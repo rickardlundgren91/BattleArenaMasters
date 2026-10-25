@@ -1,0 +1,25 @@
+{
+    "name": "BAM.Game",
+    "rootNamespace": "BAM.Game",
+    "references": [
+        "BAM.Sim",
+        "BAM.Core",
+        "BAM.Art",
+        "BAM.Audio",
+        "BAM.UI",
+        "BAM.Analytics",
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

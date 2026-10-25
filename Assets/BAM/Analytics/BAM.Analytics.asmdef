@@ -1,0 +1,17 @@
+{
+    "name": "BAM.Analytics",
+    "rootNamespace": "BAM.Analytics",
+    "references": [
+        "BAM.Sim",
+        "BAM.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

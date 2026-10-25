@@ -1,0 +1,20 @@
+{
+    "name": "BAM.UI",
+    "rootNamespace": "BAM.UI",
+    "references": [
+        "BAM.Sim",
+        "BAM.Core",
+        "BAM.Audio",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

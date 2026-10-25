@@ -1,0 +1,16 @@
+{
+    "name": "BAM.Audio",
+    "rootNamespace": "BAM.Audio",
+    "references": [
+        "BAM.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

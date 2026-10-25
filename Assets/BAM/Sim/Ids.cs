@@ -1,0 +1,64 @@
+using System;
+
+namespace BAM.Sim
+{
+    // The shared vocabulary of the game. Other assemblies (Art, Audio, UI, Game) key their visuals, sounds and screens on
+    // these values, so entries are only ever added at the end; changing or removing one is a contract change (Docs/CONTRACTS.md).
+
+    /// <summary>The seven heroes, in hero-select order.</summary>
+    public enum HeroId : byte { Bram = 0, Fenn = 1, Tyra = 2, Moa = 3, Knut = 4, Tikta = 5, Blast = 6 }
+
+    /// <summary>Team 0 is the player's team at the bottom of the map (blue), team 1 the enemy at the top (red).</summary>
+    public static class Teams
+    {
+        public const int Player = 0, Enemy = 1;
+        public static int Other(int team) => 1 - team;
+    }
+
+    public enum UnitKind : byte { Hero = 0, Minion = 1, Tower = 2, Wolf = 3 }
+
+    public enum MinionKind : byte { Melee = 0, Ranged = 1, Siege = 2 }
+
+    /// <summary>Everything that flies. Melee hits use the *Hit kinds: the art may show a swing instead of a projectile.</summary>
+    public enum ProjKind : byte
+    {
+        BramHammer = 0,     // Bram's auto attack, a thrown hammer
+        FennSlash = 1,      // Fenn's sword, near-instant
+        TyraArrow = 2,
+        MoaBolt = 3,        // honey magic
+        KnutHit = 4,        // anchor swing, short range
+        TiktaNeedle = 5,
+        BlastFire = 6,      // fire bolt
+        WolfBite = 7,       // Fenn's wolf, melee
+        MeleeMinionHit = 8,
+        RangedMinionShot = 9,
+        SiegeShell = 10,
+        TowerShot = 11,
+        BramHammerSpecial = 12, // Hammer Throw, bounces between enemies
+        TyraBolt = 13,          // Pinpoint Bolt / Long Shot
+        KnutAnchor = 14,        // Anchor Throw, a hook on a chain (tethered to Knut)
+        TiktaNeedleSpecial = 15,
+        BlastBomb = 16,         // Supernova bomb, lobbed, explodes after a delay
+    }
+
+    /// <summary>Ground areas that last a while.</summary>
+    public enum ZoneKind : byte { HoneyField = 0, FireLane = 1, BombFuse = 2 }
+
+    [Flags]
+    public enum StatusFlags : ushort
+    {
+        None = 0,
+        Stunned = 1 << 0,
+        Slowed = 1 << 1,
+        Rooted = 1 << 2,
+        Burning = 1 << 3,
+        Poisoned = 1 << 4,
+        Shielded = 1 << 5,
+        Hasted = 1 << 6,
+        InGrass = 1 << 7,
+        Revealed = 1 << 8,
+        Illusion = 1 << 9,     // Fenn's clone (only his own team is told)
+    }
+
+    public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2 }
+}

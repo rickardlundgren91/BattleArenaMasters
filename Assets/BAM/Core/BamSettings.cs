@@ -1,0 +1,96 @@
+using System;
+using UnityEngine;
+
+namespace BAM.Core
+{
+    public enum GraphicsQuality { Low = 0, High = 1 }
+
+    public enum Consent { Unknown = 0, Granted = 1, Denied = 2 }
+
+    /// <summary>
+    /// The player's settings, saved with PlayerPrefs. Every module reads them here and listens to <see cref="Changed"/>:
+    /// Audio (SfxVolume), the quality code (Graphics), the HUD (LeftHanded), Analytics (AnalyticsConsent).
+    /// The Settings screen (BAM.UI) is the only place that writes them, apart from the flags the game sets itself.
+    /// </summary>
+    public static class BamSettings
+    {
+        const string Key = "bam.";
+        static bool loaded;
+        static float sfxVolume;
+        static GraphicsQuality graphics;
+        static bool leftHanded, tutorialDone;
+        static Consent consent;
+        static int lastHero, lastDifficulty;
+
+        /// <summary>Raised after any setting changed (on the main thread).</summary>
+        public static event Action Changed;
+
+        public static float SfxVolume
+        {
+            get { Load(); return sfxVolume; }
+            set { Load(); value = Mathf.Clamp01(value); if (Mathf.Approximately(sfxVolume, value)) return; sfxVolume = value; PlayerPrefs.SetFloat(Key + "sfx", value); Commit(); }
+        }
+
+        public static GraphicsQuality Graphics
+        {
+            get { Load(); return graphics; }
+            set { Load(); if (graphics == value) return; graphics = value; PlayerPrefs.SetInt(Key + "gfx", (int)value); Commit(); }
+        }
+
+        /// <summary>Mirrors the HUD: joystick on the right, special button on the left.</summary>
+        public static bool LeftHanded
+        {
+            get { Load(); return leftHanded; }
+            set { Load(); if (leftHanded == value) return; leftHanded = value; PlayerPrefs.SetInt(Key + "left", value ? 1 : 0); Commit(); }
+        }
+
+        /// <summary>Unknown until the player answered the consent question. Analytics runs only while Granted.</summary>
+        public static Consent AnalyticsConsent
+        {
+            get { Load(); return consent; }
+            set { Load(); if (consent == value) return; consent = value; PlayerPrefs.SetInt(Key + "consent", (int)value); Commit(); }
+        }
+
+        public static bool TutorialDone
+        {
+            get { Load(); return tutorialDone; }
+            set { Load(); if (tutorialDone == value) return; tutorialDone = value; PlayerPrefs.SetInt(Key + "tut", value ? 1 : 0); Commit(); }
+        }
+
+        /// <summary>The hero picked last time (index into HeroCatalog.All), so hero select opens on it.</summary>
+        public static int LastHero
+        {
+            get { Load(); return lastHero; }
+            set { Load(); if (lastHero == value) return; lastHero = value; PlayerPrefs.SetInt(Key + "hero", value); Commit(); }
+        }
+
+        public static BAM.Sim.Difficulty LastDifficulty
+        {
+            get { Load(); return (BAM.Sim.Difficulty)lastDifficulty; }
+            set { Load(); if (lastDifficulty == (int)value) return; lastDifficulty = (int)value; PlayerPrefs.SetInt(Key + "diff", lastDifficulty); Commit(); }
+        }
+
+        static void Load()
+        {
+            if (loaded) return;
+            loaded = true;
+            sfxVolume = PlayerPrefs.GetFloat(Key + "sfx", 0.8f);
+            graphics = (GraphicsQuality)PlayerPrefs.GetInt(Key + "gfx", (int)DefaultGraphics());
+            leftHanded = PlayerPrefs.GetInt(Key + "left", 0) == 1;
+            consent = (Consent)PlayerPrefs.GetInt(Key + "consent", 0);
+            tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;
+            lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", 0), 0, BAM.Sim.HeroCatalog.Count - 1);
+            lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, 2);
+        }
+
+        // First start: Low on weak phones (little memory or few cores), else High. The player can change it in Settings.
+        static GraphicsQuality DefaultGraphics() =>
+            SystemInfo.systemMemorySize > 0 && SystemInfo.systemMemorySize < 3500 || SystemInfo.processorCount < 6 ? GraphicsQuality.Low : GraphicsQuality.High;
+
+        static void Commit()
+        {
+            PlayerPrefs.Save();
+            Changed?.Invoke();
+        }
+    }
+}

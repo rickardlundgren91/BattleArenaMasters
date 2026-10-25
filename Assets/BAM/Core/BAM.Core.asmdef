@@ -1,0 +1,16 @@
+{
+    "name": "BAM.Core",
+    "rootNamespace": "BAM.Core",
+    "references": [
+        "BAM.Sim"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
