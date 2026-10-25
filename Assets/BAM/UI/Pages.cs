@@ -11,11 +11,11 @@ namespace BAM.UI
     public static partial class Screens
     {
         const float NavH = 150f;
-        static readonly Color PageBg = new Color(0.02f, 0.024f, 0.075f);      // the near-black navy behind the panel
-        static readonly Color PageFill = new Color(0.027f, 0.03f, 0.09f, 0.97f);
-        static readonly Color CardFill = new Color(0.035f, 0.04f, 0.11f);
-        static readonly Color Lavender = new Color(0.45f, 0.47f, 0.85f);      // inactive tabs, choices not picked
-        static readonly Color Section = new Color(0.2f, 0.85f, 0.45f);        // the green section headers (AUDIO, GRAPHICS...)
+        static readonly Color PageBg = new Color(0.055f, 0.075f, 0.094f);     // #0e1318 behind the panel
+        static readonly Color PageFill = new Color(0.075f, 0.098f, 0.122f, 0.97f);
+        static readonly Color CardFill = new Color(0.086f, 0.114f, 0.141f);   // #161d24
+        static readonly Color Lavender = new Color(0.62f, 0.64f, 0.71f);      // inactive tabs, choices not picked (soft grey)
+        static readonly Color Section = UiKit.Gold;                           // section headers (AUDIO, GRAPHICS...)
 
         static GameObject nav;
         static Image[] navIcons;
@@ -70,7 +70,7 @@ namespace BAM.UI
             img.sprite = UiKit.Rounded;
             img.type = Image.Type.Sliced;
             img.pixelsPerUnitMultiplier = 0.7f;
-            img.color = new Color(0.1f, 0.11f, 0.22f);
+            img.color = UiKit.Muted;
             var label = UiKit.Label(rt, text, 38, TextAnchor.MiddleCenter, UiKit.TextColor);
             UiKit.Stretch(label.rectTransform);
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -90,7 +90,7 @@ namespace BAM.UI
             UiKit.Stretch(rt);
             nav = rt.gameObject;
             var safe = UiKit.SafeArea(rt);
-            var bar = UiKit.Fill(safe, new Color(0.04f, 0.045f, 0.12f));
+            var bar = UiKit.Fill(safe, new Color(0.055f, 0.075f, 0.094f, 0.96f));
             bar.raycastTarget = true;
             UiKit.Band(bar, false, 0, NavH, 0);
             // The bar's colour continues below the safe area to the screen's edge.
@@ -159,7 +159,7 @@ namespace BAM.UI
                 case 0: // house: a roof (turned square) over a body with a door gap
                     first = Part(UiKit.Rounded, 0, 10, 40, 40, 45);
                     Part(UiKit.Rounded, 0, -10, 44, 34);
-                    Part(null, 0, -16, 12, 22).color = new Color(0.04f, 0.045f, 0.12f);
+                    Part(null, 0, -16, 12, 22).color = new Color(0.055f, 0.075f, 0.094f);
                     break;
                 case 1: // person: head and shoulders
                     first = Part(UiKit.Circle, 0, 14, 30, 30);
@@ -172,7 +172,7 @@ namespace BAM.UI
                         float a = t * Mathf.PI / 4f;
                         Part(null, Mathf.Cos(a) * 24, Mathf.Sin(a) * 24, 12, 12, t * 45f);
                     }
-                    Part(UiKit.Circle, 0, 0, 18, 18).color = new Color(0.04f, 0.045f, 0.12f);
+                    Part(UiKit.Circle, 0, 0, 18, 18).color = new Color(0.055f, 0.075f, 0.094f);
                     break;
             }
             return first;
@@ -234,7 +234,7 @@ namespace BAM.UI
             bg.color = CardFill;
             bg.raycastTarget = false;
             row.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
-            UiKit.Frame(row).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.75f);
+            UiKit.Frame(row);
             label = UiKit.Label(row, text, 40, TextAnchor.MiddleLeft, UiKit.TextColor);
             label.font = UiKit.BodyFont;
             label.fontStyle = FontStyle.Bold;

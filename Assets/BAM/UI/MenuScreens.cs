@@ -33,12 +33,12 @@ namespace BAM.UI
             homeBody = body;
             BuildHomeBackground(body);
 
-            // On the painted platform: a faint gold rune ring and a mint ring under the feet.
+            // On the painted platform: a faint gold rune ring and a brighter gold ring under the feet.
             float platY = HomePlatY;
-            var gold = UiKit.Fill(body, new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.55f), UiKit.CircleRing);
+            var gold = UiKit.Fill(body, new Color(UiKit.Gold.r, UiKit.Gold.g, UiKit.Gold.b, 0.3f), UiKit.CircleRing);
             UiKit.Place(gold, 0.5f, 0, 0, platY - 95, 720, 190);
-            var mint = UiKit.Fill(body, UiKit.Primary, UiKit.CircleRing);
-            UiKit.Place(mint, 0.5f, 0, 0, platY - 62, 470, 124);
+            var feet = UiKit.Fill(body, new Color(UiKit.Gold.r, UiKit.Gold.g, UiKit.Gold.b, 0.85f), UiKit.CircleRing);
+            UiKit.Place(feet, 0.5f, 0, 0, platY - 62, 470, 124);
 
             // The hero: Rickard's 3D model, filmed by its own camera (HeroStage); the letter badge only if that fails.
             homeHero = UiKit.HeroBadge(body, HeroId.Bram);
@@ -48,15 +48,15 @@ namespace BAM.UI
             homeStage = stageRt.gameObject.AddComponent<HeroStage>();
 
             // Top bar: portrait, the game's name.
-            var top = UiKit.Panel(body, new Color(0.04f, 0.05f, 0.13f, 0.92f));
+            var top = UiKit.Panel(body, new Color(0.055f, 0.075f, 0.094f, 0.7f));
             UiKit.Band(top, true, 16, 130, 16);
-            UiKit.Frame(top.rectTransform).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.6f);
+            UiKit.Frame(top.rectTransform);
             homePortrait = PortraitCircle(top.transform, 104, out homePortraitImg);
             UiKit.Place(homePortrait, 0, 0.5f, 14, 0, 104, 104);
             var name = UiKit.Label(top.transform, BamInfo.ShortName, 52, TextAnchor.LowerLeft, UiKit.TextColor);
             HeaderText(name, 140, 0, 64);
             UiKit.AddShadow(name, 3);
-            var sub = UiKit.Label(top.transform, BamInfo.AppName, 32, TextAnchor.UpperLeft, UiKit.Orange);
+            var sub = UiKit.Label(top.transform, BamInfo.AppName, 32, TextAnchor.UpperLeft, UiKit.Gold);
             HeaderText(sub, 140, -46, 46);
 
             // "<Hero> selected", as in the old game.
@@ -73,13 +73,12 @@ namespace BAM.UI
             UiKit.Band(row, false, NavH + 24, 200, 24);
             var modesButton = UiKit.Button(row, "MODES", () => Push(modes), UiKit.Muted, SfxId.UiTap, 30);
             UiKit.Place(modesButton, 0, 0.5f, 0, 0, 200, 200);
-            UiKit.Frame((RectTransform)modesButton.transform).color = UiKit.Orange;
             var modesLabel = UiKit.ButtonText(modesButton);
             modesLabel.alignment = TextAnchor.LowerCenter;
             modesLabel.rectTransform.offsetMin = new Vector2(0, 14);
             RobotIcon(modesButton.targetGraphic.rectTransform);
 
-            var play = UiKit.Button(row, "PLAY  >", OnPlay, UiKit.Orange, SfxId.UiConfirm, 92);
+            var play = UiKit.Button(row, "PLAY", OnPlay, UiKit.Orange, SfxId.UiConfirm, 92);
             var playRt = (RectTransform)play.transform;
             playRt.anchorMin = new Vector2(0, 0);
             playRt.anchorMax = new Vector2(1, 1);
@@ -87,16 +86,12 @@ namespace BAM.UI
             playRt.offsetMax = Vector2.zero;
             var playLabel = UiKit.ButtonText(play);
             playLabel.rectTransform.offsetMin = new Vector2(12, 52);
-            UiKit.AddOutline(playLabel, 4);
-            playSub = UiKit.Label(play.targetGraphic.transform, "", 32, TextAnchor.MiddleCenter, UiKit.TextColor);
+            playSub = UiKit.Label(play.targetGraphic.transform, "", 30, TextAnchor.MiddleCenter, new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.75f));
             UiKit.Band(playSub, false, 22, 44, 10);
             playSub.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var subEdge = playSub.gameObject.AddComponent<Outline>();
-            subEdge.effectColor = new Color(0.43f, 0.15f, 0f);
-            subEdge.effectDistance = new Vector2(2, -2);
         }
 
-        // The old MODES icon: a small mint robot head.
+        // The MODES icon: a small gold robot head.
         static void RobotIcon(RectTransform face)
         {
             var head = UiKit.Fill(face, UiKit.Primary, UiKit.Rounded);
@@ -106,7 +101,7 @@ namespace BAM.UI
             UiKit.Place(stalk, 0.5f, 1, 0, -36, 6, 16);
             var knob = UiKit.Fill(face, UiKit.Primary, UiKit.Circle);
             UiKit.Place(knob, 0.5f, 1, 0, -26, 14, 14);
-            var dark = new Color(0.04f, 0.06f, 0.16f);
+            var dark = new Color(0.055f, 0.075f, 0.094f);
             UiKit.Place(UiKit.Fill(head.rectTransform, dark, UiKit.Circle), 0.5f, 0.5f, -16, 4, 14, 14);
             UiKit.Place(UiKit.Fill(head.rectTransform, dark, UiKit.Circle), 0.5f, 0.5f, 16, 4, 14, 14);
             UiKit.Place(UiKit.Fill(head.rectTransform, dark), 0.5f, 0.5f, 0, -14, 30, 5);
@@ -145,7 +140,7 @@ namespace BAM.UI
         /// <summary>A round portrait with a gold ring (the old top bar's hero picture).</summary>
         static RectTransform PortraitCircle(Transform parent, float size, out RawImage img)
         {
-            var ring = UiKit.Fill(parent, UiKit.Trim, UiKit.Circle);
+            var ring = UiKit.Fill(parent, UiKit.Gold, UiKit.Circle);
             ring.rectTransform.sizeDelta = new Vector2(size, size);
             var mask = UiKit.Fill(ring.rectTransform, Color.white, UiKit.Circle);
             UiKit.Stretch(mask.rectTransform, 5, 5, 5, 5);
@@ -178,16 +173,16 @@ namespace BAM.UI
             homeBg = bgRt.gameObject.AddComponent<RawImage>();
             homeBg.texture = Picture("home_bg");
             homeBg.raycastTarget = false;
-            var shade = UiKit.Fill(bgRt, new Color(0.04f, 0.055f, 0.16f, 0.2f));
+            var shade = UiKit.Fill(bgRt, new Color(0.055f, 0.075f, 0.094f, 0.2f));
             shade.name = "Shade";
             int i = 1;
-            homeEdgeL = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
-            homeEdgeR = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
+            homeEdgeL = FadePart(screen, fadeH, new Color(0.03f, 0.04f, 0.05f, 0.5f), i++);
+            homeEdgeR = FadePart(screen, fadeH, new Color(0.03f, 0.04f, 0.05f, 0.5f), i++);
             homeEdgeR.rectTransform.localScale = new Vector3(-1, 1, 1);
-            homeTopFade = FadePart(screen, fadeV, new Color(0.04f, 0.05f, 0.15f, 0.92f), i++);
-            homeBottomFade = FadePart(screen, fadeV, new Color(0.055f, 0.07f, 0.19f, 1f), i++);
+            homeTopFade = FadePart(screen, fadeV, new Color(0.055f, 0.075f, 0.094f, 0.92f), i++);
+            homeBottomFade = FadePart(screen, fadeV, new Color(0.055f, 0.075f, 0.094f, 1f), i++);
             homeBottomFade.rectTransform.localScale = new Vector3(1, -1, 1);
-            homeBottomFill = FadePart(screen, null, new Color(0.055f, 0.07f, 0.19f, 1f), i);
+            homeBottomFill = FadePart(screen, null, new Color(0.055f, 0.075f, 0.094f, 1f), i);
         }
 
         static Image FadePart(RectTransform screen, Sprite sprite, Color color, int sibling)
@@ -387,12 +382,12 @@ namespace BAM.UI
                 role.fontStyle = FontStyle.Bold;
                 UiKit.Band(role, false, 22, 40, 4);
 
-                // The old "selected" mark: a mint circle with a white tick in the top right corner.
+                // The "selected" mark: a gold circle with a dark tick in the top right corner.
                 var check = UiKit.Fill(card, UiKit.Primary, UiKit.Circle);
                 UiKit.Place(check, 1, 1, 10, 10, 56, 56);
-                var tick1 = UiKit.Fill(check.rectTransform, Color.white);
+                var tick1 = UiKit.Fill(check.rectTransform, UiKit.Ink);
                 UiKit.Place(tick1, 0.5f, 0.5f, -8, -3, 16, 6).localRotation = Quaternion.Euler(0, 0, -45);
-                var tick2 = UiKit.Fill(check.rectTransform, Color.white);
+                var tick2 = UiKit.Fill(check.rectTransform, UiKit.Ink);
                 UiKit.Place(tick2, 0.5f, 0.5f, 5, 1, 26, 6).localRotation = Quaternion.Euler(0, 0, 50);
                 cardChecks[i] = check.gameObject;
             }
@@ -404,7 +399,7 @@ namespace BAM.UI
             dbg.type = Image.Type.Sliced;
             dbg.color = CardFill;
             dbg.raycastTarget = false;
-            UiKit.Frame(detail).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.75f);
+            UiKit.Frame(detail);
             VList(detail, 10, new RectOffset(36, 36, 28, 36));
 
             detailName = DetailText(detail, 72, UiKit.Gold, 0);
@@ -453,7 +448,7 @@ namespace BAM.UI
             gap.gameObject.AddComponent<LayoutElement>().preferredHeight = spaceAbove;
             var row = UiKit.NewRect("Ability", list);
             row.gameObject.AddComponent<LayoutElement>().preferredHeight = 72;
-            var disc = UiKit.Fill(row, new Color(0.1f, 0.11f, 0.25f), UiKit.Circle);
+            var disc = UiKit.Fill(row, UiKit.Muted, UiKit.Circle);
             UiKit.Place(disc, 0, 0.5f, 0, 0, 72, 72);
             icon = UiKit.Fill(disc.rectTransform, UiKit.Gold);
             UiKit.Stretch(icon.rectTransform, 12, 12, 12, 12);
@@ -537,7 +532,7 @@ namespace BAM.UI
             for (int i = 0; i < cardFrames.Length; i++)
             {
                 bool on = i == index;
-                cardFrames[i].color = on ? UiKit.Primary : new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.75f);
+                cardFrames[i].color = on ? UiKit.Gold : UiKit.Trim;
                 cardChecks[i].SetActive(on);
             }
 

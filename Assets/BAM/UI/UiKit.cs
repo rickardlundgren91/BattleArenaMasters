@@ -23,10 +23,11 @@ namespace BAM.UI
             get
             {
                 if (font != null) return font;
-                font = Resources.Load<Font>("BAM/Fonts/LilitaOne");
+                font = Resources.Load<Font>("BAM/Fonts/InterExtraBold");
+                if (font == null) font = Resources.Load<Font>("BAM/Fonts/LilitaOne");
                 if (font == null)
                 {
-                    Debug.LogError("[BAM.UI] Lilita One missing at Resources/BAM/Fonts/LilitaOne; using Unity's built-in font");
+                    Debug.LogError("[BAM.UI] Inter missing at Resources/BAM/Fonts/InterExtraBold; using Unity's built-in font");
                     font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 }
                 return font;
@@ -34,38 +35,40 @@ namespace BAM.UI
         }
 
         static Font bodyFont;
-        /// <summary>A plain font for small body text (rows, descriptions), like the old game's Trebuchet next to Lilita One.</summary>
+        /// <summary>A lighter font for small body text (rows, descriptions): Inter SemiBold next to Inter ExtraBold.</summary>
         public static Font BodyFont
         {
             get
             {
+                if (bodyFont == null) bodyFont = Resources.Load<Font>("BAM/Fonts/InterSemiBold");
                 if (bodyFont == null) bodyFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 if (bodyFont == null) bodyFont = Font;
                 return bodyFont;
             }
         }
 
-        // Palette of the old game's menus (ABC2 Hub): deep navy, worn-gold trim, mint for "on/chosen", orange for PLAY.
+        // The website's palette (battlearenamasters.com): dark graphite, warm gold/amber, dark glass, soft white text.
         public static readonly Color Ally = new Color(0.25f, 0.55f, 1f);
         public static readonly Color Enemy = new Color(0.95f, 0.25f, 0.2f);
-        public static readonly Color Gold = new Color(0.95f, 0.81f, 0.48f);      // #f2cf7a: titles, filled stat bars
-        public static readonly Color Trim = new Color(0.85f, 0.64f, 0.25f);      // #d9a441: the gold edge on dark buttons and panels
-        public static readonly Color Orange = new Color(1f, 0.51f, 0.19f);       // #ff8230: PLAY, the main action on a screen
-        public static readonly Color Primary = new Color(0.24f, 0.9f, 0.69f);    // #3ee6b0: chosen, on, confirm
+        public static readonly Color Gold = new Color(0.898f, 0.722f, 0.412f);   // #e5b869: titles, numbers, chosen, on
+        public static readonly Color Trim = new Color(0.898f, 0.722f, 0.412f, 0.35f); // the thin gold edge on panels and cards
+        public static readonly Color Orange = new Color(0.851f, 0.627f, 0.263f); // #d9a043: PLAY, the main action (amber gold)
+        public static readonly Color Primary = Gold;                              // chosen, on, confirm
         public static readonly Color Good = Primary;
         public static readonly Color Bad = new Color(0.9f, 0.3f, 0.27f);
-        public static readonly Color Muted = new Color(0.16f, 0.21f, 0.38f);     // #2a3560: ordinary buttons, not chosen
-        public static readonly Color PanelColor = new Color(0.055f, 0.07f, 0.19f, 0.88f);
-        public static readonly Color RowColor = new Color(0.055f, 0.07f, 0.19f, 0.7f);
-        public static readonly Color TextColor = new Color(0.95f, 0.96f, 1f);    // #f3f4ff
-        public static readonly Color TextDim = new Color(0.6f, 0.64f, 0.84f);    // #9aa2d6
-        public static readonly Color Ink = new Color(0.024f, 0.07f, 0.11f);      // #06121c: text on mint and gold
-        public static readonly Color Dim = new Color(0.02f, 0.03f, 0.1f, 0.72f);
-        static readonly Color ButtonBase = new Color(0.043f, 0.075f, 0.19f);      // #0b1330: the dark edge round every button
+        public static readonly Color Muted = new Color(0.07f, 0.086f, 0.11f, 0.8f); // rgba(18,22,28,.8): dark glass buttons
+        public static readonly Color PanelColor = new Color(0.086f, 0.114f, 0.141f, 0.92f); // #161d24
+        public static readonly Color RowColor = new Color(0.086f, 0.114f, 0.141f, 0.7f);
+        public static readonly Color TextColor = new Color(0.933f, 0.941f, 0.965f); // #eef0f6
+        public static readonly Color TextDim = new Color(0.62f, 0.64f, 0.71f);    // #9ea3b5
+        public static readonly Color Ink = new Color(0.1f, 0.075f, 0.03f);        // #1a1308: text on gold
+        public static readonly Color Dim = new Color(0.02f, 0.027f, 0.035f, 0.72f);
+        static readonly Color ButtonBase = new Color(0f, 0f, 0f, 0.35f);         // the soft shadow under every button
+        static readonly Color GlassEdge = new Color(1f, 1f, 1f, 0.22f);          // the thin light edge on dark glass buttons
 
         static Sprite ring;
         /// <summary>A 9-sliced rounded outline (same corners as <see cref="Rounded"/>), for gold trim.</summary>
-        public static Sprite Ring { get { if (ring == null) ring = MakeRounded(64, 28, 3.5f); return ring; } }
+        public static Sprite Ring { get { if (ring == null) ring = MakeRounded(64, 28, 2f); return ring; } }
         static Sprite circleRing;
         /// <summary>A thin white circle outline (stretch it into an ellipse for rings on the ground).</summary>
         public static Sprite CircleRing { get { if (circleRing == null) circleRing = MakeRounded(128, 64, 6f); return circleRing; } }
@@ -81,8 +84,8 @@ namespace BAM.UI
             {
                 if (gradient != null) return gradient;
                 var tex = new Texture2D(1, 128, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "BAM.UI.Gradient" };
-                var bottom = new Color(0.11f, 0.086f, 0.31f); // #1c1650
-                var top = new Color(0.055f, 0.071f, 0.19f);  // #0e1230
+                var bottom = new Color(0.086f, 0.114f, 0.141f); // #161d24
+                var top = new Color(0.055f, 0.075f, 0.094f);    // #0e1318
                 for (int y = 0; y < 128; y++) tex.SetPixel(0, y, Color.Lerp(bottom, top, y / 127f));
                 tex.Apply(false, true);
                 gradient = Sprite.Create(tex, new Rect(0, 0, 1, 128), new Vector2(0.5f, 0.5f), 100f);
@@ -160,7 +163,7 @@ namespace BAM.UI
             return t;
         }
 
-        /// <summary>A chunky button (base + raised face) that shrinks while pressed and plays UiTap. Default 600x150, centred.</summary>
+        /// <summary>A rounded button (face over a soft shadow) that shrinks while pressed and plays UiTap. Default 600x150, centred.</summary>
         public static Button Button(Transform parent, string text, Action onClick) => Button(parent, text, onClick, Primary, SfxId.UiTap);
 
         public static Button Button(Transform parent, string text, Action onClick, Color color, SfxId sfx = SfxId.UiTap, int fontSize = 60)
@@ -172,22 +175,21 @@ namespace BAM.UI
             baseImg.type = Image.Type.Sliced;
 
             var faceRt = NewRect("Face", rt);
-            Stretch(faceRt, 5, 5, 5, 12);
+            Stretch(faceRt, 0, 0, 0, 6);
             var face = faceRt.gameObject.AddComponent<Image>();
             face.sprite = Rounded;
             face.type = Image.Type.Sliced;
             face.raycastTarget = false;
 
-            var trim = Fill(faceRt, Trim, Ring);
+            var trim = Fill(faceRt, GlassEdge, Ring);
             trim.name = "Trim";
-            var gloss = Fill(faceRt, new Color(1f, 0.93f, 0.75f, 0.08f), Rounded);
+            var gloss = Fill(faceRt, new Color(1f, 0.96f, 0.85f, 0.12f), Rounded);
             gloss.rectTransform.anchorMin = new Vector2(0, 0.6f);
             Stretch2(gloss.rectTransform, 6, 4, 6, 0);
 
             var label = Label(faceRt, text, fontSize, TextAnchor.MiddleCenter, TextColor);
             Stretch(label.rectTransform, 12, 4, 12, 4);
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            AddShadow(label, 3);
 
             var b = rt.gameObject.AddComponent<Button>();
             b.targetGraphic = face;
@@ -219,18 +221,15 @@ namespace BAM.UI
             var baseImg = b.GetComponent<Image>();
             if (baseImg != null) baseImg.color = ButtonBase;
             if (face == null) return;
-            // Dark buttons get the gold trim; bright ones get dark text (mint) or a burnt-orange edge on the text (orange).
+            // Dark glass buttons get a thin light edge and white text; gold ones get dark text and no edge.
             float lum = 0.3f * color.r + 0.59f * color.g + 0.11f * color.b;
             var trim = face.transform.Find("Trim");
             if (trim != null) trim.gameObject.SetActive(lum < 0.35f);
             var label = face.GetComponentInChildren<Text>(true);
             if (label == null) return;
-            bool orange = color.r > 0.9f && color.g < 0.7f && color.b < 0.4f;
-            label.color = lum > 0.6f && !orange ? Ink : TextColor;
-            var outline = label.GetComponent<Outline>();
-            if (outline != null) outline.effectColor = orange ? new Color(0.54f, 0.2f, 0f) : new Color(0.05f, 0.05f, 0.15f, 0.85f);
+            label.color = lum > 0.45f ? Ink : TextColor;
             var shadow = label.GetComponent<Shadow>();
-            if (shadow != null && !(shadow is Outline)) shadow.enabled = label.color != Ink;
+            if (shadow != null) shadow.enabled = label.color != Ink;
         }
 
         public static Text ButtonText(Button b) => b.GetComponentInChildren<Text>(true);
@@ -260,7 +259,7 @@ namespace BAM.UI
             return img;
         }
 
-        /// <summary>The menus' blue-purple background.</summary>
+        /// <summary>The menus' dark graphite background.</summary>
         public static Image Background(Transform parent)
         {
             var img = Fill(parent, Color.white, Gradient);
@@ -359,21 +358,22 @@ namespace BAM.UI
         public static void AddShadow(Graphic g, float distance)
         {
             var s = g.gameObject.AddComponent<Shadow>();
-            s.effectColor = new Color(0, 0, 0, 0.45f);
+            s.effectColor = new Color(0, 0, 0, 0.35f);
             s.effectDistance = new Vector2(0, -distance);
         }
 
         public static void AddOutline(Graphic g, float distance)
         {
-            var o = g.gameObject.AddComponent<Outline>();
-            o.effectColor = new Color(0.05f, 0.05f, 0.15f, 0.85f);
-            o.effectDistance = new Vector2(distance, -distance);
-            // A button's text edge follows its colour (burnt orange on PLAY).
+            // A soft drop shadow, not a thick stroke (the website's clean look). The name stays for the HUD's calls.
+            var o = g.gameObject.AddComponent<Shadow>();
+            o.effectColor = new Color(0, 0, 0, 0.4f);
+            o.effectDistance = new Vector2(0, -Mathf.Max(1f, distance * 0.6f));
+            // Text on a gold button has no shadow.
             var b = g.GetComponentInParent<Button>();
             if (b != null && b.targetGraphic != null) Tint(b, b.targetGraphic.color);
         }
 
-        /// <summary>The old game's gold edge round a panel or card.</summary>
+        /// <summary>A thin gold edge round a panel or card.</summary>
         public static Image Frame(RectTransform target)
         {
             var f = Fill(target, Trim, Ring);
