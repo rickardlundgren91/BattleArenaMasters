@@ -62,7 +62,6 @@ namespace BAM.Art
             mesh.SetTriangles(all, 0);
             if ((flags & 1) == 0) mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            mesh.UploadMeshData(true);
             return mesh;
         }
     }

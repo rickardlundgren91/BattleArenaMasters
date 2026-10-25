@@ -34,11 +34,12 @@ namespace BAM.Art.Editor
             }
             if (!assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Arena/")) return;
             ti.textureType = TextureImporterType.Default;
-            ti.wrapMode = TextureWrapMode.Repeat;
+            ti.wrapMode = assetPath.Contains("T_BAM_ArenaGround") ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
             ti.mipmapEnabled = true;
             ti.anisoLevel = 4;
             ti.sRGBTexture = true;
-            ti.maxTextureSize = 512;
+            // the baked arena ground is one 480x1120 picture of the whole floor: keep its full size
+            ti.maxTextureSize = assetPath.Contains("T_BAM_ArenaGround") ? 2048 : 512;
             ti.textureCompression = TextureImporterCompression.Compressed;
         }
 
@@ -114,17 +115,17 @@ namespace BAM.Art.Editor
         static readonly string[] pool = { "Tikta/Anim/Idle", "Tikta/Anim/Run", "Fenn/Anim/Attack1", "Fenn/Anim/Cast", "Tikta/Anim/Hit", "Tikta/Anim/Dying" };
         static readonly Spec[] specs =
         {
-            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.95f, Release = 0.45f },
-            new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Height = 1.05f, Release = 0.45f },
-            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Tyra/Anim/IdleBow", Run = "Tyra/Anim/RunBow", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Height = 1.08f, Release = 0.55f },
-            new Spec { Hero = "Moa", Model = "Moa/Moa", Attack = "Knut/Anim/Throw", Height = 0.9f, Release = 0.4f },
-            new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Height = 1.15f, Release = 0.45f },
-            new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 0.95f, Release = 0.4f },
+            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 1.3f, Release = 0.45f },
+            new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Height = 1.4f, Release = 0.45f },
+            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Tyra/Anim/IdleBow", Run = "Tyra/Anim/RunBow", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Height = 1.45f, Release = 0.55f },
+            new Spec { Hero = "Moa", Model = "Moa/Moa", Attack = "Knut/Anim/Throw", Height = 1.25f, Release = 0.4f },
+            new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Height = 1.55f, Release = 0.45f },
+            new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 1.3f, Release = 0.4f },
             // the lane minions: the old game's Mixamo goblin creeps (one figure, three paint jobs), moving with the heroes' clips
-            new Spec { Out = "Minions", Hero = "Melee", Model = "Creeps/Melee", Attack = "Tikta/Anim/Attack1", Height = 0.62f, Release = 0.4f },
-            new Spec { Out = "Minions", Hero = "Ranged", Model = "Creeps/Ranged", Attack = "Knut/Anim/Throw", Height = 0.6f, Release = 0.4f },
-            new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.72f, Release = 0.45f },
-            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Knut/Anim/Throw", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.9f, Release = 0.4f },
+            new Spec { Out = "Minions", Hero = "Melee", Model = "Creeps/Melee", Attack = "Tikta/Anim/Attack1", Height = 0.8f, Release = 0.4f },
+            new Spec { Out = "Minions", Hero = "Ranged", Model = "Creeps/Ranged", Attack = "Knut/Anim/Throw", Height = 0.78f, Release = 0.4f },
+            new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.9f, Release = 0.45f },
+            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Knut/Anim/Throw", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 1.25f, Release = 0.4f },
         };
 
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
@@ -137,7 +138,7 @@ namespace BAM.Art.Editor
                 foreach (Spec s in specs)
                 {
                     var art = AssetDatabase.LoadAssetAtPath<HeroArt>(OutOf(s) + "/" + s.Hero + ".asset");
-                    if (art == null || art.Model == null || art.Texture == null) { BuildAll(); return; }
+                    if (art == null || art.Model == null || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)) { BuildAll(); return; }
                 }
             };
         }

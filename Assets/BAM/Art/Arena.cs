@@ -46,6 +46,13 @@ namespace BAM.Art
             // the island floats over its own cloud sea instead
             if (!info.Island) Pick(water, solid, Pal.Void).Face(new Vector3(-40f, waterY, -40f), new Vector3(-40f, waterY, h + 40f), new Vector3(w + 40f, waterY, h + 40f), new Vector3(w + 40f, waterY, -40f));
 
+            // the BAM arena's own ground picture (grass, cobbled road between the towers, worn earth along it, tall grass under the
+            // bushes), baked offline exactly like the old game painted it (bam-work/art/ground/bake.py); only for that map's size
+            Texture2D painted = !info.Island && w == 15 && h == 35 ? Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_ArenaGround_v1_2") : null;
+            if (painted != null) PaintedGround(root, painted, w, h);
+            Mesh pillarM = Props.Mesh("wallkit_pillar"), beamM = Props.Mesh("wallkit_straight");
+            bool kit = pillarM != null && beamM != null && !info.Island;
+
             for (int ty = 0; ty < h; ty++)
                 for (int tx = 0; tx < w; tx++)
                 {
@@ -61,7 +68,12 @@ namespace BAM.Art
                     float x0 = c.x - 0.5f, x1 = c.x + 0.5f, z0 = c.z - 0.5f, z1 = c.z + 0.5f;
                     bool inRock = InRock(info, c);
 
-                    if (code == TWall && !inRock)
+                    if (code == TWall && !inRock && kit)
+                    {
+                        // Rickard's Meshy wall kit stands here (WallKit below); only the contact shadow on the ground
+                        marks.Color(Pal.ShadowSoft).Face(new Vector3(x0 - 0.2f, 0.012f, z0 - 0.2f), new Vector3(x0 - 0.2f, 0.012f, z1 + 0.2f), new Vector3(x1 + 0.2f, 0.012f, z1 + 0.2f), new Vector3(x1 + 0.2f, 0.012f, z0 - 0.2f));
+                    }
+                    else if (code == TWall && !inRock)
                     {
                         // stone block, a lighter cap and a dark seam so neighbours read as one wall
                         MeshBuilder wb = Pick(wall, solid, Pal.Stone);
@@ -79,7 +91,7 @@ namespace BAM.Art
                         else if (dLane < 1.6f) gb = Pick(road, solid, Pal.Road);
                         else if (dLane < 2.1f && road.T == null) gb = solid.Color(Pal.RoadEdge);
                         else gb = Pick(ground, solid, ((tx + ty) & 1) == 0 ? Pal.Ground : Pal.GroundB);
-                        gb.Face(new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), new Vector3(x1, 0f, z0));
+                        if (painted == null) gb.Face(new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), new Vector3(x1, 0f, z0));
                         if (code == TGrass) Bush(solid, c, tx, ty, rnd);
                         else if (ground.T == null && dLane >= 2.1f && rnd.NextDouble() < 0.18) Pebble(solid, c, rnd);
                     }
@@ -122,9 +134,88 @@ namespace BAM.Art
                 m.mainTexture = l.T;
                 Add(root, l.Name, l.B.ToMesh(l.Name), m, l != water);
             }
+            if (kit) WallKit(root, info, pillarM, beamM);
             Add(root, "Marks", marks.ToMesh("Arena Marks"), MarksMaterial(), false);
             if (info.Island) Island.Build(root, info);
             return root;
+        }
+
+        // Rickard's Meshy wall kit, placed like the old game (View3DWallModels.cs, "pillar + beam"): a pillar on every node of the
+        // wall grid (end, corner, tee, single tile) and at even steps along a long run, the straight piece stretched between two
+        // pillars. Each model is merged into one mesh, so the walls cost two draw calls.
+        const float KitPillarXZ = 0.9f, KitPillarY = 0.85f, KitWallH = 0.8f, KitWallT = 1.15f, KitWallLen = 1.9f;
+
+        static void WallKit(GameObject root, ArenaInfo info, Mesh pillarM, Mesh beamM)
+        {
+            int w = info.Width, h = info.Height;
+            var pillars = new System.Collections.Generic.List<CombineInstance>();
+            var beams = new System.Collections.Generic.List<CombineInstance>();
+            bool At(int x, int y) => x >= 0 && y >= 0 && x < w && y < h && info.Tile(x, y) == TWall && !InRock(info, info.TileCenter(x, y));
+            // bit 1 = next row, 2 = +x, 4 = previous row, 8 = -x; a node is anything but a straight run's middle
+            bool Node(int x, int y)
+            {
+                int m = (At(x, y + 1) ? 1 : 0) | (At(x + 1, y) ? 2 : 0) | (At(x, y - 1) ? 4 : 0) | (At(x - 1, y) ? 8 : 0);
+                return m != 5 && m != 10;
+            }
+            // tile coords (row y grows toward the bottom of the screen) to the world
+            Vector3 W(float x, float y) => new Vector3(x, 0f, h - y);
+            void Pillar(float x, float y) => pillars.Add(new CombineInstance { mesh = pillarM, transform = Matrix4x4.TRS(W(x, y), Quaternion.identity, new Vector3(KitPillarXZ, KitPillarY, KitPillarXZ)) });
+            void Beam(float x, float y, bool alongRows, float len) => beams.Add(new CombineInstance
+            {
+                mesh = beamM,
+                transform = Matrix4x4.TRS(W(x, y), Quaternion.Euler(0f, alongRows ? 90f : 0f, 0f), new Vector3(len / KitWallLen, KitWallH, KitWallT)),
+            });
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    if (!At(x, y) || !Node(x, y)) continue;
+                    Pillar(x + 0.5f, y + 0.5f);
+                    // runs go +x and +y from a node; the node at the other end finds them from its own side
+                    for (int dir = 0; dir < 2; dir++)
+                    {
+                        int dx = dir == 0 ? 1 : 0, dy = dir == 0 ? 0 : 1;
+                        if (!At(x + dx, y + dy)) continue;
+                        int len = 1;
+                        while (!Node(x + dx * len, y + dy * len)) len++;
+                        int k = Mathf.Max(1, Mathf.RoundToInt(len / 2f));
+                        float g = (float)len / k;
+                        for (int i = 0; i < k; i++)
+                        {
+                            float c = (i + 0.5f) * g;
+                            Beam(x + 0.5f + dx * c, y + 0.5f + dy * c, dir == 1, g + 0.04f);
+                            if (i > 0) Pillar(x + 0.5f + dx * i * g, y + 0.5f + dy * i * g);
+                        }
+                    }
+                }
+            KitPiece(root, "Wall pillars", pillars, "wallkit_pillar");
+            KitPiece(root, "Wall pieces", beams, "wallkit_straight");
+        }
+
+        // one quad over the whole floor, unlit like the old game's ground (the picture already carries its light and shadows)
+        static void PaintedGround(GameObject root, Texture2D tex, int w, int h)
+        {
+            var mesh = new Mesh { name = "Arena ground" };
+            mesh.vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, h), new Vector3(w, 0f, h), new Vector3(w, 0f, 0f) };
+            mesh.uv = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+            mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.RecalculateBounds();
+            var mat = ArtMaterials.Instance(ArtMaterials.Unlit);
+            mat.SetTexture(ArtMaterials.BaseMap, tex);
+            mat.mainTexture = tex;
+            Add(root, "Ground", mesh, mat, false);
+        }
+
+        static void KitPiece(GameObject root, string name, System.Collections.Generic.List<CombineInstance> parts, string tex)
+        {
+            if (parts.Count == 0) return;
+            var mesh = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };
+            mesh.CombineMeshes(parts.ToArray(), true, true);
+            mesh.UploadMeshData(true);
+            var mat = ArtMaterials.Instance(ArtMaterials.Lit);
+            Texture2D t = Props.Texture(tex);
+            if (t != null) { mat.SetTexture(ArtMaterials.BaseMap, t); mat.mainTexture = t; }
+            Add(root, name, mesh, mat, true);
         }
 
         /// <summary>The textured layer when its picture loaded, else the palette mesh in the fallback colour.</summary>
