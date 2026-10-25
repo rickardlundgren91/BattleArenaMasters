@@ -4,14 +4,15 @@ using UnityEngine;
 namespace BAM.Game
 {
     /// <summary>
-    /// The old game's camera: orthographic, tilted down 55 degrees (elevation asin 0.82), 11.5 tiles across a portrait screen,
-    /// the focus 52% down the frame. A wider window (the editor's Game view) keeps the portrait height and shows more across.
+    /// The old game's camera: orthographic, tilted down 55 degrees (elevation asin 0.82), the focus 52% down the frame.
+    /// Zoomed by height, not width (Rickard 2026-10-25: the framing of a 2960x1440 Game view, "där va bättre"): units are the
+    /// same size against the screen's height on every phone; a narrow phone shows a little less across (about 8-11 tiles).
     /// Follows the player's hero a little ahead (towards the enemy); while it is dead it follows a living teammate and comes
     /// back at the respawn. The guided match frames Tyra and the enemy tower together (the old game's tutCamY).
     /// </summary>
     sealed class MatchCamera
     {
-        const float TilesAcross = 11.5f, PortraitAspect = 0.5f, Back = 60f, FocusDown = 0.52f;
+        const float HalfHeight = 11.5f, Back = 60f, FocusDown = 0.52f;
         static readonly float Pitch = Mathf.Asin(0.82f) * Mathf.Rad2Deg;
         const float Lead = 1.2f;        // the focus sits this far ahead of the hero, so more of the way forward is seen
         const float Over = 3f;          // the focus may pass the map edge by this much (the hero is not stuck under the buttons)
@@ -70,11 +71,9 @@ namespace BAM.Game
             Place();
         }
 
-        // TilesAcross fit across a portrait screen (phones differ in shape); wider than PortraitAspect keeps that height
         void UpdateSize()
         {
-            float aspect = Mathf.Clamp(cam.aspect, 0.3f, PortraitAspect);
-            size = TilesAcross * 0.5f / aspect;
+            size = HalfHeight;
             cam.orthographicSize = size;
         }
 
