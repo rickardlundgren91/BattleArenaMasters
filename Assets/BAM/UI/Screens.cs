@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace BAM.UI
 {
     // CONTRACT between BAM.UI (owner: the menus thread) and BAM.Game (owner: the main thread). Docs/CONTRACTS.md explains it.
-    // Every screen is built in code with uGUI and the Lilita One font. Buttons call BAM.Core.Flow.Game (IGameFlow) and
+    // Every screen is built in code with uGUI and the Inter font. Buttons call BAM.Core.Flow.Game (IGameFlow) and
     // write BAM.Core.BamSettings; they never reach into BAM.Game.
     //
     // Every screen is built once in Init and then only shown and hidden. Screens form a stack (main menu -> hero select,

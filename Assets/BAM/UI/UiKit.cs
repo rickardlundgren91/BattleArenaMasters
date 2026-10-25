@@ -10,7 +10,7 @@ namespace BAM.UI
 {
     /// <summary>
     /// The shared look, also used by the in-match HUD (BAM.Game). Everything is built in code: rounded sprites are generated
-    /// once, text uses Lilita One. Sizes are in canvas units of the 1080x1920 reference (the real width is about 970-1080).
+    /// once, text uses Inter (Lilita One as fallback). Sizes are in canvas units of the 1080x1920 reference (the real width is about 970-1080).
     /// </summary>
     public static class UiKit
     {
