@@ -199,8 +199,27 @@ namespace BAM.Game
             Hint(hidden);
             IslandMarks(hidden);
             Fade();
+            Fps(dt);
             joy.Rest();
             if (!m.Player.Alive && joy.Held) joy.Release();
+        }
+
+        // the frames of the last half second, averaged (so a single slow frame does not flicker the number)
+        Text fpsText;
+        string[] fpsStrings;
+        float fpsTime;
+        int fpsFrames;
+
+        void Fps(float dt)
+        {
+            if (fpsText == null) return;
+            fpsTime += Time.unscaledDeltaTime;
+            fpsFrames++;
+            if (fpsTime < 0.5f) return;
+            int fps = Mathf.Clamp(Mathf.RoundToInt(fpsFrames / fpsTime), 0, fpsStrings.Length - 1);
+            fpsText.text = fpsStrings[fps];
+            fpsText.color = fps >= 55 ? Color.white : fps >= 45 ? UiKit.Gold : UiKit.Bad;
+            fpsTime = 0f; fpsFrames = 0;
         }
 
         void Top()
@@ -493,6 +512,16 @@ namespace BAM.Game
             respawnText = UiKit.Label(safe, "", 72, TextAnchor.MiddleCenter, Color.white);
             UiKit.Place(respawnText, 0.5f, 0.5f, 0f, 380f, 900f, 110f);
             Edge(respawnText, 4);
+
+            // development builds only (BAM > Build test APK, the editor): never in the release AAB
+            if (Debug.isDebugBuild)
+            {
+                fpsText = UiKit.Label(safe, "", 36, TextAnchor.UpperLeft, Color.white);
+                UiKit.Place(fpsText, 0f, 1f, 24f, -24f, 220f, 50f);
+                Edge(fpsText, 2);
+                fpsStrings = new string[241];
+                for (int i = 0; i < fpsStrings.Length; i++) fpsStrings[i] = i + " fps";
+            }
 
             // the guided match: chevrons over what to look at, and the black for the jump to the arena (on top of everything)
             canvasRect = (RectTransform)canvas.transform;
