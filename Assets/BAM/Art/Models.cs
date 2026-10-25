@@ -20,6 +20,8 @@ namespace BAM.Art
         public bool ThrowsProp;
         public float Height, Radius, BarWidth;
         public bool Ghost;
+        /// <summary>Rickard's imported model and clips; null = the model built in code.</summary>
+        public HeroArt Art;
     }
 
     /// <summary>Humanoid bone indices. Every two-legged model uses the same rig so one animator drives them all.</summary>
@@ -77,6 +79,12 @@ namespace BAM.Art
             }
             d.Mesh = b.ToSkinnedMesh("Hero " + hero + " t" + team, d.Pivots);
             d.BarWidth = 0.95f;
+            d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + hero);
+            if (d.Art != null)
+            {
+                d.Height = d.Art.Height;
+                d.ThrowsProp = false;
+            }
             cache[k] = d;
             return d;
         }

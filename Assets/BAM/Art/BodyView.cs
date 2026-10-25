@@ -1,13 +1,16 @@
 using System.Collections.Generic;
 using BAM.Sim;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using UnityEngine.Rendering;
 
 namespace BAM.Art
 {
     /// <summary>
-    /// A unit built from a <see cref="RigDef"/>: one rigidly skinned mesh animated by code (idle, walk, attack timed by the
-    /// windup, cast, hit flash, death), a ground decal with the team ring, a health bar and status markers.
+    /// A unit built from a <see cref="RigDef"/>: either one rigidly skinned mesh animated by code, or an imported hero model
+    /// (<see cref="HeroArt"/>) driven by its Mixamo clips through a small playable mixer. Both get idle, walk, an attack timed
+    /// by the windup, cast, hit flash and death, a ground decal with the team ring, a health bar and status markers.
     /// Everything is allocated in <see cref="Build"/>; the per-frame path only writes numbers.
     /// </summary>
     sealed class BodyView : UnitView
@@ -19,8 +22,21 @@ namespace BAM.Art
         RigDef def;
         Transform model;
         Transform[] bones;
-        SkinnedMeshRenderer smr;
-        Material opaque, fade;
+        Renderer[] rends;
+        Material[][] opaqueSets, fadeSets;
+        Material[] mats;          // every material instance of this view, for the hit flash
+        Material[] fadeMats;      // the fade instances, for the alpha
+        Material opaque;          // code models: the single instance (the ghost wolf tints it)
+
+        // imported models
+        Animator anim;
+        PlayableGraph graph;
+        AnimationMixerPlayable mixer;
+        AnimationClipPlayable[] clips;
+        float[] clipLen;
+        float atkSpeed = 1f, atkTotal = 0.5f, castLen = 0.6f, hitA = -1f, deathFadeAt = 0.55f;
+        bool imported;
+        const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5;
         Transform decalT;
         MeshFilter decalF;
         MeshRenderer decalR;
@@ -38,8 +54,6 @@ namespace BAM.Art
         Color flashColor = Color.white;
         UnitMarker marker = UnitMarker.None;
 
-        static readonly Color clear = new Color(0f, 0f, 0f, 0f);
-
         public void Build(RigDef d, int team)
         {
             def = d;
@@ -48,6 +62,13 @@ namespace BAM.Art
             var mg = new GameObject("Model");
             model = mg.transform;
             model.SetParent(transform, false);
+            if (d.Art != null && d.Art.Model != null) BuildImported(d.Art);
+            else BuildCode(d, mg);
+            BuildCommon(d);
+        }
+
+        void BuildCode(RigDef d, GameObject mg)
+        {
             bones = new Transform[d.Pivots.Length];
             for (int i = 0; i < bones.Length; i++)
             {
@@ -57,13 +78,14 @@ namespace BAM.Art
                 bones[i].SetParent(p < 0 ? model : bones[p], false);
                 bones[i].localPosition = d.Pivots[i] - (p < 0 ? Vector3.zero : d.Pivots[p]);
             }
-            smr = mg.AddComponent<SkinnedMeshRenderer>();
+            var smr = mg.AddComponent<SkinnedMeshRenderer>();
             smr.sharedMesh = d.Mesh;
             smr.bones = bones;
             smr.rootBone = bones[0];
             smr.quality = SkinQuality.Bone1;
             smr.updateWhenOffscreen = false;
             smr.localBounds = new Bounds(new Vector3(0f, d.Height * 0.5f - d.Pivots[0].y, 0f), new Vector3(d.Radius * 4f + 1f, d.Height + 1f, d.Radius * 4f + 1f));
+            Material fade;
             if (d.Ghost)
             {
                 opaque = ArtMaterials.Instance(ArtMaterials.UnlitFade);
@@ -77,6 +99,96 @@ namespace BAM.Art
             }
             smr.sharedMaterial = opaque;
             smr.receiveShadows = !d.Ghost;
+            rends = new Renderer[] { smr };
+            opaqueSets = new[] { new[] { opaque } };
+            fadeSets = new[] { new[] { fade } };
+            mats = d.Ghost ? new Material[0] : new[] { opaque, fade };
+            fadeMats = new[] { fade };
+        }
+
+        // Rickard's model: scaled to the hero's height, feet on the ground, his texture on our lit material (so the hit flash
+        // and the grass fade work the same as on everything else), clips mixed by weight every frame.
+        void BuildImported(HeroArt art)
+        {
+            imported = true;
+            bones = new Transform[0];
+            GameObject inst = Instantiate(art.Model, model, false);
+            inst.name = art.Model.name;
+            Transform it = inst.transform;
+            it.localPosition = Vector3.zero;
+            it.localRotation = Quaternion.identity;
+            rends = inst.GetComponentsInChildren<Renderer>(true);
+            Bounds bb = new Bounds();
+            for (int i = 0; i < rends.Length; i++) { if (i == 0) bb = rends[i].bounds; else bb.Encapsulate(rends[i].bounds); }
+            float h = bb.size.y > 0.01f ? bb.size.y : 1f;
+            float k = art.Height / h;
+            it.localScale = it.localScale * k;
+            it.localPosition = new Vector3(0f, (transform.position.y - bb.min.y) * k, 0f);
+
+            opaqueSets = new Material[rends.Length][];
+            fadeSets = new Material[rends.Length][];
+            var all = new List<Material>();
+            var fades = new List<Material>();
+            for (int i = 0; i < rends.Length; i++)
+            {
+                Material[] src = rends[i].sharedMaterials;
+                opaqueSets[i] = new Material[src.Length];
+                fadeSets[i] = new Material[src.Length];
+                for (int j = 0; j < src.Length; j++)
+                {
+                    Texture tex = src[j] != null ? src[j].mainTexture : null;
+                    if (tex == null) tex = Texture2D.whiteTexture;
+                    Material o = ArtMaterials.Instance(ArtMaterials.Lit), f = ArtMaterials.Instance(ArtMaterials.LitFade);
+                    o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex;
+                    f.SetTexture(ArtMaterials.BaseMap, tex); f.mainTexture = tex;
+                    opaqueSets[i][j] = o; fadeSets[i][j] = f;
+                    all.Add(o); all.Add(f); fades.Add(f);
+                }
+                rends[i].sharedMaterials = opaqueSets[i];
+                rends[i].receiveShadows = true;
+                if (rends[i] is SkinnedMeshRenderer sk) sk.updateWhenOffscreen = true; // attacks must always show, even at the screen edge
+            }
+            mats = all.ToArray();
+            fadeMats = fades.ToArray();
+
+            anim = inst.GetComponent<Animator>();
+            if (anim == null) anim = inst.AddComponent<Animator>();
+            anim.runtimeAnimatorController = null;
+            anim.applyRootMotion = false;
+            anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            AnimationClip idle = art.Idle;
+            if (idle == null) { Debug.LogWarning("[BAM.Art] " + art.name + " has no idle clip; the model stands still"); return; }
+            var src2 = new[] { art.Idle, art.Run, art.Attack, art.Cast, art.Hit, art.Death };
+            graph = PlayableGraph.Create("BAM " + art.name);
+            graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            var output = AnimationPlayableOutput.Create(graph, "Anim", anim);
+            mixer = AnimationMixerPlayable.Create(graph, src2.Length);
+            output.SetSourcePlayable(mixer);
+            clips = new AnimationClipPlayable[src2.Length];
+            clipLen = new float[src2.Length];
+            for (int c = 0; c < src2.Length; c++)
+            {
+                AnimationClip clip = src2[c] != null ? src2[c] : idle;
+                clips[c] = AnimationClipPlayable.Create(graph, clip);
+                clips[c].SetApplyFootIK(false);
+                clipLen[c] = Mathf.Max(0.1f, clip.length);
+                graph.Connect(clips[c], 0, mixer, c);
+                mixer.SetInputWeight(c, c == CIdle ? 1f : 0f);
+            }
+            // one-shot clips must hold their last frame, not loop back
+            clips[CDeath].SetDuration(clipLen[CDeath]);
+            castLen = Mathf.Min(0.9f, clipLen[CCast] / 1.2f);
+            deathFadeAt = Mathf.Clamp(clipLen[CDeath] * 0.9f, 0.6f, 2f);
+            graph.Play();
+        }
+
+        void OnDestroy()
+        {
+            if (graph.IsValid()) graph.Destroy();
+        }
+
+        void BuildCommon(RigDef d)
+        {
 
             var dg = new GameObject("Decal");
             decalT = dg.transform;
@@ -98,7 +210,7 @@ namespace BAM.Art
         /// <summary>Fresh state for a new life out of the pool.</summary>
         public void ResetState()
         {
-            moving = false; speed01 = 0f; moveW = 0f; atkT = -1f; castT = -1f; hitT = -1f; recoil = 0f; propBack = -1f;
+            moving = false; speed01 = 0f; moveW = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
@@ -122,13 +234,29 @@ namespace BAM.Art
         {
             windup = Mathf.Max(0.05f, w);
             atkT = 0f;
+            if (clips != null)
+            {
+                // line the clip's release up with the windup, and never let the follow-through drag on
+                float len = clipLen[CAttack];
+                atkSpeed = Mathf.Clamp(def.Art.AttackRelease * len / windup, 0.6f, 4f);
+                atkTotal = Mathf.Min(len / atkSpeed, windup + 0.45f);
+                clips[CAttack].SetTime(0.0);
+                clips[CAttack].SetTime(0.0);
+                clips[CAttack].SetSpeed(atkSpeed);
+            }
         }
 
-        public override void PlayCast() { castT = 0f; }
+        public override void PlayCast()
+        {
+            castT = 0f;
+            if (clips != null) { clips[CCast].SetTime(0.0); clips[CCast].SetTime(0.0); clips[CCast].SetSpeed(1.2f); }
+        }
 
         public override void PlayHit(bool big)
         {
             hitT = 0f;
+            hitA = 0f;
+            if (clips != null) { clips[CHit].SetTime(0.0); clips[CHit].SetTime(0.0); }
             hitLen = big ? 0.25f : 0.14f;
             recoil = big ? 1f : 0.6f;
             flashColor = big ? new Color(1f, 0.55f, 0.35f) : Color.white;
@@ -138,7 +266,11 @@ namespace BAM.Art
         {
             if (d == dead) return;
             dead = d;
-            if (d) { deathT = 0f; atkT = -1f; castT = -1f; }
+            if (d)
+            {
+                deathT = 0f; atkT = -1f; castT = -1f;
+                if (clips != null) { clips[CDeath].SetTime(0.0); clips[CDeath].SetTime(0.0); clips[CDeath].SetSpeed(1.0); }
+            }
             else
             {
                 deathT = -1f;
@@ -172,7 +304,7 @@ namespace BAM.Art
 
         // ---------------------------------------------------------------- look
 
-        float DeathAlpha => deathT < 0f ? 1f : Mathf.Clamp01(1f - (deathT - 0.55f) / 0.45f);
+        float DeathAlpha => deathT < 0f ? 1f : Mathf.Clamp01(1f - (deathT - deathFadeAt) / 0.45f);
 
         void ApplyLook()
         {
@@ -181,7 +313,7 @@ namespace BAM.Art
             if (on != renderersOn)
             {
                 renderersOn = on;
-                smr.enabled = on;
+                for (int i = 0; i < rends.Length; i++) rends[i].enabled = on;
             }
             decalR.enabled = on && !dead;
             bar.Visible = vis > 0.01f && !dead;
@@ -195,22 +327,24 @@ namespace BAM.Art
             bool wantFade = a < 0.99f;
             if (wantFade)
             {
-                fade.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, a));
-                if (!fading) { smr.sharedMaterial = fade; smr.shadowCastingMode = ShadowCastingMode.Off; fading = true; }
+                Color c = new Color(1f, 1f, 1f, a);
+                for (int i = 0; i < fadeMats.Length; i++) fadeMats[i].SetColor(ArtMaterials.BaseColor, c);
+                if (!fading)
+                {
+                    for (int i = 0; i < rends.Length; i++) { rends[i].sharedMaterials = fadeSets[i]; rends[i].shadowCastingMode = ShadowCastingMode.Off; }
+                    fading = true;
+                }
             }
             else if (fading)
             {
-                smr.sharedMaterial = opaque;
-                smr.shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                for (int i = 0; i < rends.Length; i++) { rends[i].sharedMaterials = opaqueSets[i]; rends[i].shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off; }
                 fading = false;
             }
         }
 
         void SetFlash(Color c)
         {
-            if (def.Ghost) return;
-            opaque.SetColor(ArtMaterials.EmissionColor, c);
-            fade.SetColor(ArtMaterials.EmissionColor, c);
+            for (int i = 0; i < mats.Length; i++) mats[i].SetColor(ArtMaterials.EmissionColor, c);
         }
 
         // ---------------------------------------------------------------- animation
@@ -221,7 +355,8 @@ namespace BAM.Art
             if (lastQuality != ArtKit.QualityVersion)
             {
                 lastQuality = ArtKit.QualityVersion;
-                if (!fading && !def.Ghost) smr.shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                if (!fading && !def.Ghost)
+                    for (int i = 0; i < rends.Length; i++) rends[i].shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
             }
             idleT += dt;
             moveW = Mathf.MoveTowards(moveW, moving && !dead ? 1f : 0f, dt * 6f);
@@ -242,9 +377,11 @@ namespace BAM.Art
             }
             recoil = Mathf.MoveTowards(recoil, 0f, dt * 5f);
 
+            if (imported) AnimateImported(dt);
             if (dead) AnimateDeath(dt);
             else
             {
+                if (!imported)
                 switch (def.Kind)
                 {
                     case RigKind.Humanoid: PoseHumanoid(dt); break;
@@ -268,6 +405,47 @@ namespace BAM.Art
             }
         }
 
+        void AnimateImported(float dt)
+        {
+            if (clips == null) return;
+            float wAtk = 0f, wCast = 0f, wHit = 0f, wDeath = 0f;
+            if (dead)
+            {
+                wDeath = deathT < 0f ? 1f : Mathf.Clamp01(deathT / 0.15f);
+            }
+            else
+            {
+                if (atkT >= 0f)
+                {
+                    atkT += dt;
+                    wAtk = Mathf.Min(Mathf.Clamp01(atkT / 0.06f), Mathf.Clamp01((atkTotal - atkT) / 0.15f));
+                    if (atkT >= atkTotal) atkT = -1f;
+                }
+                if (castT >= 0f)
+                {
+                    castT += dt;
+                    wCast = Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
+                    if (castT >= castLen) castT = -1f;
+                }
+                if (hitA >= 0f)
+                {
+                    hitA += dt;
+                    wHit = Mathf.Sin(Mathf.Clamp01(hitA / 0.3f) * Mathf.PI) * 0.6f;
+                    if (hitA >= 0.3f) hitA = -1f;
+                }
+            }
+            float over = wAtk + wCast + wHit + wDeath;
+            if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
+            float rest = 1f - over;
+            mixer.SetInputWeight(CIdle, rest * (1f - moveW));
+            mixer.SetInputWeight(CRun, rest * moveW);
+            mixer.SetInputWeight(CAttack, wAtk);
+            mixer.SetInputWeight(CCast, wCast);
+            mixer.SetInputWeight(CHit, wHit);
+            mixer.SetInputWeight(CDeath, wDeath);
+            clips[CRun].SetSpeed(0.8f + 0.4f * speed01);
+        }
+
         static float Back(float t) { t -= 1f; return 1f + t * t * (2.7f * t + 1.7f); }
         static float Smooth(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
 
@@ -277,7 +455,8 @@ namespace BAM.Art
             float before = deathT;
             deathT += dt;
             float t = Mathf.Clamp01(deathT / 0.45f);
-            if (def.Kind == RigKind.Tower)
+            if (imported) { }
+            else if (def.Kind == RigKind.Tower)
             {
                 model.localPosition = new Vector3(Mathf.Sin(deathT * 40f) * 0.04f * (1f - t), -t * t * 2.2f, 0f);
                 model.localRotation = Quaternion.Euler(t * 12f, 0f, t * 6f);
@@ -295,8 +474,8 @@ namespace BAM.Art
                 model.localRotation = Quaternion.Euler(0f, 0f, 85f * Smooth(t));
                 model.localPosition = new Vector3(0f, Mathf.Sin(t * Mathf.PI) * 0.1f, 0f);
             }
-            if (deathT > 0.55f || before <= 0.55f) ApplyLook();
-            if (deathT > 1.2f) deathT = 1.2f;
+            if (deathT > deathFadeAt || before <= deathFadeAt) ApplyLook();
+            if (deathT > deathFadeAt + 0.65f) deathT = deathFadeAt + 0.65f;
         }
 
         // Positive x rotation swings a hanging limb backward, negative forward (Unity's left-handed frame).

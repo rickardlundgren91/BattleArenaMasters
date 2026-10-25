@@ -12,17 +12,38 @@ namespace BAM.Art
         const byte TVoid = 0, TGround = 1, TGrass = 2, TWall = 3;
         const float WallH = 1.0f, CliffDepth = 2.6f, BushH = 0.62f;
 
+        // Rickard's painted textures (Resources/BAMArt/Arena) and how many units one repeat covers. Missing file = palette colour.
+        sealed class Layer
+        {
+            public readonly MeshBuilder B = new MeshBuilder();
+            public Texture2D T;
+            public string Name;
+        }
+
+        static Layer Load(string name, float repeat)
+        {
+            var l = new Layer { Name = name, T = Resources.Load<Texture2D>("BAMArt/Arena/" + name) };
+            l.B.WorldUV = repeat;
+            return l;
+        }
+
+        static float waterY;
+
         public static GameObject Build(ArenaInfo info)
         {
             var root = new GameObject("Arena");
             var solid = new MeshBuilder();
             var marks = new MeshBuilder();
+            Layer ground = Load("T_BAM_Ground_Cobble", 6f), road = Load("T_BAM_Ground_Road2", 4f), grass = Load("T_BAM_Ground_Grass", 6f),
+                wall = Load("T_BAM_Block", 2f), kerb = Load("T_BAM_Kerb", 1f), water = Load("T_BAM_Water", 6f), plinth = Load("T_BAM_Plinth", 3f);
             int w = info.Width, h = info.Height;
             float laneX = w * 0.5f;
             var rnd = new System.Random(1234);
+            bool moat = water.T != null;
+            waterY = moat ? -0.55f : -CliffDepth;
 
-            // abyss far below, so the camera never sees the empty background at the map edge
-            solid.Color(Pal.Void).Face(new Vector3(-40f, -CliffDepth, -40f), new Vector3(-40f, -CliffDepth, h + 40f), new Vector3(w + 40f, -CliffDepth, h + 40f), new Vector3(w + 40f, -CliffDepth, -40f));
+            // water (or an abyss) all around and below, so the camera never sees the empty background at the map edge
+            Pick(water, solid, Pal.Void).Face(new Vector3(-40f, waterY, -40f), new Vector3(-40f, waterY, h + 40f), new Vector3(w + 40f, waterY, h + 40f), new Vector3(w + 40f, waterY, -40f));
 
             for (int ty = 0; ty < h; ty++)
                 for (int tx = 0; tx < w; tx++)
@@ -36,30 +57,31 @@ namespace BAM.Art
                     if (code == TWall && !inRock)
                     {
                         // stone block, a lighter cap and a dark seam so neighbours read as one wall
-                        solid.Color(Pal.Stone).Box(new Vector3(c.x, WallH * 0.45f, c.z), new Vector3(1f, WallH * 0.9f, 1f), Pal.StoneDark);
-                        solid.Color(Pal.StoneTop).Box(new Vector3(c.x, WallH * 0.95f, c.z), new Vector3(0.96f, WallH * 0.1f, 0.96f), Pal.StoneTop);
-                        if (((tx + ty) & 1) == 0) solid.Color(Pal.StoneDark).Box(new Vector3(c.x, WallH * 0.45f, c.z), new Vector3(1.01f, 0.04f, 1.01f));
+                        MeshBuilder wb = Pick(wall, solid, Pal.Stone);
+                        wb.Box(new Vector3(c.x, WallH * 0.45f, c.z), new Vector3(1f, WallH * 0.9f, 1f), wall.T != null ? -1 : Pal.StoneDark);
+                        Pick(wall, solid, Pal.StoneTop).Box(new Vector3(c.x, WallH * 0.95f, c.z), new Vector3(0.96f, WallH * 0.1f, 0.96f), wall.T != null ? -1 : Pal.StoneTop);
+                        if (wall.T == null && ((tx + ty) & 1) == 0) solid.Color(Pal.StoneDark).Box(new Vector3(c.x, WallH * 0.45f, c.z), new Vector3(1.01f, 0.04f, 1.01f));
                         // contact shadow on the ground around the block
                         marks.Color(Pal.ShadowSoft).Face(new Vector3(x0 - 0.25f, 0.012f, z0 - 0.25f), new Vector3(x0 - 0.25f, 0.012f, z1 + 0.25f), new Vector3(x1 + 0.25f, 0.012f, z1 + 0.25f), new Vector3(x1 + 0.25f, 0.012f, z0 - 0.25f));
                     }
                     else
                     {
-                        byte g;
                         float dLane = Mathf.Abs(c.x - laneX);
-                        if (code == TGrass) g = Pal.GrassDark;
-                        else if (dLane < 1.6f) g = Pal.Road;
-                        else if (dLane < 2.1f) g = Pal.RoadEdge;
-                        else g = ((tx + ty) & 1) == 0 ? Pal.Ground : Pal.GroundB;
-                        solid.Color(g).Face(new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), new Vector3(x1, 0f, z0));
+                        MeshBuilder gb;
+                        if (code == TGrass) gb = Pick(grass, solid, Pal.GrassDark);
+                        else if (dLane < 1.6f) gb = Pick(road, solid, Pal.Road);
+                        else if (dLane < 2.1f && road.T == null) gb = solid.Color(Pal.RoadEdge);
+                        else gb = Pick(ground, solid, ((tx + ty) & 1) == 0 ? Pal.Ground : Pal.GroundB);
+                        gb.Face(new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), new Vector3(x1, 0f, z0));
                         if (code == TGrass) Bush(solid, c, tx, ty, rnd);
-                        else if (g == Pal.Ground && rnd.NextDouble() < 0.18) Pebble(solid, c, rnd);
+                        else if (ground.T == null && dLane >= 2.1f && rnd.NextDouble() < 0.18) Pebble(solid, c, rnd);
                     }
 
                     // cliffs where the map ends or a void tile begins
-                    if (Void(info, tx, ty - 1)) Cliff(solid, new Vector3(x1, 0f, z1), new Vector3(x0, 0f, z1)); // top row edge (+z)
-                    if (Void(info, tx, ty + 1)) Cliff(solid, new Vector3(x0, 0f, z0), new Vector3(x1, 0f, z0));
-                    if (Void(info, tx - 1, ty)) Cliff(solid, new Vector3(x0, 0f, z1), new Vector3(x0, 0f, z0));
-                    if (Void(info, tx + 1, ty)) Cliff(solid, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1));
+                    if (Void(info, tx, ty - 1)) Cliff(solid, kerb, new Vector3(x1, 0f, z1), new Vector3(x0, 0f, z1));
+                    if (Void(info, tx, ty + 1)) Cliff(solid, kerb, new Vector3(x0, 0f, z0), new Vector3(x1, 0f, z0));
+                    if (Void(info, tx - 1, ty)) Cliff(solid, kerb, new Vector3(x0, 0f, z1), new Vector3(x0, 0f, z0));
+                    if (Void(info, tx + 1, ty)) Cliff(solid, kerb, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1));
                 }
 
             // lane dashes down the road between the towers
@@ -87,15 +109,26 @@ namespace BAM.Art
                 {
                     Vector3 p = info.Towers[t];
                     p.y = 0f;
-                    solid.Color(Pal.StoneDark).Cylinder(p, 1.45f, 1.35f, 0.12f, 16, true, Pal.StoneTop);
+                    Pick(plinth, solid, Pal.StoneDark).Cylinder(p, 1.45f, 1.35f, 0.12f, 16, true, plinth.T != null ? -1 : Pal.StoneTop);
                     solid.Color(Pal.Team(t)).Cylinder(p + new Vector3(0f, 0.12f, 0f), 1.3f, 1.3f, 0.03f, 16, true, Pal.Team(t));
-                    solid.Color(Pal.StoneTop).Cylinder(p + new Vector3(0f, 0.12f, 0f), 1.12f, 1.12f, 0.035f, 16, true, Pal.StoneTop);
+                    Pick(plinth, solid, Pal.StoneTop).Cylinder(p + new Vector3(0f, 0.12f, 0f), 1.12f, 1.12f, 0.035f, 16, true, plinth.T != null ? -1 : Pal.StoneTop);
                 }
 
-            Add(root, "Ground", solid.ToMesh("Arena"), ArtMaterials.Lit, true);
-            Add(root, "Marks", marks.ToMesh("Arena Marks"), ArtMaterials.UnlitFade, false).GetComponent<MeshRenderer>().sharedMaterial = MarksMaterial();
+            Add(root, "Solid", solid.ToMesh("Arena"), ArtMaterials.Lit, true);
+            foreach (Layer l in new[] { ground, road, grass, wall, kerb, water, plinth })
+            {
+                if (l.T == null || l.B.VertexCount == 0) continue;
+                var m = ArtMaterials.Instance(ArtMaterials.Lit);
+                m.SetTexture(ArtMaterials.BaseMap, l.T);
+                m.mainTexture = l.T;
+                Add(root, l.Name, l.B.ToMesh(l.Name), m, l != water);
+            }
+            Add(root, "Marks", marks.ToMesh("Arena Marks"), MarksMaterial(), false);
             return root;
         }
+
+        /// <summary>The textured layer when its picture loaded, else the palette mesh in the fallback colour.</summary>
+        static MeshBuilder Pick(Layer l, MeshBuilder solid, byte fallback) => l.T != null ? l.B : solid.Color(fallback);
 
         static Material marksMat;
         static Material MarksMaterial()
@@ -133,17 +166,20 @@ namespace BAM.Art
             return false;
         }
 
-        // Edge from a to b, going clockwise round the tile seen from above, so the face looks outward.
-        static void Cliff(MeshBuilder m, Vector3 a, Vector3 b)
+        // Edge from a to b, ordered so the face looks outward (see the callers).
+        static void Cliff(MeshBuilder m, Layer kerb, Vector3 a, Vector3 b)
         {
             Vector3 down = Vector3.down;
-            m.Color(Pal.Cliff).Face(a, b, b + down * 0.5f, a + down * 0.5f);
-            m.Color(Pal.CliffDark).Face(a + down * 0.5f, b + down * 0.5f, b + down * CliffDepth, a + down * CliffDepth);
+            float bottom = -waterY + 0.1f;
+            MeshBuilder top = Pick(kerb, m, Pal.Cliff);
+            top.Face(a, b, b + down * 0.5f, a + down * 0.5f);
+            m.Color(Pal.CliffDark).Face(a + down * 0.5f, b + down * 0.5f, b + down * Mathf.Max(bottom, 0.6f), a + down * Mathf.Max(bottom, 0.6f));
             // a low curb of stone along the edge: you see where the arena stops
             Vector3 mid = (a + b) * 0.5f, along = (b - a).normalized, outward = new Vector3(along.z, 0f, -along.x);
-            m.Color(Pal.StoneTop).At(mid - outward * 0.07f + Vector3.up * 0.05f, new Vector3(0f, Mathf.Atan2(along.x, along.z) * Mathf.Rad2Deg, 0f));
-            m.Box(Vector3.zero, new Vector3(0.14f, 0.1f, 1.0f), Pal.StoneTop);
-            m.Reset();
+            MeshBuilder cb = Pick(kerb, m, Pal.StoneTop);
+            cb.At(mid - outward * 0.07f + Vector3.up * 0.05f, new Vector3(0f, Mathf.Atan2(along.x, along.z) * Mathf.Rad2Deg, 0f));
+            cb.Box(Vector3.zero, new Vector3(0.14f, 0.1f, 1.0f), kerb.T != null ? -1 : Pal.StoneTop);
+            cb.Reset();
         }
 
         // A round hedge clump per grass tile. Clumps overlap their neighbours, so a grass area reads as one bush.

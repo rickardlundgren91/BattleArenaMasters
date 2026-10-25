@@ -19,9 +19,12 @@ namespace BAM.Art
         public Matrix4x4 M = Matrix4x4.identity;
         public int Bone;
         Vector2 col;
+        /// <summary>&gt; 0: UVs come from the world position instead of the palette, one texture repeat every WorldUV units
+        /// (top faces use x/z, walls the horizontal axis they run along and y). For the textured arena.</summary>
+        public float WorldUV;
 
         public int VertexCount => v.Count;
-        public void Clear() { v.Clear(); n.Clear(); uv.Clear(); bones.Clear(); tri.Clear(); M = Matrix4x4.identity; Bone = 0; }
+        public void Clear() { v.Clear(); n.Clear(); uv.Clear(); bones.Clear(); tri.Clear(); M = Matrix4x4.identity; Bone = 0; WorldUV = 0f; }
 
         public MeshBuilder Color(byte c) { col = Pal.UV(c); return this; }
         public MeshBuilder At(Vector3 pos) { M = Matrix4x4.Translate(pos); return this; }
@@ -30,9 +33,17 @@ namespace BAM.Art
 
         int Vert(Vector3 p, Vector3 normal)
         {
-            v.Add(M.MultiplyPoint3x4(p));
-            n.Add(M.MultiplyVector(normal).normalized);
-            uv.Add(col);
+            Vector3 wp = M.MultiplyPoint3x4(p), wn = M.MultiplyVector(normal).normalized;
+            v.Add(wp);
+            n.Add(wn);
+            if (WorldUV > 0f)
+            {
+                float k = 1f / WorldUV;
+                if (Mathf.Abs(wn.y) > 0.6f) uv.Add(new Vector2(wp.x * k, wp.z * k));
+                else if (Mathf.Abs(wn.x) > Mathf.Abs(wn.z)) uv.Add(new Vector2(wp.z * k, wp.y * k));
+                else uv.Add(new Vector2(wp.x * k, wp.y * k));
+            }
+            else uv.Add(col);
             bones.Add(Bone);
             return v.Count - 1;
         }
