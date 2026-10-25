@@ -28,6 +28,7 @@ namespace BAM.Art.Editor
             bool made = false;
             made |= Make(ArtMaterials.LitName, "Universal Render Pipeline/Simple Lit", false, false, force);
             made |= Make(ArtMaterials.LitFadeName, "Universal Render Pipeline/Simple Lit", true, false, force);
+            made |= Make(ArtMaterials.LitClipName, "Universal Render Pipeline/Simple Lit", false, false, force, true);
             made |= Make(ArtMaterials.UnlitName, "Universal Render Pipeline/Unlit", false, false, force);
             made |= Make(ArtMaterials.UnlitFadeName, "Universal Render Pipeline/Unlit", true, false, force);
             made |= Make(ArtMaterials.UnlitAddName, "Universal Render Pipeline/Unlit", true, true, force);
@@ -40,7 +41,7 @@ namespace BAM.Art.Editor
             }
         }
 
-        static bool Make(string name, string shaderName, bool transparent, bool additive, bool force)
+        static bool Make(string name, string shaderName, bool transparent, bool additive, bool force, bool clip = false)
         {
             string path = Dir + "/" + name + ".mat";
             if (!force && AssetDatabase.LoadAssetAtPath<Material>(path) != null) return false;
@@ -56,6 +57,7 @@ namespace BAM.Art.Editor
             if (isNew) m = new Material(shader);
             else m.shader = shader;
             ArtMaterials.SetupFallback(m, transparent, additive);
+            if (clip) ArtMaterials.SetupClip(m);
             // let URP's own inspector code finish the job (keywords, passes, queue) exactly as it would by hand
             BaseShaderGUI.SetupMaterialBlendMode(m);
             if (m.HasProperty("_EmissionColor"))

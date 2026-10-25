@@ -59,6 +59,20 @@ namespace BAM.Art.Editor
             "ggg.........ggg", "ggg.........ggg", "...............", "...............", "...##.....##...", "...##.....##...",
         };
 
+        // The guided match's training island (Sim TutorialIsland.cs IslandMap), built beside the arena at x + IslandX.
+        const float IslandX = 40f;
+        static readonly string[] IslandLower =
+        {
+            "     ...     ", "     ...     ", "     ...     ", "             ", "             ",
+            "  .........  ", "  .........  ", "  .........  ", "  .........  ", "  .... ....  ",
+            "  .........  ", "ggg.......ggg", "gg#.......ggg", "ggg.......#gg", "ggg.......#gg",
+            "ggg.......#gg", "g...........g", "g...........g", "g...........g", "g...........g",
+            "g...........g", "g...........g", "gg#.......ggg", "gg#.......ggg", "gg#.......ggg",
+            "ggg.......#gg", "ggg.......ggg", "  .........  ", "  .... ....  ", "  .........  ",
+            "  .........  ", "  .........  ", "  .........  ",
+        };
+        GameObject island;
+
         static readonly HeroId[] heroes = { HeroId.Bram, HeroId.Fenn, HeroId.Tyra, HeroId.Moa, HeroId.Knut, HeroId.Tikta, HeroId.Blast };
 
         UnitView[,] heroViews = new UnitView[2, 7];
@@ -89,6 +103,7 @@ namespace BAM.Art.Editor
             ArtKit.Init();
             ArtKit.ApplyQuality(GraphicsQuality.High);
             ArtKit.BuildArena(MakeArena());
+            BuildIsland(false);
             Camera mc = Camera.main;
             if (mc == null)
             {
@@ -150,9 +165,36 @@ namespace BAM.Art.Editor
 
             aim = ArtKit.CreateAim();
 
-            focus = new[] { new Vector3(7.5f, 0f, 9f), new Vector3(7.5f, 0f, 13f), new Vector3(7.5f, 0f, 17f), new Vector3(7.5f, 0f, 21.5f), new Vector3(7.5f, 0f, 25f), new Vector3(7.5f, 0f, 17.5f) };
-            focusName = new[] { "Heroes", "Minions, wolf", "Projectiles", "Zones", "Effects", "Whole map" };
+            focus = new[] { new Vector3(7.5f, 0f, 9f), new Vector3(7.5f, 0f, 13f), new Vector3(7.5f, 0f, 17f), new Vector3(7.5f, 0f, 21.5f), new Vector3(7.5f, 0f, 25f), new Vector3(7.5f, 0f, 17.5f),
+                new Vector3(IslandX + 6.5f, 0f, 50f - 11.4f), new Vector3(IslandX + 6.5f, 0f, 50f - 24f) };
+            focusName = new[] { "Heroes", "Minions, wolf", "Projectiles", "Zones", "Effects", "Whole map", "Island", "Island bridge, lane" };
             Debug.Log("[BAM.Art] Preview ready. Buttons top left; the Scene view works too.");
+        }
+
+        void BuildIsland(bool rise)
+        {
+            if (island != null) Destroy(island);
+            const int w = 13, h = 50;
+            var tiles = new byte[w * h];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    byte t;
+                    if (y < 17)
+                    {
+                        float dx = x + 0.5f - 6.5f, dy = y + 0.5f - 11f, d = Mathf.Sqrt(dx * dx + dy * dy);
+                        bool neck = y == 16 && x >= 5 && x <= 7;
+                        t = d > 5.25f && !neck ? (byte)0 : d > 4f && Mathf.Abs(dx) > 2.6f && Mathf.Abs(dy) > 2.6f ? (byte)2 : (byte)1;
+                    }
+                    else
+                    {
+                        char ch = IslandLower[y - 17][x];
+                        t = ch == ' ' ? (byte)0 : ch == 'g' ? (byte)2 : ch == '#' ? (byte)3 : (byte)1;
+                    }
+                    tiles[y * w + x] = t;
+                }
+            island = ArtKit.BuildArena(new ArenaInfo { Width = w, Height = h, Tiles = tiles, Rocks = new Vector3[0], Island = true, LaneRises = rise });
+            island.transform.position = new Vector3(IslandX, 0f, 0f);
         }
 
         void AddOther(UnitView v, Vector3 p, int team)
@@ -269,6 +311,9 @@ namespace BAM.Art.Editor
                 float dist = (focusIndex == focus.Length - 1 ? 3.2f : 1f) * zoom;
                 camT.position = f + new Vector3(0f, 11.5f, -7.6f) * dist;
                 camT.rotation = Quaternion.Euler(56.5f, 0f, 0f);
+                // the island's sky (the match sets the same colour on its camera there)
+                Camera cam = camT.GetComponent<Camera>();
+                if (cam != null) cam.backgroundColor = focusIndex >= 6 ? new Color32(0x79, 0xb9, 0xee, 0xff) : new Color(0.11f, 0.14f, 0.25f);
             }
         }
 
@@ -330,6 +375,7 @@ namespace BAM.Art.Editor
                 low = !low;
                 ArtKit.ApplyQuality(low ? GraphicsQuality.Low : GraphicsQuality.High);
             }
+            if (GUILayout.Button("Island: raise the bridge")) { BuildIsland(true); focusIndex = 7; }
             auto = GUILayout.Toggle(auto, "Attack every 2 s");
             GUILayout.EndArea();
         }

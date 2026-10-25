@@ -26,6 +26,12 @@ namespace BAM.Art
         public Vector3[] Rocks;
         /// <summary>Tower positions in world space, index = team.</summary>
         public Vector3[] Towers;
+        /// <summary>The guided match's round training island (Tutorial island map): rows 0-16 are drawn as Rickard's painted
+        /// platform, rows 17+ as the bridge and lane, all with his island textures, over a sky with a cloud sea.</summary>
+        public bool Island;
+        /// <summary>Island only: the bridge and lane (rows 17+) rise 3 units into place over 0.9 s instead of standing there.
+        /// Set it when the arena is rebuilt because the bridge opened.</summary>
+        public bool LaneRises;
 
         public int Tile(int tx, int ty) => Tiles[ty * Width + tx];
         /// <summary>World centre of tile (tx, ty), ty counted from the top row.</summary>

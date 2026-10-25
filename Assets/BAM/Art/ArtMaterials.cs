@@ -11,7 +11,7 @@ namespace BAM.Art
         public const string Folder = "BAMArt/";
         // Asset names, shared with the editor script that creates them.
         public const string LitName = "BAM_Lit", LitFadeName = "BAM_LitFade", UnlitName = "BAM_Unlit", UnlitFadeName = "BAM_UnlitFade",
-            UnlitAddName = "BAM_UnlitAdd", ParticleAddName = "BAM_ParticleAdd", ParticleAlphaName = "BAM_ParticleAlpha";
+            UnlitAddName = "BAM_UnlitAdd", LitClipName = "BAM_LitClip", ParticleAddName = "BAM_ParticleAdd", ParticleAlphaName = "BAM_ParticleAlpha";
 
         public static readonly int BaseMap = Shader.PropertyToID("_BaseMap");
         public static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
@@ -21,6 +21,8 @@ namespace BAM.Art
         public static Material Lit;
         /// <summary>Same look, alpha blended: units in grass, dying units.</summary>
         public static Material LitFade;
+        /// <summary>Lit with alpha clipping (cutoff 0.5): painted pictures with holes, e.g. the island's cliffs and stalactites.</summary>
+        public static Material LitClip;
         /// <summary>Opaque unlit palette: health bars, team rings.</summary>
         public static Material Unlit;
         /// <summary>Alpha-blended unlit palette: shadows, rings, zones, aim, the ghost wolf.</summary>
@@ -37,6 +39,7 @@ namespace BAM.Art
             ready = true;
             Lit = Make(LitName, "Universal Render Pipeline/Simple Lit", false, false, Pal.Texture);
             LitFade = Make(LitFadeName, "Universal Render Pipeline/Simple Lit", true, false, Pal.Texture);
+            LitClip = Make(LitClipName, "Universal Render Pipeline/Simple Lit", false, false, Pal.Texture, true);
             Unlit = Make(UnlitName, "Universal Render Pipeline/Unlit", false, false, Pal.Texture);
             UnlitFade = Make(UnlitFadeName, "Universal Render Pipeline/Unlit", true, false, Pal.Texture);
             UnlitAdd = Make(UnlitAddName, "Universal Render Pipeline/Unlit", true, true, Pal.Texture);
@@ -47,7 +50,7 @@ namespace BAM.Art
             UnlitAdd.renderQueue = 3050;
         }
 
-        static Material Make(string asset, string shader, bool transparent, bool additive, Texture tex)
+        static Material Make(string asset, string shader, bool transparent, bool additive, Texture tex, bool clip = false)
         {
             Material src = Resources.Load<Material>(Folder + asset);
             Material m;
@@ -61,6 +64,7 @@ namespace BAM.Art
                 if (s == null) s = Shader.Find("Universal Render Pipeline/Unlit");
                 m = new Material(s);
                 SetupFallback(m, transparent, additive);
+                if (clip) SetupClip(m);
             }
             m.name = asset + " (BAM)";
             m.hideFlags = HideFlags.DontSave;
@@ -101,6 +105,16 @@ namespace BAM.Art
                 m.EnableKeyword("_EMISSION");
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             }
+        }
+
+        /// <summary>Alpha clipping on an opaque URP material (what the inspector's Alpha Clipping box does).</summary>
+        public static void SetupClip(Material m)
+        {
+            if (m.HasProperty("_AlphaClip")) m.SetFloat("_AlphaClip", 1f);
+            if (m.HasProperty("_Cutoff")) m.SetFloat("_Cutoff", 0.5f);
+            m.EnableKeyword("_ALPHATEST_ON");
+            m.SetOverrideTag("RenderType", "TransparentCutout");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
         }
 
         /// <summary>A private copy for one view (hit flash, fade, tint). Made when the view is created, reused by its pool.</summary>

@@ -42,14 +42,21 @@ namespace BAM.Art
             bool moat = water.T != null;
             waterY = moat ? -0.55f : -CliffDepth;
 
-            // water (or an abyss) all around and below, so the camera never sees the empty background at the map edge
-            Pick(water, solid, Pal.Void).Face(new Vector3(-40f, waterY, -40f), new Vector3(-40f, waterY, h + 40f), new Vector3(w + 40f, waterY, h + 40f), new Vector3(w + 40f, waterY, -40f));
+            // water (or an abyss) all around and below, so the camera never sees the empty background at the map edge;
+            // the island floats over its own cloud sea instead
+            if (!info.Island) Pick(water, solid, Pal.Void).Face(new Vector3(-40f, waterY, -40f), new Vector3(-40f, waterY, h + 40f), new Vector3(w + 40f, waterY, h + 40f), new Vector3(w + 40f, waterY, -40f));
 
             for (int ty = 0; ty < h; ty++)
                 for (int tx = 0; tx < w; tx++)
                 {
                     int code = info.Tile(tx, ty);
                     if (code == TVoid) continue;
+                    if (info.Island)
+                    {
+                        // the painted platform covers rows 0-16 (only its bushes come from here); Island draws the bridge and lane
+                        if (ty < Island.PlatformRows && code == TGrass) Bush(solid, info.TileCenter(tx, ty), tx, ty, rnd);
+                        continue;
+                    }
                     Vector3 c = info.TileCenter(tx, ty);
                     float x0 = c.x - 0.5f, x1 = c.x + 0.5f, z0 = c.z - 0.5f, z1 = c.z + 0.5f;
                     bool inRock = InRock(info, c);
@@ -124,6 +131,7 @@ namespace BAM.Art
                 Add(root, l.Name, l.B.ToMesh(l.Name), m, l != water);
             }
             Add(root, "Marks", marks.ToMesh("Arena Marks"), MarksMaterial(), false);
+            if (info.Island) Island.Build(root, info);
             return root;
         }
 
@@ -139,7 +147,7 @@ namespace BAM.Art
             return marksMat;
         }
 
-        static GameObject Add(GameObject root, string name, Mesh mesh, Material mat, bool lit)
+        internal static GameObject Add(GameObject root, string name, Mesh mesh, Material mat, bool lit)
         {
             var go = new GameObject(name);
             go.transform.SetParent(root.transform, false);
@@ -183,7 +191,7 @@ namespace BAM.Art
         }
 
         // A round hedge clump per grass tile. Clumps overlap their neighbours, so a grass area reads as one bush.
-        static void Bush(MeshBuilder m, Vector3 c, int tx, int ty, System.Random rnd)
+        internal static void Bush(MeshBuilder m, Vector3 c, int tx, int ty, System.Random rnd)
         {
             for (int i = 0; i < 3; i++)
             {
