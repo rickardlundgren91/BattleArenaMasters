@@ -37,7 +37,7 @@ Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
 
 | Folder (`Assets/BAM/...`) | Assembly | Owner | What |
 |---|---|---|---|
-| `Sim/` | BAM.Sim (no UnityEngine) | main thread; `Sim/Bots/`: bots thread ("Porta bottarna") | The rules: map, heroes, minions, towers, line of sight, bots. Deterministic, fixed 60 Hz step, seeded RNG, runs headless in .NET 8. Also the shared ids (`Ids.cs`) and hero texts (`HeroCatalog.cs`). |
+| `Sim/` | BAM.Sim (no UnityEngine) | main thread; `Sim/Bots/`: bots thread ("Porta bottarna"); `Minions.cs`, `Tutorial*.cs`: minions thread | The rules: map, heroes, minions, towers, line of sight, bots. Deterministic, fixed 60 Hz step, seeded RNG, runs headless in .NET 8. Also the shared ids (`Ids.cs`) and hero texts (`HeroCatalog.cs`). |
 | `Core/` | BAM.Core | main thread | Settings (`BamSettings`), `MatchSetup`/`MatchResult`, `IGameFlow` + `Flow.Game`, `BamInfo`. Tiny and stable. |
 | `Game/` | BAM.Game | match thread ("Bygg matchskärmen"); `Boot.cs` stays as the main thread wrote it | Boot, match driver, input (joystick, special tap/drag), camera, view sync, HUD, guided match. References everything below. |
 | `Art/` (+ `Art/Editor/`) | BAM.Art (+ BAM.Art.Editor) | graphics thread | Everything visible in the world, built in code: arena, heroes, wolf, minions, towers, projectiles, zones, effects, aim, health bars, materials. |
@@ -46,6 +46,10 @@ Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
 | `Analytics/`, `Branding/`, `Resources/BAM/Licenses.txt`, `Docs/play/`, `Docs/LICENSES.md` | BAM.Analytics | Play thread | Analytics behind consent, privacy policy, Data safety, content rating, store texts, app icon and feature graphic, licenses. |
 | `Editor/Build/`, `Settings/`, `Scenes/`, `Docs/guides/`, `Packages/manifest.json` | BAM.Build.Editor | build thread | Android player settings, quality levels Low/High (URP assets), the Build AAB menu, version codes, keystore guide, package clean-up, the first scene. ProjectSettings change only through its setup script in Rickard's Unity. |
 | `Docs/ARCHITECTURE.md`, `CONTRACTS.md`, `DECISIONS.md` | | main thread | Ask the main thread to change them. |
+
+Hand-overs: a helper thread tells the main thread which files are ready; the main thread compile-checks, commits and sends
+the commit to the sync thread ("Synka filerna till din dator"), which copies committed states to Rickard's PC. Never copy
+the live working copy to his PC: other threads edit it mid-work.
 
 Dependencies point one way: `Sim <- Core <- {Audio, Art, Analytics} <- UI <- Game` (UI uses Audio; Game uses all).
 Nothing references BAM.Game. Editor assemblies are editor-only (`includePlatforms: ["Editor"]`).

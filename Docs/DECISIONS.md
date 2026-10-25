@@ -13,13 +13,16 @@ before going beyond it.
 - Everything else from the old game is out: online, friends, voice, progression, shop, talents, WoW modes, RL.
 
 ## Rule changes against the old game
-- **Fenn's wolf is spectral:** it moves through walls and units. When thrown (drag) it homes on an enemy hero in range
-  and follows it; if no enemy hero is near it bites minions. Throw range about 7 tiles ("fairly long, like Popol and
-  Kupa in Mobile Legends"), to be tuned after playtests.
+- **Fenn's wolf can be thrown:** tap = it follows Fenn and bites enemies near him; drag = it is thrown up to 6 tiles
+  ("like Popol and Kupa in Mobile Legends"), homes on an enemy hero in sight and pounces (bite + short root); if no enemy
+  hero is near it bites minions. Walls stop it: it walks round them, a throw ends at the first wall and its bite needs a
+  clear line like everyone's (Rickard 2026-10-25 14:50-14:51, after it won 90 % against bots going through walls; this
+  replaced the first "spectral, through walls, 7 tiles" version). It still passes through bodies. To be tuned after playtests.
 - **Fenn's clone (Phantom Step) works like the old ABC2 hero Omega's illusion:** a full copy with Fenn's health and level
   that runs to the nearest enemy within 5 tiles and fights with his damage for 6 s; every unit can target it; it takes
   double damage; it gives no special charge; it ends when its time is up or Fenn dies. Trigger as before: an enemy hero
-  hits Fenn, at most once per 18 s.
+  hits Fenn, at most once per 18 s. Open (2026-10-25 15:10): it makes Fenn win 83 % against Hard bots (48 % without it,
+  old Fenn 61 %); Rickard is choosing how to weaken it (recommended: a decoy, 3 s, no damage, gone at the first hit = 62 %).
 
 ## Screens and feel
 - Menus: Start, hero select, Settings. Short guided match as tutorial.
