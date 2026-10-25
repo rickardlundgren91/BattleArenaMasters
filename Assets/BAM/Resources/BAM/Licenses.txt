@@ -1,8 +1,14 @@
 BATTLE ARENA MASTERS
 Licenses and credits
 
-Game code, 3D visuals, sound effects, icon and texts:
+Game code, sound effects, icon and texts:
 made for Battle Arena Masters. All rights reserved.
+
+Hero models: Rickard Lundgren, made with Meshy AI / Tripo AI.
+Models made on a free plan are licensed under CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+Character rigging and animations: Mixamo (Adobe).
+Arena textures: Rickard Lundgren.
 
 Made with Unity.
 

@@ -3,15 +3,16 @@
 > Not legal advice. This lists what is in the game and why we may use it. Update it in the same change that adds a
 > file, a package or an SDK. The text players see is `Assets/BAM/Resources/BAM/Licenses.txt` (Settings > Licenses).
 
-Rule (Rickard, 2026-10-25): only assets made in code by us, or under OFL/CC0 with the license recorded here. Nothing
-binary is copied from the old game (no models, Mixamo animations, textures, images or music).
+Rules (Rickard, 2026-10-25): assets made in code by us, or under OFL/CC0 with the license recorded here. Later the same
+day Rickard also allowed his own old hero models (made with Tripo or Meshy, rigged on Mixamo), Mixamo animations and his
+own arena/tutorial textures; each such file gets a row under "Imported from the old game" with its origin before it ships.
 
 ## Ours
 
 | What | Where | Made by | Rights |
 |---|---|---|---|
 | All game code | `Assets/BAM/**/*.cs` | The BAM project (Rickard, with Claude) | Ours. Ported rules and texts from the old game are Rickard's own code. |
-| 3D look (heroes, arena, minions, towers, effects) | Built at runtime by `Assets/BAM/Art` | Code | Ours, no external models or textures. |
+| 3D look built in code (minions, towers, wolf, bushes, rocks, effects, fallback heroes) | `Assets/BAM/Art` | Code | Ours. Hero models and arena textures: see "Imported from the old game". |
 | Sound effects | Synthesized at runtime by `Assets/BAM/Audio` | Code | Ours, no recorded samples. |
 | App icon layers, legacy icon | `Assets/BAM/Branding/icon_*.png` | `Docs/play/branding/make_branding.py` | Ours; uses Lilita One (OFL, see below). |
 | Store icon, feature graphic | `Docs/play/store-icon-512.png`, `Docs/play/feature-graphic-1024x500.png` | Same script | Ours; uses Lilita One. |
@@ -26,6 +27,23 @@ binary is copied from the old game (no models, Mixamo animations, textures, imag
 | Unity engine and packages (URP, Input System, uGUI, TextMeshPro) | Engine and `Packages/manifest.json` | Unity Technologies | Unity Terms of Service / Unity Companion License | Unity Personal is free under USD 200k revenue and funding in the last 12 months. No in-game notice needed; the splash screen is optional in Unity 6. |
 | Unity Analytics SDK (`com.unity.services.analytics`) | Package | Unity Technologies | Unity Terms of Service, Unity Gaming Services terms | Runs only after consent. Disclosed in the privacy policy and Data safety. |
 
-## Not used (on purpose)
-Mixamo, Meshy or AI-generated models and textures, Asset Store assets, the old game's images, music and textures.
-Adding any of them later needs a row here with proof of the right to use it.
+## Imported from the old game
+
+Filled in from the graphics thread's import list. Mixamo (Adobe) animations and auto-rigging are royalty free in games
+and need no credit. A model from Tripo's free plan is CC BY 4.0 and needs a credit line in `Licenses.txt`; Meshy and
+paid Tripo plans give the owner the rights under their terms (keep proof of the plan).
+
+Source: graphics thread hand-over 2 (`bam-work/art/HANDOVER-2.md`), byte-identical copies from the old game repo
+(xyz @ d231695). Paths under `Assets/BAM/Art/`.
+
+| Files | What | Origin | Made by | Rights / proof | Credit |
+|---|---|---|---|---|---|
+| `Models/{Bram,Fenn,Tyra,Moa,Knut,Tikta,Blast}/<Hero>.fbx` (7) | Hero models, texture embedded | Rickard's own models made with Meshy AI or Tripo AI (old register says Meshy; Rickard says Tripo), auto-rigged on mixamo.com. Tyra = `Looks/TyraClay`, Knut = Meshy "walrus tank". | Rickard via Meshy/Tripo + Mixamo | **Needs proof:** which tool and plan made each model. Paid plan: owned by Rickard. Free plan: CC BY 4.0, credit required (in `Licenses.txt` either way). | Yes (given) |
+| `Models/<Hero>/Anim/*.fbx` (29: Bram 6, Fenn 6, Knut 6, Tikta 6, Tyra 5) | Animation clips on Rickard's rigs | mixamo.com (Adobe) | Adobe | Mixamo terms: royalty free in games, commercial use OK; no redistribution of the raw files on their own. | Not required (given as courtesy) |
+| `Resources/BAMArt/Arena/T_BAM_{Block,Kerb,Plinth,Water}.jpg`, `T_BAM_Ground_{Cobble,Grass,Moss,Road2}.png` (8) | Arena textures | Rickard's own textures made with an image generator, 2026-10-18 | Rickard | Rickard holds the rights per the old register. **Needs proof:** which generator; check its terms allow commercial use. | No |
+
+Skipped by the graphics thread on purpose (unclear rights): the old Barbarian-mesh clips (`Mixamo/Anim/Idle|Walk|Run|Slash`),
+Simon's TyraDemon, the Asset Store shrub, the original game's visuals and props.
+
+## Not used
+Asset Store assets, other people's models, textures, images or music. Adding any needs a row here with proof first.
