@@ -10,8 +10,9 @@ calls mean, when they happen and what the caller expects. All calls happen on Un
 - **World space:** 1 tile = 1 Unity unit, y up, map in the xz plane, 15 x 35 tiles. The player's tower is near small z,
   the enemy's near large z. Tile (tx, ty) with ty counted from the top row has its centre at
   `(tx + 0.5, 0, Height - ty - 0.5)` (`ArenaInfo.TileCenter`).
-- **Camera:** portrait, looking down at about 55-60 degrees, following the player's hero, about 11.5 tiles across.
-  Things must read clearly from there on a 6" phone: bold silhouettes, strong team colours.
+- **Camera:** portrait, looking down at about 55 degrees, following the player's hero, 11.5 tiles across the standing
+  frame (`UiKit.PortraitFrame`, the old game's frame: the safe area, or a 9:19.5 picture in the middle of a wider
+  window with black edges). Things must read clearly from there on a 6" phone: bold silhouettes, strong team colours.
 - **Sizes (radius in tiles):** heroes 0.2-0.4 (Bram 0.3, Fenn 0.4, Tyra 0.25, Moa 0.215, Knut 0.4, Tikta 0.225,
   Blast 0.25), melee/ranged minions about 0.3, siege about 0.45, towers about 1.0, wolf about 0.3. Models may be a bit
   bigger than the radius; heroes stand about 0.9-1.1 units tall.
@@ -48,6 +49,8 @@ with distance from the point set by `SetListener`, which the game layer moves wi
 Volume follows `BamSettings.SfxVolume`. Voice limits so that 20 minion hits in one frame do not stack into noise.
 `StopAll()` on pause and when leaving a match. All clips synthesized in code at boot (short, punchy, mobile-speaker
 friendly, nothing harsh above about 8 kHz, no clipping). See `SfxId` for the list; the game layer maps events to ids.
+Music: `PlayMusic(MusicId.Match)` when a match starts and after a resume (it goes on where it was), `StopMusic()` at the
+result screen; `StopAll()` also fades it out. One loop for now (`Resources/BAM/Music/ByteStrikeLoop`).
 
 ## UI (BAM.UI) - called by BAM.Game; calls Core
 

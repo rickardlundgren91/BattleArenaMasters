@@ -109,7 +109,30 @@ namespace BAM.UI
             return canvas;
         }
 
-        /// <summary>A full-screen child that keeps clear of notches and rounded corners (Screen.safeArea).</summary>
+        /// <summary>Pixels at the bottom of the screen that Android's navigation bar covers (measured by SafeAreaFitter; 0 elsewhere).</summary>
+        public static float NavBarInset { get; internal set; }
+
+        /// <summary>
+        /// The old game's frame (AbcGame.cs Layout), in screen pixels: a standing picture inside the safe area, shaped like the
+        /// safe area itself when that is between 9:22 and 9:16, else 9:19.5, centred. On a phone it is the whole safe area; a
+        /// wider window (the editor's landscape Game view, a tablet) gets it in the middle with black edges beside it. The match
+        /// camera is framed by it and every SafeArea child lays out inside it.
+        /// </summary>
+        public static Rect PortraitFrame()
+        {
+            float sw = Screen.width, sh = Screen.height;
+            var sa = Screen.safeArea;
+            if (sa.width < 10f || sa.height < 10f) sa = new Rect(0f, 0f, sw, sh);
+            if (NavBarInset > sa.yMin) sa.yMin = Mathf.Min(NavBarInset, sa.yMax - 10f);
+            float a = sa.width / sa.height;
+            float ar = a >= 9f / 22f && a <= 9f / 16f ? a : 9f / 19.5f;
+            float fw, fh;
+            if (a > ar) { fh = sa.height; fw = sa.height * ar; }
+            else { fw = sa.width; fh = sa.width / ar; }
+            return new Rect(Mathf.Round(sa.x + (sa.width - fw) * 0.5f), Mathf.Round(sa.y + (sa.height - fh) * 0.5f), Mathf.Round(fw), Mathf.Round(fh));
+        }
+
+        /// <summary>A full-screen child that keeps to the standing frame (PortraitFrame): clear of notches and rounded corners.</summary>
         public static RectTransform SafeArea(Canvas canvas) => SafeArea((RectTransform)canvas.transform);
 
         public static RectTransform SafeArea(RectTransform parent)

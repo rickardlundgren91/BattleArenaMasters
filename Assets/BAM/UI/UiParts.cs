@@ -22,9 +22,10 @@ namespace BAM.UI
     }
 
     /// <summary>
-    /// Keeps its RectTransform inside Screen.safeArea, and on Android also clear of the navigation bar when the game is
-    /// drawn behind it (edge-to-edge; Unity's safe area does not report that bar on every phone). Re-checks when the screen
-    /// changes and a few times after it is shown, since Android reports the bars a moment after start.
+    /// Keeps its RectTransform on the standing frame (UiKit.PortraitFrame): inside Screen.safeArea, and on Android also clear
+    /// of the navigation bar when the game is drawn behind it (edge-to-edge; Unity's safe area does not report that bar on
+    /// every phone). On a phone the frame is the whole safe area; a wider window gets the phone-shaped middle. Re-checks when
+    /// the screen changes and a few times after it is shown, since Android reports the bars a moment after start.
     /// </summary>
     sealed class SafeAreaFitter : MonoBehaviour
     {
@@ -54,10 +55,11 @@ namespace BAM.UI
             size = new Vector2Int(Screen.width, Screen.height);
             if (Screen.width <= 0 || Screen.height <= 0) return;
             bottomExtra = NavBarOverlap();
-            float yMin = Mathf.Max(area.yMin, bottomExtra);
+            UiKit.NavBarInset = bottomExtra;
+            var f = UiKit.PortraitFrame();
             var rt = (RectTransform)transform;
-            rt.anchorMin = new Vector2(area.xMin / Screen.width, yMin / Screen.height);
-            rt.anchorMax = new Vector2(area.xMax / Screen.width, area.yMax / Screen.height);
+            rt.anchorMin = new Vector2(f.xMin / Screen.width, f.yMin / Screen.height);
+            rt.anchorMax = new Vector2(f.xMax / Screen.width, f.yMax / Screen.height);
             rt.offsetMin = rt.offsetMax = Vector2.zero;
         }
 
@@ -96,27 +98,41 @@ namespace BAM.UI
     }
 
     /// <summary>
-    /// Keeps the canvas at least 1920 units tall: on screens wider than 9:16 (tablets, a landscape Game view in the editor)
-    /// it scales by height only, so the portrait layouts never overlap; on taller phones it keeps the 0.5 width/height match.
+    /// Scales the canvas for the standing frame (UiKit.PortraitFrame). When the frame is as wide as the screen (a phone) the
+    /// canvas keeps the 1080x1920 reference with a 0.5 width/height match, by height only when wider than 9:16, so it stays at
+    /// least 1920 units tall. A wider window (a tablet, the editor's landscape Game view) is scaled as a phone of the frame's
+    /// size, so the layouts inside the frame look as they do on a phone.
     /// </summary>
     sealed class AdaptiveScaler : MonoBehaviour
     {
         CanvasScaler scaler;
         int width, height;
+        Rect frame;
 
         void Awake() => scaler = GetComponent<CanvasScaler>();
-        void OnEnable() => Apply();
+        void OnEnable() => Apply(UiKit.PortraitFrame());
         void Update()
         {
-            if (Screen.width != width || Screen.height != height) Apply();
+            var f = UiKit.PortraitFrame();
+            if (Screen.width != width || Screen.height != height || f != frame) Apply(f);
         }
 
-        void Apply()
+        void Apply(Rect f)
         {
             width = Screen.width;
             height = Screen.height;
+            frame = f;
             if (scaler == null || height <= 0) return;
-            scaler.matchWidthOrHeight = width * 1920f > height * 1080f ? 1f : 0.5f;
+            if (f.width >= 1f && f.width < width - 1f)
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+                scaler.scaleFactor = Mathf.Sqrt(f.width / 1080f * (f.height / 1920f));
+            }
+            else
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.matchWidthOrHeight = width * 1920f > height * 1080f ? 1f : 0.5f;
+            }
         }
     }
 

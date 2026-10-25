@@ -71,7 +71,8 @@ In a match it steps the Sim at a fixed 60 Hz, reads the Sim's state and events, 
   `Resources` or created by an editor script that runs by itself in Rickard's Unity.
 - Runtime code never uses `UnityEditor` (the player pass of compilecheck fails if it does); editor code goes in an
   editor-only asmdef or behind `#if UNITY_EDITOR`.
-- Portrait only. Respect `Screen.safeArea`. Touch first; mouse works in the editor through the Input System.
+- Portrait only. Respect `Screen.safeArea`: lay out in `UiKit.SafeArea` (it keeps to `UiKit.PortraitFrame`, the old
+  game's standing frame). Touch first; mouse works in the editor through the Input System.
 - Text in the game is English. Talk to Rickard in Swedish.
 
 ## Performance budget (mid-range Android, 60 fps)

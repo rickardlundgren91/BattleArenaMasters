@@ -34,8 +34,13 @@ before going beyond it.
 - English only. Font Lilita One (OFL).
 - Graphics: effects, projectiles, zones and UI made in code; heroes, creeps, wolf and arena use Rickard's own old models,
   Mixamo animations and textures (changed 2026-10-25, see ARCHITECTURE rule 4). Every attack is always visible (rule 5).
-  Sounds synthesized in code. No music for now. No vibration for now.
+  Sounds synthesized in code. Music: Rickard's "Byte Strike" loop plays in matches (2026-10-25; its rights row in
+  LICENSES waits for the name of the music service and plan, and no build with it is uploaded before that). No
+  vibration for now.
 - Portrait, camera angled from above. 60 fps target with Low/High graphics.
+- Camera zoom exactly as the old game (Rickard 2026-10-25: "rätt zoom på kamera är det viktigaste", "inte mer av
+  kamer på map"): 11.5 tiles across the old game's standing frame, the focus 52% down it. The HUD and menus lay out in
+  the same frame, so a landscape Game view in the editor looks like the phone with black edges beside it.
 
 ## Data
 - Analytics WITH consent: a consent dialog at first start, a switch in Settings, a privacy policy, and Data safety

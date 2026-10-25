@@ -65,6 +65,7 @@ namespace BAM.Game
             paused = false;
             acc = 0f;
             Screens.HidePause();
+            BamAudio.PlayMusic(MusicId.Match); // Pause silenced it; it goes on where it was
         }
 
         public void QuitToMenu()
@@ -95,6 +96,9 @@ namespace BAM.Game
             hud.Begin(match, views, cam);
             inMatch = true; paused = false; over = false; resultShown = false; endSent = false;
             acc = 0f;
+            // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
+            // leaving the match fade it out
+            BamAudio.PlayMusic(MusicId.Match);
             if (!setup.Tutorial || island) BamAnalytics.MatchStarted(setup);
             Debug.Log("[BAM.Game] match started: " + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + ", seed " + seed);
         }
@@ -185,6 +189,7 @@ namespace BAM.Game
             if (r.Tutorial && r.Won) BamSettings.TutorialDone = true;
             SendEnd(false);
             hud.CancelTouches();
+            BamAudio.StopMusic();
             Screens.ShowResult(r);
         }
 
