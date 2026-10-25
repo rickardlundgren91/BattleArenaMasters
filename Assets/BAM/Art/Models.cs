@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace BAM.Art
 {
-    enum RigKind : byte { Humanoid, Wolf, Cart, Tower }
+    enum RigKind : byte { Humanoid, Wolf, Cart, Tower, Target }
 
-    enum AttackStyle : byte { Swing, Throw, Bow, Cast, Flick, Cannon, Bite, Pulse }
+    enum AttackStyle : byte { Swing, Throw, Bow, Cast, Flick, Cannon, Bite, Pulse, None }
 
     /// <summary>A built model: one rigidly skinned mesh plus its bones. Shared by every view of the same kind and team.</summary>
     sealed class RigDef
@@ -109,6 +109,18 @@ namespace BAM.Art
             d = BuildTower(team);
             d.Mesh = b.ToSkinnedMesh("Tower t" + team, d.Pivots);
             d.BarWidth = 1.6f;
+            cache[k] = d;
+            return d;
+        }
+
+        public static RigDef Target()
+        {
+            int k = Key(4, 0, 1);
+            if (cache.TryGetValue(k, out RigDef d)) return d;
+            b.Clear();
+            d = BuildTarget();
+            d.Mesh = b.ToSkinnedMesh("Target", d.Pivots);
+            d.BarWidth = 0.8f;
             cache[k] = d;
             return d;
         }
@@ -609,6 +621,33 @@ namespace BAM.Art
             b.At(c, new Vector3(180f, 0f, 0f)).Cylinder(Vector3.zero, 0.24f, 0f, 0.3f, 6);
             b.Reset();
             return new RigDef { Pivots = piv, Parents = new[] { -1, TowerBase }, Kind = RigKind.Tower, Attack = AttackStyle.Pulse, Height = 3.3f, Radius = 1.0f };
+        }
+
+        public const int TargetPost = 0, TargetBoard = 1;
+
+        // The guided match's practice dummy: a round painted target board on a short post, rings on both faces.
+        static RigDef BuildTarget()
+        {
+            var piv = new[] { Vector3.zero, new Vector3(0f, 0.75f, 0f) };
+            b.Bone = TargetPost;
+            b.Color(Pal.WoodDark).Cylinder(Vector3.zero, 0.22f, 0.18f, 0.08f, 10, true, Pal.Wood);
+            b.Color(Pal.Wood).Box(new Vector3(0f, 0.4f, -0.06f), new Vector3(0.09f, 0.8f, 0.09f));
+            b.Color(Pal.WoodDark).Beam(new Vector3(0f, 0.05f, -0.35f), new Vector3(0f, 0.55f, -0.08f), 0.06f, 0.06f); // back leg
+            b.Bone = TargetBoard;
+            Vector3 c = piv[TargetBoard];
+            byte[] ring = { Pal.Cloth, Pal.Red, Pal.Cloth, Pal.Red, Pal.Gold };
+            float[] rad = { 0.5f, 0.4f, 0.3f, 0.2f, 0.1f };
+            for (int side = 0; side < 2; side++)
+            {
+                float z = side == 0 ? 0.04f : -0.04f;
+                // x 90 turns the up-facing disc to face +z (side 0) or -z (side 1, x -90)
+                for (int i = 0; i < ring.Length; i++)
+                    b.Color(ring[i]).At(c + new Vector3(0f, 0f, z + (side == 0 ? i : -i) * 0.004f), new Vector3(side == 0 ? 90f : -90f, 0f, 0f)).Disc(Vector3.zero, rad[i], 24);
+            }
+            b.Reset();
+            b.Color(Pal.WoodDark).At(c, new Vector3(90f, 0f, 0f)).Cylinder(new Vector3(0f, -0.035f, 0f), 0.53f, 0.53f, 0.07f, 24, false);
+            b.Reset();
+            return new RigDef { Pivots = piv, Parents = new[] { -1, TargetPost }, Kind = RigKind.Target, Attack = AttackStyle.None, Height = 1.3f, Radius = 0.45f };
         }
 
         public const int WolfBody = 0, WolfHead = 1, WolfFL = 2, WolfFR = 3, WolfBL = 4, WolfBR = 5, WolfTail = 6;

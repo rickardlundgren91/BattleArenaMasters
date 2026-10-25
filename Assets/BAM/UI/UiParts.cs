@@ -21,28 +21,77 @@ namespace BAM.UI
         void OnDisable() => transform.localScale = Vector3.one;
     }
 
-    /// <summary>Keeps its RectTransform inside Screen.safeArea; re-checks only when the screen changes (rotation, split view).</summary>
+    /// <summary>
+    /// Keeps its RectTransform inside Screen.safeArea, and on Android also clear of the navigation bar when the game is
+    /// drawn behind it (edge-to-edge; Unity's safe area does not report that bar on every phone). Re-checks when the screen
+    /// changes and a few times after it is shown, since Android reports the bars a moment after start.
+    /// </summary>
     sealed class SafeAreaFitter : MonoBehaviour
     {
         Rect applied;
         Vector2Int size;
+        float bottomExtra, nextCheck;
+        int checksLeft;
 
-        void OnEnable() => Apply();
+        void OnEnable()
+        {
+            checksLeft = 5;
+            nextCheck = 0;
+            Apply();
+        }
+
         void Update()
         {
-            if (Screen.safeArea != applied || Screen.width != size.x || Screen.height != size.y) Apply();
+            if (Screen.safeArea != applied || Screen.width != size.x || Screen.height != size.y) { checksLeft = 5; Apply(); }
+            else if (checksLeft > 0 && Time.unscaledTime >= nextCheck) Apply();
         }
 
         void Apply()
         {
+            if (checksLeft > 0) { checksLeft--; nextCheck = Time.unscaledTime + 0.5f; }
             var area = Screen.safeArea;
             applied = area;
             size = new Vector2Int(Screen.width, Screen.height);
             if (Screen.width <= 0 || Screen.height <= 0) return;
+            bottomExtra = NavBarOverlap();
+            float yMin = Mathf.Max(area.yMin, bottomExtra);
             var rt = (RectTransform)transform;
-            rt.anchorMin = new Vector2(area.xMin / Screen.width, area.yMin / Screen.height);
+            rt.anchorMin = new Vector2(area.xMin / Screen.width, yMin / Screen.height);
             rt.anchorMax = new Vector2(area.xMax / Screen.width, area.yMax / Screen.height);
             rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+
+        // How many of Unity's pixels at the bottom are covered by the navigation bar (0 when the game ends above it).
+        static float NavBarOverlap()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+                using var window = activity.Call<AndroidJavaObject>("getWindow");
+                using var decor = window.Call<AndroidJavaObject>("getDecorView");
+                using var insets = decor.Call<AndroidJavaObject>("getRootWindowInsets");
+                if (insets == null) return 0;
+                using var content = decor.Call<AndroidJavaObject>("findViewById", 0x01020002); // android.R.id.content
+                if (content == null) return 0;
+                using var rect = new AndroidJavaObject("android.graphics.Rect");
+                if (!content.Call<bool>("getGlobalVisibleRect", rect)) return 0;
+                int top = rect.Get<int>("top"), bottom = rect.Get<int>("bottom");
+                int screenBottom = decor.Call<int>("getHeight");
+                int nav = insets.Call<int>("getSystemWindowInsetBottom");
+                int overlap = bottom - (screenBottom - nav);
+                if (overlap <= 0 || bottom <= top) return 0;
+                return overlap * (float)Screen.height / (bottom - top);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[BAM.UI] could not read the navigation bar size: " + e.Message);
+                return 0;
+            }
+#else
+            return 0;
+#endif
         }
     }
 
@@ -92,12 +141,15 @@ namespace BAM.UI
         }
     }
 
-    /// <summary>An on/off switch: a rounded track with a sliding knob.</summary>
+    /// <summary>An on/off switch like the old game's: green track when on, dark with a lavender knob when off.</summary>
     sealed class SwitchView
     {
-        readonly Image track;
+        static readonly Color OnColor = new Color(0.13f, 0.72f, 0.37f);
+        static readonly Color OffColor = new Color(0.1f, 0.11f, 0.25f);
+        static readonly Color KnobOff = new Color(0.48f, 0.5f, 0.82f);
+        static readonly Color KnobOn = new Color(0.94f, 0.95f, 0.98f);
+        readonly Image track, knobImg;
         readonly RectTransform knob;
-        readonly Text label;
         readonly Action<bool> changed;
         public bool On { get; private set; }
 
@@ -105,11 +157,11 @@ namespace BAM.UI
         {
             this.changed = changed;
             var rt = UiKit.NewRect("Switch", parent);
-            rt.sizeDelta = new Vector2(220, 100);
+            rt.sizeDelta = new Vector2(136, 72);
             track = rt.gameObject.AddComponent<Image>();
             track.sprite = UiKit.Rounded;
             track.type = Image.Type.Sliced;
-            track.pixelsPerUnitMultiplier = 0.6f; // fully round ends
+            track.pixelsPerUnitMultiplier = 0.75f; // fully round ends
             var button = rt.gameObject.AddComponent<Button>();
             button.transition = Selectable.Transition.None;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
@@ -119,13 +171,10 @@ namespace BAM.UI
                 BamAudio.Play(SfxId.UiToggle);
                 this.changed?.Invoke(On);
             });
-            label = UiKit.Label(rt, "", 36, TextAnchor.MiddleCenter, UiKit.TextColor);
-            UiKit.Stretch(label.rectTransform);
-            var k = UiKit.Fill(rt, Color.white, UiKit.Circle);
-            knob = k.rectTransform;
+            knobImg = UiKit.Fill(rt, KnobOn, UiKit.Circle);
+            knob = knobImg.rectTransform;
             knob.anchorMin = knob.anchorMax = knob.pivot = new Vector2(0.5f, 0.5f);
-            knob.sizeDelta = new Vector2(80, 80);
-            UiKit.AddShadow(k, 3);
+            knob.sizeDelta = new Vector2(56, 56);
         }
 
         public RectTransform Rect => (RectTransform)track.transform;
@@ -133,35 +182,57 @@ namespace BAM.UI
         public void Set(bool on)
         {
             On = on;
-            track.color = on ? UiKit.Good : UiKit.Muted;
-            knob.anchoredPosition = new Vector2(on ? 58 : -58, 0);
-            label.text = on ? "ON" : "OFF";
-            label.rectTransform.offsetMin = new Vector2(on ? 0 : 90, 0);
-            label.rectTransform.offsetMax = new Vector2(on ? -90 : 0, 0);
+            track.color = on ? OnColor : OffColor;
+            knobImg.color = on ? KnobOn : KnobOff;
+            knob.anchoredPosition = new Vector2(on ? 32 : -32, 0);
         }
     }
 
-    /// <summary>A row of buttons where exactly one is chosen (Easy/Normal/Hard, Low/High).</summary>
+    /// <summary>
+    /// Choices side by side (High/Low, Easy/Normal/Hard), the old game's way: dark cells, the chosen one with a mint edge and
+    /// white text, the others with lavender text.
+    /// </summary>
     sealed class Segmented
     {
-        readonly Button[] buttons;
+        static readonly Color CellFill = new Color(0.06f, 0.07f, 0.16f);
+        static readonly Color ChosenFill = new Color(0.03f, 0.1f, 0.11f);
+        static readonly Color Lavender = new Color(0.4f, 0.42f, 0.8f);
+        readonly Image[] cells, edges;
+        readonly Text[] labels;
         readonly Action<int> chosen;
         public int Selected { get; private set; } = -1;
 
         public Segmented(RectTransform parent, string[] names, Action<int> chosen)
         {
             this.chosen = chosen;
-            buttons = new Button[names.Length];
+            cells = new Image[names.Length];
+            edges = new Image[names.Length];
+            labels = new Text[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
                 int index = i;
-                var b = UiKit.Button(parent, names[i], () => Choose(index), UiKit.Muted, SfxId.UiToggle, 48);
-                var rt = (RectTransform)b.transform;
+                var rt = UiKit.NewRect(names[i], parent);
                 rt.anchorMin = new Vector2((float)i / names.Length, 0);
                 rt.anchorMax = new Vector2((float)(i + 1) / names.Length, 1);
-                rt.offsetMin = new Vector2(6, 0);
-                rt.offsetMax = new Vector2(-6, 0);
-                buttons[i] = b;
+                rt.offsetMin = new Vector2(5, 0);
+                rt.offsetMax = new Vector2(-5, 0);
+                var img = rt.gameObject.AddComponent<Image>();
+                img.sprite = UiKit.Rounded;
+                img.type = Image.Type.Sliced;
+                img.pixelsPerUnitMultiplier = 1.4f;
+                var b = rt.gameObject.AddComponent<Button>();
+                b.transition = Selectable.Transition.None;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiToggle); Choose(index); });
+                rt.gameObject.AddComponent<ButtonFx>();
+                var edge = UiKit.Fill(rt, UiKit.Primary, UiKit.Ring);
+                edge.pixelsPerUnitMultiplier = 1.4f;
+                var label = UiKit.Label(rt, names[i], 40, TextAnchor.MiddleCenter, Lavender);
+                UiKit.Stretch(label.rectTransform);
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                cells[i] = img;
+                edges[i] = edge;
+                labels[i] = label;
             }
         }
 
@@ -174,7 +245,13 @@ namespace BAM.UI
         public void Set(int index)
         {
             Selected = index;
-            for (int i = 0; i < buttons.Length; i++) UiKit.Tint(buttons[i], i == index ? UiKit.Primary : UiKit.Muted);
+            for (int i = 0; i < cells.Length; i++)
+            {
+                bool on = i == index;
+                cells[i].color = on ? ChosenFill : CellFill;
+                edges[i].enabled = on;
+                labels[i].color = on ? UiKit.TextColor : Lavender;
+            }
         }
     }
 
@@ -185,7 +262,7 @@ namespace BAM.UI
         {
             var rt = UiKit.NewRect("Slider", parent);
             rt.sizeDelta = new Vector2(420, 100);
-            var bg = UiKit.Fill(rt, UiKit.Muted, UiKit.Rounded);
+            var bg = UiKit.Fill(rt, new Color(0.1f, 0.11f, 0.25f), UiKit.Rounded);
             bg.rectTransform.anchorMin = new Vector2(0, 0.5f);
             bg.rectTransform.anchorMax = new Vector2(1, 0.5f);
             bg.rectTransform.sizeDelta = new Vector2(0, 28);
@@ -195,7 +272,7 @@ namespace BAM.UI
             fillArea.anchorMin = new Vector2(0, 0.5f);
             fillArea.anchorMax = new Vector2(1, 0.5f);
             fillArea.sizeDelta = new Vector2(-50, 28);
-            var fill = UiKit.Fill(fillArea, UiKit.Gold, UiKit.Rounded);
+            var fill = UiKit.Fill(fillArea, new Color(0.13f, 0.72f, 0.37f), UiKit.Rounded);
             fill.pixelsPerUnitMultiplier = 2f;
             fill.rectTransform.sizeDelta = new Vector2(50, 0);
 

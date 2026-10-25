@@ -37,6 +37,7 @@ namespace BAM.UI
             BuildHeroSelect();
             BuildSettings();
             BuildLicenses();
+            BuildNav();
             BuildPause();
             BuildResult();
             dialog = new Dialog(root);
@@ -129,11 +130,15 @@ namespace BAM.UI
 
         static void Push(GameObject screen)
         {
-            if (stack.Count > 0) stack[stack.Count - 1].SetActive(false);
+            // An overlay (the Modes sheet) leaves the screen under it visible.
+            if (stack.Count > 0 && !IsOverlay(screen)) stack[stack.Count - 1].SetActive(false);
             stack.Add(screen);
             screen.SetActive(true);
             OnShown(screen);
+            RefreshNav();
         }
+
+        static bool IsOverlay(GameObject screen) => screen == modes;
 
         static void Pop()
         {
@@ -146,18 +151,22 @@ namespace BAM.UI
                 screen.SetActive(true);
                 OnShown(screen);
             }
+            RefreshNav();
         }
 
         static void ClearStack()
         {
             for (int i = 0; i < stack.Count; i++) stack[i].SetActive(false);
             stack.Clear();
+            RefreshNav();
         }
 
         static void OnShown(GameObject screen)
         {
-            if (screen == heroSelect) RefreshHeroSelect();
+            if (screen == mainMenu) RefreshHome();
+            else if (screen == heroSelect) RefreshHeroSelect();
             else if (screen == settings) RefreshSettings();
+            else if (screen == modes) modeDifficulty.Set((int)BamSettings.LastDifficulty);
         }
 
         // The game layer normally hides/shows our screens itself after these calls; the extra calls here only make sure
@@ -213,31 +222,6 @@ namespace BAM.UI
             var body = UiKit.SafeArea(rt);
             go.SetActive(false);
             return body;
-        }
-
-        /// <summary>Top bar with a back button and a title.</summary>
-        static void TopBar(RectTransform body, string title)
-        {
-            var back = UiKit.Button(body, "Back", () => HandleBack(), UiKit.Muted, SfxId.None, 48);
-            UiKit.Place(back, 0, 1, 30, -30, 220, 110);
-            var t = UiKit.Label(body, title, 72, TextAnchor.MiddleCenter, UiKit.TextColor);
-            UiKit.Band(t, true, 30, 110, 260);
-            UiKit.AddOutline(t, 3);
-        }
-
-        /// <summary>A rounded row in a vertical list: a label on the left, room for a control on the right.</summary>
-        static RectTransform Row(Transform list, string text, float height, out Text label)
-        {
-            var row = UiKit.NewRect(text, list);
-            var bg = row.gameObject.AddComponent<Image>();
-            bg.sprite = UiKit.Rounded;
-            bg.type = Image.Type.Sliced;
-            bg.color = UiKit.RowColor;
-            bg.raycastTarget = false;
-            row.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
-            label = UiKit.Label(row, text, 44, TextAnchor.MiddleLeft, UiKit.TextColor);
-            UiKit.Stretch(label.rectTransform, 36, 0, 300, 0);
-            return row;
         }
 
         static VerticalLayoutGroup VList(RectTransform rt, float spacing, RectOffset padding)

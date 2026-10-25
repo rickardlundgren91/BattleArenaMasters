@@ -269,12 +269,24 @@ namespace BAM.Art
             if (d)
             {
                 deathT = 0f; atkT = -1f; castT = -1f;
+                if (def.Kind == RigKind.Target)
+                {
+                    // bursts into splinters at once
+                    Vector3 p = transform.position + new Vector3(0f, 0.75f, 0f);
+                    Fx.Shards(p, 16, Pal.Get(Pal.Wood), 0.12f, 4.5f, 0.9f, 2.5f, 0.3f);
+                    Fx.Shards(p, 8, Pal.Get(Pal.Red), 0.1f, 4f, 0.8f, 2.5f, 0.3f);
+                    Fx.Shards(p, 8, Pal.Get(Pal.Cloth), 0.1f, 4f, 0.8f, 2.5f, 0.3f);
+                    Fx.Smoke(p, 6, Pal.Get(Pal.Cloth), 0.5f, 1.2f, 0.6f, 0.5f, 0.2f);
+                    Fx.Ring(transform.position, 0.3f, 1.4f, new Color(1f, 0.9f, 0.6f, 0.9f), 0.35f);
+                    deathFadeAt = 0f;
+                }
                 if (clips != null) { clips[CDeath].SetTime(0.0); clips[CDeath].SetTime(0.0); clips[CDeath].SetSpeed(1.0); }
             }
             else
             {
                 deathT = -1f;
                 spawnT = 0f;
+                if (def.Kind == RigKind.Target) deathFadeAt = 0.55f;
                 model.localPosition = Vector3.zero;
                 model.localRotation = Quaternion.identity;
                 bar.Reset();
@@ -387,6 +399,7 @@ namespace BAM.Art
                     case RigKind.Humanoid: PoseHumanoid(dt); break;
                     case RigKind.Wolf: PoseWolf(dt); break;
                     case RigKind.Cart: PoseCart(dt); break;
+                    case RigKind.Target: PoseTarget(dt); break;
                     default: PoseTower(dt); break;
                 }
                 if (spawnT >= 0f)
@@ -456,6 +469,11 @@ namespace BAM.Art
             deathT += dt;
             float t = Mathf.Clamp01(deathT / 0.45f);
             if (imported) { }
+            else if (def.Kind == RigKind.Target)
+            {
+                float s = 1f - Smooth(deathT / 0.12f);
+                model.localScale = new Vector3(s, s, s);
+            }
             else if (def.Kind == RigKind.Tower)
             {
                 model.localPosition = new Vector3(Mathf.Sin(deathT * 40f) * 0.04f * (1f - t), -t * t * 2.2f, 0f);
@@ -615,6 +633,14 @@ namespace BAM.Art
             bones[Models.CartBarrel].localRotation = Quaternion.Euler(pitch, 0f, 0f);
             bones[Models.CartWheelL].localRotation = Quaternion.Euler(spin, 0f, 0f);
             bones[Models.CartWheelR].localRotation = Quaternion.Euler(spin, 0f, 0f);
+        }
+
+        // stands still; a hit knocks the board back on its post and it wobbles out
+        void PoseTarget(float dt)
+        {
+            atkT = -1f; castT = -1f;
+            float wob = recoil * Mathf.Sin(idleT * 30f) * 14f + recoil * 10f;
+            bones[Models.TargetBoard].localRotation = Quaternion.Euler(wob, 0f, Mathf.Sin(idleT * 1.3f) * 1.5f);
         }
 
         void PoseTower(float dt)

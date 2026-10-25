@@ -205,6 +205,7 @@ namespace BAM.Art
         Vector3 center, dir;
         float length, radius, duration, age, emitT;
         Color baseColor;
+        bool warn;
 
         public void Build(ZoneKind k, int t)
         {
@@ -220,19 +221,23 @@ namespace BAM.Art
             shapeR.sharedMaterial = mat;
             shapeR.shadowCastingMode = ShadowCastingMode.Off;
             shapeR.receiveShadows = false;
+            warn = k == ZoneKind.WarnLine || k == ZoneKind.WarnCircle;
+            // warnings: the enemy's in strong red (that is what players dodge), our own team's in a quiet white
             baseColor = k == ZoneKind.HoneyField ? new Color(1f, 0.78f, 0.2f, 1f)
                 : k == ZoneKind.FireLane ? new Color(1f, 0.45f, 0.08f, 1f)
+                : warn ? (t == Teams.Player ? new Color(1f, 1f, 1f, 0.6f) : new Color(1f, 0.12f, 0.1f, 1f))
                 : (t == Teams.Player ? new Color(1f, 0.6f, 0.15f, 1f) : new Color(1f, 0.15f, 0.12f, 1f));
-            if (k == ZoneKind.BombFuse)
+            if (warn) mat.renderQueue = 2995; // over honey and fire, under unit rings
+            if (k == ZoneKind.BombFuse || warn)
             {
-                // the inner disc grows to the rim as the fuse burns down
+                // the inner fill grows to the rim (or the end of the line) as the time runs out
                 var ig = new GameObject("Fuse");
                 inner = ig.transform;
                 inner.SetParent(transform, false);
-                ig.AddComponent<MeshFilter>().sharedMesh = Shapes.Disc(Pal.WhiteMid);
+                ig.AddComponent<MeshFilter>().sharedMesh = k == ZoneKind.WarnLine ? Shapes.AimBody() : Shapes.Disc(Pal.WhiteMid);
                 innerR = ig.AddComponent<MeshRenderer>();
                 innerMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
-                innerMat.renderQueue = 2991;
+                innerMat.renderQueue = warn ? 2996 : 2991;
                 innerMat.SetColor(ArtMaterials.BaseColor, baseColor);
                 innerR.sharedMaterial = innerMat;
                 innerR.shadowCastingMode = ShadowCastingMode.Off;
@@ -246,7 +251,7 @@ namespace BAM.Art
             d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : Vector3.forward;
             age = 0f; emitT = 0f;
-            transform.position = new Vector3(c.x, 0.03f, c.z);
+            transform.position = new Vector3(c.x, warn ? 0.04f : 0.03f, c.z);
             transform.rotation = Quaternion.LookRotation(dir);
             if (length > 0f)
             {
@@ -268,7 +273,26 @@ namespace BAM.Art
             age += dt;
             float t = Mathf.Clamp01(age / duration);
             float a;
-            if (kind == ZoneKind.BombFuse)
+            if (warn)
+            {
+                // fades in fast, then the fill races to the end: when it arrives the shot leaves
+                float fadeIn = Mathf.Clamp01(age / 0.1f);
+                a = fadeIn * (0.85f + Mathf.Sin(age * 18f) * 0.15f);
+                if (length > 0f)
+                {
+                    inner.localScale = new Vector3(radius * 2f * 0.84f, 1f, Mathf.Max(0.01f, length * t));
+                    inner.localPosition = new Vector3(0f, 0.004f, 0f);
+                }
+                else
+                {
+                    float s = radius * Mathf.Lerp(0.05f, 0.94f, t);
+                    inner.localScale = new Vector3(s, 1f, s);
+                    inner.localPosition = new Vector3(0f, 0.004f, 0f);
+                }
+                Color ic = baseColor; ic.a = baseColor.a * fadeIn * 0.8f;
+                innerMat.SetColor(ArtMaterials.BaseColor, ic);
+            }
+            else if (kind == ZoneKind.BombFuse)
             {
                 a = 0.75f + Mathf.Sin(age * (10f + t * 25f)) * 0.25f; // blinks faster as it is about to blow
                 float s = radius * Mathf.Lerp(0.1f, 0.95f, t);
@@ -280,8 +304,9 @@ namespace BAM.Art
                 float fadeIn = Mathf.Clamp01(age / 0.15f), fadeOut = Mathf.Clamp01((duration - age) / 0.35f);
                 a = fadeIn * fadeOut * (0.85f + Mathf.Sin(age * 4f) * 0.1f);
             }
-            Color c = baseColor; c.a = a;
+            Color c = baseColor; c.a = baseColor.a * a;
             mat.SetColor(ArtMaterials.BaseColor, c);
+            if (warn) return;
 
             emitT -= dt;
             if (emitT > 0f || dt <= 0f) return;

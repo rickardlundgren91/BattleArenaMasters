@@ -209,6 +209,8 @@ namespace BAM.Art
         public static UnitView CreateTower(int team) => Body(Models.Tower(team), 20, team);
         /// <summary>Fenn's spectral wolf.</summary>
         public static UnitView CreateWolf(int team) => Body(Models.Wolf(team), 30, team);
+        /// <summary>The guided match's practice dummy (a target board on a post). PlayAttack does nothing; SetDead bursts it into splinters.</summary>
+        public static UnitView CreateTarget() => Body(Models.Target(), 40, Teams.Enemy);
 
         static BodyView Body(RigDef def, int kindKey, int team)
         {

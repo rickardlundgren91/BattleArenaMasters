@@ -69,7 +69,7 @@ namespace BAM.Art.Editor
         bool walking, auto = true, low;
         int statusIndex, visIndex;
         AimView aim;
-        ZoneView[] zones = new ZoneView[3];
+        ZoneView[] zones = new ZoneView[5];
 
         struct Shot { public ProjectileView V; public Vector3 A, B; public float T, Len; }
         Shot[] shots = new Shot[17 * 2];
@@ -108,6 +108,7 @@ namespace BAM.Art.Editor
                 AddOther(ArtKit.CreateWolf(t), new Vector3(3f + t * 9f, 0f, 12.5f), t);
                 AddOther(ArtKit.CreateTower(t), new Vector3(7.5f, 0f, t == 0 ? 5.5f : 29.5f), t);
             }
+            AddOther(ArtKit.CreateTarget(), new Vector3(7.5f, 0f, 13.6f), 1);
 
             for (int t = 0; t < 2; t++)
                 for (int k = 0; k < 17; k++)
@@ -124,6 +125,8 @@ namespace BAM.Art.Editor
             zones[0] = ArtKit.CreateZone(ZoneKind.HoneyField, 0);
             zones[1] = ArtKit.CreateZone(ZoneKind.FireLane, 1);
             zones[2] = ArtKit.CreateZone(ZoneKind.BombFuse, 1);
+            zones[3] = ArtKit.CreateZone(ZoneKind.WarnLine, 1);
+            zones[4] = ArtKit.CreateZone(ZoneKind.WarnCircle, 1);
             ShowZones();
 
             aim = ArtKit.CreateAim();
@@ -146,6 +149,8 @@ namespace BAM.Art.Editor
             zones[0].Show(new Vector3(3f, 0f, 21.5f), Vector3.forward, 0f, 1.5f, 3f);
             zones[1].Show(new Vector3(7.5f, 0f, 19.8f), Vector3.forward, 4f, 0.6f, 3f);
             zones[2].Show(new Vector3(12f, 0f, 21.5f), Vector3.forward, 0f, 1.6f, 1.4f);
+            zones[3].Show(new Vector3(14f, 0f, 19.5f), new Vector3(-0.3f, 0f, 1f), 4.5f, 0.35f, 1.2f);
+            zones[4].Show(new Vector3(7.5f, 0f, 24f), Vector3.forward, 0f, 1.1f, 1.2f);
         }
 
         static ArenaInfo MakeArena()
@@ -169,10 +174,26 @@ namespace BAM.Art.Editor
             };
         }
 
+        float uiCheck;
+
+        // The preview is about the world: if the game's menus started anyway (Play pressed in the game scene first, or an older
+        // Boot), switch their canvases off so they do not cover the view.
+        void HideGameUi()
+        {
+            foreach (Canvas c in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude))
+                if (c.isRootCanvas)
+                {
+                    c.gameObject.SetActive(false);
+                    Debug.Log("[BAM.Art] Preview hid the menu canvas '" + c.name + "'");
+                }
+        }
+
         void Update()
         {
             float dt = Time.deltaTime;
             timer += dt;
+            uiCheck -= dt;
+            if (uiCheck <= 0f) { uiCheck = 0.5f; HideGameUi(); }
 
             for (int i = 0; i < shots.Length; i++)
             {

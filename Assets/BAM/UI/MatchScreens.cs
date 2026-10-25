@@ -21,12 +21,13 @@ namespace BAM.UI
             var body = NewScreen("Pause", true, out pause);
             var box = UiKit.Panel(body, UiKit.PanelColor).rectTransform;
             UiKit.Place(box, 0.5f, 0.5f, 0, 0, 760, 780);
+            UiKit.Frame(box);
             var title = UiKit.Label(box, "Paused", 96, TextAnchor.MiddleCenter, UiKit.Gold);
             UiKit.Band(title, true, 50, 130, 20);
             UiKit.AddOutline(title, 4);
             var resume = UiKit.Button(box, "Resume", ResumeMatch, UiKit.Good, SfxId.UiConfirm, 64);
             UiKit.Place(resume, 0.5f, 1, 0, -230, 600, 150);
-            var settingsButton = UiKit.Button(box, "Settings", () => Push(settings), UiKit.Primary);
+            var settingsButton = UiKit.Button(box, "Settings", () => Push(settings), UiKit.Muted);
             UiKit.Place(settingsButton, 0.5f, 1, 0, -410, 600, 140);
             var quit = UiKit.Button(box, "Quit match", ConfirmQuit, UiKit.Bad);
             UiKit.Place(quit, 0.5f, 1, 0, -580, 600, 140);
@@ -53,6 +54,7 @@ namespace BAM.UI
 
             var box = UiKit.Panel(body, UiKit.PanelColor).rectTransform;
             UiKit.Place(box, 0.5f, 0.5f, 0, 60, 820, 560);
+            UiKit.Frame(box);
             var badge = UiKit.HeroBadge(box, HeroId.Bram);
             UiKit.Place(badge, 0.5f, 1, 0, -40, 170, 170);
             resultBadgeColor = badge.GetChild(0).GetComponent<Image>();
@@ -62,7 +64,7 @@ namespace BAM.UI
             resultDeaths = StatCell(box, "Deaths", 2);
             resultLevel = StatCell(box, "Level", 3);
 
-            var again = UiKit.Button(body, "Play again", RestartMatch, UiKit.Gold, SfxId.UiConfirm, 64);
+            var again = UiKit.Button(body, "Play again", RestartMatch, UiKit.Orange, SfxId.UiConfirm, 64);
             UiKit.Place(again, 0.5f, 0, 0, 250, 620, 160);
             UiKit.AddOutline(UiKit.ButtonText(again), 3);
             var menu = UiKit.Button(body, "Menu", GoToMenu, UiKit.Muted);

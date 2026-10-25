@@ -35,73 +35,82 @@ namespace BAM.UI
 
         static void BuildSettings()
         {
-            var body = NewScreen("Settings", false, out settings);
-            TopBar(body, "Settings");
+            var content = NewPage("Settings", out settings, out var panel);
+            tabPanels[2] = panel;
+            VList(content, 14, new RectOffset(8, 8, 0, 30));
 
-            var panel = UiKit.NewRect("List", body);
-            UiKit.Stretch(panel, 30, 170, 30, 30);
-            var content = ScrollContent(panel, out _);
-            VList(content, 18, new RectOffset(0, 0, 0, 20));
-
-            var row = Row(content, "Sound", 140, out _);
+            SectionHeader(content, "AUDIO");
+            var row = PageRow(content, "Sound volume", 124, out _);
             volume = SliderFactory.Create(row, v =>
             {
                 BamSettings.SfxVolume = v;
                 BamAudio.Play(SfxId.UiTap); // lets the player hear the new volume
             });
-            UiKit.Place(volume, 1, 0.5f, -30, 0, 380, 100);
+            UiKit.Place(volume, 1, 0.5f, -28, 0, 360, 90);
 
-            row = Row(content, "Graphics", 140, out _);
+            SectionHeader(content, "GRAPHICS");
+            row = PageRow(content, "Quality", 210, out var qualityLabel);
+            qualityLabel.rectTransform.offsetMin = new Vector2(36, 110);
             var seg = UiKit.NewRect("Quality", row);
-            UiKit.Place(seg, 1, 0.5f, -24, 0, 380, 104);
-            graphics = new Segmented(seg, new[] { "Low", "High" }, i => BamSettings.Graphics = (GraphicsQuality)i);
+            UiKit.Band(seg, false, 22, 92, 26);
+            // Shown High first, like the old game.
+            graphics = new Segmented(seg, new[] { "High", "Low" }, i => BamSettings.Graphics = i == 0 ? GraphicsQuality.High : GraphicsQuality.Low);
 
-            row = Row(content, "Left-handed controls", 140, out _);
+            SectionHeader(content, "CONTROLS");
+            row = PageRow(content, "Left-handed controls", 124, out _);
             leftHanded = new SwitchView(row, on => BamSettings.LeftHanded = on);
-            UiKit.Place(leftHanded.Rect, 1, 0.5f, -30, 0, 220, 100);
+            UiKit.Place(leftHanded.Rect, 1, 0.5f, -28, 0, 136, 72);
 
-            row = Row(content, ConsentText.SettingsLabel, 270, out var shareLabel);
-            shareLabel.rectTransform.offsetMin = new Vector2(36, 150);
-            shareLabel.rectTransform.offsetMax = new Vector2(-270, -14);
+            SectionHeader(content, "PRIVACY");
+            row = PageRow(content, ConsentText.SettingsLabel, 236, out var shareLabel);
+            shareLabel.rectTransform.offsetMin = new Vector2(36, 130);
             var note = UiKit.Label(row, ConsentText.SettingsNote, 30, TextAnchor.UpperLeft, UiKit.TextDim);
+            note.font = UiKit.BodyFont;
             note.rectTransform.anchorMin = new Vector2(0, 0);
             note.rectTransform.anchorMax = new Vector2(1, 0);
-            note.rectTransform.offsetMin = new Vector2(36, 14);
-            note.rectTransform.offsetMax = new Vector2(-270, 150);
+            note.rectTransform.offsetMin = new Vector2(36, 16);
+            note.rectTransform.offsetMax = new Vector2(-36, 130);
             shareData = new SwitchView(row, on => BamSettings.AnalyticsConsent = on ? Consent.Granted : Consent.Denied);
-            UiKit.Place(shareData.Rect, 1, 0.5f, -30, 0, 220, 100);
-
-            // The privacy policy button only appears once the Play thread has a public address for it.
+            UiKit.Place(shareData.Rect, 1, 1, -28, -30, 136, 72);
+            // The privacy policy row only appears once the Play thread has a public address for it.
             if (!string.IsNullOrEmpty(BamInfo.PrivacyPolicyUrl))
-                LinkButton(content, "Privacy policy", () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
-            LinkButton(content, "Licenses", () => Push(licenses));
+                LinkRow(content, "Privacy policy", () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
 
-            var version = UiKit.Label(content, BamInfo.AppName + "  v" + Application.version, 34, TextAnchor.MiddleCenter, UiKit.TextDim);
-            version.gameObject.AddComponent<LayoutElement>().preferredHeight = 90;
+            SectionHeader(content, "ABOUT");
+            LinkRow(content, "Licenses", () => Push(licenses));
+            row = PageRow(content, "Version", 124, out _);
+            var version = UiKit.Label(row, Application.version, 36, TextAnchor.MiddleRight, Lavender);
+            version.font = UiKit.BodyFont;
+            UiKit.Stretch(version.rectTransform, 300, 0, 36, 0);
         }
 
-        static void LinkButton(RectTransform list, string text, Action onClick)
+        /// <summary>A row that opens something, with a "&gt;" on the right.</summary>
+        static void LinkRow(RectTransform list, string text, Action onClick)
         {
-            var b = UiKit.Button(list, text, onClick, UiKit.Muted, SfxId.UiTap, 48);
-            b.gameObject.AddComponent<LayoutElement>().preferredHeight = 130;
+            var row = PageRow(list, text, 124, out _);
+            var bg = row.GetComponent<Image>();
+            bg.raycastTarget = true;
+            var b = row.gameObject.AddComponent<Button>();
+            b.targetGraphic = bg;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); onClick?.Invoke(); });
+            row.gameObject.AddComponent<ButtonFx>();
+            var arrow = UiKit.Label(row, ">", 48, TextAnchor.MiddleRight, Lavender);
+            UiKit.Stretch(arrow.rectTransform, 300, 0, 36, 0);
         }
 
         static void RefreshSettings()
         {
             volume.SetValueWithoutNotify(BamSettings.SfxVolume);
-            graphics.Set((int)BamSettings.Graphics);
+            graphics.Set(BamSettings.Graphics == GraphicsQuality.High ? 0 : 1);
             leftHanded.Set(BamSettings.LeftHanded);
             shareData.Set(BamSettings.AnalyticsConsent == Consent.Granted);
         }
 
         static void BuildLicenses()
         {
-            var body = NewScreen("Licenses", false, out licenses);
-            TopBar(body, "Licenses");
-            var panel = UiKit.Panel(body, UiKit.PanelColor);
-            UiKit.Stretch(panel.rectTransform, 24, 170, 24, 30);
-            licensesContent = ScrollContent(panel.rectTransform, out _);
-            VList(licensesContent, 0, new RectOffset(30, 30, 30, 40));
+            licensesContent = NewPage("Licenses", out licenses, out _);
+            VList(licensesContent, 0, new RectOffset(20, 20, 0, 40));
             licenses.AddComponent<OnEnableHook>().Enabled = LoadLicenses;
         }
 
@@ -150,7 +159,8 @@ namespace BAM.UI
                 UiKit.Fill(rt, UiKit.Dim).raycastTarget = true;
                 var safe = UiKit.SafeArea(rt);
 
-                var box = UiKit.Panel(safe, new Color(0.1f, 0.14f, 0.34f, 0.98f)).rectTransform;
+                var box = UiKit.Panel(safe, new Color(0.055f, 0.07f, 0.19f, 0.97f)).rectTransform;
+                UiKit.Frame(box);
                 box.anchorMin = new Vector2(0, 0.5f);
                 box.anchorMax = new Vector2(1, 0.5f);
                 box.pivot = new Vector2(0.5f, 0.5f);

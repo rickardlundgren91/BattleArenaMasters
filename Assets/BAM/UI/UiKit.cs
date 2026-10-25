@@ -33,20 +33,42 @@ namespace BAM.UI
             }
         }
 
-        // Palette: a bright, saturated mobile look on a deep blue-purple background.
+        static Font bodyFont;
+        /// <summary>A plain font for small body text (rows, descriptions), like the old game's Trebuchet next to Lilita One.</summary>
+        public static Font BodyFont
+        {
+            get
+            {
+                if (bodyFont == null) bodyFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                if (bodyFont == null) bodyFont = Font;
+                return bodyFont;
+            }
+        }
+
+        // Palette of the old game's menus (ABC2 Hub): deep navy, worn-gold trim, mint for "on/chosen", orange for PLAY.
         public static readonly Color Ally = new Color(0.25f, 0.55f, 1f);
         public static readonly Color Enemy = new Color(0.95f, 0.25f, 0.2f);
-        public static readonly Color Gold = new Color(1f, 0.78f, 0.2f);
-        public static readonly Color Primary = new Color(0.2f, 0.56f, 1f);
-        public static readonly Color Good = new Color(0.25f, 0.78f, 0.35f);
-        public static readonly Color Bad = new Color(0.92f, 0.3f, 0.27f);
-        public static readonly Color Muted = new Color(0.24f, 0.29f, 0.52f);
-        public static readonly Color PanelColor = new Color(0.08f, 0.11f, 0.27f, 0.92f);
-        public static readonly Color RowColor = new Color(1f, 1f, 1f, 0.08f);
-        public static readonly Color TextColor = Color.white;
-        public static readonly Color TextDim = new Color(0.78f, 0.83f, 1f);
-        public static readonly Color Ink = new Color(0.06f, 0.07f, 0.16f);
-        public static readonly Color Dim = new Color(0.02f, 0.03f, 0.1f, 0.7f);
+        public static readonly Color Gold = new Color(0.95f, 0.81f, 0.48f);      // #f2cf7a: titles, filled stat bars
+        public static readonly Color Trim = new Color(0.85f, 0.64f, 0.25f);      // #d9a441: the gold edge on dark buttons and panels
+        public static readonly Color Orange = new Color(1f, 0.51f, 0.19f);       // #ff8230: PLAY, the main action on a screen
+        public static readonly Color Primary = new Color(0.24f, 0.9f, 0.69f);    // #3ee6b0: chosen, on, confirm
+        public static readonly Color Good = Primary;
+        public static readonly Color Bad = new Color(0.9f, 0.3f, 0.27f);
+        public static readonly Color Muted = new Color(0.16f, 0.21f, 0.38f);     // #2a3560: ordinary buttons, not chosen
+        public static readonly Color PanelColor = new Color(0.055f, 0.07f, 0.19f, 0.88f);
+        public static readonly Color RowColor = new Color(0.055f, 0.07f, 0.19f, 0.7f);
+        public static readonly Color TextColor = new Color(0.95f, 0.96f, 1f);    // #f3f4ff
+        public static readonly Color TextDim = new Color(0.6f, 0.64f, 0.84f);    // #9aa2d6
+        public static readonly Color Ink = new Color(0.024f, 0.07f, 0.11f);      // #06121c: text on mint and gold
+        public static readonly Color Dim = new Color(0.02f, 0.03f, 0.1f, 0.72f);
+        static readonly Color ButtonBase = new Color(0.043f, 0.075f, 0.19f);      // #0b1330: the dark edge round every button
+
+        static Sprite ring;
+        /// <summary>A 9-sliced rounded outline (same corners as <see cref="Rounded"/>), for gold trim.</summary>
+        public static Sprite Ring { get { if (ring == null) ring = MakeRounded(64, 28, 3.5f); return ring; } }
+        static Sprite circleRing;
+        /// <summary>A thin white circle outline (stretch it into an ellipse for rings on the ground).</summary>
+        public static Sprite CircleRing { get { if (circleRing == null) circleRing = MakeRounded(128, 64, 6f); return circleRing; } }
 
         /// <summary>9-sliced rounded rectangle (white, tint with Image.color).</summary>
         public static Sprite Rounded { get { if (rounded == null) rounded = MakeRounded(64, 28); return rounded; } }
@@ -59,8 +81,8 @@ namespace BAM.UI
             {
                 if (gradient != null) return gradient;
                 var tex = new Texture2D(1, 128, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "BAM.UI.Gradient" };
-                var bottom = new Color(0.29f, 0.12f, 0.46f);
-                var top = new Color(0.1f, 0.2f, 0.55f);
+                var bottom = new Color(0.11f, 0.086f, 0.31f); // #1c1650
+                var top = new Color(0.055f, 0.071f, 0.19f);  // #0e1230
                 for (int y = 0; y < 128; y++) tex.SetPixel(0, y, Color.Lerp(bottom, top, y / 127f));
                 tex.Apply(false, true);
                 gradient = Sprite.Create(tex, new Rect(0, 0, 1, 128), new Vector2(0.5f, 0.5f), 100f);
@@ -127,11 +149,17 @@ namespace BAM.UI
             baseImg.type = Image.Type.Sliced;
 
             var faceRt = NewRect("Face", rt);
-            Stretch(faceRt, 0, 0, 0, 10);
+            Stretch(faceRt, 5, 5, 5, 12);
             var face = faceRt.gameObject.AddComponent<Image>();
             face.sprite = Rounded;
             face.type = Image.Type.Sliced;
             face.raycastTarget = false;
+
+            var trim = Fill(faceRt, Trim, Ring);
+            trim.name = "Trim";
+            var gloss = Fill(faceRt, new Color(1f, 0.93f, 0.75f, 0.08f), Rounded);
+            gloss.rectTransform.anchorMin = new Vector2(0, 0.6f);
+            Stretch2(gloss.rectTransform, 6, 4, 6, 0);
 
             var label = Label(faceRt, text, fontSize, TextAnchor.MiddleCenter, TextColor);
             Stretch(label.rectTransform, 12, 4, 12, 4);
@@ -163,9 +191,23 @@ namespace BAM.UI
         /// <summary>Recolours a button made by <see cref="Button(Transform,string,Action)"/>.</summary>
         public static void Tint(Button b, Color color)
         {
-            if (b.targetGraphic != null) b.targetGraphic.color = color;
+            var face = b.targetGraphic;
+            if (face != null) face.color = color;
             var baseImg = b.GetComponent<Image>();
-            if (baseImg != null) baseImg.color = new Color(color.r * 0.6f, color.g * 0.6f, color.b * 0.6f, color.a);
+            if (baseImg != null) baseImg.color = ButtonBase;
+            if (face == null) return;
+            // Dark buttons get the gold trim; bright ones get dark text (mint) or a burnt-orange edge on the text (orange).
+            float lum = 0.3f * color.r + 0.59f * color.g + 0.11f * color.b;
+            var trim = face.transform.Find("Trim");
+            if (trim != null) trim.gameObject.SetActive(lum < 0.35f);
+            var label = face.GetComponentInChildren<Text>(true);
+            if (label == null) return;
+            bool orange = color.r > 0.9f && color.g < 0.7f && color.b < 0.4f;
+            label.color = lum > 0.6f && !orange ? Ink : TextColor;
+            var outline = label.GetComponent<Outline>();
+            if (outline != null) outline.effectColor = orange ? new Color(0.54f, 0.2f, 0f) : new Color(0.05f, 0.05f, 0.15f, 0.85f);
+            var shadow = label.GetComponent<Shadow>();
+            if (shadow != null && !(shadow is Outline)) shadow.enabled = label.color != Ink;
         }
 
         public static Text ButtonText(Button b) => b.GetComponentInChildren<Text>(true);
@@ -191,7 +233,7 @@ namespace BAM.UI
             img.sprite = sprite;
             img.color = color;
             img.raycastTarget = false;
-            if (sprite == Rounded) img.type = Image.Type.Sliced;
+            if (sprite == Rounded || sprite == Ring) img.type = Image.Type.Sliced;
             return img;
         }
 
@@ -220,7 +262,11 @@ namespace BAM.UI
             shine.rectTransform.anchorMax = new Vector2(0.82f, 0.92f);
             var info = HeroCatalog.Get(id);
             var letter = Label(inner.rectTransform, info.Name.Substring(0, 1), 80, TextAnchor.MiddleCenter, Color.white);
-            Stretch(letter.rectTransform);
+            letter.rectTransform.anchorMin = new Vector2(0.14f, 0.14f);
+            letter.rectTransform.anchorMax = new Vector2(0.86f, 0.86f);
+            letter.rectTransform.offsetMin = letter.rectTransform.offsetMax = Vector2.zero;
+            // Best fit only limits the height when vertical overflow is off; without this the letter grows past the circle.
+            letter.verticalOverflow = VerticalWrapMode.Truncate;
             letter.resizeTextForBestFit = true;
             letter.resizeTextMinSize = 10;
             letter.resizeTextMaxSize = 200;
@@ -299,6 +345,24 @@ namespace BAM.UI
             var o = g.gameObject.AddComponent<Outline>();
             o.effectColor = new Color(0.05f, 0.05f, 0.15f, 0.85f);
             o.effectDistance = new Vector2(distance, -distance);
+            // A button's text edge follows its colour (burnt orange on PLAY).
+            var b = g.GetComponentInParent<Button>();
+            if (b != null && b.targetGraphic != null) Tint(b, b.targetGraphic.color);
+        }
+
+        /// <summary>The old game's gold edge round a panel or card.</summary>
+        public static Image Frame(RectTransform target)
+        {
+            var f = Fill(target, Trim, Ring);
+            f.name = "Trim";
+            f.gameObject.AddComponent<LayoutElement>().ignoreLayout = true; // panels with a layout group must not stack it
+            return f;
+        }
+
+        static void Stretch2(RectTransform rt, float left, float top, float right, float bottom)
+        {
+            rt.offsetMin = new Vector2(left, bottom);
+            rt.offsetMax = new Vector2(-right, -top);
         }
 
         static void EnsureEventSystem()
@@ -315,11 +379,11 @@ namespace BAM.UI
         }
 
         // Anti-aliased rounded square with corners of `radius` px, 9-sliced so it stretches to any size.
-        static Sprite MakeRounded(int size, int radius)
+        static Sprite MakeRounded(int size, int radius, float ringWidth = 0)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
             {
-                wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "BAM.UI.Rounded" + size
+                wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "BAM.UI.Rounded" + size + (ringWidth > 0 ? "Ring" : "")
             };
             var px = new Color32[size * size];
             for (int y = 0; y < size; y++)
@@ -328,7 +392,15 @@ namespace BAM.UI
                 float cx = x + 0.5f, cy = y + 0.5f;
                 float dx = Mathf.Max(0f, Mathf.Max(radius - cx, cx - (size - radius)));
                 float dy = Mathf.Max(0f, Mathf.Max(radius - cy, cy - (size - radius)));
-                float a = Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.Clamp01(radius - d + 0.5f);
+                if (ringWidth > 0)
+                {
+                    // Distance to the nearest edge inside the shape; keep only a band ringWidth wide along the outline.
+                    float edge = Mathf.Min(Mathf.Min(cx, size - cx), Mathf.Min(cy, size - cy));
+                    float inside = dx > 0 || dy > 0 ? radius - d : edge;
+                    a *= Mathf.Clamp01(ringWidth - inside + 0.5f);
+                }
                 px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255f));
             }
             tex.SetPixels32(px);
