@@ -159,7 +159,7 @@ namespace BAM.UI
                 UiKit.Fill(rt, UiKit.Dim).raycastTarget = true;
                 var safe = UiKit.SafeArea(rt);
 
-                var box = UiKit.Panel(safe, new Color(0.086f, 0.114f, 0.141f, 0.97f)).rectTransform;
+                var box = UiKit.Panel(safe, new Color(0.055f, 0.07f, 0.19f, 0.97f)).rectTransform;
                 UiKit.Frame(box);
                 box.anchorMin = new Vector2(0, 0.5f);
                 box.anchorMax = new Vector2(1, 0.5f);

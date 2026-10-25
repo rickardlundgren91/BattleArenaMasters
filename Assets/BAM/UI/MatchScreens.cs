@@ -66,6 +66,7 @@ namespace BAM.UI
 
             var again = UiKit.Button(body, "Play again", RestartMatch, UiKit.Orange, SfxId.UiConfirm, 64);
             UiKit.Place(again, 0.5f, 0, 0, 250, 620, 160);
+            UiKit.AddOutline(UiKit.ButtonText(again), 3);
             var menu = UiKit.Button(body, "Menu", GoToMenu, UiKit.Muted);
             UiKit.Place(menu, 0.5f, 0, 0, 70, 620, 140);
         }

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace BAM.UI
 {
     // CONTRACT between BAM.UI (owner: the menus thread) and BAM.Game (owner: the main thread). Docs/CONTRACTS.md explains it.
-    // Every screen is built in code with uGUI and the Inter font. Buttons call BAM.Core.Flow.Game (IGameFlow) and
+    // Every screen is built in code with uGUI and the Lilita One font. Buttons call BAM.Core.Flow.Game (IGameFlow) and
     // write BAM.Core.BamSettings; they never reach into BAM.Game.
     //
     // Every screen is built once in Init and then only shown and hidden. Screens form a stack (main menu -> hero select,
@@ -211,15 +211,16 @@ namespace BAM.UI
 
         // ---- shared screen pieces ----
 
-        /// <summary>A hidden full-screen page: background (gradient for menus, dim veil over the match) and a safe-area body.</summary>
+        /// <summary>A hidden full-screen page: black outside the standing frame and the gradient inside it for menus, a dim veil over the match, and a safe-area body.</summary>
         static RectTransform NewScreen(string name, bool overMatch, out GameObject go)
         {
             var rt = UiKit.NewRect(name, root);
             UiKit.Stretch(rt);
             go = rt.gameObject;
             if (overMatch) UiKit.Fill(rt, UiKit.Dim).raycastTarget = true;
-            else UiKit.Background(rt);
+            else UiKit.Fill(rt, Color.black).raycastTarget = true; // black outside the standing frame, like the old game
             var body = UiKit.SafeArea(rt);
+            if (!overMatch) UiKit.Background(body);
             go.SetActive(false);
             return body;
         }

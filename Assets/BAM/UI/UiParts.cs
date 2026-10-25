@@ -157,13 +157,13 @@ namespace BAM.UI
         }
     }
 
-    /// <summary>An on/off switch: gold track with a dark knob when on, dark with a grey knob when off.</summary>
+    /// <summary>An on/off switch like the old game's: green track when on, dark with a lavender knob when off.</summary>
     sealed class SwitchView
     {
-        static readonly Color OnColor = UiKit.Gold;
-        static readonly Color OffColor = new Color(0.12f, 0.15f, 0.19f);
-        static readonly Color KnobOff = new Color(0.62f, 0.64f, 0.71f);
-        static readonly Color KnobOn = new Color(0.1f, 0.075f, 0.03f);
+        static readonly Color OnColor = new Color(0.13f, 0.72f, 0.37f);
+        static readonly Color OffColor = new Color(0.1f, 0.11f, 0.25f);
+        static readonly Color KnobOff = new Color(0.48f, 0.5f, 0.82f);
+        static readonly Color KnobOn = new Color(0.94f, 0.95f, 0.98f);
         readonly Image track, knobImg;
         readonly RectTransform knob;
         readonly Action<bool> changed;
@@ -205,14 +205,14 @@ namespace BAM.UI
     }
 
     /// <summary>
-    /// Choices side by side (High/Low, Easy/Normal/Hard), the old game's way: dark cells, the chosen one with a gold edge and
+    /// Choices side by side (High/Low, Easy/Normal/Hard), the old game's way: dark cells, the chosen one with a mint edge and
     /// white text, the others with lavender text.
     /// </summary>
     sealed class Segmented
     {
-        static readonly Color CellFill = new Color(0.07f, 0.086f, 0.11f);
-        static readonly Color ChosenFill = new Color(0.16f, 0.13f, 0.07f);
-        static readonly Color Lavender = new Color(0.62f, 0.64f, 0.71f);
+        static readonly Color CellFill = new Color(0.06f, 0.07f, 0.16f);
+        static readonly Color ChosenFill = new Color(0.03f, 0.1f, 0.11f);
+        static readonly Color Lavender = new Color(0.4f, 0.42f, 0.8f);
         readonly Image[] cells, edges;
         readonly Text[] labels;
         readonly Action<int> chosen;
@@ -278,7 +278,7 @@ namespace BAM.UI
         {
             var rt = UiKit.NewRect("Slider", parent);
             rt.sizeDelta = new Vector2(420, 100);
-            var bg = UiKit.Fill(rt, new Color(0.12f, 0.15f, 0.19f), UiKit.Rounded);
+            var bg = UiKit.Fill(rt, new Color(0.1f, 0.11f, 0.25f), UiKit.Rounded);
             bg.rectTransform.anchorMin = new Vector2(0, 0.5f);
             bg.rectTransform.anchorMax = new Vector2(1, 0.5f);
             bg.rectTransform.sizeDelta = new Vector2(0, 28);
@@ -288,7 +288,7 @@ namespace BAM.UI
             fillArea.anchorMin = new Vector2(0, 0.5f);
             fillArea.anchorMax = new Vector2(1, 0.5f);
             fillArea.sizeDelta = new Vector2(-50, 28);
-            var fill = UiKit.Fill(fillArea, UiKit.Gold, UiKit.Rounded);
+            var fill = UiKit.Fill(fillArea, new Color(0.13f, 0.72f, 0.37f), UiKit.Rounded);
             fill.pixelsPerUnitMultiplier = 2f;
             fill.rectTransform.sizeDelta = new Vector2(50, 0);
 

@@ -33,103 +33,70 @@ namespace BAM.UI
             homeBody = body;
             BuildHomeBackground(body);
 
-            // On the painted platform: a warm glow and a gold rune circle, seen at a slant, centred on platY.
+            // On the painted platform: a faint gold rune ring and a mint ring under the feet.
             float platY = HomePlatY;
-            var glow = UiKit.Fill(body, new Color(1f, 0.78f, 0.4f, 0.35f), Glow);
-            PlaceOnPlatform(glow.rectTransform, platY, 980, 320);
-            var rune = UiKit.Fill(body, new Color(UiKit.Gold.r, UiKit.Gold.g, UiKit.Gold.b, 0.9f), RuneCircle);
-            PlaceOnPlatform(rune.rectTransform, platY, 820, 250);
+            var gold = UiKit.Fill(body, new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.55f), UiKit.CircleRing);
+            UiKit.Place(gold, 0.5f, 0, 0, platY - 95, 720, 190);
+            var mint = UiKit.Fill(body, UiKit.Primary, UiKit.CircleRing);
+            UiKit.Place(mint, 0.5f, 0, 0, platY - 62, 470, 124);
 
-            // The hero, big and in the middle: Rickard's 3D model filmed by its own camera (HeroStage); the letter badge
-            // only if that fails. The camera sees 1.6 units from 0.1 below the feet, so even the tallest hero keeps air above
-            // its head and the feet land 6.25 % up the picture, on the circle's middle.
+            // The hero: Rickard's 3D model, filmed by its own camera (HeroStage); the letter badge only if that fails.
             homeHero = UiKit.HeroBadge(body, HeroId.Bram);
             UiKit.Place(homeHero, 0.5f, 0, 0, platY - 20, 440, 440);
             var stageRt = UiKit.NewRect("Hero3D", body);
-            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 1080 * 0.0625f, 1080, 1080);
+            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 75, 620, 620);
             homeStage = stageRt.gameObject.AddComponent<HeroStage>();
 
-            // Top bar: a rounded glass pill with a gold edge; portrait, the game's name, the chosen hero.
-            var top = UiKit.Panel(body, new Color(0.055f, 0.075f, 0.094f, 0.72f));
-            top.pixelsPerUnitMultiplier = 0.45f;
+            // Top bar: portrait, the game's name.
+            var top = UiKit.Panel(body, new Color(0.04f, 0.05f, 0.13f, 0.92f));
             UiKit.Band(top, true, 16, 130, 16);
-            var topEdge = UiKit.Frame(top.rectTransform);
-            topEdge.color = new Color(UiKit.Gold.r, UiKit.Gold.g, UiKit.Gold.b, 0.6f);
-            topEdge.pixelsPerUnitMultiplier = 0.45f;
+            UiKit.Frame(top.rectTransform).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.6f);
             homePortrait = PortraitCircle(top.transform, 104, out homePortraitImg);
             UiKit.Place(homePortrait, 0, 0.5f, 14, 0, 104, 104);
             var name = UiKit.Label(top.transform, BamInfo.ShortName, 52, TextAnchor.LowerLeft, UiKit.TextColor);
             HeaderText(name, 140, 0, 64);
             UiKit.AddShadow(name, 3);
-            homeSelected = UiKit.Label(top.transform, "", 32, TextAnchor.UpperLeft, UiKit.Gold);
-            HeaderText(homeSelected, 140, -46, 46);
+            var sub = UiKit.Label(top.transform, BamInfo.AppName, 32, TextAnchor.UpperLeft, UiKit.Orange);
+            HeaderText(sub, 140, -46, 46);
 
-            // Upper right: a round dark glass button with a matte white gear (the only side button the beta needs).
-            var gearRt = UiKit.NewRect("Settings", body);
-            UiKit.Place(gearRt, 1, 1, -24, -170, 112, 112);
-            var gearBg = gearRt.gameObject.AddComponent<Image>();
-            gearBg.sprite = UiKit.Circle;
-            gearBg.color = UiKit.Muted;
-            var gearEdge = UiKit.Fill(gearRt, new Color(1, 1, 1, 0.22f), UiKit.CircleRing);
-            gearEdge.name = "Edge";
-            var gearIcon = UiKit.NewRect("Icon", gearRt);
-            UiKit.Place(gearIcon, 0.5f, 0.5f, 0, 0, 64, 64);
-            DrawIcon(gearIcon, 2);
-            for (int k = 0; k < gearIcon.childCount; k++)
-            {
-                var part = gearIcon.GetChild(k).GetComponent<Image>();
-                if (part != null && part.color.r + part.color.g + part.color.b > 0.4f) part.color = new Color(0.9f, 0.91f, 0.94f, 0.9f);
-            }
-            var gearButton = gearRt.gameObject.AddComponent<Button>();
-            gearButton.targetGraphic = gearBg;
-            gearButton.transition = Selectable.Transition.None;
-            gearButton.navigation = new Navigation { mode = Navigation.Mode.None };
-            gearButton.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); ShowTab(2); });
-            gearRt.gameObject.AddComponent<ButtonFx>();
+            // "<Hero> selected", as in the old game.
+            var pill = UiKit.Panel(body, new Color(0f, 0f, 0f, 0.45f));
+            pill.pixelsPerUnitMultiplier = 0.7f;
+            pill.raycastTarget = false;
+            UiKit.Band(pill, true, 166, 76, 60);
+            homeSelected = UiKit.Label(pill.transform, "", 34, TextAnchor.MiddleCenter, UiKit.TextColor);
+            homeSelected.font = UiKit.BodyFont;
+            UiKit.Stretch(homeSelected.rectTransform);
 
-            // Bottom row: MODES and ENTER ARENA.
+            // Bottom row: MODES and PLAY.
             var row = UiKit.NewRect("Bottom row", body);
-            UiKit.Band(row, false, NavH + 24, 220, 24);
+            UiKit.Band(row, false, NavH + 24, 200, 24);
             var modesButton = UiKit.Button(row, "MODES", () => Push(modes), UiKit.Muted, SfxId.UiTap, 30);
-            UiKit.Place(modesButton, 0, 0.5f, 0, 0, 210, 210);
-            // gold-framed glass
-            var modesEdge = UiKit.Frame(modesButton.targetGraphic.rectTransform);
-            modesEdge.color = new Color(UiKit.Gold.r, UiKit.Gold.g, UiKit.Gold.b, 0.8f);
+            UiKit.Place(modesButton, 0, 0.5f, 0, 0, 200, 200);
+            UiKit.Frame((RectTransform)modesButton.transform).color = UiKit.Orange;
             var modesLabel = UiKit.ButtonText(modesButton);
             modesLabel.alignment = TextAnchor.LowerCenter;
             modesLabel.rectTransform.offsetMin = new Vector2(0, 14);
             RobotIcon(modesButton.targetGraphic.rectTransform);
 
-            // ENTER ARENA: big glossy gold with a warm glow round it.
-            var playGlow = UiKit.Fill(row, new Color(1f, 0.75f, 0.35f, 0.45f), Glow);
-            playGlow.rectTransform.offsetMin = new Vector2(190, -50);
-            playGlow.rectTransform.offsetMax = new Vector2(40, 50);
-            var play = UiKit.Button(row, "ENTER ARENA", OnPlay, UiKit.Orange, SfxId.UiConfirm, 76);
+            var play = UiKit.Button(row, "PLAY  >", OnPlay, UiKit.Orange, SfxId.UiConfirm, 92);
             var playRt = (RectTransform)play.transform;
             playRt.anchorMin = new Vector2(0, 0);
             playRt.anchorMax = new Vector2(1, 1);
-            playRt.offsetMin = new Vector2(234, 0);
+            playRt.offsetMin = new Vector2(224, 0);
             playRt.offsetMax = Vector2.zero;
-            var shine = UiKit.Fill(play.targetGraphic.rectTransform, new Color(1f, 0.93f, 0.7f, 0.55f), UiKit.Rounded);
-            shine.rectTransform.anchorMin = new Vector2(0, 0.45f);
-            shine.rectTransform.offsetMin = new Vector2(4, 0);
-            shine.rectTransform.offsetMax = new Vector2(-4, -4);
-            shine.transform.SetSiblingIndex(0);
-            var playEdge = UiKit.Frame(play.targetGraphic.rectTransform);
-            playEdge.color = new Color(1f, 0.92f, 0.7f, 0.9f);
             var playLabel = UiKit.ButtonText(play);
             playLabel.rectTransform.offsetMin = new Vector2(12, 52);
-            playLabel.horizontalOverflow = HorizontalWrapMode.Wrap; // shrinks to fit on narrow phones
-            playLabel.verticalOverflow = VerticalWrapMode.Truncate;
-            playLabel.resizeTextForBestFit = true;
-            playLabel.resizeTextMinSize = 40;
-            playLabel.resizeTextMaxSize = 76;
-            playSub = UiKit.Label(play.targetGraphic.transform, "", 30, TextAnchor.MiddleCenter, new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.75f));
+            UiKit.AddOutline(playLabel, 4);
+            playSub = UiKit.Label(play.targetGraphic.transform, "", 32, TextAnchor.MiddleCenter, UiKit.TextColor);
             UiKit.Band(playSub, false, 22, 44, 10);
             playSub.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var subEdge = playSub.gameObject.AddComponent<Outline>();
+            subEdge.effectColor = new Color(0.43f, 0.15f, 0f);
+            subEdge.effectDistance = new Vector2(2, -2);
         }
 
-        // The MODES icon: a small gold robot head.
+        // The old MODES icon: a small mint robot head.
         static void RobotIcon(RectTransform face)
         {
             var head = UiKit.Fill(face, UiKit.Primary, UiKit.Rounded);
@@ -139,7 +106,7 @@ namespace BAM.UI
             UiKit.Place(stalk, 0.5f, 1, 0, -36, 6, 16);
             var knob = UiKit.Fill(face, UiKit.Primary, UiKit.Circle);
             UiKit.Place(knob, 0.5f, 1, 0, -26, 14, 14);
-            var dark = new Color(0.055f, 0.075f, 0.094f);
+            var dark = new Color(0.04f, 0.06f, 0.16f);
             UiKit.Place(UiKit.Fill(head.rectTransform, dark, UiKit.Circle), 0.5f, 0.5f, -16, 4, 14, 14);
             UiKit.Place(UiKit.Fill(head.rectTransform, dark, UiKit.Circle), 0.5f, 0.5f, 16, 4, 14, 14);
             UiKit.Place(UiKit.Fill(head.rectTransform, dark), 0.5f, 0.5f, 0, -14, 30, 5);
@@ -154,90 +121,14 @@ namespace BAM.UI
             if (!shown) SetBadge(homeHero, id);
             homePortraitImg.texture = Portrait(id);
             LayoutHomeBackground();
-            homeSelected.text = info.Name + " · " + info.Title;
+            homeSelected.text = info.Name + " - " + info.Title + " selected";
             playSub.text = "3V3 · VS BOTS · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant();
         }
 
         // ---- pictures from the old game (Rickard's own, Resources/BAM/Menu) ----
 
         static readonly System.Collections.Generic.Dictionary<string, Texture2D> pictures = new System.Collections.Generic.Dictionary<string, Texture2D>();
-        static Sprite fadeV, fadeH, glowSprite, runeSprite;
-
-        static void PlaceOnPlatform(RectTransform rt, float platY, float w, float h)
-        {
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0);
-            rt.anchoredPosition = new Vector2(0, platY - h / 2);
-            rt.sizeDelta = new Vector2(w, h);
-        }
-
-        /// <summary>A soft round glow: white in the middle fading to nothing at the edge.</summary>
-        static Sprite Glow
-        {
-            get
-            {
-                if (glowSprite != null) return glowSprite;
-                const int n = 128;
-                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "BAM.UI.Glow" };
-                for (int y = 0; y < n; y++)
-                for (int x = 0; x < n; x++)
-                {
-                    float dx = (x + 0.5f) / n * 2 - 1, dy = (y + 0.5f) / n * 2 - 1;
-                    float a = Mathf.Clamp01(1 - Mathf.Sqrt(dx * dx + dy * dy));
-                    tex.SetPixel(x, y, new Color(1, 1, 1, a * a));
-                }
-                tex.Apply(false, true);
-                glowSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-                return glowSprite;
-            }
-        }
-
-        /// <summary>A gold summoning circle: two outer rings with tick marks, an inner ring and small rune dots.</summary>
-        static Sprite RuneCircle
-        {
-            get
-            {
-                if (runeSprite != null) return runeSprite;
-                const int n = 512;
-                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "BAM.UI.Rune" };
-                var px = new Color32[n * n];
-                float px1 = 2f / n; // one pixel in radius units
-                for (int y = 0; y < n; y++)
-                for (int x = 0; x < n; x++)
-                {
-                    float dx = (x + 0.5f) / n * 2 - 1, dy = (y + 0.5f) / n * 2 - 1;
-                    float r = Mathf.Sqrt(dx * dx + dy * dy);
-                    float ang = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg + 180f;
-                    float a = 0;
-                    a = Mathf.Max(a, Band(r, 0.975f, 0.012f, px1));
-                    a = Mathf.Max(a, Band(r, 0.93f, 0.006f, px1));
-                    a = Mathf.Max(a, Band(r, 0.72f, 0.01f, px1));
-                    a = Mathf.Max(a, Band(r, 0.5f, 0.005f, px1) * 0.8f);
-                    // ticks between the two outer rings, every 7.5 degrees
-                    if (r > 0.935f && r < 0.97f)
-                    {
-                        float t = Mathf.Abs(Mathf.Repeat(ang + 3.75f, 7.5f) - 3.75f) * Mathf.Deg2Rad * r;
-                        a = Mathf.Max(a, Mathf.Clamp01(1 - (t - 0.004f) / px1));
-                    }
-                    // rune dots between the middle rings, every 30 degrees, and a star of lines inside
-                    float seg = Mathf.Abs(Mathf.Repeat(ang + 15f, 30f) - 15f) * Mathf.Deg2Rad;
-                    float ddot = Mathf.Sqrt((r - 0.82f) * (r - 0.82f) + (seg * r) * (seg * r));
-                    a = Mathf.Max(a, Mathf.Clamp01(1 - (ddot - 0.03f) / px1));
-                    if (r < 0.72f && r > 0.5f)
-                    {
-                        float line = Mathf.Abs(Mathf.Repeat(ang, 60f) - 30f) * Mathf.Deg2Rad * r;
-                        a = Mathf.Max(a, Mathf.Clamp01(1 - (line - 0.003f) / px1) * 0.6f);
-                    }
-                    px[y * n + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
-                }
-                tex.SetPixels32(px);
-                tex.Apply(true, true);
-                runeSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-                return runeSprite;
-            }
-        }
-
-        // 1 inside a ring of half-width w around radius c, smoothed over one pixel.
-        static float Band(float r, float c, float w, float px1) => Mathf.Clamp01(1 - (Mathf.Abs(r - c) - w) / px1);
+        static Sprite fadeV, fadeH;
 
         static Texture2D Picture(string name)
         {
@@ -254,7 +145,7 @@ namespace BAM.UI
         /// <summary>A round portrait with a gold ring (the old top bar's hero picture).</summary>
         static RectTransform PortraitCircle(Transform parent, float size, out RawImage img)
         {
-            var ring = UiKit.Fill(parent, UiKit.Gold, UiKit.Circle);
+            var ring = UiKit.Fill(parent, UiKit.Trim, UiKit.Circle);
             ring.rectTransform.sizeDelta = new Vector2(size, size);
             var mask = UiKit.Fill(ring.rectTransform, Color.white, UiKit.Circle);
             UiKit.Stretch(mask.rectTransform, 5, 5, 5, 5);
@@ -278,7 +169,7 @@ namespace BAM.UI
             fadeH = MakeFade(false);
             var screen = UiKit.NewRect("Backdrop", body);
             UiKit.Stretch(screen);
-            screen.SetSiblingIndex(0); // under everything else on Home
+            screen.SetSiblingIndex(1); // over the plain gradient, under everything else on Home
             screen.gameObject.AddComponent<RectMask2D>();
             screen.gameObject.AddComponent<SizeWatch>().Changed = LayoutHomeBackground;
             homeBackdrop = screen;
@@ -287,16 +178,16 @@ namespace BAM.UI
             homeBg = bgRt.gameObject.AddComponent<RawImage>();
             homeBg.texture = Picture("home_bg");
             homeBg.raycastTarget = false;
-            var shade = UiKit.Fill(bgRt, new Color(0.055f, 0.075f, 0.094f, 0.2f));
+            var shade = UiKit.Fill(bgRt, new Color(0.04f, 0.055f, 0.16f, 0.2f));
             shade.name = "Shade";
             int i = 1;
-            homeEdgeL = FadePart(screen, fadeH, new Color(0.03f, 0.04f, 0.05f, 0.5f), i++);
-            homeEdgeR = FadePart(screen, fadeH, new Color(0.03f, 0.04f, 0.05f, 0.5f), i++);
+            homeEdgeL = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
+            homeEdgeR = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
             homeEdgeR.rectTransform.localScale = new Vector3(-1, 1, 1);
-            homeTopFade = FadePart(screen, fadeV, new Color(0.055f, 0.075f, 0.094f, 0.92f), i++);
-            homeBottomFade = FadePart(screen, fadeV, new Color(0.055f, 0.075f, 0.094f, 1f), i++);
+            homeTopFade = FadePart(screen, fadeV, new Color(0.04f, 0.05f, 0.15f, 0.92f), i++);
+            homeBottomFade = FadePart(screen, fadeV, new Color(0.055f, 0.07f, 0.19f, 1f), i++);
             homeBottomFade.rectTransform.localScale = new Vector3(1, -1, 1);
-            homeBottomFill = FadePart(screen, null, new Color(0.055f, 0.075f, 0.094f, 1f), i);
+            homeBottomFill = FadePart(screen, null, new Color(0.055f, 0.07f, 0.19f, 1f), i);
         }
 
         static Image FadePart(RectTransform screen, Sprite sprite, Color color, int sibling)
@@ -496,12 +387,12 @@ namespace BAM.UI
                 role.fontStyle = FontStyle.Bold;
                 UiKit.Band(role, false, 22, 40, 4);
 
-                // The "selected" mark: a gold circle with a dark tick in the top right corner.
+                // The old "selected" mark: a mint circle with a white tick in the top right corner.
                 var check = UiKit.Fill(card, UiKit.Primary, UiKit.Circle);
                 UiKit.Place(check, 1, 1, 10, 10, 56, 56);
-                var tick1 = UiKit.Fill(check.rectTransform, UiKit.Ink);
+                var tick1 = UiKit.Fill(check.rectTransform, Color.white);
                 UiKit.Place(tick1, 0.5f, 0.5f, -8, -3, 16, 6).localRotation = Quaternion.Euler(0, 0, -45);
-                var tick2 = UiKit.Fill(check.rectTransform, UiKit.Ink);
+                var tick2 = UiKit.Fill(check.rectTransform, Color.white);
                 UiKit.Place(tick2, 0.5f, 0.5f, 5, 1, 26, 6).localRotation = Quaternion.Euler(0, 0, 50);
                 cardChecks[i] = check.gameObject;
             }
@@ -513,7 +404,7 @@ namespace BAM.UI
             dbg.type = Image.Type.Sliced;
             dbg.color = CardFill;
             dbg.raycastTarget = false;
-            UiKit.Frame(detail);
+            UiKit.Frame(detail).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.75f);
             VList(detail, 10, new RectOffset(36, 36, 28, 36));
 
             detailName = DetailText(detail, 72, UiKit.Gold, 0);
@@ -562,7 +453,7 @@ namespace BAM.UI
             gap.gameObject.AddComponent<LayoutElement>().preferredHeight = spaceAbove;
             var row = UiKit.NewRect("Ability", list);
             row.gameObject.AddComponent<LayoutElement>().preferredHeight = 72;
-            var disc = UiKit.Fill(row, UiKit.Muted, UiKit.Circle);
+            var disc = UiKit.Fill(row, new Color(0.1f, 0.11f, 0.25f), UiKit.Circle);
             UiKit.Place(disc, 0, 0.5f, 0, 0, 72, 72);
             icon = UiKit.Fill(disc.rectTransform, UiKit.Gold);
             UiKit.Stretch(icon.rectTransform, 12, 12, 12, 12);
@@ -646,7 +537,7 @@ namespace BAM.UI
             for (int i = 0; i < cardFrames.Length; i++)
             {
                 bool on = i == index;
-                cardFrames[i].color = on ? UiKit.Gold : UiKit.Trim;
+                cardFrames[i].color = on ? UiKit.Primary : new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.75f);
                 cardChecks[i].SetActive(on);
             }
 
@@ -702,7 +593,7 @@ namespace BAM.UI
     sealed class HeroStage : MonoBehaviour
     {
         static readonly Vector3 Spot = new Vector3(500, 0, 500);
-        const int Size = 768;
+        const int Size = 512;
 
         RawImage image;
         Camera cam;
@@ -746,9 +637,10 @@ namespace BAM.UI
             cam.farClipPlane = 8;
             cam.targetTexture = rt;
             cam.depth = -50;
-            // Level with the hero's chest, straight in front (it looks toward -z): 30 degrees at 3 units shows y -0.1 to 1.5.
-            go.transform.position = Spot + new Vector3(0, 0.7f, -3f);
-            go.transform.rotation = Quaternion.identity;
+            // In front of the hero (who looks toward -z), a little above, looking at its middle.
+            var target = Spot + new Vector3(0, 0.5f, 0);
+            go.transform.position = Spot + new Vector3(0, 0.75f, -2.6f);
+            go.transform.LookAt(target);
             cam.enabled = false;
         }
 
