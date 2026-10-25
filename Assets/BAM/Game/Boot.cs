@@ -5,6 +5,7 @@ using BAM.Core;
 using BAM.UI;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 
 namespace BAM.Game
 {
@@ -16,6 +17,8 @@ namespace BAM.Game
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Start()
         {
+            // Editor tools such as BAM > Art Preview play an unsaved scene of their own; the game only starts from a scene in the build.
+            if (SceneManager.GetActiveScene().buildIndex < 0) return;
             Application.targetFrameRate = 60;
 
             var host = new GameObject("BAM.Game");
