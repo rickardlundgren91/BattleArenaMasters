@@ -124,7 +124,8 @@ namespace BAM.Build
             SetSerialized(a, "m_AdditionalLightShadowsSupported", 0, n + "additional light shadows", log);
             if (!a.useSRPBatcher) { log.Change(n + "SRP batcher", false, true); a.useSRPBatcher = true; }
             if (a.colorGradingMode != ColorGradingMode.LowDynamicRange) { log.Change(n + "color grading", a.colorGradingMode, ColorGradingMode.LowDynamicRange); a.colorGradingMode = ColorGradingMode.LowDynamicRange; }
-            if (a.gpuResidentDrawerMode != GPUResidentDrawerMode.Disabled) { log.Change(n + "GPU resident drawer", a.gpuResidentDrawerMode, GPUResidentDrawerMode.Disabled); a.gpuResidentDrawerMode = GPUResidentDrawerMode.Disabled; }
+            // GPUResidentDrawerMode lives in Unity.RenderPipelines.GPUDriven.Runtime in Unity 6.6, so this goes through the field (0 = Disabled).
+            SetSerialized(a, "m_GPUResidentDrawerMode", 0, n + "GPU resident drawer", log);
             if (a.volumeProfile != null) { log.Change(n + "volume profile", a.volumeProfile.name, "none"); a.volumeProfile = null; }
             if (a.upscalingFilter != UpscalingFilterSelection.Linear) { log.Change(n + "upscaling filter", a.upscalingFilter, UpscalingFilterSelection.Linear); a.upscalingFilter = UpscalingFilterSelection.Linear; }
         }
