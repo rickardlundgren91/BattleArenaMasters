@@ -4,6 +4,7 @@
     "references": [
         "BAM.Sim",
         "BAM.Core",
+        "BAM.Art",
         "BAM.Audio",
         "UnityEngine.UI",
         "Unity.InputSystem"

@@ -1,3 +1,4 @@
+using BAM.Art;
 using BAM.Audio;
 using BAM.Core;
 using BAM.Sim;
@@ -20,6 +21,7 @@ namespace BAM.UI
         // ---- Home ----
 
         static RectTransform homePortrait, homeHero, homeBody;
+        static HeroStage homeStage;
         static RawImage homeBg, homePortraitImg;
         static Image homeTopFade, homeBottomFade, homeBottomFill, homeEdgeL, homeEdgeR;
         const float HomePlatY = NavH + 24 + 200 + 260; // the platform's middle, from the bottom of the safe area
@@ -40,9 +42,12 @@ namespace BAM.UI
             var mint = UiKit.Fill(body, UiKit.Primary, UiKit.CircleRing);
             UiKit.Place(mint, 0.5f, 0, 0, platY - 62, 470, 124);
 
-            // The hero: a big badge for now (a 3D model later).
+            // The hero: Rickard's 3D model, filmed by its own camera (HeroStage); the letter badge only if that fails.
             homeHero = UiKit.HeroBadge(body, HeroId.Bram);
             UiKit.Place(homeHero, 0.5f, 0, 0, platY - 20, 440, 440);
+            var stageRt = UiKit.NewRect("Hero3D", body);
+            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 75, 620, 620);
+            homeStage = stageRt.gameObject.AddComponent<HeroStage>();
 
             // Top bar: portrait, the game's name.
             var top = UiKit.Panel(body, new Color(0.04f, 0.05f, 0.13f, 0.92f));
@@ -113,7 +118,9 @@ namespace BAM.UI
         {
             var id = (HeroId)BamSettings.LastHero;
             var info = HeroCatalog.Get(id);
-            SetBadge(homeHero, id);
+            bool shown = homeStage.Show(id);
+            homeHero.gameObject.SetActive(!shown);
+            if (!shown) SetBadge(homeHero, id);
             homePortraitImg.texture = Portrait(id);
             LayoutHomeBackground();
             homeSelected.text = info.Name + " - " + info.Title + " selected";
@@ -571,5 +578,67 @@ namespace BAM.UI
             Grid.constraintCount = cols;
             Grid.cellSize = new Vector2((inner - Grid.spacing.x * (cols - 1)) / cols, 370);
         }
+    }
+
+    /// <summary>
+    /// Shows one hero's 3D model (ArtKit.CreateHeroPreview) in the UI: a small camera far from the arena films it into a
+    /// RenderTexture drawn by a RawImage. The camera only runs while this is visible.
+    /// </summary>
+    sealed class HeroStage : MonoBehaviour
+    {
+        static readonly Vector3 Spot = new Vector3(500, 0, 500);
+        const int Size = 512;
+
+        RawImage image;
+        Camera cam;
+        RenderTexture rt;
+        UnitView view;
+        HeroId shownId;
+        bool hasHero;
+
+        /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback).</summary>
+        public bool Show(HeroId id)
+        {
+            if (hasHero && id == shownId) return true;
+            Setup();
+            if (hasHero) { ArtKit.Release(view); view = null; hasHero = false; }
+            try { view = ArtKit.CreateHeroPreview(id); }
+            catch (System.Exception e) { Debug.LogException(e); view = null; }
+            if (view == null) { image.enabled = false; return false; }
+            view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, 160, 0)); // faces the camera, a little turned
+            view.SetMoving(false, 0);
+            shownId = id;
+            hasHero = true;
+            image.enabled = true;
+            cam.enabled = isActiveAndEnabled;
+            return true;
+        }
+
+        void Setup()
+        {
+            if (cam != null) return;
+            image = gameObject.AddComponent<RawImage>();
+            image.raycastTarget = false;
+            rt = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGB32) { name = "BAM.UI.HeroStage", antiAliasing = 4 };
+            image.texture = rt;
+            var go = new GameObject("BAM.HeroStageCamera");
+            DontDestroyOnLoad(go);
+            cam = go.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0, 0, 0, 0);
+            cam.fieldOfView = 30;
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 8;
+            cam.targetTexture = rt;
+            cam.depth = -50;
+            // In front of the hero (who looks toward -z), a little above, looking at its middle.
+            var target = Spot + new Vector3(0, 0.5f, 0);
+            go.transform.position = Spot + new Vector3(0, 0.75f, -2.6f);
+            go.transform.LookAt(target);
+            cam.enabled = false;
+        }
+
+        void OnEnable() { if (cam != null) cam.enabled = hasHero; }
+        void OnDisable() { if (cam != null) cam.enabled = false; }
     }
 }
