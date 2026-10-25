@@ -87,6 +87,7 @@ namespace BAM.Build
             Scene(log);
             Icons(log);
             PlayMode(log);
+            Privacy(log);
 
             AssetDatabase.SaveAssets();
             if (interactive) RemoveTemplateSamples(log);
@@ -104,6 +105,13 @@ namespace BAM.Build
                 log.Change("Enter Play Mode options", "custom", "reload domain and scene");
                 EditorSettings.enterPlayModeOptionsEnabled = false;
             }
+        }
+
+        // Data safety says nothing leaves the phone without consent; Unity's own crash and performance reporting would.
+        static void Privacy(Log log)
+        {
+            if (UnityEditor.CrashReporting.CrashReportingSettings.enabled) { log.Change("Cloud Diagnostics crash reporting", true, false); UnityEditor.CrashReporting.CrashReportingSettings.enabled = false; }
+            if (UnityEditor.Analytics.PerformanceReportingSettings.enabled) { log.Change("Performance reporting", true, false); UnityEditor.Analytics.PerformanceReportingSettings.enabled = false; }
         }
 
         static void Identity(Log log)
