@@ -31,12 +31,10 @@ namespace BAM.UI
         {
             var body = NewScreen("Home", false, out mainMenu);
             homeBody = body;
-            BuildHomeBackground((RectTransform)body.parent);
+            BuildHomeBackground(body);
 
-            // On the painted platform: a soft warm spotlight, a faint gold rune ring and a mint ring under the feet.
+            // On the painted platform: a faint gold rune ring and a mint ring under the feet.
             float platY = HomePlatY;
-            var glow = UiKit.Fill(body, new Color(1f, 0.88f, 0.63f, 0.07f), UiKit.Circle);
-            UiKit.Place(glow, 0.5f, 0, 0, platY - 120, 760, 760);
             var gold = UiKit.Fill(body, new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.55f), UiKit.CircleRing);
             UiKit.Place(gold, 0.5f, 0, 0, platY - 95, 720, 190);
             var mint = UiKit.Fill(body, UiKit.Primary, UiKit.CircleRing);
@@ -162,19 +160,27 @@ namespace BAM.UI
 
         // The painting fills the screen behind Home like in the old game: scaled so its platform (at 47 % across, 79 % down
         // the picture) sits under the hero, a little darker, with dark fades at the top, the sides and below it.
-        static void BuildHomeBackground(RectTransform screen)
+        static RectTransform homeBackdrop;
+
+        // Everything sits in the standing frame (the phone-shaped middle of a wide window), clipped to it.
+        static void BuildHomeBackground(RectTransform body)
         {
             fadeV = MakeFade(true);
             fadeH = MakeFade(false);
+            var screen = UiKit.NewRect("Backdrop", body);
+            UiKit.Stretch(screen);
+            screen.SetSiblingIndex(0); // under everything else on Home
+            screen.gameObject.AddComponent<RectMask2D>();
+            screen.gameObject.AddComponent<SizeWatch>().Changed = LayoutHomeBackground;
+            homeBackdrop = screen;
             var bgRt = UiKit.NewRect("Painting", screen);
-            bgRt.SetSiblingIndex(1); // over the plain gradient, under everything else
             bgRt.anchorMin = bgRt.anchorMax = bgRt.pivot = new Vector2(0, 1);
             homeBg = bgRt.gameObject.AddComponent<RawImage>();
             homeBg.texture = Picture("home_bg");
             homeBg.raycastTarget = false;
             var shade = UiKit.Fill(bgRt, new Color(0.04f, 0.055f, 0.16f, 0.2f));
             shade.name = "Shade";
-            int i = 2;
+            int i = 1;
             homeEdgeL = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
             homeEdgeR = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
             homeEdgeR.rectTransform.localScale = new Vector3(-1, 1, 1);
@@ -210,11 +216,11 @@ namespace BAM.UI
 
         static void LayoutHomeBackground()
         {
-            var screen = (RectTransform)homeBody.parent;
-            Vector2 size = screen.rect.size;
+            if (homeBackdrop == null || homeBg == null) return;
+            Vector2 size = homeBackdrop.rect.size;
             float W = size.x, H = size.y;
             if (W <= 0 || H <= 0 || homeBg.texture == null) return;
-            float platFromTop = H - (homeBody.anchorMin.y * H + HomePlatY);
+            float platFromTop = H - HomePlatY;
             float iw = homeBg.texture.width, ih = homeBg.texture.height;
             float s = Mathf.Max(platFromTop / (0.786f * ih), W / iw);
             float dw = iw * s, dh = ih * s, dx = W / 2 - 0.4725f * dw, dy = platFromTop - 0.786f * dh;
@@ -640,5 +646,12 @@ namespace BAM.UI
 
         void OnEnable() { if (cam != null) cam.enabled = hasHero; }
         void OnDisable() { if (cam != null) cam.enabled = false; }
+    }
+
+    /// <summary>Calls back when its RectTransform changes size (the window or the standing frame changed).</summary>
+    sealed class SizeWatch : MonoBehaviour
+    {
+        public System.Action Changed;
+        void OnRectTransformDimensionsChange() => Changed?.Invoke();
     }
 }
