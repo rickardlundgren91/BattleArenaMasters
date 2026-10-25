@@ -16,7 +16,7 @@ namespace BAM.Sim
 
         public static HeroInfo Get(HeroId id) => All[(int)id];
 
-        // Texts follow the old game's shipped heroes plus Rickard's 2026-10-25 changes (Fenn's thrown wolf and Omega-style clone).
+        // Texts follow the old game's shipped heroes plus Rickard's 2026-10-25 changes (Fenn's thrown wolf and decoy clone).
         public static readonly HeroInfo[] All =
         {
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
@@ -25,7 +25,7 @@ namespace BAM.Sim
                 Health = 2, Damage = 3, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = "Pack Runner", Role = "Fighter", Ranged = false,
                 SpecialName = "Call of the Pack", SpecialDesc = "Calls a wolf that follows Fenn and bites enemies for 4 s. Drag to throw it up to 6 tiles: it hunts an enemy hero, or bites minions when no hero is near. Walls stop it.",
-                PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a clone of him appears and fights for 6 s. Every 18 s.",
+                PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit. Every 18 s.",
                 Health = 2, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tyra, Name = "Tyra", Title = "The Longshot", Role = "Marksman", Ranged = true,
                 SpecialName = "Pinpoint Bolt", SpecialDesc = "Fires a heavy bolt after a short draw that hits the first enemy in its path. Drag to aim it.",

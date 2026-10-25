@@ -82,7 +82,7 @@ namespace BAM.Sim
             {
                 amount *= tgt.TakenMult;
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
-                if (tgt.IsClone) amount *= 2;
+                if (tgt.IsClone) amount = Math.Max(amount, tgt.Hp); // Fenn's decoy is gone at the first hit (the old illusion took double)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
                 if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy)) amount = TutDamage(src, tgt, amount, kind);

@@ -18,11 +18,11 @@ before going beyond it.
   hero is near it bites minions. Walls stop it: it walks round them, a throw ends at the first wall and its bite needs a
   clear line like everyone's (Rickard 2026-10-25 14:50-14:51, after it won 90 % against bots going through walls; this
   replaced the first "spectral, through walls, 7 tiles" version). It still passes through bodies. To be tuned after playtests.
-- **Fenn's clone (Phantom Step) works like the old ABC2 hero Omega's illusion:** a full copy with Fenn's health and level
-  that runs to the nearest enemy within 5 tiles and fights with his damage for 6 s; every unit can target it; it takes
-  double damage; it gives no special charge; it ends when its time is up or Fenn dies. Trigger as before: an enemy hero
-  hits Fenn, at most once per 18 s. Open (2026-10-25 15:10): it makes Fenn win 83 % against Hard bots (48 % without it,
-  old Fenn 61 %); Rickard is choosing how to weaken it (recommended: a decoy, 3 s, no damage, gone at the first hit = 62 %).
+- **Fenn's clone is a decoy:** when an enemy hero hits Fenn (at most once per 18 s) a copy with his look, health and level
+  appears for 3 s, runs at the nearest enemy within 5 tiles and swings at it, but deals no damage and is gone at the first
+  hit it takes; every unit can target it, it gives no special charge, it ends early when Fenn dies (Rickard 2026-10-25,
+  card "Klonen blir ett lockbete"). The first version, the old ABC2 hero Omega's illusion (6 s, full damage, double damage
+  taken), made Fenn win 83 % against Hard bots; the decoy 58 % Hard, 59 % Normal, 39 % Easy (old Fenn 61, 52, 43 %).
 
 ## Screens and feel
 - Menus: Start, hero select, Settings. Short guided match as tutorial.

@@ -22,8 +22,8 @@ or y direction, a timer that counts differently, a unit kind that is included or
 - The old code has many switches (`ABC2_*` environment variables, `G.*` flags): only their default values count. Old
   features that are out (items, buff spots, Arena Core, spells, WoW classes, the RL brain, multiplayer, other heroes) are
   not differences.
-- Decided changes (not differences): Fenn's wolf is spectral and has a tap and a thrown form, Fenn's clone works like the
-  old Omega/Thief illusion (DECISIONS.md "Rule changes"); the map is mirrored so the player's team is at the bottom
+- Decided changes (not differences): Fenn's wolf has a tap and a thrown form (6 tiles, walls stop it), Fenn's clone is a
+  3 s decoy that deals no damage (DECISIONS.md "Rule changes"); the map is mirrored so the player's team is at the bottom
   (old team numbers and y directions are flipped: check that every flip is right); red warnings exist as zones.
 
 ## Output

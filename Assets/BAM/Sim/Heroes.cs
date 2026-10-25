@@ -22,14 +22,16 @@ namespace BAM.Sim
     /// 6 tiles, homes in on an enemy hero it passes and pounces (a bite and a short root), then hunts on. Walls stop the wolf:
     /// it walks round them, a throw ends at the first one and it bites only with a clear line (Rickard 2026-10-25, after it won
     /// 90 % going through them); it still passes through bodies. Passive (the clone): when an enemy hero hits Fenn, a copy of
-    /// him with his health and level runs at the nearest enemy and fights for 6 s (it takes double damage), at most once per 18 s.</summary>
+    /// him with his health and level appears for 3 s, runs at the nearest enemy and swings at it, but it is a decoy: it deals no
+    /// damage and is gone at the first hit it takes (Rickard 2026-10-25; the old illusion's full fight made Fenn win 83 % against
+    /// Hard bots, the decoy 62 %, the old game's Fenn 61 %). At most once per 18 s.</summary>
     public static class FennS
     {
         public const float ThrowReach = 6, ThrowSpeed = 11, HomeRadius = 1.5f, PounceRadius = 1, RootDuration = 0.8f;
         public const float HpPercent = 0.3f, Duration = 4, DamageCoeff = 0.4f, Leash = 6, Sight = 3.5f, FollowGap = 1.2f;
-        public const float CloneCooldown = 18, CloneLife = 6, CloneSight = 5;
-        /// <summary>The clone's damage as a share of Fenn's (the old illusion: all of it).</summary>
-        public const float CloneDamage = 1;
+        public const float CloneCooldown = 18, CloneLife = 3, CloneSight = 5;
+        /// <summary>The clone's damage as a share of Fenn's: none, it is a decoy (the old illusion dealt all of it).</summary>
+        public const float CloneDamage = 0;
     }
 
     /// <summary>Tyra, Pinpoint Bolt: a short draw, then a heavy bolt that stops in the first enemy it meets. Passive: standing
@@ -442,7 +444,7 @@ namespace BAM.Sim
             Emit(EventType.CloneEnd, c, c.Owner, 0, 0, false, c.X, c.Y);
         }
 
-        /// <summary>The clone runs at the nearest enemy within 5 tiles (its attacks do the rest), else stays by Fenn.</summary>
+        /// <summary>The clone runs at the nearest enemy within 5 tiles (its harmless swings do the rest), else stays by Fenn.</summary>
         void AiClone(Unit c, float dt)
         {
             var t = Nearest(EnemiesInRange(c, FennS.CloneSight, Pick.Any, false, aiBuf), c.X, c.Y);

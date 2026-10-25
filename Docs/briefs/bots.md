@@ -46,9 +46,10 @@ data: `/mnt/project-files/bam-ref/oldsim/dump/abc2_gamedata.json`.
 Not in the new game (drop those branches): items, buff spots, the Arena Core, battle spells, WoW classes, the RL brain
 (`SimBrain*`), multiplayer, every hero except Bram, Fenn, Tyra, Moa, Knut, Tikta and Blast. All old `ABC2_*` switches stay
 at their defaults: keep only the default path, with the tuning values (TK, TK3) that path uses.
-Rule changes that matter for bots: Fenn's wolf is spectral (passes walls and units); his tap calls it to follow him and
-bite, his drag throws it up to 7 tiles where it homes on an enemy hero (else it bites minions), so a bot drags it at a
-hero it can reach. Fenn's passive makes a clone (the old Thief/Omega illusion) when an enemy hero hits him, once per 18 s.
+Rule changes that matter for bots: Fenn's wolf passes units but walls stop it (it walks round them, needs a clear line to
+bite); his tap calls it to follow him and bite, his drag throws it up to 6 tiles where it homes on an enemy hero (else it
+bites minions), so a bot drags it at a hero it can reach in a clear line. Fenn's passive makes a 3 s decoy clone (no
+damage, gone at the first hit) when an enemy hero hits him, once per 18 s.
 
 ## Steps
 1. Read the old bot code; map every old helper to the new API in `/mnt/project-files/bam-work/bots/NOTES.md`.
