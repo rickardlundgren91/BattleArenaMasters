@@ -2,7 +2,7 @@
 
 _Last updated: 25 October 2026_
 
-Battle Arena Masters ("BAM", "the game") is a mobile game made by **{{DEVELOPER_NAME}}** (Rickard Lundgren, Sweden; "we", "us"), who is responsible for the data described here.
+Battle Arena Masters ("BAM", "the game") is a mobile game made by **BAM Games** (Rickard Lundgren, Sweden; "we", "us"), who is responsible for the data described here.
 Questions about this policy or your data: **support@battlearenamasters.com**.
 
 ## 1. The short version
@@ -89,4 +89,4 @@ and we will ask for your consent again if needed.
 
 ## 11. Contact
 
-{{DEVELOPER_NAME}} (Rickard Lundgren, Sweden) – support@battlearenamasters.com – https://battlearenamasters.com
+BAM Games (Rickard Lundgren, Sweden) – support@battlearenamasters.com – https://battlearenamasters.com

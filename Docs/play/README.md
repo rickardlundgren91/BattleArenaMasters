@@ -8,7 +8,7 @@
 | Privacy policy URL | **https://battlearenamasters.com/privacy** (Cloudflare Pages, site files in `/mnt/project-files/bam-site/`) |
 | Contact email | support@battlearenamasters.com (forwards to Rickard) |
 | Website | https://battlearenamasters.com |
-| Developer name | {{DEVELOPER_NAME}} (waiting for Rickard) |
+| Developer name | BAM Games |
 | Privacy policy text | `privacy-policy.md` |
 | Consent dialog and Settings texts | `consent-text.md` |
 | Data safety answers | `data-safety.md` |
