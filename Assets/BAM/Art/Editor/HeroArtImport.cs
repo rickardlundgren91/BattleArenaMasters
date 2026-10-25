@@ -35,6 +35,8 @@ namespace BAM.Art.Editor
             if (!assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Arena/")) return;
             ti.textureType = TextureImporterType.Default;
             ti.wrapMode = assetPath.Contains("T_BAM_ArenaGround") ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
+            // the boulder picture is cut out by its alpha: no dark fringe from the transparent pixels' colour
+            if (assetPath.Contains("T_BAM_Pillar")) { ti.alphaIsTransparency = true; ti.wrapMode = TextureWrapMode.Clamp; }
             ti.mipmapEnabled = true;
             ti.anisoLevel = 4;
             ti.sRGBTexture = true;

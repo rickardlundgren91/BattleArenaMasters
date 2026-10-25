@@ -4,7 +4,7 @@ Licenses and credits
 Game code, sound effects, icon and texts:
 made for Battle Arena Masters. All rights reserved.
 
-Hero, tower, wolf and wall models: Rickard Lundgren, made with Tripo AI and Meshy AI.
+Hero, tower, wolf, wall and bush models: Rickard Lundgren, made with Tripo AI and Meshy AI.
 Minion character, character rigging and animations: Mixamo (Adobe).
 Arena and training island textures: Rickard Lundgren.
 
