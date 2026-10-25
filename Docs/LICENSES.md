@@ -15,8 +15,8 @@ own arena/tutorial textures; each such file gets a row under "Imported from the 
 | 3D look built in code (minions, towers, wolf, bushes, rocks, effects, fallback heroes) | `Assets/BAM/Art` | Code | Ours. Hero models and arena textures: see "Imported from the old game". |
 | Sound effects | Synthesized at runtime by `Assets/BAM/Audio` | Code | Ours, no recorded samples. |
 | Music loop "Byte Strike" | `Assets/BAM/Audio/Resources/BAM/Music/ByteStrikeLoop.wav` (one 14.3 s cycle cut from Rickard's file "Byte Strike (13s Loop).mp3", 2026-10-25) | Rickard (artist tag TerreTrigger) with the AI music service FlowMusic | **Pending:** which FlowMusic (flowmusic.co or Google's Flow Music) and which plan. flowmusic.co gives a commercial license only on paid plans (Professional/Enterprise; the free plan lists none). Google's Flow Music lists commercial use for its Starter/Plus/Member tiers (Google AI Plus/Pro/Ultra) and does not claim ownership. Keep proof of the plan. Not legal advice. |
-| App icon layers, legacy icon | `Assets/BAM/Branding/icon_*.png` | `Docs/play/branding/make_branding.py` | Ours; uses Lilita One (OFL, see below). |
-| Store icon, feature graphic | `Docs/play/store-icon-512.png`, `Docs/play/feature-graphic-1024x500.png` | Same script | Ours; uses Lilita One. |
+| BAM logo (source) | `Docs/play/branding/bam-logo.png` | Rickard, 2026-10-25 (AI image generator, see note) | Rickard's; tool to be confirmed (GPT Image / Nano Banana allow commercial use). |
+| App icon layers, legacy icon, store icon, feature graphic | `Assets/BAM/Branding/icon_*.png`, `Docs/play/store-icon-512.png`, `Docs/play/feature-graphic-1024x500.png` | `Docs/play/branding/make_branding_logo.py` from the logo above | Rickard's logo. (The older code-drawn look, `make_branding.py`, used Lilita One and is no longer used.) |
 | Store texts, privacy policy | `Docs/play/` | The BAM project | Ours. |
 | Hero names and texts | `Assets/BAM/Sim/HeroCatalog.cs` | Rickard (from the old game) | Ours. |
 

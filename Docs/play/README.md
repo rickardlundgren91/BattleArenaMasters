@@ -16,7 +16,7 @@
 | Store texts + release notes | `store-listing.md` |
 | Store icon / feature graphic | `store-icon-512.png`, `feature-graphic-1024x500.png` |
 | App icon layers | `Assets/BAM/Branding/icon_foreground.png`, `icon_background.png`, `icon_legacy.png` |
-| Regenerate all images | `python3 Docs/play/branding/make_branding.py` (Pillow, Lilita One) |
+| Regenerate all images | `python3 Docs/play/branding/make_branding_logo.py` (from Rickard's logo `branding/bam-logo.png`) |
 | Play Console steps (Swedish) | `play-console-sv.md` |
 | Unity Cloud + Analytics steps (Swedish) | `unity-analytics-sv.md` |
 | Rights register | `Docs/LICENSES.md`; in-game text `Assets/BAM/Resources/BAM/Licenses.txt` |
