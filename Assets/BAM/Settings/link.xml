@@ -1,0 +1,11 @@
+<!-- Keeps the game's own assemblies whole when IL2CPP strips unused code (BAM > Setup Project sets stripping to Low).
+     The game uses no reflection, so this is a guard, not a fix; drop it if build size ever matters. -->
+<linker>
+  <assembly fullname="BAM.Sim" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="BAM.Core" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="BAM.Audio" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="BAM.Art" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="BAM.UI" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="BAM.Analytics" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="BAM.Game" preserve="all" ignoreIfMissing="1" />
+</linker>

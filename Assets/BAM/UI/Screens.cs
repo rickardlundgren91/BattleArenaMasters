@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using BAM.Audio;
 using BAM.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,44 +10,247 @@ namespace BAM.UI
     // CONTRACT between BAM.UI (owner: the menus thread) and BAM.Game (owner: the main thread). Docs/CONTRACTS.md explains it.
     // Every screen is built in code with uGUI and the Lilita One font. Buttons call BAM.Core.Flow.Game (IGameFlow) and
     // write BAM.Core.BamSettings; they never reach into BAM.Game.
+    //
+    // Every screen is built once in Init and then only shown and hidden. Screens form a stack (main menu -> hero select,
+    // pause -> settings -> licenses); the back button pops it. A dialog (consent, confirm) sits above the stack.
 
-    /// <summary>The shared look, also used by the in-match HUD (BAM.Game).</summary>
-    public static class UiKit
+    public static partial class Screens
     {
-        public static Font Font => null;
+        // Above the HUD (which should stay below 50); the hint bubble sits between the HUD and the menus.
+        const int MenuOrder = 100, HintOrder = 60;
 
-        /// <summary>A screen-space canvas scaled for portrait phones (reference 1080x1920, match width/height 0.5).</summary>
-        public static Canvas CreateCanvas(string name, int sortingOrder) => null;
-        /// <summary>A full-screen child that keeps clear of notches and rounded corners (Screen.safeArea).</summary>
-        public static RectTransform SafeArea(Canvas canvas) => null;
-        public static Text Label(Transform parent, string text, int size, TextAnchor anchor, Color color) => null;
-        public static Button Button(Transform parent, string text, Action onClick) => null;
-        public static Image Panel(Transform parent, Color color) => null;
+        static bool ready;
+        static Canvas menuCanvas;
+        static RectTransform root;
+        static readonly List<GameObject> stack = new List<GameObject>(8);
+        static Dialog dialog;
 
-        public static readonly Color Ally = new Color(0.25f, 0.55f, 1f);
-        public static readonly Color Enemy = new Color(0.95f, 0.25f, 0.2f);
-    }
-
-    public static class Screens
-    {
         /// <summary>Once at boot, before anything is shown.</summary>
-        public static void Init() { }
+        public static void Init()
+        {
+            if (ready) return;
+            ready = true;
+            menuCanvas = UiKit.CreateCanvas("BAM.Menus", MenuOrder);
+            menuCanvas.gameObject.AddComponent<UiRoot>();
+            root = (RectTransform)menuCanvas.transform;
+            BuildMainMenu();
+            BuildHeroSelect();
+            BuildSettings();
+            BuildLicenses();
+            BuildPause();
+            BuildResult();
+            dialog = new Dialog(root);
+            BuildHint();
+        }
 
         /// <summary>First start: asks for analytics consent if BamSettings.AnalyticsConsent is Unknown, then calls done.</summary>
-        public static void ShowConsentIfNeeded(Action done) { done?.Invoke(); }
+        public static void ShowConsentIfNeeded(Action done)
+        {
+            if (BamSettings.AnalyticsConsent != Consent.Unknown) { done?.Invoke(); return; }
+            Init();
+            // Both answers look the same and are the same size (Google Play: declining must be as easy as accepting).
+            dialog.Show(ConsentText.Title, ConsentText.Body,
+                ConsentText.No, () => { BamSettings.AnalyticsConsent = Consent.Denied; done?.Invoke(); },
+                ConsentText.Yes, () => { BamSettings.AnalyticsConsent = Consent.Granted; done?.Invoke(); },
+                UiKit.Primary, UiKit.Primary, null,
+                string.IsNullOrEmpty(BamInfo.PrivacyPolicyUrl) ? null : "Privacy policy",
+                () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
+        }
 
-        public static void ShowMainMenu() { }
-        public static void ShowPause() { }
-        public static void HidePause() { }
-        public static void ShowResult(MatchResult result) { }
+        public static void ShowMainMenu()
+        {
+            Init();
+            ClearStack();
+            Push(mainMenu);
+        }
 
-        /// <summary>Guided match: a hint bubble with one short sentence. anchorScreenPos = what it points at (null = centred).</summary>
-        public static void ShowHint(string text, Vector2? anchorScreenPos = null) { }
-        public static void HideHint() { }
+        public static void ShowPause()
+        {
+            Init();
+            ClearStack();
+            Push(pause);
+        }
 
-        public static void HideAll() { }
+        public static void HidePause()
+        {
+            if (!ready) return;
+            if (stack.Count > 0 && stack[0] == pause)
+            {
+                ClearStack();
+                dialog.Hide();
+            }
+        }
+
+        public static void ShowResult(MatchResult result)
+        {
+            Init();
+            ClearStack();
+            dialog.Hide();
+            HideHint();
+            FillResult(result);
+            Push(resultScreen);
+            if (!result.Quit) BamAudio.Play(result.Won ? SfxId.Victory : SfxId.Defeat);
+        }
+
+        public static void HideAll()
+        {
+            if (!ready) return;
+            ClearStack();
+            dialog.Hide();
+            HideHint();
+        }
 
         /// <summary>True while a menu or dialog covers the match (the HUD ignores touches then).</summary>
-        public static bool IsBlockingInput => false;
+        public static bool IsBlockingInput => stack.Count > 0 || (dialog != null && dialog.Open);
+
+        /// <summary>
+        /// The Android back button. The UI calls it itself outside a match; during a match the game layer calls it and, when
+        /// it returns false (nothing of ours is open), opens the pause menu. Closes the top dialog or goes back one screen;
+        /// on the pause menu it resumes, on the result screen it goes to the menu.
+        /// </summary>
+        public static bool HandleBack()
+        {
+            if (!ready) return false;
+            if (dialog.Open)
+            {
+                // The consent question has no back action on purpose: the player answers Allow or No thanks.
+                if (dialog.Back != null) { BamAudio.Play(SfxId.UiBack); dialog.Back(); }
+                return true;
+            }
+            if (stack.Count == 0) return false;
+            var top = stack[stack.Count - 1];
+            if (top == pause) { BamAudio.Play(SfxId.UiBack); ResumeMatch(); return true; }
+            if (top == resultScreen) { BamAudio.Play(SfxId.UiBack); GoToMenu(); return true; }
+            if (stack.Count > 1) { BamAudio.Play(SfxId.UiBack); Pop(); return true; }
+            return true; // the main menu has nothing below it; swallow the press instead of closing the app
+        }
+
+        // ---- navigation ----
+
+        static void Push(GameObject screen)
+        {
+            if (stack.Count > 0) stack[stack.Count - 1].SetActive(false);
+            stack.Add(screen);
+            screen.SetActive(true);
+            OnShown(screen);
+        }
+
+        static void Pop()
+        {
+            if (stack.Count == 0) return;
+            stack[stack.Count - 1].SetActive(false);
+            stack.RemoveAt(stack.Count - 1);
+            if (stack.Count > 0)
+            {
+                var screen = stack[stack.Count - 1];
+                screen.SetActive(true);
+                OnShown(screen);
+            }
+        }
+
+        static void ClearStack()
+        {
+            for (int i = 0; i < stack.Count; i++) stack[i].SetActive(false);
+            stack.Clear();
+        }
+
+        static void OnShown(GameObject screen)
+        {
+            if (screen == heroSelect) RefreshHeroSelect();
+            else if (screen == settings) RefreshSettings();
+        }
+
+        // The game layer normally hides/shows our screens itself after these calls; the extra calls here only make sure
+        // the player is never left without a screen if it does not.
+        static void GoToMenu()
+        {
+            if (Flow.Game != null && Flow.Game.InMatch)
+            {
+                HideAll();
+                Flow.Game.QuitToMenu();
+                if (!IsBlockingInput) ShowMainMenu();
+            }
+            else ShowMainMenu();
+        }
+
+        static void ResumeMatch()
+        {
+            Flow.Game?.Resume();
+            HidePause();
+        }
+
+        static void RestartMatch()
+        {
+            if (Flow.Game == null) return;
+            HideAll();
+            Flow.Game.RestartMatch();
+        }
+
+        static void StartMatch(MatchSetup setup)
+        {
+            if (Flow.Game == null)
+            {
+                Debug.LogError("[BAM.UI] Flow.Game is not set; cannot start a match");
+                return;
+            }
+            HideAll();
+            Flow.Game.StartMatch(setup);
+        }
+
+        /// <summary>Per-frame work (from UiRoot): only the hint bubble's bob. No allocations.</summary>
+        internal static void Tick() => TickHint();
+
+        // ---- shared screen pieces ----
+
+        /// <summary>A hidden full-screen page: background (gradient for menus, dim veil over the match) and a safe-area body.</summary>
+        static RectTransform NewScreen(string name, bool overMatch, out GameObject go)
+        {
+            var rt = UiKit.NewRect(name, root);
+            UiKit.Stretch(rt);
+            go = rt.gameObject;
+            if (overMatch) UiKit.Fill(rt, UiKit.Dim).raycastTarget = true;
+            else UiKit.Background(rt);
+            var body = UiKit.SafeArea(rt);
+            go.SetActive(false);
+            return body;
+        }
+
+        /// <summary>Top bar with a back button and a title.</summary>
+        static void TopBar(RectTransform body, string title)
+        {
+            var back = UiKit.Button(body, "Back", () => HandleBack(), UiKit.Muted, SfxId.None, 48);
+            UiKit.Place(back, 0, 1, 30, -30, 220, 110);
+            var t = UiKit.Label(body, title, 72, TextAnchor.MiddleCenter, UiKit.TextColor);
+            UiKit.Band(t, true, 30, 110, 260);
+            UiKit.AddOutline(t, 3);
+        }
+
+        /// <summary>A rounded row in a vertical list: a label on the left, room for a control on the right.</summary>
+        static RectTransform Row(Transform list, string text, float height, out Text label)
+        {
+            var row = UiKit.NewRect(text, list);
+            var bg = row.gameObject.AddComponent<Image>();
+            bg.sprite = UiKit.Rounded;
+            bg.type = Image.Type.Sliced;
+            bg.color = UiKit.RowColor;
+            bg.raycastTarget = false;
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
+            label = UiKit.Label(row, text, 44, TextAnchor.MiddleLeft, UiKit.TextColor);
+            UiKit.Stretch(label.rectTransform, 36, 0, 300, 0);
+            return row;
+        }
+
+        static VerticalLayoutGroup VList(RectTransform rt, float spacing, RectOffset padding)
+        {
+            var v = rt.gameObject.AddComponent<VerticalLayoutGroup>();
+            v.spacing = spacing;
+            v.padding = padding;
+            v.childControlWidth = true;
+            v.childControlHeight = true;
+            v.childForceExpandWidth = true;
+            v.childForceExpandHeight = false;
+            v.childAlignment = TextAnchor.UpperCenter;
+            return v;
+        }
     }
 }

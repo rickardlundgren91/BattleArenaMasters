@@ -34,3 +34,7 @@ keystore*.txt
 *.apk
 *.aab
 *.symbols.zip
+# Python caches and the sound preview export (BAM > Export Sounds as WAV)
+__pycache__/
+*.pyc
+/SoundPreview/

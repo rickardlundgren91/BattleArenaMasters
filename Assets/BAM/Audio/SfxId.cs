@@ -1,0 +1,22 @@
+namespace BAM.Audio
+{
+    // CONTRACT between BAM.Audio (owner: the sound thread) and its callers (BAM.Game, BAM.UI). Docs/CONTRACTS.md explains it.
+    // Every sound is synthesized in code (no audio files). Entries are only ever added at the end of SfxId.
+    public enum SfxId
+    {
+        None = 0,
+        // UI
+        UiTap, UiBack, UiConfirm, UiToggle, Countdown, CountdownGo, Victory, Defeat,
+        // hero auto attacks (one per hero, in HeroId order)
+        AttackBram, AttackFenn, AttackTyra, AttackMoa, AttackKnut, AttackTikta, AttackBlast,
+        // specials
+        BramHammerThrow, BramHammerBounce, FennWolfCall, FennWolfThrow, TyraDraw, TyraRelease, MoaShield, MoaField,
+        KnutAnchorThrow, KnutAnchorHook, TiktaNeedles, BlastBombThrow, BlastExplosion, BlastFireLane,
+        // combat
+        HitLight, HitHeavy, ShieldBlock, Stunned, WolfBite, CloneAppear, CloneVanish,
+        // minions and towers
+        MinionMelee, MinionRanged, SiegeShot, TowerShot, TowerDestroyed,
+        // events
+        HeroDeath, AllyDeath, MinionDeath, Respawn, LevelUp, WaveSpawn, GrassEnter, SpecialReady, LowHealth,
+    }
+}
