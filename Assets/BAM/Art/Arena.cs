@@ -91,14 +91,6 @@ namespace BAM.Art
                     if (Void(info, tx + 1, ty)) Cliff(solid, kerb, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1));
                 }
 
-            // lane dashes down the road between the towers
-            if (info.Towers != null && info.Towers.Length >= 2)
-            {
-                float za = Mathf.Min(info.Towers[0].z, info.Towers[1].z) + 1.6f, zb = Mathf.Max(info.Towers[0].z, info.Towers[1].z) - 1.6f;
-                for (float z = za; z < zb; z += 1.2f)
-                    marks.Color(Pal.WhiteSoft).Face(new Vector3(laneX - 0.06f, 0.011f, z), new Vector3(laneX - 0.06f, 0.011f, z + 0.6f), new Vector3(laneX + 0.06f, 0.011f, z + 0.6f), new Vector3(laneX + 0.06f, 0.011f, z));
-            }
-
             if (info.Rocks != null)
                 for (int i = 0; i < info.Rocks.Length; i++)
                 {

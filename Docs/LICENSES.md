@@ -59,4 +59,4 @@ Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources
 |---|---|---|---|---|---|
 | `home_bg.jpg` (was `home_bg_soft.jpg`) | Home background painting | Old game Home | Rickard ("bilden är min egen", 2026-10-25) | Rickard's own | None |
 | `portrait_<hero>.png` (7) | Hero portraits on the Heroes cards and the Home top bar | Old game `profile_<hero>.png` | Renders of Rickard's own hero models | Rickard's own (he confirmed 2026-10-25 15:07) | None |
-| `special_<hero>.png`, `passive_<hero>.png` (14) | Ability icons on the Heroes page | Old game `ui_abilities_<hero>_*.png` | Rickard / the old project | To confirm with Rickard before release | None |
+| `special_<hero>.png`, `passive_<hero>.png` (14) | Ability icons on the Heroes page | Old game `ui_abilities_<hero>_*.png` | Rickard / the old project | Rickard's own (he confirmed 2026-10-25 15:14) | None |

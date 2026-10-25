@@ -152,7 +152,7 @@ namespace BAM.Art.Editor
                     float x = 0.6f + k * 0.82f;
                     var a = new Vector3(x, 0f, 15f + t * 2f);
                     var s = new Shot { V = ArtKit.CreateProjectile((ProjKind)k, t), A = a, B = a + new Vector3(0f, 0f, 3.5f), Len = 0.9f, T = k * 0.05f };
-                    if ((ProjKind)k == ProjKind.KnutAnchor) s.V.SetTether(heroViews[t, 4].transform);
+                    // no tether here: Knut stands far away in the preview, so the chain would cross the whole map
                     s.V.transform.position = a;
                     s.V.Launch(s.A, s.B, s.Len);
                     shots[t * 17 + k] = s;
@@ -310,7 +310,7 @@ namespace BAM.Art.Editor
             if (camT != null && focus != null)
             {
                 Vector3 f = focus[focusIndex];
-                float dist = (focusIndex == focus.Length - 1 ? 3.2f : 1f) * zoom;
+                float dist = (focusIndex == 5 ? 3.2f : focusIndex >= 6 ? 2.2f : focusIndex == 0 ? 0.6f : 1f) * zoom; // whole map far, island pages wide, heroes up close
                 camT.position = f + new Vector3(0f, 11.5f, -7.6f) * dist;
                 camT.rotation = Quaternion.Euler(56.5f, 0f, 0f);
                 // the island's sky (the match sets the same colour on its camera there)

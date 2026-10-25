@@ -174,14 +174,14 @@ namespace BAM.Art
             sun = lg.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.96f, 0.88f);
-            sun.intensity = 1.15f;
+            sun.intensity = 1.3f;
             sun.shadowStrength = 0.55f;
             sun.shadowBias = 0.04f;
             sun.shadowNormalBias = 0.3f;
             RenderSettings.sun = sun;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.72f, 0.78f, 0.9f);
-            RenderSettings.ambientEquatorColor = new Color(0.62f, 0.6f, 0.58f);
+            RenderSettings.ambientSkyColor = new Color(0.8f, 0.85f, 0.95f);
+            RenderSettings.ambientEquatorColor = new Color(0.7f, 0.68f, 0.64f);
             RenderSettings.ambientGroundColor = new Color(0.42f, 0.36f, 0.3f);
             RenderSettings.fog = false;
         }
