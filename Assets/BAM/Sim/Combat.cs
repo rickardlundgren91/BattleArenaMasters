@@ -9,7 +9,7 @@ namespace BAM.Sim
         None = 0,
         Burning = 1,   // a burn tick: its amount was finished when the burn was lit, so it skips the multipliers
         DotTick = 2,   // a poison tick
-        NotDirect = 4, // from a hero but not a direct hit (Inferno Lane's ticks): no Queen's Instinct, no clone
+        NotDirect = 4, // from a hero but not a direct hit (Inferno Lane's ticks): no Queen's Instinct (Fenn's clone still comes, as the old Phantom Step)
     }
 
     // Damage, death, auto attacks and shots (the old game's Sim.dealDamage, kill and SimCombat).

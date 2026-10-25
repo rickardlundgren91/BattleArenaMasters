@@ -27,6 +27,8 @@ namespace BAM.Sim
         public const float ThrowReach = 7, ThrowSpeed = 11, HomeRadius = 1.5f, PounceRadius = 1, RootDuration = 0.8f;
         public const float HpPercent = 0.3f, Duration = 4, DamageCoeff = 0.4f, Leash = 6, Sight = 3.5f, FollowGap = 1.2f;
         public const float CloneCooldown = 18, CloneLife = 6, CloneSight = 5;
+        /// <summary>The clone's damage as a share of Fenn's (the old illusion: all of it).</summary>
+        public const float CloneDamage = 1;
     }
 
     /// <summary>Tyra, Pinpoint Bolt: a short draw, then a heavy bolt that stops in the first enemy it meets. Passive: standing
@@ -392,8 +394,8 @@ namespace BAM.Sim
                 h.ClonePending = false;
                 if (!h.Alive || h.Kind != UnitKind.Hero) continue;
                 var c = NewUnit(UnitKind.Hero, h.Team, h.X + Rng.Range(-0.3f, 0.3f), h.Y + Rng.Range(-0.3f, 0.3f));
-                c.Hero = h.Hero; c.HDef = h.HDef; c.R = h.R; c.IsClone = true; c.Owner = h; c.Level = h.Level; c.Pips = h.Pips;
-                c.MaxHp = h.MaxHp; c.Hp = h.Hp; c.LifeT = FennS.CloneLife; c.Charge = 0; c.Facing = h.Facing;
+                c.Hero = h.Hero; c.HDef = h.HDef; c.R = h.R; c.IsClone = true; c.Owner = h; c.Level = h.Level; c.Pips = 0; // as the old illusion: no stars until the next hero death
+                c.MaxHp = h.MaxHp; c.Hp = h.Hp; c.LifeT = FennS.CloneLife; c.Charge = 0; c.Facing = h.Facing; c.DmgMult = h.DmgMult * FennS.CloneDamage;
                 Unstick(c);
                 c.PX = c.X; c.PY = c.Y; c.SpawnX = c.X; c.SpawnY = c.Y;
                 Emit(EventType.CloneSpawn, c, h, 0, 0, false, c.X, c.Y);

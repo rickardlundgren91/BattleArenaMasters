@@ -20,6 +20,10 @@ namespace BAM.Art.Editor
         {
             if (EditorApplication.isPlaying) { EditorApplication.isPlaying = false; return; }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            // make sure Rickard's models and pictures are imported and the hero list is built, even if the files arrived
+            // while Unity was busy (otherwise the game falls back to the code figures)
+            AssetDatabase.Refresh();
+            HeroArtImport.BuildAll();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var cam = new GameObject("Main Camera") { tag = "MainCamera" };
             var c = cam.AddComponent<Camera>();
@@ -85,7 +89,22 @@ namespace BAM.Art.Editor
             ArtKit.Init();
             ArtKit.ApplyQuality(GraphicsQuality.High);
             ArtKit.BuildArena(MakeArena());
-            camT = Camera.main != null ? Camera.main.transform : null;
+            Camera mc = Camera.main;
+            if (mc == null)
+            {
+                mc = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
+                mc.clearFlags = CameraClearFlags.SolidColor;
+                mc.backgroundColor = new Color(0.11f, 0.14f, 0.25f);
+                mc.fieldOfView = 38f;
+                mc.farClipPlane = 120f;
+            }
+            camT = mc.transform;
+            mc.depth = 100f; // draws over any camera the game itself started
+            int heroArt = 0, arenaTex = 0;
+            foreach (HeroId h in heroes) if (Resources.Load<HeroArt>("BAMArt/Heroes/" + h) != null) heroArt++;
+            foreach (string t in new[] { "Cobble", "Road2", "Grass" }) if (Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_Ground_" + t) != null) arenaTex++;
+            if (Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_Block") != null) arenaTex++;
+            Debug.Log("[BAM.Art] Preview: " + heroArt + " of 7 hero models, " + arenaTex + " of 4 arena pictures found");
 
             for (int t = 0; t < 2; t++)
                 for (int i = 0; i < 7; i++)
@@ -180,6 +199,12 @@ namespace BAM.Art.Editor
         // Boot), switch their canvases off so they do not cover the view.
         void HideGameUi()
         {
+            foreach (Camera c in Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude))
+                if (c.enabled && camT != null && c.transform != camT && c.targetTexture == null)
+                {
+                    c.enabled = false;
+                    Debug.Log("[BAM.Art] Preview switched off the game camera '" + c.name + "'");
+                }
             foreach (Canvas c in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude))
                 if (c.isRootCanvas)
                 {

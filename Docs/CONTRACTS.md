@@ -52,10 +52,13 @@ friendly, nothing harsh above about 8 kHz, no clipping). See `SfxId` for the lis
 ## UI (BAM.UI) - called by BAM.Game; calls Core
 
 - Boot order: `Screens.Init()`, then `Screens.ShowConsentIfNeeded(done)`, then `ShowMainMenu()` in `done`.
-- Main menu: title "Battle Arena Masters", Play, Tutorial (guided match), Settings. First start without a finished
-  tutorial: Play suggests the tutorial first (can be skipped).
-- Hero select: the seven heroes from `HeroCatalog` (name, title, role, special and passive texts, the 1-3 bars),
-  Easy/Normal/Hard, Start. Start calls `Flow.Game.StartMatch(new MatchSetup{...})` and saves `BamSettings.LastHero/LastDifficulty`.
+- Layout copied from the old game's Hub (Rickard 2026-10-25). Home: the chosen hero on a platform, a top bar, "<Hero>
+  selected", MODES and a big orange PLAY, and a bottom bar HOME / HEROES / SETTINGS (only outside a match). PLAY calls
+  `Flow.Game.StartMatch` at once with `BamSettings.LastHero/LastDifficulty`; before the first finished tutorial it
+  offers the tutorial first (once per run, skippable). MODES: Easy/Normal/Hard (saves `LastDifficulty`) and Training
+  (`StartMatch` with `Tutorial = true`, Easy). The game sets `BamSettings.TutorialDone`.
+- Heroes: a card grid of the seven heroes from `HeroCatalog`; tapping a card saves `BamSettings.LastHero`; the chosen
+  hero's texts and 1-3 bars sit under the grid. No Start button there.
 - Settings: sound volume, graphics Low/High, left-handed controls, share anonymous usage data (on/off, writes
   `BamSettings.AnalyticsConsent`), privacy policy (opens `BamInfo.PrivacyPolicyUrl` when set), licenses
   (`Resources/BAM/Licenses`), version (`Application.version`).
@@ -64,6 +67,8 @@ friendly, nothing harsh above about 8 kHz, no clipping). See `SfxId` for the lis
 - Hint bubble (`ShowHint`/`HideHint`) for the guided match.
 - `UiKit` is the shared look (Lilita One, colours, buttons, panels, safe area). The HUD in BAM.Game uses it.
 - `Screens.IsBlockingInput` is true while any menu or dialog is open.
+- Android back: outside a match the UI handles it; in a match the game calls `Screens.HandleBack()` and opens pause only
+  when it returns false. `ShowResult` plays Victory/Defeat itself. Canvas order: menus 100, hint 60, so the HUD stays below 50.
 
 ## Analytics (BAM.Analytics) - called by BAM.Game
 

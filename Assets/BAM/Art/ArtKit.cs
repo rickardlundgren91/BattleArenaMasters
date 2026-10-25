@@ -211,8 +211,11 @@ namespace BAM.Art
         public static UnitView CreateWolf(int team) => Body(Models.Wolf(team), 30, team);
         /// <summary>The guided match's practice dummy (a target board on a post). PlayAttack does nothing; SetDead bursts it into splinters.</summary>
         public static UnitView CreateTarget() => Body(Models.Target(), 40, Teams.Enemy);
+        /// <summary>A hero for the menus (Home platform, hero cards): team 0 look, idle, no ground ring, bar or status
+        /// markers, own pool. It is lit by the game's sun wherever it stands, and any camera can render it.</summary>
+        public static UnitView CreateHeroPreview(HeroId hero) => Body(Models.Hero(hero, Teams.Player), 50 + (int)hero, Teams.Player, true);
 
-        static BodyView Body(RigDef def, int kindKey, int team)
+        static BodyView Body(RigDef def, int kindKey, int team, bool preview = false)
         {
             Init();
             team = team == 1 ? 1 : 0;
@@ -230,6 +233,7 @@ namespace BAM.Art
                 go.transform.SetParent(root, false);
                 v = go.AddComponent<BodyView>();
                 v.Pool = pool;
+                v.Preview = preview;
                 v.Build(def, team);
             }
             v.InPool = false;

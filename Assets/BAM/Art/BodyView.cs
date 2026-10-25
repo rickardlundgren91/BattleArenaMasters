@@ -18,6 +18,8 @@ namespace BAM.Art
         internal Stack<BodyView> Pool;
         internal bool InPool;
         internal int Team;
+        /// <summary>Menu showcase: no ground ring, bar or status markers.</summary>
+        internal bool Preview;
 
         RigDef def;
         Transform model;
@@ -327,9 +329,9 @@ namespace BAM.Art
                 renderersOn = on;
                 for (int i = 0; i < rends.Length; i++) rends[i].enabled = on;
             }
-            decalR.enabled = on && !dead;
-            bar.Visible = vis > 0.01f && !dead;
-            status.Visible = vis > 0.01f && !dead;
+            decalR.enabled = on && !dead && !Preview;
+            bar.Visible = vis > 0.01f && !dead && !Preview;
+            status.Visible = vis > 0.01f && !dead && !Preview;
             if (!on) return;
             if (def.Ghost)
             {

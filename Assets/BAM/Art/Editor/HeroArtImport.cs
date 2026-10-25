@@ -117,9 +117,9 @@ namespace BAM.Art.Editor
             BuildAll();
         }
 
-        static void BuildAll()
+        internal static void BuildAll()
         {
-            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+            if (EditorApplication.isPlaying) return;
             if (!AssetDatabase.IsValidFolder(OutDir)) Directory.CreateDirectory(OutDir);
             int ok = 0;
             foreach (Spec s in specs)
