@@ -25,6 +25,7 @@ namespace BAM.Art.Editor
             AssetDatabase.Refresh();
             HeroArtImport.BuildAll();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            new GameObject("BAM Tool Scene"); // tells Boot (BAM.Game) not to start the game in this scene
             var cam = new GameObject("Main Camera") { tag = "MainCamera" };
             var c = cam.AddComponent<Camera>();
             c.clearFlags = CameraClearFlags.SolidColor;

@@ -41,6 +41,8 @@ Source: graphics thread hand-over 2 (`bam-work/art/HANDOVER-2.md`), byte-identic
 | `Models/{Bram,Fenn,Tyra,Moa,Knut,Tikta,Blast}/<Hero>.fbx` (7) | Hero models, texture embedded | Rickard's own models made with Meshy AI or Tripo AI (old register says Meshy; Rickard says Tripo), auto-rigged on mixamo.com. Tyra = `Looks/TyraClay`, Knut = Meshy "walrus tank". | Rickard via Meshy/Tripo + Mixamo | Rickard showed (2026-10-25, screenshot) his Tripo account on the paid **Max** plan: outputs made on a paid plan are owned by him, no credit required. Rickard confirmed (2026-10-25) all seven were made on the paid plan, so they are his; the credit in `Licenses.txt` is a courtesy. Older models made in Meshy were also on a paid Meshy plan (also owned); the new Knut model is from Tripo. | Courtesy only |
 | `Models/<Hero>/Anim/*.fbx` (29: Bram 6, Fenn 6, Knut 6, Tikta 6, Tyra 5) | Animation clips on Rickard's rigs | mixamo.com (Adobe) | Adobe | Mixamo terms: royalty free in games, commercial use OK; no redistribution of the raw files on their own. | Not required (given as courtesy) |
 | `Resources/BAMArt/Arena/T_BAM_{Block,Kerb,Plinth,Water}.jpg`, `T_BAM_Ground_{Cobble,Grass,Moss,Road2}.png` (8) | Arena textures | Rickard's own textures made with GPT Image (OpenAI) and Nano Banana (Google Gemini), 2026-10-18 (Rickard, 2026-10-25) | Rickard | Rickard holds the rights. OpenAI's terms assign the output to the user; Google's generative AI terms do not claim ownership of generated content (Nano Banana images carry an invisible SynthID watermark). Both allow commercial use. Not legal advice; re-check the terms before a paid launch. | No |
+| `Models/<Hero>/<Hero>_Tex.jpg` (7) | The hero models' own colour pictures | Extracted unchanged from the hero FBX files above (Unity did not pick up the embedded picture) | Rickard via Meshy/Tripo | Same as the hero models above. | Courtesy only |
+| `Resources/BAMArt/Props/blackbruk_tower.{bytes,jpg}`, `blackbruk_tower_red.jpg`, `fenn_wolf.{bytes,jpg}` (5) | Tower model (blue and red picture) and Fenn's wolf model | Rickard's own Meshy models from his concept art (art/blackbruk), 2026-10-15; old register `LICENSES/assets.csv` rows 11-14 and 33-34; byte copies of the old `AbcModels` files | Rickard via Meshy | Made on Rickard's paid Meshy plan (Rickard 2026-10-25: his Meshy models were made on a paid plan), so customer-owned, no credit required. | Courtesy only |
 | `Resources/BAMArt/Island/tut_{disc,cliff_disc,cliff_lane}.png`, `tut_{stone,moss,bridge}.jpg` (6) | Training island textures (disc, cliffs, stone, moss, bridge) | Rickard's own Gemini textures, cropped and masked, 2026-10-18; old register `LICENSES/assets.csv` rows 95-100 ("tutorial-island"); decoded byte for byte from the old `AbcTutorial/*.bytes` | Rickard via Google Gemini | Rickard allowed his own tutorial textures (2026-10-25). Google's generative AI terms do not claim ownership of generated content and allow commercial use. Not legal advice; re-check the terms before a paid launch. | No |
 
 Skipped by the graphics thread on purpose (unclear rights): the old Barbarian-mesh clips (`Mixamo/Anim/Idle|Walk|Run|Slash`),
@@ -48,3 +50,13 @@ Simon's TyraDemon, the Asset Store shrub, the original game's visuals and props.
 
 ## Not used
 Asset Store assets, other people's models, textures, images or music. Adding any needs a row here with proof first.
+
+### Menu pictures (menus thread, 2026-10-25)
+
+Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources/AbcUI/` into `Assets/BAM/UI/Resources/BAM/Menu/`.
+
+| Files | What | Origin | Made by | Rights / proof | Credit |
+|---|---|---|---|---|---|
+| `home_bg.jpg` (was `home_bg_soft.jpg`) | Home background painting | Old game Home | Rickard ("bilden är min egen", 2026-10-25) | Rickard's own | None |
+| `portrait_<hero>.png` (7) | Hero portraits on the Heroes cards and the Home top bar | Old game `profile_<hero>.png` | Renders of Rickard's own hero models | Rickard's own (to confirm with him) | None |
+| `special_<hero>.png`, `passive_<hero>.png` (14) | Ability icons on the Heroes page | Old game `ui_abilities_<hero>_*.png` | Rickard / the old project | To confirm with Rickard before release | None |

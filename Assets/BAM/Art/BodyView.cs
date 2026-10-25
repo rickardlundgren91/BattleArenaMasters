@@ -29,6 +29,8 @@ namespace BAM.Art
         Material[] mats;          // every material instance of this view, for the hit flash
         Material[] fadeMats;      // the fade instances, for the alpha
         Material opaque;          // code models: the single instance (the ghost wolf tints it)
+        Material[] ghostMats = new Material[0]; // the ghost wolf's see-through materials (code glow, Meshy body)
+        Color ghostTint = Color.white;
 
         // imported models
         Animator anim;
@@ -106,6 +108,47 @@ namespace BAM.Art
             fadeSets = new[] { new[] { fade } };
             mats = d.Ghost ? new Material[0] : new[] { opaque, fade };
             fadeMats = new[] { fade };
+            ghostMats = d.Ghost ? new[] { opaque } : new Material[0];
+            if (d.PropMesh != null) AddProp(d);
+        }
+
+        // Rickard's Meshy model on one bone, with its own texture on our materials (flash, fade and ghost work as on the rest)
+        void AddProp(RigDef d)
+        {
+            var pg = new GameObject("Prop");
+            Transform pt = pg.transform;
+            pt.SetParent(bones[d.PropBone], false);
+            pt.localPosition = d.PropOffset - d.Pivots[d.PropBone];
+            pt.localRotation = Quaternion.Euler(d.PropEuler);
+            pt.localScale = new Vector3(d.PropScale, d.PropScale, d.PropScale);
+            pg.AddComponent<MeshFilter>().sharedMesh = d.PropMesh;
+            var r = pg.AddComponent<MeshRenderer>();
+            Texture tex = d.PropTex != null ? (Texture)d.PropTex : Texture2D.whiteTexture;
+            Material o, f;
+            if (d.Ghost)
+            {
+                o = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex;
+                f = o;
+                r.shadowCastingMode = ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                ghostMats = new[] { opaque, o };
+                ghostTint = new Color(0.62f, 1f, 0.96f, 1f);
+            }
+            else
+            {
+                o = ArtMaterials.Instance(ArtMaterials.Lit);
+                f = ArtMaterials.Instance(ArtMaterials.LitFade);
+                o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex;
+                f.SetTexture(ArtMaterials.BaseMap, tex); f.mainTexture = tex;
+                r.receiveShadows = true;
+                mats = new[] { mats[0], mats[1], o, f };
+                fadeMats = new[] { fadeMats[0], f };
+            }
+            r.sharedMaterial = o;
+            rends = new[] { rends[0], r };
+            opaqueSets = new[] { opaqueSets[0], new[] { o } };
+            fadeSets = new[] { fadeSets[0], new[] { f } };
         }
 
         // Rickard's model: scaled to the hero's height, feet on the ground, his texture on our lit material (so the hit flash
@@ -138,7 +181,7 @@ namespace BAM.Art
                 fadeSets[i] = new Material[src.Length];
                 for (int j = 0; j < src.Length; j++)
                 {
-                    Texture tex = src[j] != null ? src[j].mainTexture : null;
+                    Texture tex = art.Texture != null ? art.Texture : src[j] != null ? src[j].mainTexture : null;
                     if (tex == null) tex = Texture2D.whiteTexture;
                     Material o = ArtMaterials.Instance(ArtMaterials.Lit), f = ArtMaterials.Instance(ArtMaterials.LitFade);
                     o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex;
@@ -335,7 +378,13 @@ namespace BAM.Art
             if (!on) return;
             if (def.Ghost)
             {
-                opaque.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, a * (0.62f + ghostPulse * 0.18f)));
+                float ga = a * (0.62f + ghostPulse * 0.18f);
+                for (int i = 0; i < ghostMats.Length; i++)
+                {
+                    Color gc = i == 0 ? Color.white : ghostTint;
+                    gc.a = ga;
+                    ghostMats[i].SetColor(ArtMaterials.BaseColor, gc);
+                }
                 return;
             }
             bool wantFade = a < 0.99f;

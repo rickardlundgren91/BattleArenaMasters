@@ -11,6 +11,8 @@ namespace BAM.Art
     public sealed class HeroArt : ScriptableObject
     {
         public GameObject Model;
+        /// <summary>The colour picture (taken out of the FBX); null = whatever the FBX material has.</summary>
+        public Texture2D Texture;
         public AnimationClip Idle, Run, Attack, Cast, Hit, Death;
         /// <summary>Standing height in units the model is scaled to.</summary>
         public float Height = 1f;

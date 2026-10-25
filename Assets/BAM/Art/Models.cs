@@ -22,6 +22,12 @@ namespace BAM.Art
         public bool Ghost;
         /// <summary>Rickard's imported model and clips; null = the model built in code.</summary>
         public HeroArt Art;
+        /// <summary>Rickard's Meshy model (Props), hung on bone PropBone; null = only the code mesh.</summary>
+        public Mesh PropMesh;
+        public Texture2D PropTex;
+        public int PropBone;
+        public Vector3 PropOffset, PropEuler;
+        public float PropScale = 1f;
     }
 
     /// <summary>Humanoid bone indices. Every two-legged model uses the same rig so one animator drives them all.</summary>
@@ -97,6 +103,12 @@ namespace BAM.Art
             d = kind == MinionKind.Siege ? SiegeCart(team) : kind == MinionKind.Ranged ? RangedMinion(team) : MeleeMinion(team);
             d.Mesh = b.ToSkinnedMesh("Minion " + kind + " t" + team, d.Pivots);
             d.BarWidth = kind == MinionKind.Siege ? 0.8f : 0.6f;
+            d.Art = Resources.Load<HeroArt>("BAMArt/Minions/" + kind);
+            if (d.Art != null)
+            {
+                d.Height = d.Art.Height;
+                d.ThrowsProp = false;
+            }
             cache[k] = d;
             return d;
         }
@@ -106,7 +118,8 @@ namespace BAM.Art
             int k = Key(2, 0, team);
             if (cache.TryGetValue(k, out RigDef d)) return d;
             b.Clear();
-            d = BuildTower(team);
+            Mesh prop = Props.Mesh("blackbruk_tower");
+            d = prop != null ? BuildTowerProp(team, prop) : BuildTower(team);
             d.Mesh = b.ToSkinnedMesh("Tower t" + team, d.Pivots);
             d.BarWidth = 1.6f;
             cache[k] = d;
@@ -130,7 +143,15 @@ namespace BAM.Art
             int k = Key(3, 0, team);
             if (cache.TryGetValue(k, out RigDef d)) return d;
             b.Clear();
-            d = BuildWolf(team);
+            Mesh wolfProp = Props.Mesh("fenn_wolf");
+            d = BuildWolf(team, wolfProp != null);
+            if (wolfProp != null)
+            {
+                // the Meshy wolf faces -z; about 1.1 units nose to tail, the same ghost look as the code one
+                d.PropMesh = wolfProp; d.PropTex = Props.Texture("fenn_wolf"); d.PropBone = WolfBody;
+                d.PropEuler = new Vector3(0f, 180f, 0f); d.PropScale = 0.58f;
+                d.Height = 0.9f; d.Radius = 0.4f;
+            }
             d.Mesh = b.ToSkinnedMesh("Wolf t" + team, d.Pivots);
             d.BarWidth = 0.6f;
             cache[k] = d;
@@ -623,6 +644,35 @@ namespace BAM.Art
             return new RigDef { Pivots = piv, Parents = new[] { -1, TowerBase }, Kind = RigKind.Tower, Attack = AttackStyle.Pulse, Height = 3.3f, Radius = 1.0f };
         }
 
+        // Rickard's Meshy tower ("Arcane Crystal Forge"; the red team's texture has its crystal and banners turned red), about
+        // 2.6 high and 2.4 across like in the old game, on a stone plinth, with four small team crystals circling its top.
+        static RigDef BuildTowerProp(int team, Mesh prop)
+        {
+            Bounds pb = prop.bounds;
+            float s = Mathf.Min(2.6f / pb.size.y, 2.4f / Mathf.Max(pb.size.x, pb.size.z));
+            float top = 0.18f + pb.size.y * s;
+            var piv = new[] { Vector3.zero, new Vector3(0f, top * 0.86f, 0f) };
+            b.Bone = TowerBase;
+            b.Color(Pal.StoneDark).Cylinder(Vector3.zero, 1.32f, 1.26f, 0.12f, 16, true, Pal.Stone);
+            b.Color(Pal.Gold).Cylinder(new Vector3(0f, 0.12f, 0f), 1.12f, 1.1f, 0.03f, 16, true, Pal.Gold);
+            b.Color(Pal.StoneTop).Cylinder(new Vector3(0f, 0.15f, 0f), 0.95f, 0.95f, 0.03f, 16, true, Pal.StoneTop);
+            b.Bone = TowerCrystal;
+            for (int k = 0; k < 4; k++)
+            {
+                float a = k * Mathf.PI * 0.5f + Mathf.PI * 0.25f;
+                Vector3 c = piv[TowerCrystal] + new Vector3(Mathf.Cos(a) * 0.75f, 0f, Mathf.Sin(a) * 0.75f);
+                b.Color(Pal.TeamLight(team)).Cylinder(c, 0.08f, 0f, 0.16f, 5);
+                b.At(c, new Vector3(180f, 0f, 0f)).Cylinder(Vector3.zero, 0.08f, 0f, 0.12f, 5);
+                b.Reset();
+            }
+            return new RigDef
+            {
+                Pivots = piv, Parents = new[] { -1, TowerBase }, Kind = RigKind.Tower, Attack = AttackStyle.Pulse, Height = top + 0.2f, Radius = 1.0f,
+                PropMesh = prop, PropTex = Props.Texture(team == 1 ? "blackbruk_tower_red" : "blackbruk_tower"), PropBone = TowerBase,
+                PropOffset = new Vector3(0f, 0.18f, 0f), PropScale = s,
+            };
+        }
+
         public const int TargetPost = 0, TargetBoard = 1;
 
         // The guided match's practice dummy: a round painted target board on a short post, rings on both faces.
@@ -652,13 +702,24 @@ namespace BAM.Art
 
         public const int WolfBody = 0, WolfHead = 1, WolfFL = 2, WolfFR = 3, WolfBL = 4, WolfBR = 5, WolfTail = 6;
 
-        static RigDef BuildWolf(int team)
+        static RigDef BuildWolf(int team, bool propBody = false)
         {
             var piv = new[]
             {
                 new Vector3(0f, 0.36f, 0f), new Vector3(0f, 0.44f, 0.2f), new Vector3(-0.08f, 0.32f, 0.15f), new Vector3(0.08f, 0.32f, 0.15f),
                 new Vector3(-0.08f, 0.32f, -0.16f), new Vector3(0.08f, 0.32f, -0.16f), new Vector3(0f, 0.42f, -0.22f),
             };
+            if (propBody)
+            {
+                // Rickard's wolf mesh is the body; the code adds only a ghostly glow on the ground under it
+                b.Bone = WolfBody;
+                b.Color(Pal.Ghost).Disc(new Vector3(0f, 0.03f, 0f), 0.45f, 16);
+                return new RigDef
+                {
+                    Pivots = piv, Parents = new[] { -1, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody }, Kind = RigKind.Wolf,
+                    Attack = AttackStyle.Bite, Height = 0.7f, Radius = 0.3f, Ghost = true,
+                };
+            }
             b.Bone = WolfBody;
             b.Color(Pal.Ghost).Sphere(new Vector3(0f, 0.38f, -0.02f), new Vector3(0.12f, 0.12f, 0.24f), 10, 6);
             b.Sphere(new Vector3(0f, 0.41f, 0.12f), new Vector3(0.13f, 0.14f, 0.13f), 10, 6); // chest ruff

@@ -13,6 +13,7 @@ namespace BAM.Art.Editor
     {
         const string ModelsDir = "Assets/BAM/Art/Models/";
         const string OutDir = "Assets/BAM/Art/Resources/BAMArt/Heroes";
+        static string OutOf(Spec s) => s.Out == null ? OutDir : "Assets/BAM/Art/Resources/BAMArt/" + s.Out;
 
         bool Ours => assetPath.StartsWith(ModelsDir) && assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase);
         bool IsClip => assetPath.Contains("/Anim/");
@@ -20,8 +21,18 @@ namespace BAM.Art.Editor
         // Rickard's arena pictures repeat across the floor and walls; 512 is plenty at the match camera's distance.
         void OnPreprocessTexture()
         {
-            if (!assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Arena/")) return;
             var ti = (TextureImporter)assetImporter;
+            if (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Props/"))
+            {
+                // the heroes' and props' colour pictures: 1024 is plenty on a phone, compressed
+                ti.textureType = TextureImporterType.Default;
+                ti.sRGBTexture = true;
+                ti.mipmapEnabled = true;
+                ti.maxTextureSize = 1024;
+                ti.textureCompression = TextureImporterCompression.Compressed;
+                return;
+            }
+            if (!assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Arena/")) return;
             ti.textureType = TextureImporterType.Default;
             ti.wrapMode = TextureWrapMode.Repeat;
             ti.mipmapEnabled = true;
@@ -82,7 +93,7 @@ namespace BAM.Art.Editor
         static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
             foreach (string p in imported)
-                if (p.StartsWith(ModelsDir))
+                if (p.StartsWith(ModelsDir) || p.StartsWith("Assets/BAM/Art/Editor/"))
                 {
                     EditorApplication.delayCall -= BuildAll;
                     EditorApplication.delayCall += BuildAll;
@@ -92,6 +103,7 @@ namespace BAM.Art.Editor
 
         struct Spec
         {
+            public string Out; // null = Heroes
             public string Hero, Model, Idle, Run, Attack, Cast, Hit, Death;
             public float Height, Release;
         }
@@ -105,8 +117,27 @@ namespace BAM.Art.Editor
             new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Knut/Anim/Throw", Cast = "Fenn/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 0.9f, Release = 0.4f },
             new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Height = 1.15f, Release = 0.45f },
             new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 0.95f, Release = 0.4f },
+            // the lane minions: the old game's Mixamo goblin creeps (one figure, three paint jobs), moving with the heroes' clips
+            new Spec { Out = "Minions", Hero = "Melee", Model = "Creeps/Melee", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Attack1", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 0.62f, Release = 0.4f },
+            new Spec { Out = "Minions", Hero = "Ranged", Model = "Creeps/Ranged", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Knut/Anim/Throw", Cast = "Knut/Anim/Throw", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 0.6f, Release = 0.4f },
+            new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Cast = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.72f, Release = 0.45f },
             new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Knut/Anim/Throw", Cast = "Fenn/Anim/Cast", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.9f, Release = 0.4f },
         };
+
+        // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
+        // the hero list was not built yet on this computer.
+        [InitializeOnLoadMethod]
+        static void EnsureBuilt()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                foreach (Spec s in specs)
+                {
+                    var art = AssetDatabase.LoadAssetAtPath<HeroArt>(OutOf(s) + "/" + s.Hero + ".asset");
+                    if (art == null || art.Model == null || art.Texture == null) { BuildAll(); return; }
+                }
+            };
+        }
 
         [MenuItem("BAM/Art/Rebuild Hero Models")]
         static void Rebuild()
@@ -120,17 +151,18 @@ namespace BAM.Art.Editor
         internal static void BuildAll()
         {
             if (EditorApplication.isPlaying) return;
-            if (!AssetDatabase.IsValidFolder(OutDir)) Directory.CreateDirectory(OutDir);
             int ok = 0;
             foreach (Spec s in specs)
             {
                 var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + s.Model + ".fbx");
                 if (model == null) { Debug.LogWarning("[BAM.Art] " + s.Hero + ": model " + s.Model + ".fbx not found, the code model is used"); continue; }
-                string path = OutDir + "/" + s.Hero + ".asset";
+                if (!AssetDatabase.IsValidFolder(OutOf(s))) { Directory.CreateDirectory(OutOf(s)); AssetDatabase.Refresh(); }
+                string path = OutOf(s) + "/" + s.Hero + ".asset";
                 var art = AssetDatabase.LoadAssetAtPath<HeroArt>(path);
                 bool isNew = art == null;
                 if (isNew) art = ScriptableObject.CreateInstance<HeroArt>();
                 art.Model = model;
+                art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ModelsDir + s.Model + "_Tex.jpg");
                 art.Idle = Clip(s.Idle); art.Run = Clip(s.Run); art.Attack = Clip(s.Attack);
                 art.Cast = Clip(s.Cast); art.Hit = Clip(s.Hit); art.Death = Clip(s.Death);
                 art.Height = s.Height;
