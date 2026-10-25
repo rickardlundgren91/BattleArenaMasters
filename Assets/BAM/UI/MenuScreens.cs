@@ -19,19 +19,22 @@ namespace BAM.UI
 
         // ---- Home ----
 
-        static RectTransform homePortrait, homeHero;
+        static RectTransform homePortrait, homeHero, homeBody;
+        static RawImage homeBg, homePortraitImg;
+        static Image homeTopFade, homeBottomFade, homeBottomFill, homeEdgeL, homeEdgeR;
+        const float HomePlatY = NavH + 24 + 200 + 260; // the platform's middle, from the bottom of the safe area
         static Text homeSelected, playSub;
 
         static void BuildMainMenu()
         {
             var body = NewScreen("Home", false, out mainMenu);
+            homeBody = body;
+            BuildHomeBackground((RectTransform)body.parent);
 
-            // The platform the hero stands on: dark stone, a mint ring under the feet and a faint gold rune ring round it.
-            float platY = NavH + 24 + 200 + 260;
+            // On the painted platform: a soft warm spotlight, a faint gold rune ring and a mint ring under the feet.
+            float platY = HomePlatY;
             var glow = UiKit.Fill(body, new Color(1f, 0.88f, 0.63f, 0.07f), UiKit.Circle);
             UiKit.Place(glow, 0.5f, 0, 0, platY - 120, 760, 760);
-            var stone = UiKit.Fill(body, new Color(0.07f, 0.08f, 0.17f, 0.95f), UiKit.Circle);
-            UiKit.Place(stone, 0.5f, 0, 0, platY - 110, 820, 220);
             var gold = UiKit.Fill(body, new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.55f), UiKit.CircleRing);
             UiKit.Place(gold, 0.5f, 0, 0, platY - 95, 720, 190);
             var mint = UiKit.Fill(body, UiKit.Primary, UiKit.CircleRing);
@@ -45,7 +48,7 @@ namespace BAM.UI
             var top = UiKit.Panel(body, new Color(0.04f, 0.05f, 0.13f, 0.92f));
             UiKit.Band(top, true, 16, 130, 16);
             UiKit.Frame(top.rectTransform).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.6f);
-            homePortrait = UiKit.HeroBadge(top.transform, HeroId.Bram);
+            homePortrait = PortraitCircle(top.transform, 104, out homePortraitImg);
             UiKit.Place(homePortrait, 0, 0.5f, 14, 0, 104, 104);
             var name = UiKit.Label(top.transform, BamInfo.ShortName, 52, TextAnchor.LowerLeft, UiKit.TextColor);
             HeaderText(name, 140, 0, 64);
@@ -111,9 +114,124 @@ namespace BAM.UI
             var id = (HeroId)BamSettings.LastHero;
             var info = HeroCatalog.Get(id);
             SetBadge(homeHero, id);
-            SetBadge(homePortrait, id);
+            homePortraitImg.texture = Portrait(id);
+            LayoutHomeBackground();
             homeSelected.text = info.Name + " - " + info.Title + " selected";
             playSub.text = "3V3 · VS BOTS · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant();
+        }
+
+        // ---- pictures from the old game (Rickard's own, Resources/BAM/Menu) ----
+
+        static readonly System.Collections.Generic.Dictionary<string, Texture2D> pictures = new System.Collections.Generic.Dictionary<string, Texture2D>();
+        static Sprite fadeV, fadeH;
+
+        static Texture2D Picture(string name)
+        {
+            if (pictures.TryGetValue(name, out var t)) return t;
+            t = Resources.Load<Texture2D>("BAM/Menu/" + name);
+            if (t == null) Debug.LogError("[BAM.UI] picture missing: Resources/BAM/Menu/" + name);
+            pictures[name] = t;
+            return t;
+        }
+
+        static string Lower(HeroId id) => HeroCatalog.Get(id).Name.ToLowerInvariant();
+        static Texture2D Portrait(HeroId id) => Picture("portrait_" + Lower(id));
+
+        /// <summary>A round portrait with a gold ring (the old top bar's hero picture).</summary>
+        static RectTransform PortraitCircle(Transform parent, float size, out RawImage img)
+        {
+            var ring = UiKit.Fill(parent, UiKit.Trim, UiKit.Circle);
+            ring.rectTransform.sizeDelta = new Vector2(size, size);
+            var mask = UiKit.Fill(ring.rectTransform, Color.white, UiKit.Circle);
+            UiKit.Stretch(mask.rectTransform, 5, 5, 5, 5);
+            mask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var pic = UiKit.NewRect("Portrait", mask.rectTransform);
+            UiKit.Stretch(pic);
+            img = pic.gameObject.AddComponent<RawImage>();
+            img.raycastTarget = false;
+            img.uvRect = new Rect(0.115f, 0.1f, 0.77f, 0.9f); // the 400x308 portraits: a square around the face
+            return ring.rectTransform;
+        }
+
+        // The painting fills the screen behind Home like in the old game: scaled so its platform (at 47 % across, 79 % down
+        // the picture) sits under the hero, a little darker, with dark fades at the top, the sides and below it.
+        static void BuildHomeBackground(RectTransform screen)
+        {
+            fadeV = MakeFade(true);
+            fadeH = MakeFade(false);
+            var bgRt = UiKit.NewRect("Painting", screen);
+            bgRt.SetSiblingIndex(1); // over the plain gradient, under everything else
+            bgRt.anchorMin = bgRt.anchorMax = bgRt.pivot = new Vector2(0, 1);
+            homeBg = bgRt.gameObject.AddComponent<RawImage>();
+            homeBg.texture = Picture("home_bg");
+            homeBg.raycastTarget = false;
+            var shade = UiKit.Fill(bgRt, new Color(0.04f, 0.055f, 0.16f, 0.2f));
+            shade.name = "Shade";
+            int i = 2;
+            homeEdgeL = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
+            homeEdgeR = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
+            homeEdgeR.rectTransform.localScale = new Vector3(-1, 1, 1);
+            homeTopFade = FadePart(screen, fadeV, new Color(0.04f, 0.05f, 0.15f, 0.92f), i++);
+            homeBottomFade = FadePart(screen, fadeV, new Color(0.055f, 0.07f, 0.19f, 1f), i++);
+            homeBottomFade.rectTransform.localScale = new Vector3(1, -1, 1);
+            homeBottomFill = FadePart(screen, null, new Color(0.055f, 0.07f, 0.19f, 1f), i);
+        }
+
+        static Image FadePart(RectTransform screen, Sprite sprite, Color color, int sibling)
+        {
+            var img = UiKit.Fill(screen, color, sprite);
+            img.transform.SetSiblingIndex(sibling);
+            img.rectTransform.anchorMin = img.rectTransform.anchorMax = img.rectTransform.pivot = new Vector2(0.5f, 1);
+            return img;
+        }
+
+        // White with alpha 1 at the top (or left) fading to 0.
+        static Sprite MakeFade(bool vertical)
+        {
+            int n = 64;
+            var tex = new Texture2D(vertical ? 1 : n, vertical ? n : 1, TextureFormat.RGBA32, false)
+            { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "BAM.UI.Fade" };
+            for (int k = 0; k < n; k++)
+            {
+                float a = vertical ? k / (n - 1f) : 1f - k / (n - 1f);
+                var c = new Color(1, 1, 1, a * a * (3 - 2 * a));
+                if (vertical) tex.SetPixel(0, k, c); else tex.SetPixel(k, 0, c);
+            }
+            tex.Apply(false, true);
+            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        static void LayoutHomeBackground()
+        {
+            var screen = (RectTransform)homeBody.parent;
+            Vector2 size = screen.rect.size;
+            float W = size.x, H = size.y;
+            if (W <= 0 || H <= 0 || homeBg.texture == null) return;
+            float platFromTop = H - (homeBody.anchorMin.y * H + HomePlatY);
+            float iw = homeBg.texture.width, ih = homeBg.texture.height;
+            float s = Mathf.Max(platFromTop / (0.786f * ih), W / iw);
+            float dw = iw * s, dh = ih * s, dx = W / 2 - 0.4725f * dw, dy = platFromTop - 0.786f * dh;
+            if (dy > 0) dy = 0; // never a gap at the top
+            var r = homeBg.rectTransform;
+            r.anchoredPosition = new Vector2(dx, -dy);
+            r.sizeDelta = new Vector2(dw, dh);
+
+            float edge = W * 0.24f;
+            SetPart(homeEdgeL, -W / 2 + edge / 2, 0, edge, H);
+            SetPart(homeEdgeR, W / 2 - edge / 2, 0, edge, H);
+            SetPart(homeTopFade, 0, 0, W, W * 0.52f);
+            float fb = Mathf.Min(-dy + dh - W * 0.24f, platFromTop + 200f);
+            SetPart(homeBottomFade, 0, fb, W, W * 0.3f);
+            SetPart(homeBottomFill, 0, fb + W * 0.3f - 1, W, Mathf.Max(0, H - fb - W * 0.3f + 1));
+        }
+
+        // Places a fade part by its top edge (y measured down from the screen's top), centred at x.
+        static void SetPart(Image img, float x, float top, float w, float h)
+        {
+            var r = img.rectTransform;
+            // the flipped parts (scale -1) keep their pivot, so their top is the same edge
+            r.anchoredPosition = new Vector2(x, -top - (r.localScale.y < 0 ? h : 0));
+            r.sizeDelta = new Vector2(w, h);
         }
 
         static void SetBadge(RectTransform badge, HeroId id)
@@ -212,7 +330,7 @@ namespace BAM.UI
                 if (i % 3 == 0)
                 {
                     row = UiKit.NewRect("Row", content);
-                    row.gameObject.AddComponent<LayoutElement>().preferredHeight = 330;
+                    row.gameObject.AddComponent<LayoutElement>().preferredHeight = 370;
                 }
                 int index = i;
                 var info = HeroCatalog.All[i];
@@ -233,8 +351,21 @@ namespace BAM.UI
                 card.gameObject.AddComponent<ButtonFx>();
                 cardFrames[i] = UiKit.Frame(card);
 
-                var badge = UiKit.HeroBadge(card, info.Id);
-                UiKit.Place(badge, 0.5f, 1, 0, -22, 170, 170);
+                // The hero's portrait in the top of the card, with rounded corners.
+                var mask = UiKit.Fill(card, Color.white, UiKit.Rounded);
+                mask.rectTransform.anchorMin = new Vector2(0, 1);
+                mask.rectTransform.anchorMax = new Vector2(1, 1);
+                mask.rectTransform.pivot = new Vector2(0.5f, 1);
+                mask.rectTransform.offsetMin = new Vector2(8, -240);
+                mask.rectTransform.offsetMax = new Vector2(-8, -8);
+                mask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+                var pic = UiKit.NewRect("Portrait", mask.rectTransform);
+                UiKit.Stretch(pic);
+                var raw = pic.gameObject.AddComponent<RawImage>();
+                raw.texture = Portrait(info.Id);
+                raw.raycastTarget = false;
+                // fill the card's width; crop the picture's height to keep its shape
+                raw.uvRect = new Rect(0.06f, 0.08f, 0.88f, 0.92f);
                 var heroName = UiKit.Label(card, info.Name, 44, TextAnchor.MiddleCenter, UiKit.TextColor);
                 UiKit.Band(heroName, false, 62, 56, 4);
                 UiKit.AddShadow(heroName, 2);
@@ -292,13 +423,46 @@ namespace BAM.UI
                 }
             }
 
-            specialName = DetailText(detail, 44, UiKit.Gold, 14);
+            specialName = IconTitle(detail, out specialIcon, 14);
             specialDesc = DetailText(detail, 34, UiKit.TextDim, 0);
             specialDesc.font = UiKit.BodyFont;
-            passiveName = DetailText(detail, 44, UiKit.Gold, 10);
+            passiveName = IconTitle(detail, out passiveIcon, 10);
             passiveDesc = DetailText(detail, 34, UiKit.TextDim, 0);
             passiveDesc.font = UiKit.BodyFont;
         }
+
+        static Image specialIcon, passiveIcon;
+
+        // "Special: Hammer Throw" with the ability's icon in front, like the old hero page.
+        static Text IconTitle(RectTransform list, out Image icon, float spaceAbove)
+        {
+            var gap = UiKit.NewRect("Gap", list);
+            gap.gameObject.AddComponent<LayoutElement>().preferredHeight = spaceAbove;
+            var row = UiKit.NewRect("Ability", list);
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 72;
+            var disc = UiKit.Fill(row, new Color(0.1f, 0.11f, 0.25f), UiKit.Circle);
+            UiKit.Place(disc, 0, 0.5f, 0, 0, 72, 72);
+            icon = UiKit.Fill(disc.rectTransform, UiKit.Gold);
+            UiKit.Stretch(icon.rectTransform, 12, 12, 12, 12);
+            icon.preserveAspect = true;
+            var t = UiKit.Label(row, "", 44, TextAnchor.MiddleLeft, UiKit.Gold);
+            UiKit.Stretch(t.rectTransform, 90, 0, 0, 0);
+            return t;
+        }
+
+        static Sprite IconSprite(string name)
+        {
+            var tex = Picture(name);
+            if (tex == null) return null;
+            if (!iconSprites.TryGetValue(name, out var sp))
+            {
+                sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                iconSprites[name] = sp;
+            }
+            return sp;
+        }
+
+        static readonly System.Collections.Generic.Dictionary<string, Sprite> iconSprites = new System.Collections.Generic.Dictionary<string, Sprite>();
 
         static void HeaderText(Text t, float left, float y, float h)
         {
@@ -373,6 +537,8 @@ namespace BAM.UI
             SetBar(2, info.Speed);
             SetBar(3, info.Difficulty);
             specialName.text = "Special: " + info.SpecialName;
+            specialIcon.sprite = IconSprite("special_" + Lower(info.Id));
+            passiveIcon.sprite = IconSprite("passive_" + Lower(info.Id));
             specialDesc.text = info.SpecialDesc;
             passiveName.text = "Passive: " + info.PassiveName;
             passiveDesc.text = info.PassiveDesc;

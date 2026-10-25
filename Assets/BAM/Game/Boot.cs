@@ -19,7 +19,11 @@ namespace BAM.Game
         {
             // Editor tools such as BAM > Art Preview play a scene of their own (marked with an object of this name, since an
             // unsaved scene did not always report buildIndex -1); the game only starts from a scene in the build.
-            if (SceneManager.GetActiveScene().buildIndex < 0 || GameObject.Find("BAM Tool Scene") != null) return;
+            if (SceneManager.GetActiveScene().buildIndex < 0 || GameObject.Find("BAM Tool Scene") != null)
+            {
+                Debug.Log("[BAM.Game] Not started in this scene. Open Assets/BAM/Scenes/Main.unity and press Play to play the game.");
+                return;
+            }
             Application.targetFrameRate = 60;
 
             var host = new GameObject("BAM.Game");

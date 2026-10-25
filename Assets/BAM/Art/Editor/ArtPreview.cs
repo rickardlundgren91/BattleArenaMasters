@@ -34,6 +34,7 @@ namespace BAM.Art.Editor
             c.nearClipPlane = 0.3f;
             c.farClipPlane = 120f;
             SessionState.SetBool(Key, true);
+            EditorSceneManager.playModeStartScene = null; // play this scene, not the game's (BAM.Build sets it again afterwards)
             EditorApplication.isPlaying = true;
         }
 
