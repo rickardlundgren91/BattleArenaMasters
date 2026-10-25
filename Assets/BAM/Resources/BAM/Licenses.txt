@@ -6,7 +6,7 @@ made for Battle Arena Masters. All rights reserved.
 
 Hero models: Rickard Lundgren, made with Tripo AI and Meshy AI.
 Character rigging and animations: Mixamo (Adobe).
-Arena textures: Rickard Lundgren.
+Arena and training island textures: Rickard Lundgren.
 
 Made with Unity.
 
