@@ -12,7 +12,9 @@ namespace BAM.Game
     /// </summary>
     sealed class MatchCamera
     {
-        const float HalfHeight = 11.5f, Back = 60f, FocusDown = 0.52f;
+        // Back: orthographic framing ignores distance, but the High shadow distance (30 m, BamQuality) is measured from the camera,
+        // so the camera stays close: the ground then lies about 12-28 m away (the island's cloud sea at about 40)
+        const float HalfHeight = 11.5f, Back = 20f, FocusDown = 0.52f;
         static readonly float Pitch = Mathf.Asin(0.82f) * Mathf.Rad2Deg;
         const float Lead = 1.2f;        // the focus sits this far ahead of the hero, so more of the way forward is seen
         const float Over = 3f;          // the focus may pass the map edge by this much (the hero is not stuck under the buttons)
