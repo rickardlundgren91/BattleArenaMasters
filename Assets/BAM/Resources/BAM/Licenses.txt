@@ -11,9 +11,20 @@ Arena and training island textures: Rickard Lundgren.
 Made with Unity.
 
 ----------------------------------------------------------------
+Inter font
+----------------------------------------------------------------
+Used for the text in the game (Inter ExtraBold and Inter SemiBold), unmodified.
+
+Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
+
+----------------------------------------------------------------
 Lilita One font
 ----------------------------------------------------------------
-Used for all text in the game and in the app icon, unmodified.
+Included as a fallback font for the game's text, unmodified.
 
 Copyright (c) 2011 Juan Montoreano (juan@remolacha.biz), 
 with Reserved Font Name Lilita

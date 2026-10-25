@@ -455,10 +455,10 @@ namespace BAM.Game
             specialName.resizeTextForBestFit = true;
             specialName.resizeTextMinSize = 20;
             specialName.resizeTextMaxSize = 44;
-            UiKit.AddOutline(specialName, 3);
+            Edge(specialName, 3);
 
             deniedText = UiKit.Label(safe, "", 44, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.8f));
-            UiKit.AddOutline(deniedText, 3);
+            Edge(deniedText, 3);
 
             // top: blue kills, time, red kills; the team stars under them
             scorePanel = UiKit.Panel(safe, new Color(UiKit.PanelColor.r, UiKit.PanelColor.g, UiKit.PanelColor.b, 0.75f)).rectTransform;
@@ -466,13 +466,13 @@ namespace BAM.Game
             UiKit.Place(scorePanel, 0.5f, 1f, 0f, -24f, 520f, 116f);
             blueKills = UiKit.Label(scorePanel, "0", 72, TextAnchor.MiddleCenter, UiKit.Ally);
             UiKit.Place(blueKills, 0f, 0.5f, 20f, 0f, 120f, 110f);
-            UiKit.AddOutline(blueKills, 3);
+            Edge(blueKills, 3);
             timeText = UiKit.Label(scorePanel, "0:00", 56, TextAnchor.MiddleCenter, Color.white);
             UiKit.Place(timeText, 0.5f, 0.5f, 0f, 0f, 220f, 110f);
-            UiKit.AddOutline(timeText, 3);
+            Edge(timeText, 3);
             redKills = UiKit.Label(scorePanel, "0", 72, TextAnchor.MiddleCenter, UiKit.Enemy);
             UiKit.Place(redKills, 1f, 0.5f, -20f, 0f, 120f, 110f);
-            UiKit.AddOutline(redKills, 3);
+            Edge(redKills, 3);
             starsRow = UiKit.NewRect("Stars", safe);
             UiKit.Place(starsRow, 0.5f, 1f, 0f, -146f, 520f, 40f);
             for (int i = 0; i < 6; i++)
@@ -489,10 +489,10 @@ namespace BAM.Game
 
             centerText = UiKit.Label(safe, "", 200, TextAnchor.MiddleCenter, UiKit.Gold);
             UiKit.Place(centerText, 0.5f, 0.5f, 0f, 200f, 900f, 260f);
-            UiKit.AddOutline(centerText, 6);
+            Edge(centerText, 6);
             respawnText = UiKit.Label(safe, "", 72, TextAnchor.MiddleCenter, Color.white);
             UiKit.Place(respawnText, 0.5f, 0.5f, 0f, 380f, 900f, 110f);
-            UiKit.AddOutline(respawnText, 4);
+            Edge(respawnText, 4);
 
             // the guided match: chevrons over what to look at, and the black for the jump to the arena (on top of everything)
             canvasRect = (RectTransform)canvas.transform;
@@ -530,6 +530,15 @@ namespace BAM.Game
             }
             rt.gameObject.SetActive(false);
             return rt;
+        }
+
+        // In-match text sits over the bright arena, so it keeps the old game's dark edge (UiKit.AddOutline became the menus'
+        // soft shadow in the 2026-10-25 restyle).
+        static void Edge(Text t, float distance)
+        {
+            var o = t.gameObject.AddComponent<Outline>();
+            o.effectColor = new Color(0.05f, 0.05f, 0.15f, 0.85f);
+            o.effectDistance = new Vector2(distance, -distance);
         }
 
         static RectTransform Circle(Transform parent, string name, float size, Color color)
