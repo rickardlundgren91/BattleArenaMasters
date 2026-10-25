@@ -17,7 +17,10 @@ before going beyond it.
   ("like Popol and Kupa in Mobile Legends"), homes on an enemy hero in sight within 1 tile of its flight and pounces (bite +
   short root); a red strip 2 tiles wide warns over the whole flight and the landing; if no enemy hero is near it bites minions. Walls stop it: it walks round them, a throw ends at the first wall and its bite needs a
   clear line like everyone's (Rickard 2026-10-25 14:50-14:51, after it won 90 % against bots going through walls; this
-  replaced the first "spectral, through walls, 7 tiles" version). It still passes through bodies. To be tuned after playtests.
+  replaced the first "spectral, through walls, 7 tiles" version). It still passes through bodies. To be tuned after playtests:
+  in 1000 bot matches per level (2026-10-25) Fenn wins 58/57/39 % on Hard/Normal/Easy (old 55/54/40); the thrown, homing
+  wolf hurts Tikta most (she wins 38 % on Hard, old 44 %; her own rules and bot match the old game, see
+  `bam-work/simtest/tikta/REPORT.md`).
 - **Fenn's clone is a decoy:** when an enemy hero hits Fenn (at most once per 18 s) a copy with his look, health and level
   appears for 3 s, runs at the nearest enemy within 5 tiles and swings at it, but deals no damage and is gone at the first
   hit it takes; every unit can target it, it gives no special charge, it ends early when Fenn dies (Rickard 2026-10-25,
