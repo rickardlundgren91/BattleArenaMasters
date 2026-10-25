@@ -41,11 +41,12 @@ namespace BAM.UI
             PlaceOnPlatform(rune.rectTransform, platY, 820, 250);
 
             // The hero, big and in the middle: Rickard's 3D model filmed by its own camera (HeroStage); the letter badge
-            // only if that fails. Its feet land about 14 % up the picture, on the circle's middle.
+            // only if that fails. The camera sees 1.6 units from 0.1 below the feet, so even the tallest hero keeps air above
+            // its head and the feet land 6.25 % up the picture, on the circle's middle.
             homeHero = UiKit.HeroBadge(body, HeroId.Bram);
             UiKit.Place(homeHero, 0.5f, 0, 0, platY - 20, 440, 440);
             var stageRt = UiKit.NewRect("Hero3D", body);
-            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 140, 980, 980);
+            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 1080 * 0.0625f, 1080, 1080);
             homeStage = stageRt.gameObject.AddComponent<HeroStage>();
 
             // Top bar: a rounded glass pill with a gold edge; portrait, the game's name, the chosen hero.
@@ -63,7 +64,30 @@ namespace BAM.UI
             homeSelected = UiKit.Label(top.transform, "", 32, TextAnchor.UpperLeft, UiKit.Gold);
             HeaderText(homeSelected, 140, -46, 46);
 
-            // Bottom row: MODES and PLAY.
+            // Upper right: a round dark glass button with a matte white gear (the only side button the beta needs).
+            var gearRt = UiKit.NewRect("Settings", body);
+            UiKit.Place(gearRt, 1, 1, -24, -170, 112, 112);
+            var gearBg = gearRt.gameObject.AddComponent<Image>();
+            gearBg.sprite = UiKit.Circle;
+            gearBg.color = UiKit.Muted;
+            var gearEdge = UiKit.Fill(gearRt, new Color(1, 1, 1, 0.22f), UiKit.CircleRing);
+            gearEdge.name = "Edge";
+            var gearIcon = UiKit.NewRect("Icon", gearRt);
+            UiKit.Place(gearIcon, 0.5f, 0.5f, 0, 0, 64, 64);
+            DrawIcon(gearIcon, 2);
+            for (int k = 0; k < gearIcon.childCount; k++)
+            {
+                var part = gearIcon.GetChild(k).GetComponent<Image>();
+                if (part != null && part.color.r + part.color.g + part.color.b > 0.4f) part.color = new Color(0.9f, 0.91f, 0.94f, 0.9f);
+            }
+            var gearButton = gearRt.gameObject.AddComponent<Button>();
+            gearButton.targetGraphic = gearBg;
+            gearButton.transition = Selectable.Transition.None;
+            gearButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            gearButton.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); ShowTab(2); });
+            gearRt.gameObject.AddComponent<ButtonFx>();
+
+            // Bottom row: MODES and ENTER ARENA.
             var row = UiKit.NewRect("Bottom row", body);
             UiKit.Band(row, false, NavH + 24, 220, 24);
             var modesButton = UiKit.Button(row, "MODES", () => Push(modes), UiKit.Muted, SfxId.UiTap, 30);
@@ -76,11 +100,11 @@ namespace BAM.UI
             modesLabel.rectTransform.offsetMin = new Vector2(0, 14);
             RobotIcon(modesButton.targetGraphic.rectTransform);
 
-            // PLAY: big glossy gold with a warm glow round it.
+            // ENTER ARENA: big glossy gold with a warm glow round it.
             var playGlow = UiKit.Fill(row, new Color(1f, 0.75f, 0.35f, 0.45f), Glow);
             playGlow.rectTransform.offsetMin = new Vector2(190, -50);
             playGlow.rectTransform.offsetMax = new Vector2(40, 50);
-            var play = UiKit.Button(row, "PLAY", OnPlay, UiKit.Orange, SfxId.UiConfirm, 100);
+            var play = UiKit.Button(row, "ENTER ARENA", OnPlay, UiKit.Orange, SfxId.UiConfirm, 76);
             var playRt = (RectTransform)play.transform;
             playRt.anchorMin = new Vector2(0, 0);
             playRt.anchorMax = new Vector2(1, 1);
@@ -95,6 +119,11 @@ namespace BAM.UI
             playEdge.color = new Color(1f, 0.92f, 0.7f, 0.9f);
             var playLabel = UiKit.ButtonText(play);
             playLabel.rectTransform.offsetMin = new Vector2(12, 52);
+            playLabel.horizontalOverflow = HorizontalWrapMode.Wrap; // shrinks to fit on narrow phones
+            playLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            playLabel.resizeTextForBestFit = true;
+            playLabel.resizeTextMinSize = 40;
+            playLabel.resizeTextMaxSize = 76;
             playSub = UiKit.Label(play.targetGraphic.transform, "", 30, TextAnchor.MiddleCenter, new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.75f));
             UiKit.Band(playSub, false, 22, 44, 10);
             playSub.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -717,10 +746,9 @@ namespace BAM.UI
             cam.farClipPlane = 8;
             cam.targetTexture = rt;
             cam.depth = -50;
-            // In front of the hero (who looks toward -z), a little above, looking at its middle.
-            var target = Spot + new Vector3(0, 0.5f, 0);
-            go.transform.position = Spot + new Vector3(0, 0.75f, -2.6f);
-            go.transform.LookAt(target);
+            // Level with the hero's chest, straight in front (it looks toward -z): 30 degrees at 3 units shows y -0.1 to 1.5.
+            go.transform.position = Spot + new Vector3(0, 0.7f, -3f);
+            go.transform.rotation = Quaternion.identity;
             cam.enabled = false;
         }
 
