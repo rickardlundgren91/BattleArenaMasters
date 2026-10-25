@@ -28,7 +28,13 @@ namespace BAM.Sim
             return SimMath.Clamp((u.BaseSpeed + flat) * (1 + pct), 0.5f, 6);
         }
 
-        internal static float DpsOf(Unit u) => u.Kind == UnitKind.Hero ? u.StatDmg() / u.StatCd() : u.DefDmg / u.UDef.Cd;
+        /// <summary>The damage per second u looks like it deals: Fenn's decoy looks like Fenn (a person cannot tell them apart).</summary>
+        internal static float DpsOf(Unit u)
+        {
+            if (u.Kind != UnitKind.Hero) return u.DefDmg / u.UDef.Cd;
+            var s = u.IsClone && u.Owner != null ? u.Owner : u;
+            return s.StatDmg() / s.StatCd();
+        }
         static float ShieldOf(Unit u) => u.ShieldAmount;
         static float HpR(Unit u) => u.Hp / u.MaxHp;
 
