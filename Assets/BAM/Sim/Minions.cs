@@ -170,7 +170,7 @@ namespace BAM.Sim
             dx /= dl; dy /= dl;
 
             // keep apart from friends (minions spread, and make room for friendly heroes); enemies are fought, not avoided.
-            // Fenn's spectral wolf touches nobody, so nobody steers round it.
+            // Fenn's wolf passes through bodies, so nobody steers round it.
             float sepX = 0, sepY = 0;
             for (int i = 0; i < Units.Count; i++)
             {

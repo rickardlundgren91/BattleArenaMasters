@@ -18,13 +18,14 @@ namespace BAM.Sim
         public const float PassiveRadius = 1.5f, PassiveCoeff = 0.5f;
     }
 
-    /// <summary>Fenn, Call of the Pack. Tap: a spectral wolf that follows him and bites enemies near him. Drag: the wolf is
-    /// thrown up to 7 tiles, homes in on an enemy hero it passes and pounces (a bite and a short root), then hunts on. The wolf
-    /// passes walls and bodies. Passive (the clone): when an enemy hero hits Fenn, a copy of him with his health and level runs
-    /// at the nearest enemy and fights for 6 s (it takes double damage), at most once per 18 s.</summary>
+    /// <summary>Fenn, Call of the Pack. Tap: a wolf that follows him and bites enemies near him. Drag: the wolf is thrown up to
+    /// 6 tiles, homes in on an enemy hero it passes and pounces (a bite and a short root), then hunts on. Walls stop the wolf:
+    /// it walks round them, a throw ends at the first one and it bites only with a clear line (Rickard 2026-10-25, after it won
+    /// 90 % going through them); it still passes through bodies. Passive (the clone): when an enemy hero hits Fenn, a copy of
+    /// him with his health and level runs at the nearest enemy and fights for 6 s (it takes double damage), at most once per 18 s.</summary>
     public static class FennS
     {
-        public const float ThrowReach = 7, ThrowSpeed = 11, HomeRadius = 1.5f, PounceRadius = 1, RootDuration = 0.8f;
+        public const float ThrowReach = 6, ThrowSpeed = 11, HomeRadius = 1.5f, PounceRadius = 1, RootDuration = 0.8f;
         public const float HpPercent = 0.3f, Duration = 4, DamageCoeff = 0.4f, Leash = 6, Sight = 3.5f, FollowGap = 1.2f;
         public const float CloneCooldown = 18, CloneLife = 6, CloneSight = 5;
         /// <summary>The clone's damage as a share of Fenn's (the old illusion: all of it).</summary>
@@ -274,6 +275,9 @@ namespace BAM.Sim
             if (drag)
             {
                 AimPoint(h, aa, ak, FennS.ThrowReach, out float gx, out float gy);
+                // the throw ends where a wall would stop the wolf, so the red circle shows where it really lands
+                float ga = SimMath.Atan2(gy - wy, gx - wx), gd = WolfReach(wx, wy, ga, SimMath.Hypot(gx - wx, gy - wy));
+                gx = wx + SimMath.Cos(ga) * gd; gy = wy + SimMath.Sin(ga) * gd;
                 h.Facing = aa; w.Facing = aa; w.Wolf = WolfMode.Fly; w.WolfGx = gx; w.WolfGy = gy;
                 WarnCircle(w, gx, gy, FennS.PounceRadius, SimMath.Hypot(gx - wx, gy - wy) / FennS.ThrowSpeed + 0.05f, true);
                 castX = gx; castY = gy;
@@ -284,11 +288,12 @@ namespace BAM.Sim
 
         /// <summary>The wolf's brain: a thrown wolf flies (homing in on an enemy hero it passes) and pounces; after a pounce it hunts
         /// its prey, else any enemy near it; a called wolf bites the nearest enemy near Fenn, else stays at his side. It walks
-        /// straight through walls.</summary>
+        /// round walls on a path, as the old aiWolf.</summary>
         void AiWolf(Unit w, float dt)
         {
             var o = w.Owner;
             if (w.Wolf == WolfMode.Fly) { WolfFly(w, dt); return; }
+            w.AiT -= dt;
             Unit t = null;
             if (w.Wolf == WolfMode.Free)
             {
@@ -307,8 +312,25 @@ namespace BAM.Sim
                 t = Nearest(EnemiesInRange(w, FennS.Sight, Pick.Any, false, aiBuf), w.X, w.Y);
                 if (t != null && SimMath.Dist(o, t) > FennS.Leash) t = null;
             }
-            if (t != null) { if (SimMath.Dist(w, t) > w.Range + t.R) MoveUnit(w, t.X - w.X, t.Y - w.Y, dt); }
-            else if (SimMath.Dist(w, o) > FennS.FollowGap) MoveUnit(w, o.X - w.X, o.Y - w.Y, dt);
+            // its bite needs a clear line, so a target behind a wall is walked round to
+            if (t != null) { if (SimMath.Dist(w, t) > w.Range + t.R || !Map.LosClear(w, t)) { WolfWalk(w, t.X, t.Y, dt); return; } }
+            else if (SimMath.Dist(w, o) > FennS.FollowGap) { WolfWalk(w, o.X, o.Y, dt); return; }
+            w.AiT = 0; w.Path.Clear(); // standing: the next goal gets a fresh path
+        }
+
+        /// <summary>One step towards (gx, gy) along a path round the walls, made again every 0.3 s (the old aiWolf); straight at
+        /// the goal when there is no path.</summary>
+        void WolfWalk(Unit w, float gx, float gy, float dt)
+        {
+            if (w.AiT <= 0) { w.AiT = 0.3f; Map.FindPath(w.X, w.Y, gx, gy, Time, w.Path); }
+            if (w.Path.Has)
+            {
+                float nx = w.Path.X[w.Path.Index], ny = w.Path.Y[w.Path.Index];
+                if (SimMath.Hypot(nx - w.X, ny - w.Y) < 0.25f) w.Path.Index++;
+                else MoveUnit(w, nx - w.X, ny - w.Y, dt);
+                return;
+            }
+            MoveUnit(w, gx - w.X, gy - w.Y, dt);
         }
 
         void WolfFly(Unit w, float dt)
@@ -323,28 +345,40 @@ namespace BAM.Sim
                     var u = Units[i];
                     if (!u.Alive || u.Team == w.Team || u.Kind != UnitKind.Hero || u.Has(St.Untargetable) || !IsVisibleTo(u, w.Team)) continue;
                     float d = SimMath.Dist(w, u) - u.R;
-                    if (d <= FennS.HomeRadius && d < bd) { bd = d; prey = u; }
+                    if (d <= FennS.HomeRadius && d < bd && Map.LosClear(w, u)) { bd = d; prey = u; }
                 }
                 w.WolfPrey = prey;
             }
             float gx = prey != null ? prey.X : w.WolfGx, gy = prey != null ? prey.Y : w.WolfGy;
             float dist = SimMath.Hypot(gx - w.X, gy - w.Y), stop = prey != null ? w.R + prey.R + 0.1f : 0, step = FennS.ThrowSpeed * dt;
             if (dist > 1e-4f) w.Facing = SimMath.Atan2(gy - w.Y, gx - w.X);
-            if (dist - stop <= step)
+            bool last = dist - stop <= step;
+            float k = last ? (dist > 1e-4f ? Math.Max(0, dist - stop) / dist : 0) : step / dist;
+            float nx = w.X + (gx - w.X) * k, ny = w.Y + (gy - w.Y) * k;
+            bool wall = !Map.Free(nx, ny, w.R); // a wall stops the flight: it lands where it is (the old rush, wall = true)
+            if (!wall) { w.X = nx; w.Y = ny; w.WalkT += dist * k; w.MovedAt = Time; }
+            if (last || wall) WolfPounce(w, prey);
+        }
+
+        /// <summary>How far the thrown wolf flies from (x, y) along ang (map space) before a wall stops it, at most want: the
+        /// steps it really flies (the old rushStop), so the aim preview and the red circle can show where it lands.</summary>
+        public float WolfReach(float x, float y, float ang, float want)
+        {
+            float c = SimMath.Cos(ang), s = SimMath.Sin(ang), step = FennS.ThrowSpeed * Rules.Tick, d = 0;
+            while (d < want - 1e-4f)
             {
-                float k = dist > 1e-4f ? Math.Max(0, dist - stop) / dist : 0;
-                w.X += (gx - w.X) * k; w.Y += (gy - w.Y) * k; w.WalkT += dist * k; w.MovedAt = Time;
-                WolfPounce(w, prey);
-                return;
+                float nd = Math.Min(want, d + step);
+                if (!Map.Free(x + c * nd, y + s * nd, Defs.Wolf.Radius)) break;
+                d = nd;
             }
-            w.X += (gx - w.X) / dist * step; w.Y += (gy - w.Y) / dist * step; w.WalkT += step; w.MovedAt = Time;
+            return d;
         }
 
         /// <summary>The thrown wolf lands: a bite from Fenn on its prey (else the enemy next to it, heroes first) and a short root.
         /// A landing on nothing shows no bite.</summary>
         void WolfPounce(Unit w, Unit prey)
         {
-            var best = prey != null && prey.Alive && SimMath.Dist(w, prey) - prey.R <= FennS.PounceRadius ? prey : PounceTarget(w.Team, w.X, w.Y, FennS.PounceRadius);
+            var best = prey != null && prey.Alive && SimMath.Dist(w, prey) - prey.R <= FennS.PounceRadius && Map.LosClear(w, prey) ? prey : PounceTarget(w.Team, w.X, w.Y, FennS.PounceRadius);
             w.Wolf = WolfMode.Free;
             w.WolfPrey = best != null && best.Kind == UnitKind.Hero ? best : null;
             Emit(EventType.WolfPounce, w, best, FennS.PounceRadius, 0, false, w.X, w.Y);
@@ -354,8 +388,8 @@ namespace BAM.Sim
             if (best.Alive) AddStatus(best, St.Root, FennS.RootDuration, 0, 0, w);
         }
 
-        /// <summary>The enemy (not a tower) within radius of the spot, measured to its edge: a hero before anything else, then the
-        /// nearest. The aim preview rings the same one.</summary>
+        /// <summary>The enemy (not a tower) within radius of the spot, measured to its edge, with no wall in between: a hero before
+        /// anything else, then the nearest. The aim preview rings the same one.</summary>
         public Unit PounceTarget(int team, float x, float y, float radius)
         {
             Unit best = null; float bd = 99;
@@ -364,7 +398,7 @@ namespace BAM.Sim
                 var u = Units[i];
                 if (!u.Alive || u.Team == team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable)) continue;
                 float d = SimMath.Hypot(u.X - x, u.Y - y) - u.R;
-                if (d > radius) continue;
+                if (d > radius || !Map.LosClear(x, y, u.X, u.Y)) continue;
                 bool uh = u.Kind == UnitKind.Hero;
                 bool better = best == null || (uh != (best.Kind == UnitKind.Hero) ? uh : d < bd);
                 if (better) { best = u; bd = d; }

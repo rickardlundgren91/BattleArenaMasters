@@ -34,9 +34,9 @@ namespace BAM.Sim
             float sp = SpeedOf(u), m = SimMath.Hypot(dx, dy);
             if (m > 1) { dx /= m; dy /= m; }
             float ox = u.X, oy = u.Y, nx = ox + dx * sp * dt, ny = oy + dy * sp * dt;
-            if (MoveOk(u, nx, ny)) { u.X = nx; u.Y = ny; }
-            else if (MoveOk(u, nx, oy)) u.X = nx;
-            else if (MoveOk(u, ox, ny)) u.Y = ny;
+            if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; }
+            else if (Map.Free(nx, oy, u.R)) u.X = nx;
+            else if (Map.Free(ox, ny, u.R)) u.Y = ny;
             float moved = SimMath.Hypot(u.X - ox, u.Y - oy);
             if (moved > 0)
             {
@@ -44,11 +44,6 @@ namespace BAM.Sim
                 u.WalkT += moved; u.MovedAt = Time;
             }
         }
-
-        /// <summary>Fenn's spectral wolf passes walls and bodies and only stays inside the map.</summary>
-        bool MoveOk(Unit u, float x, float y) => u.Kind == UnitKind.Wolf
-            ? x > 0.3f && y > 0.3f && x < Map.W - 0.3f && y < Map.H - 0.3f
-            : Map.Free(x, y, u.R);
 
         /// <summary>Moves u to the nearest free spot (rings of 0.5 tiles, 16 directions) when it ended up inside a wall.</summary>
         internal void Unstick(Unit u)
@@ -62,8 +57,9 @@ namespace BAM.Sim
                 }
         }
 
-        /// <summary>Bodies push apart once per tick. Towers push everyone out of their body; heroes (and Fenn's clone) walk
-        /// through heroes; minions yield to heroes and push each other softly; the spectral wolf touches nobody.</summary>
+        /// <summary>Bodies push apart once per tick. Towers push everyone out of their body (Fenn's wolf too, as a wall stops it);
+        /// heroes (and Fenn's clone) walk through heroes; minions yield to heroes and push each other softly; Fenn's wolf passes
+        /// through every other body.</summary>
         void Separate()
         {
             for (int t = 0; t < 2; t++)
@@ -73,7 +69,7 @@ namespace BAM.Sim
                 for (int i = 0; i < Units.Count; i++)
                 {
                     var u = Units[i];
-                    if (!u.Alive || u.Kind == UnitKind.Tower || u.Kind == UnitKind.Wolf) continue;
+                    if (!u.Alive || u.Kind == UnitKind.Tower) continue;
                     float d = SimMath.Dist(tw, u), min = tw.R + u.R;
                     if (d >= min) continue;
                     float nx = (u.X - tw.X) / (d != 0 ? d : 1), ny = (u.Y - tw.Y) / (d != 0 ? d : 1), side = u.X >= tw.X ? 1 : -1;

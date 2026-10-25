@@ -38,7 +38,7 @@ namespace BAM.Sim
         public float Radius;
         /// <summary>How long a zone or warning lasts.</summary>
         public float Dur;
-        public bool Big, OnHit, Launched, Out, Done, Tied, NoWall;
+        public bool Big, OnHit, Launched, Out, Done, Tied;
         public int Ticks;
         internal Unit[] Hit = new Unit[16];
         internal int HitCount;
@@ -70,7 +70,7 @@ namespace BAM.Sim
         {
             Mode = ProjMode.Auto; Kind = ProjKind.TowerShot; Team = 0; Src = Tgt = Caught = null;
             X = Y = PX = PY = OX = OY = Ang = D = Travel = Speed = T = Dmg = Radius = Dur = 0;
-            Big = OnHit = Launched = Out = Done = Tied = NoWall = false; Ticks = 0;
+            Big = OnHit = Launched = Out = Done = Tied = false; Ticks = 0;
             for (int i = 0; i < HitCount; i++) Hit[i] = null;
             HitCount = 0;
         }

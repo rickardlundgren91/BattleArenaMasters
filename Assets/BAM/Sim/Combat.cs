@@ -229,7 +229,7 @@ namespace BAM.Sim
             float cd = u.AttackCd;
             u.AtkTimer += dt;
             if (u.AtkTimer < cd) return;
-            var targets = EnemiesInRange(u, u.Range, Pick.Any, u.Kind != UnitKind.Wolf, atkBuf); // the spectral wolf bites through walls
+            var targets = EnemiesInRange(u, u.Range, Pick.Any, true, atkBuf);
             Unit tgt;
             if (u.Kind == UnitKind.Tower)
             {
@@ -291,7 +291,6 @@ namespace BAM.Sim
             if (hero && u.Hero == HeroId.Tyra) travel = SimMath.Clamp(SimMath.Dist(u, tgt) / 15f, 0.08f, projTime); // her arrow flies at a steady 15 tiles/s
             var p = NewProj(ProjMode.Auto, u, u.X, u.Y);
             p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero;
-            p.NoWall = u.Kind == UnitKind.Wolf;
             Emit(EventType.AttackStart, u, tgt, spawnDelay, (byte)kind, big);
         }
 
@@ -340,26 +339,26 @@ namespace BAM.Sim
         {
             var tgt = p.Tgt;
             if (!p.Launched) { p.Launched = true; p.OX = p.Src.X; p.OY = p.Src.Y; } // the shot leaves where the shooter stood at the release
-            float ox = p.X, oy = p.Y; bool los = !p.NoWall;
+            float ox = p.X, oy = p.Y;
             if (p.Speed > 0)
             {
                 float d = SimMath.Hypot(tgt.X - p.X, tgt.Y - p.Y), step = p.Speed * Rules.Tick;
                 if (d <= step || d < 0.05f)
                 {
                     p.Done = true;
-                    if (!los || !Map.ShotBlocked(ox, oy, tgt.X, tgt.Y)) HitWith(p); else Blocked(p, ox, oy);
+                    if (!Map.ShotBlocked(ox, oy, tgt.X, tgt.Y)) HitWith(p); else Blocked(p, ox, oy);
                 }
                 else
                 {
                     p.X += (tgt.X - p.X) / d * step; p.Y += (tgt.Y - p.Y) / d * step;
-                    if (los && Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
+                    if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
                 }
             }
             else
             {
                 float k = SimMath.Clamp(p.T / p.Travel, 0, 1);
                 p.X = SimMath.Lerp(p.OX, tgt.X, k); p.Y = SimMath.Lerp(p.OY, tgt.Y, k);
-                if (los && Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
+                if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
                 else if (p.T >= p.Travel) { p.Done = true; HitWith(p); }
             }
             if (!tgt.Alive && !p.Done) p.Done = true;
@@ -374,7 +373,7 @@ namespace BAM.Sim
         {
             var u = p.Src;
             if (u == null || !u.Alive) return; // the shot just ends
-            var list = EnemiesInRange(u, u.Range, Pick.Any, u.Kind != UnitKind.Wolf, atkBuf);
+            var list = EnemiesInRange(u, u.Range, Pick.Any, true, atkBuf);
             if (list.Count > 0)
             {
                 p.Tgt = u.Kind == UnitKind.Hero ? PickRandom(list) : Nearest(list, u.X, u.Y);
