@@ -247,7 +247,7 @@ namespace BAM.Art
                             new Vector3(sc, sc * (0.9f + (float)rnd.NextDouble() * 0.2f), sc)),
                     });
                 }
-            KitPiece(root, "Bushes", parts, "bam_bush");
+            KitPiece(root, "Bushes", parts, "bam_bush", false); // receive shadows but cast none: hundreds of leaves in the shadow pass cost more than they show
         }
 
         // The middle boulders: Rickard's painted mossy boulder standing upright at its foot line, as in the old game (RuinBill): a
@@ -297,7 +297,7 @@ namespace BAM.Art
             Add(root, "Ground", mesh, mat, false);
         }
 
-        static void KitPiece(GameObject root, string name, System.Collections.Generic.List<CombineInstance> parts, string tex)
+        static void KitPiece(GameObject root, string name, System.Collections.Generic.List<CombineInstance> parts, string tex, bool cast = true)
         {
             if (parts.Count == 0) return;
             var mesh = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };
@@ -306,7 +306,7 @@ namespace BAM.Art
             var mat = ArtMaterials.Instance(ArtMaterials.Lit);
             Texture2D t = Props.Texture(tex);
             if (t != null) { mat.SetTexture(ArtMaterials.BaseMap, t); mat.mainTexture = t; }
-            Add(root, name, mesh, mat, true);
+            Add(root, name, mesh, mat, true, cast);
         }
 
         /// <summary>The textured layer when its picture loaded, else the palette mesh in the fallback colour.</summary>
@@ -321,7 +321,7 @@ namespace BAM.Art
             return marksMat;
         }
 
-        internal static GameObject Add(GameObject root, string name, Mesh mesh, Material mat, bool lit)
+        internal static GameObject Add(GameObject root, string name, Mesh mesh, Material mat, bool lit, bool cast = true)
         {
             var go = new GameObject(name);
             go.transform.SetParent(root.transform, false);
@@ -329,8 +329,8 @@ namespace BAM.Art
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = mat;
             r.receiveShadows = lit;
-            r.shadowCastingMode = lit && ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
-            if (lit) ArtKit.RegisterCaster(r);
+            r.shadowCastingMode = lit && cast && ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            if (lit && cast) ArtKit.RegisterCaster(r);
             go.isStatic = true;
             return go;
         }
