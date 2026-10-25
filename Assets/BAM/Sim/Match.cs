@@ -1,0 +1,392 @@
+using System;
+using System.Collections.Generic;
+
+namespace BAM.Sim
+{
+    public sealed class MatchConfig
+    {
+        public HeroId PlayerHero = HeroId.Tyra;
+        public Difficulty Difficulty = Difficulty.Normal;
+        /// <summary>The bots on the player's own team; null = Difficulty.</summary>
+        public Difficulty? AllyDifficulty;
+        public int Seed = 1;
+        /// <summary>The guided first match (Tyra, one enemy tower, no waves).</summary>
+        public bool Tutorial;
+        /// <summary>With Tutorial: the guided match's first half instead, Fenn on the round training island (old
+        /// SimTutorialIsland). When its Tut.Done the game starts the arena half (Tutorial without Island).</summary>
+        public bool Island;
+        /// <summary>A bot plays the player's hero too (headless test matches).</summary>
+        public bool PlayerIsBot;
+        /// <summary>Optional fixed line-ups: 2 allies and 3 enemies. Null = drawn from the other heroes with the seed.</summary>
+        public HeroId[] Allies, Enemies;
+        /// <summary>Test matches: every hero at slot i of its team's spawn (left to right) instead of the player in the middle.</summary>
+        public bool SlotOrder;
+    }
+
+    /// <summary>The player's controls for one tick, in map space (x right, y down the map).</summary>
+    public struct PlayerInput
+    {
+        public float MoveX, MoveY;
+        /// <summary>The special button was tapped, or a drag was released, this tick.</summary>
+        public bool Special;
+        /// <summary>The drag's direction (NaN = a tap) and length 0..1.</summary>
+        public float AimAngle, AimK;
+        public static PlayerInput None => new PlayerInput { AimAngle = float.NaN };
+    }
+
+    public enum MatchState : byte { Countdown, Play, Over }
+
+    /// <summary>
+    /// One match of the rules, without graphics: create it, call Step 60 times a second with the player's input, read Units,
+    /// Projs and Events after each Step. Deterministic: the same config (seed) and inputs give the same match.
+    /// </summary>
+    public sealed partial class Match
+    {
+        public readonly MatchConfig Config;
+        public readonly Arena Map;
+        public readonly Rng Rng;
+        public float Time;
+        public MatchState State;
+        /// <summary>The winning team once State is Over (-1 before).</summary>
+        public int Winner = -1;
+        public int Level = 1;
+        public float WaveT;
+        public int WaveN;
+        public readonly int[] Kills = new int[2], Stars = new int[2];
+        public bool NoStars;
+        public Unit Player;
+        public readonly Unit[] Towers = new Unit[2];
+        public readonly List<Unit> Units = new List<Unit>(96);
+        /// <summary>The real heroes (no clones), by HeroIndex.</summary>
+        public readonly List<Unit> Heroes = new List<Unit>(8);
+        public readonly List<Proj> Projs = new List<Proj>(160);
+        /// <summary>What happened in the last Step (cleared at the start of each Step).</summary>
+        public readonly List<SimEvent> Events = new List<SimEvent>(256);
+        public Tutorial Tut;
+        public long Ticks;
+        /// <summary>The player pressed the special and it ran out unanswered at this time (the HUD shakes the button).</summary>
+        public float SpecialDeniedAt = -99;
+
+        int nextSerial = 1;
+        float specialBuf, bufAng = float.NaN, bufK;
+        float inMoveX, inMoveY;
+        readonly List<Unit> unitBuf = new List<Unit>(96), atkBuf = new List<Unit>(48), aiBuf = new List<Unit>(48), tmpBuf = new List<Unit>(48);
+        readonly List<Proj> projBuf = new List<Proj>(160), projPool = new List<Proj>(160);
+        readonly List<Spawn> spawns = new List<Spawn>(16);
+        struct Spawn { public float T; public int Team; public MinionKind Kind; }
+
+        public static Match Create(MatchConfig cfg) => new Match(cfg);
+
+        Match(MatchConfig cfg)
+        {
+            Config = cfg;
+            Map = cfg.Tutorial && cfg.Island ? IslandMap() : new Arena();
+            Rng = new Rng(cfg.Seed);
+            Time = -Rules.Countdown;
+            State = MatchState.Countdown;
+            WaveT = Rules.WaveFirst;
+            for (int t = 0; t < 2; t++) Towers[t] = NewTower(t, Map.TowerX[t], Map.TowerY[t]);
+            Map.TowerTile0 = TileOf(Towers[0]); Map.TowerTile1 = TileOf(Towers[1]);
+            if (cfg.Tutorial) { if (cfg.Island) StartIsland(); else StartTutorial(); return; }
+
+            // the line-up: the player's hero and five others, drawn with the seed (bots never copy the player's hero)
+            var pool = new List<HeroId>(7);
+            for (int i = 0; i < HeroCatalog.Count; i++) if ((HeroId)i != cfg.PlayerHero) pool.Add((HeroId)i);
+            for (int i = pool.Count - 1; i > 0; i--) { int j = Rng.Int(i + 1); var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
+            var allies = cfg.Allies ?? new[] { pool[0], pool[1] };
+            var enemies = cfg.Enemies ?? new[] { pool[2], pool[3], pool[4] };
+            var allyTier = Defs.Tier(cfg.AllyDifficulty ?? cfg.Difficulty);
+            var enemyTier = Defs.Tier(cfg.Difficulty);
+            int[] mid = { 1, 0, 2 }; // the player in the middle, as in the old game
+            for (int i = 0; i < 3; i++)
+            {
+                var id = i == 0 ? cfg.PlayerHero : allies[i - 1];
+                int s = cfg.SlotOrder ? i : mid[i];
+                var h = NewHero(id, Teams.Player, Map.SpawnX[0][s], Map.SpawnY[0][s]);
+                if (i == 0) { h.IsPlayer = true; Player = h; if (cfg.PlayerIsBot) h.Bot = new BotBrain(h, allyTier, this); }
+                else h.Bot = new BotBrain(h, allyTier, this);
+            }
+            for (int i = 0; i < enemies.Length && i < 3; i++)
+            {
+                var h = NewHero(enemies[i], Teams.Enemy, Map.SpawnX[1][i], Map.SpawnY[1][i]);
+                h.Bot = new BotBrain(h, enemyTier, this);
+            }
+        }
+
+        int TileOf(Unit u) => (int)Math.Floor(u.Y) * Map.W + (int)Math.Floor(u.X);
+
+        // ---------- making units ----------
+        Unit NewUnit(UnitKind kind, int team, float x, float y)
+        {
+            var u = new Unit { Serial = nextSerial++, Kind = kind, Team = team, X = x, Y = y, PX = x, PY = y, Facing = team == Teams.Player ? -SimMath.PI / 2 : SimMath.PI / 2 };
+            u.NoStars = NoStars;
+            Units.Add(u);
+            return u;
+        }
+
+        internal Unit NewHero(HeroId id, int team, float x, float y)
+        {
+            var h = NewUnit(UnitKind.Hero, team, x, y);
+            h.Hero = id; h.HDef = Defs.Hero(id); h.R = h.HDef.Radius; h.Level = Level; h.Charge = 0;
+            h.MaxHp = h.StatHp(); h.Hp = h.MaxHp; h.SpawnX = x; h.SpawnY = y;
+            h.HeroIndex = Heroes.Count; Heroes.Add(h);
+            h.MoX = x; h.MoY = y;
+            return h;
+        }
+
+        internal Unit NewMinion(MinionKind kind, int team, float x, float y)
+        {
+            var m = NewUnit(UnitKind.Minion, team, x, y);
+            m.Minion = kind; m.UDef = Defs.Minion(kind); m.R = m.UDef.Radius; m.MaxHp = m.UDef.Hp; m.Hp = m.MaxHp;
+            m.Wp = 0; m.AiT = Rng.Range(0, 0.3f); m.SpawnX = x; m.SpawnY = y;
+            m.MbScanT = Rng.Range(0, MnScan);
+            return m;
+        }
+
+        Unit NewTower(int team, float x, float y)
+        {
+            var t = NewUnit(UnitKind.Tower, team, x, y);
+            t.UDef = Defs.Tower; t.R = Defs.Tower.Radius; t.MaxHp = Defs.Tower.Hp; t.Hp = t.MaxHp;
+            return t;
+        }
+
+        // ---------- the tick ----------
+        public void Step(in PlayerInput input)
+        {
+            Events.Clear();
+            for (int i = 0; i < Units.Count; i++) { var u = Units[i]; u.PX = u.X; u.PY = u.Y; }
+            for (int i = 0; i < Projs.Count; i++) { var p = Projs[i]; p.PX = p.X; p.PY = p.Y; }
+            const float dt = Rules.Tick;
+            if (State == MatchState.Over) return;
+            if (State == MatchState.Countdown)
+            {
+                Time += dt;
+                if (Time >= 0)
+                {
+                    Time = 0; State = MatchState.Play; Emit(EventType.MatchStart, null, null);
+                    if (Tut == null) for (int i = 0; i < Heroes.Count; i++) AddStatus(Heroes[i], St.SpeedPct, Rules.StartSpeedTime, 1);
+                }
+                return;
+            }
+            Time += dt; Ticks++;
+            inMoveX = input.MoveX; inMoveY = input.MoveY;
+            if (input.Special) { specialBuf = Rules.SpecialBuffer; bufAng = input.AimAngle; bufK = input.AimK; }
+
+            // minions of a wave come out one by one
+            for (int i = spawns.Count - 1; i >= 0; i--)
+            {
+                var s = spawns[i]; s.T -= dt;
+                if (s.T > 0) { spawns[i] = s; continue; }
+                spawns.RemoveAt(i);
+                if (State != MatchState.Play) continue;
+                float x = Map.MinionX[s.Team] + Rng.Range(-0.2f, 0.2f), y = Map.MinionY[s.Team] + Rng.Range(-0.2f, 0.2f);
+                NewMinion(s.Kind, s.Team, x, y);
+            }
+            if (Tut != null) UpdateTutorial(dt);
+
+            int lvl = Tut != null ? 1 : Math.Min(Rules.MaxLevel, 1 + (int)Math.Floor(Time / Rules.SecondsPerLevel));
+            if (lvl != Level)
+            {
+                Level = lvl;
+                for (int i = 0; i < Units.Count; i++) if (Units[i].Kind == UnitKind.Hero) Units[i].SetLevel(lvl);
+                Emit(EventType.LevelUp, null, null, lvl);
+            }
+            if (Tut == null) WaveT -= dt;
+            if (WaveT <= 0) { WaveT += Rules.WavePeriod * PacingWaveMult(); SpawnWave(); }
+
+            unitBuf.Clear(); unitBuf.AddRange(Units);
+            for (int i = 0; i < unitBuf.Count; i++)
+            {
+                var u = unitBuf[i];
+                if (u.Kind == UnitKind.Hero && !u.Alive && !u.IsClone)
+                {
+                    u.RespawnT -= dt;
+                    if (u.RespawnT <= 0) Revive(u);
+                    continue;
+                }
+                if (!u.Alive) { if (!float.IsNaN(u.DeadT)) u.DeadT -= dt; continue; }
+                u.RevealT = Math.Max(0, u.RevealT - dt);
+                BurnTick(u, dt);
+                DotTick(u, dt);
+                for (int k = u.StCount - 1; k >= 0; k--)
+                {
+                    u.Sts[k].T -= dt;
+                    if (!(u.Sts[k].T > 0) || (u.Sts[k].Type == St.Shield && u.Sts[k].Amount <= 0)) u.RemoveAt(k);
+                }
+                if (!u.Alive) continue; // a burn or poison tick killed it
+                if (u.IsClone)
+                {
+                    u.LifeT -= dt;
+                    if (u.LifeT <= 0 || !u.Owner.Alive) { EndClone(u); continue; }
+                }
+                if (u.Kind == UnitKind.Wolf)
+                {
+                    u.LifeT -= dt;
+                    if (u.LifeT <= 0 || !u.Owner.Alive) { u.Alive = false; u.Hp = 0; u.DeadT = 0.6f; Emit(EventType.Death, null, u); continue; }
+                }
+                if (u.Kind == UnitKind.Hero)
+                {
+                    if (!u.IsClone) UpdateSpecial(u, dt);
+                    if (!u.InCombat(Time) && !u.IsClone)
+                    {
+                        u.RegenT += dt;
+                        if (u.RegenT >= Rules.RegenTick) { u.RegenT = 0; Heal(u, u.MaxHp * Rules.RegenAmount, u); }
+                    }
+                    else u.RegenT = 0;
+                    if (CanAct(u) && !u.Has(St.Casting))
+                    {
+                        if (u.Bot != null) u.Bot.Think(dt);
+                        else if (u == Player) PlayerAct(u, dt);
+                        else if (u.IsClone) AiClone(u, dt);
+                    }
+                    if (!u.IsClone) TrackMotion(u, dt);
+                }
+                else if (u.Kind == UnitKind.Minion) { if (CanAct(u)) AiMinion(u, dt); }
+                else if (u.Kind == UnitKind.Wolf) { if (CanAct(u)) AiWolf(u, dt); }
+                else if (u.Kind == UnitKind.Tower)
+                {
+                    if (!u.InCombat(Time) && u.Hp < u.MaxHp * Rules.TowerRegenBelow)
+                    {
+                        u.RegenT += dt;
+                        if (u.RegenT >= Rules.TowerRegenTick) { u.RegenT = 0; u.Hp = Math.Min(u.MaxHp * Rules.TowerRegenBelow, u.Hp + u.MaxHp * Rules.TowerRegenAmount); }
+                    }
+                }
+                UpdateAttack(u, dt);
+            }
+            specialBuf = Math.Max(0, specialBuf - dt);
+
+            // minions gone 0.6 s after death, clones at once
+            int w = 0;
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                bool gone = (u.IsMinionLike && !u.Alive && u.DeadT <= 0) || (u.IsClone && !u.Alive);
+                if (!gone) Units[w++] = u;
+            }
+            if (w < Units.Count) Units.RemoveRange(w, Units.Count - w);
+            Separate();
+            UpdateProjectiles(dt);
+            FlushClones();
+        }
+
+        void PlayerAct(Unit u, float dt)
+        {
+            MoveUnit(u, inMoveX, inMoveY, dt);
+            if (specialBuf > 0)
+            {
+                bool cast = TryCastSpecial(u, bufAng, bufK);
+                if (cast) specialBuf = 0;
+                else if (specialBuf <= dt && u.SpecialReady) { SpecialDeniedAt = Time; Emit(EventType.SpecialDenied, u, null); }
+            }
+        }
+
+        // ---------- waves ----------
+        static readonly MinionKind[] WaveKinds = { MinionKind.Melee, MinionKind.Siege, MinionKind.Ranged };
+        static readonly int[] WaveCount = { 2, 1, 1 }, WaveEvery = { 1, 3, 1 };
+
+        void SpawnWave()
+        {
+            WaveN++;
+            for (int team = 0; team < 2; team++)
+            {
+                int k = 0;
+                for (int e = 0; e < WaveKinds.Length; e++)
+                {
+                    if ((WaveN - 1) % WaveEvery[e] != 0) continue;
+                    for (int i = 0; i < WaveCount[e]; i++) spawns.Add(new Spawn { T = (k++) * Rules.WaveStagger, Team = team, Kind = WaveKinds[e] });
+                }
+            }
+        }
+
+        float PacingWaveMult() => Tut != null ? 1 : Time >= 330 ? 0.7f : Time >= 210 ? 0.85f : 1;
+        float PacingMinionTowerMult() => Tut != null ? 1 : Time >= 330 ? 1.4f : Time >= 270 ? 1.2f : 1;
+
+        // ---------- what a team sees ----------
+        /// <summary>Can team see u? Own units always; a recent hit shows both sides for 4 s; a tower sees its range; a unit in
+        /// grass is seen only by enemies within 2.5 tiles.</summary>
+        public bool IsVisibleTo(Unit u, int team)
+        {
+            if (!u.Alive) return false;
+            if (u.Team == team) return true;
+            if (u.RevealT > 0) return true;
+            var tw = Towers[team];
+            if (tw != null && tw.Alive && SimMath.Dist(tw, u) <= tw.UDef.Range) return true;
+            if (Map.InGrass(u.X, u.Y))
+            {
+                for (int i = 0; i < Units.Count; i++)
+                {
+                    var o = Units[i];
+                    if (o.Alive && o.Team == team && SimMath.Dist(o, u) <= Rules.GrassSight) return true;
+                }
+                return false;
+            }
+            return true;
+        }
+        /// <summary>No enemy can see u right now (the HUD's crossed-out eye; ambush).</summary>
+        public bool HiddenFromFoes(Unit u) => u.Alive && !IsVisibleTo(u, Teams.Other(u.Team));
+
+        public enum Pick : byte { Any, Heroes, MinionLike, HeroOrMinion }
+
+        static bool PickOk(Unit u, Pick p)
+        {
+            switch (p)
+            {
+                case Pick.Heroes: return u.Kind == UnitKind.Hero;
+                case Pick.MinionLike: return u.Kind == UnitKind.Minion || u.Kind == UnitKind.Wolf;
+                case Pick.HeroOrMinion: return u.Kind != UnitKind.Tower;
+                default: return true;
+            }
+        }
+
+        /// <summary>Living enemies of src that src's team can see, within range of src (plus their radius), not untargetable;
+        /// los = only those with a clear sight line. Fills into and returns it.</summary>
+        public List<Unit> EnemiesInRange(Unit src, float range, Pick pick, bool los, List<Unit> into)
+        {
+            into.Clear();
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (!u.Alive || u.Team == src.Team || !PickOk(u, pick) || SimMath.Dist(src, u) > range + u.R || u.Has(St.Untargetable)) continue;
+                if (!IsVisibleTo(u, src.Team)) continue;
+                if (los && !Map.LosClear(src, u)) continue;
+                into.Add(u);
+            }
+            return into;
+        }
+
+        public static Unit Nearest(List<Unit> l, float x, float y)
+        {
+            Unit best = null; float bd = float.MaxValue;
+            for (int i = 0; i < l.Count; i++) { float d = SimMath.Dist(l[i], x, y); if (d < bd) { bd = d; best = l[i]; } }
+            return best;
+        }
+
+        internal T PickRandom<T>(List<T> l) => l[Rng.Int(l.Count)];
+
+        // ---------- events ----------
+        internal void Emit(EventType type, Unit a, Unit b, float v = 0, byte kind = 0, bool big = false, float x = 0, float y = 0, DmgKind dk = DmgKind.Auto)
+        {
+            if (Events.Count >= 2048) return; // a safety net only: the game reads events every tick
+            Events.Add(new SimEvent { Type = type, A = a, B = b, ASerial = a != null ? a.Serial : 0, BSerial = b != null ? b.Serial : 0, V = v, Kind = kind, Big = big, X = x, Y = y, Dmg = dk });
+        }
+
+        // ---------- projectiles ----------
+        internal Proj NewProj(ProjMode mode, Unit src, float x, float y)
+        {
+            Proj p;
+            if (projPool.Count > 0) { p = projPool[projPool.Count - 1]; projPool.RemoveAt(projPool.Count - 1); p.Reset(); }
+            else p = new Proj();
+            p.Serial = nextSerial++; p.Mode = mode; p.Src = src; p.Team = src != null ? src.Team : 0; p.X = p.PX = x; p.Y = p.PY = y;
+            Projs.Add(p);
+            return p;
+        }
+
+        // ---------- the end ----------
+        void EndMatch(int winner)
+        {
+            if (State == MatchState.Over) return;
+            State = MatchState.Over; Winner = winner;
+            Emit(EventType.MatchOver, null, null, winner);
+        }
+    }
+}
