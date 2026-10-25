@@ -180,7 +180,7 @@ namespace BAM.Game
                 case UnitKind.Hero: v = ArtKit.CreateHero(u.Hero, u.Team); break;
                 case UnitKind.Tower: v = ArtKit.CreateTower(u.Team); break;
                 case UnitKind.Wolf: v = ArtKit.CreateWolf(u.Team); break;
-                default: v = ArtKit.CreateMinion(u.Minion, u.Team); break; // the guided match's practice target too, until art has a board
+                default: v = u == TutDummy ? ArtKit.CreateTarget() : ArtKit.CreateMinion(u.Minion, u.Team); break; // the guided match's practice target is a board
             }
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
