@@ -324,22 +324,19 @@ namespace BAM.UI
 
             cardFrames = new Image[HeroCatalog.Count];
             cardChecks = new GameObject[HeroCatalog.Count];
-            RectTransform row = null;
+            // 3 cards a row on a phone held upright; on a wide screen as many as fit, so the details stay in view.
+            var grid = UiKit.NewRect("Grid", content);
+            var gl = grid.gameObject.AddComponent<GridLayoutGroup>();
+            gl.spacing = new Vector2(16, 16);
+            gl.padding = new RectOffset(8, 8, 0, 0);
+            gl.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gl.childAlignment = TextAnchor.UpperCenter;
+            grid.gameObject.AddComponent<HeroGridFit>().Grid = gl;
             for (int i = 0; i < HeroCatalog.Count; i++)
             {
-                if (i % 3 == 0)
-                {
-                    row = UiKit.NewRect("Row", content);
-                    row.gameObject.AddComponent<LayoutElement>().preferredHeight = 370;
-                }
                 int index = i;
                 var info = HeroCatalog.All[i];
-                var card = UiKit.NewRect(info.Name, row);
-                int col = i % 3;
-                card.anchorMin = new Vector2(col / 3f, 0);
-                card.anchorMax = new Vector2((col + 1) / 3f, 1);
-                card.offsetMin = new Vector2(8, 0);
-                card.offsetMax = new Vector2(-8, 0);
+                var card = UiKit.NewRect(info.Name, grid);
                 var bg = card.gameObject.AddComponent<Image>();
                 bg.sprite = UiKit.Rounded;
                 bg.type = Image.Type.Sliced;
@@ -351,21 +348,24 @@ namespace BAM.UI
                 card.gameObject.AddComponent<ButtonFx>();
                 cardFrames[i] = UiKit.Frame(card);
 
-                // The hero's portrait in the top of the card, with rounded corners.
-                var mask = UiKit.Fill(card, Color.white, UiKit.Rounded);
-                mask.rectTransform.anchorMin = new Vector2(0, 1);
-                mask.rectTransform.anchorMax = new Vector2(1, 1);
-                mask.rectTransform.pivot = new Vector2(0.5f, 1);
-                mask.rectTransform.offsetMin = new Vector2(8, -240);
-                mask.rectTransform.offsetMax = new Vector2(-8, -8);
+                // The whole portrait in the top of the card, rounded corners, never stretched or cut.
+                var holder = UiKit.NewRect("PortraitArea", card);
+                holder.anchorMin = new Vector2(0, 1);
+                holder.anchorMax = new Vector2(1, 1);
+                holder.pivot = new Vector2(0.5f, 1);
+                holder.offsetMin = new Vector2(8, -248);
+                holder.offsetMax = new Vector2(-8, -8);
+                var mask = UiKit.Fill(holder, Color.white, UiKit.Rounded);
+                var fit = mask.gameObject.AddComponent<AspectRatioFitter>();
+                fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+                var tex = Portrait(info.Id);
+                fit.aspectRatio = tex != null ? (float)tex.width / tex.height : 1.3f;
                 mask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
                 var pic = UiKit.NewRect("Portrait", mask.rectTransform);
                 UiKit.Stretch(pic);
                 var raw = pic.gameObject.AddComponent<RawImage>();
-                raw.texture = Portrait(info.Id);
+                raw.texture = tex;
                 raw.raycastTarget = false;
-                // fill the card's width; crop the picture's height to keep its shape
-                raw.uvRect = new Rect(0.06f, 0.08f, 0.88f, 0.92f);
                 var heroName = UiKit.Label(card, info.Name, 44, TextAnchor.MiddleCenter, UiKit.TextColor);
                 UiKit.Band(heroName, false, 62, 56, 4);
                 UiKit.AddShadow(heroName, 2);
@@ -547,6 +547,29 @@ namespace BAM.UI
         static void SetBar(int stat, int value)
         {
             for (int k = 0; k < 3; k++) statBars[stat, k].color = k < value ? UiKit.Gold : UiKit.Muted;
+        }
+    }
+
+    /// <summary>Picks the hero grid's column count and card size from its width (3 upright, more on wide screens).</summary>
+    sealed class HeroGridFit : MonoBehaviour
+    {
+        public GridLayoutGroup Grid;
+        float lastWidth = -1;
+
+        void OnRectTransformDimensionsChange() => Fit();
+        void OnEnable() => Fit();
+
+        void Fit()
+        {
+            if (Grid == null) return;
+            float w = ((RectTransform)transform).rect.width;
+            if (w <= 0 || Mathf.Abs(w - lastWidth) < 0.5f) return;
+            lastWidth = w;
+            float inner = w - Grid.padding.left - Grid.padding.right;
+            int count = transform.childCount;
+            int cols = Mathf.Clamp(Mathf.FloorToInt((inner + Grid.spacing.x) / (380 + Grid.spacing.x)), 3, Mathf.Max(3, count));
+            Grid.constraintCount = cols;
+            Grid.cellSize = new Vector2((inner - Grid.spacing.x * (cols - 1)) / cols, 370);
         }
     }
 }
