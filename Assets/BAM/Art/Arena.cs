@@ -52,7 +52,6 @@ namespace BAM.Art
             if (painted != null) PaintedGround(root, painted, w, h);
             Mesh pillarM = Props.Mesh("wallkit_pillar"), beamM = Props.Mesh("wallkit_straight");
             bool kit = pillarM != null && beamM != null && !info.Island;
-            Mesh bushM = info.Island ? null : Props.Mesh("bam_bush");
             Texture2D rockPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_Pillar_C");
 
             for (int ty = 0; ty < h; ty++)
@@ -94,7 +93,7 @@ namespace BAM.Art
                         else if (dLane < 2.1f && road.T == null) gb = solid.Color(Pal.RoadEdge);
                         else gb = Pick(ground, solid, ((tx + ty) & 1) == 0 ? Pal.Ground : Pal.GroundB);
                         if (painted == null) gb.Face(new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), new Vector3(x1, 0f, z0));
-                        if (code == TGrass) { if (bushM == null) Bush(solid, c, tx, ty, rnd); }
+                        if (code == TGrass) { } // the old game's leaves stand here (LeafBushes below)
                         else if (ground.T == null && dLane >= 2.1f && rnd.NextDouble() < 0.18) Pebble(solid, c, rnd);
                     }
 
@@ -138,7 +137,7 @@ namespace BAM.Art
                 Add(root, l.Name, l.B.ToMesh(l.Name), m, l != water);
             }
             if (kit) WallKit(root, info, pillarM, beamM);
-            if (bushM != null) BushModels(root, info, bushM);
+            if (!info.Island) LeafBushes(root, info);
             Mesh edgeM = info.Island ? null : Props.Mesh("bam_boundary_wall");
             if (edgeM != null) BoundaryWall(root, info, edgeM);
             if (rockPic != null && info.Rocks != null) RockPictures(root, info, rockPic);
@@ -225,29 +224,105 @@ namespace BAM.Art
             KitPiece(root, "Boundary wall", parts, "bam_boundary_wall");
         }
 
-        // Rickard's Meshy bush (bam_bush, made for the BAM arena): one copy on every grass tile of a 1.5-tile grid, turned and sized a
-        // little differently so a grass area reads as one thick hedge. Merged into one mesh (one draw call).
-        static void BushModels(GameObject root, ArenaInfo info, Mesh bush)
+        // The old game's bush (View3DMapArena.ArenaBush, Rickard 2026-10-17: "the leaves built in code looked good, so they are the
+        // bush"): on every grass tile about 24 pointed leaves on a jittered 5x5 grid, leaning away from the camera so on screen they
+        // rise long and upward and fan out; tiles on an area's edge lean their outer leaves outward, so the outline is ragged. Two
+        // greens, each leaf dark at the root and light at the tip (a bilinear 4x2 ramp texture, as the old palette). One mesh.
+        static Texture2D leafRamp;
+        static Material leafMat;
+
+        static void LeafBushes(GameObject root, ArenaInfo info)
         {
-            var parts = new System.Collections.Generic.List<CombineInstance>();
-            var rnd = new System.Random(4242);
-            float size = Mathf.Max(bush.bounds.size.x, bush.bounds.size.z);
-            const float Step = 1.5f;
-            for (float y = 0.75f; y < info.Height; y += Step)
-                for (float x = 0.75f; x < info.Width; x += Step)
+            int w = info.Width, h = info.Height;
+            var v = new System.Collections.Generic.List<Vector3>(16384);
+            var n = new System.Collections.Generic.List<Vector3>(16384);
+            var uv = new System.Collections.Generic.List<Vector2>(16384);
+            var t = new System.Collections.Generic.List<int>(24576);
+            bool G(int x, int y) => x >= 0 && y >= 0 && x < w && y < h && info.Tile(x, y) == TGrass;
+            const int N = 5;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
                 {
-                    int tx = (int)x, ty = (int)y;
-                    if (info.Tile(tx, ty) != TGrass) continue;
-                    float sc = (1.9f + (float)rnd.NextDouble() * 0.35f) / size;
-                    float jx = ((float)rnd.NextDouble() - 0.5f) * 0.25f, jz = ((float)rnd.NextDouble() - 0.5f) * 0.25f;
-                    parts.Add(new CombineInstance
-                    {
-                        mesh = bush,
-                        transform = Matrix4x4.TRS(new Vector3(x + jx, 0f, info.Height - y + jz), Quaternion.Euler(0f, (float)rnd.NextDouble() * 360f, 0f),
-                            new Vector3(sc, sc * (0.9f + (float)rnd.NextDouble() * 0.2f), sc)),
-                    });
+                    if (!G(x, y)) continue;
+                    // the old map's rows grew with z; here row y lies at z = h - 1 - y, so the old row y - 1 (toward -z) is y + 1
+                    float ex = (G(x - 1, y) ? 0 : -1) + (G(x + 1, y) ? 0 : 1), ez = (G(x, y + 1) ? 0 : -1) + (G(x, y - 1) ? 0 : 1);
+                    for (int j = 0; j < N; j++)
+                        for (int i = 0; i < N; i++)
+                        {
+                            int hx = x * N + i, hy = y * N + j;
+                            if (Hash(hx, hy, 31) < 0.06f) continue; // a few gaps
+                            float u = (i + 0.15f + Hash(hx, hy, 32) * 0.7f) / N, vv = (j + 0.15f + Hash(hx, hy, 33) * 0.7f) / N;
+                            var at = new Vector3(x + u, 0f, h - 1 - y + vv);
+                            float a = (Hash(hx, hy, 34) - 0.5f) * 1.6f; // -46..46 degrees round +z
+                            var dir = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
+                            float edgeW = Mathf.Clamp01(Mathf.Max(ex * (u - 0.5f), ez * (vv - 0.5f)) * 2.2f); // near an open side: lean out
+                            dir = (dir + new Vector3(ex, 0f, ez) * (edgeW * 1.4f)).normalized;
+                            float len = 0.75f + Hash(hx, hy, 35) * 0.4f - edgeW * 0.15f, wd = 0.085f + Hash(hx, hy, 36) * 0.04f;
+                            int row = Hash(hx, hy, 37) < 0.35f ? 1 : 0;
+                            Leaf(v, n, uv, t, at, dir, len, wd, row, Hash(hx, hy, 38) < 0.5f ? 1 : 2);
+                        }
                 }
-            KitPiece(root, "Bushes", parts, "bam_bush", false); // receive shadows but cast none: hundreds of leaves in the shadow pass cost more than they show
+            if (v.Count == 0) return;
+            var mesh = new Mesh { name = "Arena bushes", indexFormat = v.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
+            mesh.SetVertices(v); mesh.SetNormals(n); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
+            mesh.RecalculateBounds();
+            mesh.UploadMeshData(true);
+            if (leafMat == null)
+            {
+                leafRamp = new Texture2D(4, 2, TextureFormat.RGBA32, false, false)
+                {
+                    name = "BAM leaf ramp", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.DontSave,
+                };
+                leafRamp.SetPixels32(new[]
+                {
+                    new Color32(0x1c, 0x4a, 0x2c, 255), new Color32(0x2c, 0x7a, 0x44, 255), new Color32(0x4a, 0xa4, 0x5a, 255), new Color32(0x9b, 0xd8, 0x73, 255), // leaves
+                    new Color32(0x18, 0x44, 0x38, 255), new Color32(0x2a, 0x76, 0x60, 255), new Color32(0x48, 0xa0, 0x7c, 255), new Color32(0xa6, 0xe0, 0xa0, 255), // a cooler green
+                });
+                leafRamp.Apply(false, true);
+                leafMat = ArtMaterials.Instance(ArtMaterials.Lit);
+                leafMat.name = "BAM leaves";
+                leafMat.SetTexture(ArtMaterials.BaseMap, leafRamp);
+                leafMat.mainTexture = leafRamp;
+                if (leafMat.HasProperty(CullId)) leafMat.SetFloat(CullId, 0f); // both sides, as the old game
+            }
+            Add(root, "Bushes", mesh, leafMat, true, false); // receive shadows, cast none (thousands of leaves in the shadow pass)
+        }
+
+        static readonly int CullId = Shader.PropertyToID("_Cull");
+
+        // a pointed leaf from its root p, rising and bending out along dir: five rings of two points, widest a third of the way up
+        static void Leaf(System.Collections.Generic.List<Vector3> v, System.Collections.Generic.List<Vector3> n, System.Collections.Generic.List<Vector2> uv,
+            System.Collections.Generic.List<int> t, Vector3 p, Vector3 dir, float len, float wd, int row, int mid)
+        {
+            var side = Vector3.Cross(Vector3.up, dir).normalized;
+            Vector3 ctrl = p + Vector3.up * (len * 0.75f) + dir * (len * 0.15f), end = p + Vector3.up * (len * 0.7f) + dir * (len * 0.6f);
+            Vector3 Pt(float k) => (1 - k) * (1 - k) * p + 2 * (1 - k) * k * ctrl + k * k * end;
+            int pl = -1, pr = -1;
+            for (int i = 0; i < 5; i++)
+            {
+                float k = LeafT[i];
+                Vector3 c = Pt(k), tan = (Pt(Mathf.Min(1f, k + 0.05f)) - Pt(Mathf.Max(0f, k - 0.05f))).normalized;
+                Vector3 nr = Vector3.Cross(side, tan).normalized;
+                if (nr.z > 0f) nr = -nr;                    // the face toward the camera
+                nr = (nr + Vector3.up * 0.6f).normalized;   // and a little up, so the light reads soft
+                int cell = i == 0 ? 0 : i < 3 ? mid : 3;    // root dark, middle mid or light, tip
+                var cuv = new Vector2((cell + 0.5f) / 4f, (row + 0.5f) / 2f);
+                int l = v.Count;
+                v.Add(c - side * (wd * LeafW[i])); n.Add(nr); uv.Add(cuv);
+                v.Add(c + side * (wd * LeafW[i])); n.Add(nr); uv.Add(cuv);
+                if (pl >= 0) { t.Add(pl); t.Add(pr); t.Add(l + 1); t.Add(pl); t.Add(l + 1); t.Add(l); }
+                pl = l; pr = l + 1;
+            }
+        }
+
+        static readonly float[] LeafT = { 0f, 0.3f, 0.6f, 0.85f, 1f }, LeafW = { 0.35f, 1f, 0.85f, 0.45f, 0f };
+
+        // the old game's hash (View3DMapStyle.Hash): the same leaves in the same places
+        static float Hash(int x, int y, int k)
+        {
+            uint hh = (uint)(x * 374761393 + y * 668265263 + k * 1274126177);
+            hh = (hh ^ (hh >> 13)) * 1274126177; hh ^= hh >> 16;
+            return (hh & 0xffffff) / (float)0x1000000;
         }
 
         // The middle boulders: Rickard's painted mossy boulder standing upright at its foot line, as in the old game (RuinBill): a
