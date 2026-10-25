@@ -26,7 +26,9 @@ before going beyond it.
 - HUD: only the essentials. On death the camera follows a teammate. Pause exists.
 - Settings: sound, graphics Low/High, left-handed controls, analytics consent, privacy policy, licenses.
 - English only. Font Lilita One (OFL).
-- Graphics made in code now (3D models later). Sounds synthesized in code. No music for now. No vibration for now.
+- Graphics: effects, projectiles, zones and UI made in code; heroes, creeps, wolf and arena use Rickard's own old models,
+  Mixamo animations and textures (changed 2026-10-25, see ARCHITECTURE rule 4). Every attack is always visible (rule 5).
+  Sounds synthesized in code. No music for now. No vibration for now.
 - Portrait, camera angled from above. 60 fps target with Low/High graphics.
 
 ## Data

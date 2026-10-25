@@ -1,0 +1,23 @@
+{
+    "name": "BAM.Art.Editor",
+    "rootNamespace": "BAM.Art.Editor",
+    "references": [
+        "BAM.Art",
+        "BAM.Sim",
+        "BAM.Core",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

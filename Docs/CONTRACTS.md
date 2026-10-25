@@ -25,7 +25,7 @@ calls mean, when they happen and what the caller expects. All calls happen on Un
 | `ArtKit.ApplyQuality(q)` | boot and on change | Low: no shadows, fewer particles, cheaper materials. High: full look. |
 | `ArtKit.BuildArena(info)` | match start | Returns one root with the static map: ground, walls (raised blocks), grass/bushes (low, see-through-able), rocks, void edge, tower bases. Few draw calls (combine meshes). Destroyed by the caller at match end. |
 | `CreateHero/Minion/Tower/Wolf` | when a unit appears | Returns a pooled `UnitView`. The caller sets position/rotation every frame (feet at y = 0, forward = facing) and calls `Release` when the unit is gone for good (heroes stay all match and are `SetDead` instead). Fenn's clone is `CreateHero(Fenn, team)`; it must look identical to Fenn for the enemy. |
-| `UnitView.PlayAttack(windup)` | auto attack starts | Swing/throw so the release lands `windup` s later. |
+| `UnitView.PlayAttack(windup)` | auto attack starts | Swing/throw so the release lands `windup` s later. Always visible (ARCHITECTURE rule 5): the game calls it for every attack, minions and towers too, and plays a hit effect on every hit. |
 | `UnitView.SetStatus(flags)` | when statuses change | Stun stars, slow, root, burn, poison, shield bubble, haste. `Illusion` is only set for the player's own team (a faint marker is fine). |
 | `UnitView.SetVisibility(a)` | when it changes | 1 visible; about 0.5 for the player's team in grass; 0 = hidden from the player (hide the bar too). |
 | `UnitView.SetHealth/SetLevel` | when they change | World-space bar above the unit, team-coloured; heroes show the level. Must stay readable and face the camera. |

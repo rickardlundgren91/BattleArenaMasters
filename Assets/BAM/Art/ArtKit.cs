@@ -1,6 +1,11 @@
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using BAM.Core;
 using BAM.Sim;
 using UnityEngine;
+using UnityEngine.Rendering;
+
+[assembly: InternalsVisibleTo("BAM.Art.Editor")]
 
 namespace BAM.Art
 {
@@ -85,28 +90,248 @@ namespace BAM.Art
 
     public static class ArtKit
     {
+        static bool ready;
+        static Transform root;
+        static Light sun;
+        static readonly Dictionary<int, Stack<BodyView>> bodyPools = new Dictionary<int, Stack<BodyView>>();
+        static readonly Dictionary<int, Stack<ProjView>> projPools = new Dictionary<int, Stack<ProjView>>();
+        static readonly Dictionary<int, Stack<ZoneLook>> zonePools = new Dictionary<int, Stack<ZoneLook>>();
+        static readonly List<Renderer> casters = new List<Renderer>(64);
+
+        internal static bool High = true;
+        internal static bool Shadows => High;
+        /// <summary>Bumped on every quality change; views compare it to know when to re-apply their settings.</summary>
+        internal static int QualityVersion;
+        internal static Material TrailMaterial;
+
         /// <summary>Once at boot. Builds shared materials and meshes and warms the pools.</summary>
-        public static void Init() { }
+        public static void Init()
+        {
+            if (ready) return;
+            ready = true;
+            var go = new GameObject("BAM.Art");
+            Object.DontDestroyOnLoad(go);
+            root = go.transform;
+            go.AddComponent<ArtDriver>();
+
+            ArtMaterials.Init();
+            TrailMaterial = ArtMaterials.Instance(ArtMaterials.ParticleAdd);
+            TrailMaterial.SetTexture(ArtMaterials.BaseMap, Texture2D.whiteTexture);
+            TrailMaterial.mainTexture = Texture2D.whiteTexture;
+            Fx.Init(root);
+            SetupLighting();
+
+            // build the shared meshes now so the first minion wave does not hitch
+            for (int t = 0; t < 2; t++)
+            {
+                Models.Minion(MinionKind.Melee, t); Models.Minion(MinionKind.Ranged, t); Models.Minion(MinionKind.Siege, t);
+                Models.Tower(t); Models.Wolf(t);
+            }
+            Shapes.Decal(UnitMarker.None); Shapes.Decal(UnitMarker.Player); Shapes.Decal(UnitMarker.Ally); Shapes.Decal(UnitMarker.Enemy);
+            Warm();
+            ApplyQuality(BamSettings.Graphics);
+        }
+
+        static void Warm()
+        {
+            // a full 3v3 wave keeps about 30 minions alive; most are melee and ranged
+            for (int t = 0; t < 2; t++)
+            {
+                WarmBodies(MinionKind.Melee, t, 6);
+                WarmBodies(MinionKind.Ranged, t, 6);
+                WarmBodies(MinionKind.Siege, t, 2);
+                WarmProjectiles(ProjKind.RangedMinionShot, t, 8);
+                WarmProjectiles(ProjKind.MeleeMinionHit, t, 8);
+            }
+        }
+
+        static void WarmBodies(MinionKind kind, int team, int n)
+        {
+            var list = new UnitView[n];
+            for (int i = 0; i < n; i++) list[i] = CreateMinion(kind, team);
+            for (int i = 0; i < n; i++) Release(list[i]);
+        }
+
+        static void WarmProjectiles(ProjKind kind, int team, int n)
+        {
+            var list = new ProjectileView[n];
+            for (int i = 0; i < n; i++) list[i] = CreateProjectile(kind, team);
+            for (int i = 0; i < n; i++) Release(list[i]);
+        }
+
+        static void SetupLighting()
+        {
+            var lg = new GameObject("BAM Sun");
+            lg.transform.SetParent(root, false);
+            // from behind the camera and a bit to the left, so faces (toward the bottom of the screen) are lit
+            lg.transform.rotation = Quaternion.Euler(52f, -28f, 0f);
+            sun = lg.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.color = new Color(1f, 0.96f, 0.88f);
+            sun.intensity = 1.15f;
+            sun.shadowStrength = 0.55f;
+            sun.shadowBias = 0.04f;
+            sun.shadowNormalBias = 0.3f;
+            RenderSettings.sun = sun;
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.72f, 0.78f, 0.9f);
+            RenderSettings.ambientEquatorColor = new Color(0.62f, 0.6f, 0.58f);
+            RenderSettings.ambientGroundColor = new Color(0.42f, 0.36f, 0.3f);
+            RenderSettings.fog = false;
+        }
 
         /// <summary>Low: no shadows, fewer particles. High: the full look. Called at boot and when the setting changes.</summary>
-        public static void ApplyQuality(GraphicsQuality quality) { }
+        public static void ApplyQuality(GraphicsQuality quality)
+        {
+            High = quality == GraphicsQuality.High;
+            QualityVersion++;
+            Fx.Amount = High ? 1f : 0.5f;
+            if (sun != null) sun.shadows = High ? LightShadows.Soft : LightShadows.None;
+            for (int i = casters.Count - 1; i >= 0; i--)
+            {
+                if (casters[i] == null) { casters.RemoveAt(i); continue; }
+                casters[i].shadowCastingMode = High ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            }
+        }
+
+        internal static void RegisterCaster(Renderer r) => casters.Add(r);
 
         /// <summary>Static map geometry (ground, walls, grass, rocks, towers' bases, void edges), batched for few draw calls.</summary>
-        public static GameObject BuildArena(ArenaInfo arena) => null;
+        public static GameObject BuildArena(ArenaInfo arena)
+        {
+            Init();
+            if (arena == null || arena.Tiles == null) { Debug.LogError("[BAM.Art] BuildArena: no map"); return new GameObject("Arena"); }
+            return Arena.Build(arena);
+        }
 
-        public static UnitView CreateHero(HeroId hero, int team) => null;
-        public static UnitView CreateMinion(MinionKind kind, int team) => null;
-        public static UnitView CreateTower(int team) => null;
+        public static UnitView CreateHero(HeroId hero, int team) => Body(Models.Hero(hero, team), (int)hero, team);
+        public static UnitView CreateMinion(MinionKind kind, int team) => Body(Models.Minion(kind, team), 10 + (int)kind, team);
+        public static UnitView CreateTower(int team) => Body(Models.Tower(team), 20, team);
         /// <summary>Fenn's spectral wolf.</summary>
-        public static UnitView CreateWolf(int team) => null;
-        public static ProjectileView CreateProjectile(ProjKind kind, int team) => null;
-        public static ZoneView CreateZone(ZoneKind kind, int team) => null;
-        public static AimView CreateAim() => null;
+        public static UnitView CreateWolf(int team) => Body(Models.Wolf(team), 30, team);
+
+        static BodyView Body(RigDef def, int kindKey, int team)
+        {
+            Init();
+            team = team == 1 ? 1 : 0;
+            int key = kindKey * 2 + team;
+            if (!bodyPools.TryGetValue(key, out Stack<BodyView> pool)) { pool = new Stack<BodyView>(); bodyPools[key] = pool; }
+            BodyView v;
+            if (pool.Count > 0)
+            {
+                v = pool.Pop();
+                v.ResetState();
+            }
+            else
+            {
+                var go = new GameObject(def.Mesh.name);
+                go.transform.SetParent(root, false);
+                v = go.AddComponent<BodyView>();
+                v.Pool = pool;
+                v.Build(def, team);
+            }
+            v.InPool = false;
+            v.gameObject.SetActive(true);
+            return v;
+        }
+
+        public static ProjectileView CreateProjectile(ProjKind kind, int team)
+        {
+            Init();
+            team = team == 1 ? 1 : 0;
+            int key = (int)kind * 2 + team;
+            if (!projPools.TryGetValue(key, out Stack<ProjView> pool)) { pool = new Stack<ProjView>(); projPools[key] = pool; }
+            ProjView v;
+            if (pool.Count > 0) v = pool.Pop();
+            else
+            {
+                var go = new GameObject("Proj " + kind);
+                go.transform.SetParent(root, false);
+                v = go.AddComponent<ProjView>();
+                v.Pool = pool;
+                v.Build(kind, team);
+            }
+            v.InPool = false;
+            v.gameObject.SetActive(true);
+            return v;
+        }
+
+        public static ZoneView CreateZone(ZoneKind kind, int team)
+        {
+            Init();
+            team = team == 1 ? 1 : 0;
+            int key = (int)kind * 2 + team;
+            if (!zonePools.TryGetValue(key, out Stack<ZoneLook> pool)) { pool = new Stack<ZoneLook>(); zonePools[key] = pool; }
+            ZoneLook v;
+            if (pool.Count > 0) v = pool.Pop();
+            else
+            {
+                var go = new GameObject("Zone " + kind);
+                go.transform.SetParent(root, false);
+                v = go.AddComponent<ZoneLook>();
+                v.Pool = pool;
+                v.Build(kind, team);
+            }
+            v.InPool = false;
+            v.gameObject.SetActive(true);
+            return v;
+        }
+
+        public static AimView CreateAim()
+        {
+            Init();
+            var go = new GameObject("Aim");
+            go.transform.SetParent(root, false);
+            var v = go.AddComponent<AimLook>();
+            v.Build();
+            return v;
+        }
 
         /// <summary>One-shot effect at a world position. size scales it (1 = default for that kind).</summary>
-        public static void PlayFx(FxKind kind, Vector3 position, float size = 1f, int team = 0) { }
+        public static void PlayFx(FxKind kind, Vector3 position, float size = 1f, int team = 0)
+        {
+            if (!ready) return;
+            Fx.Play(kind, position, size <= 0f ? 1f : size, team == 1 ? 1 : 0);
+        }
 
         /// <summary>Hands a view back to its pool (minions, projectiles and zones come and go all match long).</summary>
-        public static void Release(Component view) { }
+        public static void Release(Component view)
+        {
+            if (view == null) return;
+            switch (view)
+            {
+                case BodyView b:
+                    if (b.InPool) return;
+                    b.InPool = true;
+                    Park(b);
+                    if (b.Pool != null) b.Pool.Push(b);
+                    break;
+                case ProjView p:
+                    if (p.InPool) return;
+                    p.InPool = true;
+                    p.OnRelease();
+                    Park(p);
+                    if (p.Pool != null) p.Pool.Push(p);
+                    break;
+                case ZoneLook z:
+                    if (z.InPool) return;
+                    z.InPool = true;
+                    Park(z);
+                    if (z.Pool != null) z.Pool.Push(z);
+                    break;
+                default:
+                    Object.Destroy(view.gameObject);
+                    break;
+            }
+        }
+
+        static void Park(Component c)
+        {
+            c.gameObject.SetActive(false);
+            if (c.transform.parent != root) c.transform.SetParent(root, false);
+        }
+
+        /// <summary>Clears running particles and rings (handy at match end; not part of the contract).</summary>
+        internal static void ClearEffects() => Fx.ClearAll();
     }
 }

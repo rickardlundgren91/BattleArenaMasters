@@ -11,8 +11,15 @@ Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
    Write to him in Swedish, short and simple. He is not a programmer; give exact clicks.
 3. **Safe for Google Play:** only assets with clear rights (made in code by us, or OFL/CC0 with the license recorded in
    `Docs/LICENSES.md`); no data leaves the phone unless the player said yes (analytics with consent); offline game.
-4. Never copy binary assets from the old game (models, Mixamo animations, textures). Its code and texts are Rickard's
-   and may be read and ported.
+4. Old game assets (Rickard chose "Ja, använd dem" on 2026-10-25): his own hero models (made with Tripo or Meshy, rigged
+   on Mixamo), Mixamo animations, and his arena and tutorial-island textures may be used. Check each file in the old
+   register (`bam-ref/xyz/LICENSES/ASSETS.md`, `assets.csv`) first: take only files whose origin is Rickard's own (Tripo,
+   Meshy, Gemini or another image generator), Mixamo, or made in code; leave out anything marked unknown ("Oklart") and
+   Asset Store packs. Every used file gets a line in `Docs/LICENSES.md` (Tripo free-plan models are CC BY 4.0 and need a
+   credit line). The old binaries are in `bam-ref/xyz-art/` (from GitHub, read-only). Its code and texts may be ported.
+5. **Every attack is always visible** (Rickard, 2026-10-25): hero, minion, tower, wolf and clone attacks, on any target
+   (creeps too), on Low and High. The attacker shows its swing or throw, a ranged attack shows its projectile, a melee
+   attack shows a slash, and every hit shows a hit effect on the target. Never skip, cull or pool away one of these.
 
 ## Where things are
 
