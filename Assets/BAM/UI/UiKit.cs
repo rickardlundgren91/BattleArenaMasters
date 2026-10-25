@@ -68,7 +68,7 @@ namespace BAM.UI
             }
         }
 
-        /// <summary>A screen-space canvas scaled for portrait phones (reference 1080x1920, match width/height 0.5).</summary>
+        /// <summary>A screen-space canvas scaled for portrait phones (reference 1080x1920, match 0.5; at least 1920 units tall).</summary>
         public static Canvas CreateCanvas(string name, int sortingOrder)
         {
             EnsureEventSystem();
@@ -82,6 +82,7 @@ namespace BAM.UI
             scaler.referenceResolution = new Vector2(1080, 1920);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
+            go.AddComponent<AdaptiveScaler>();
             go.AddComponent<GraphicRaycaster>();
             return canvas;
         }

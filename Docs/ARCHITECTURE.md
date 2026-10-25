@@ -27,6 +27,8 @@ Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
 |---|---|
 | `/mnt/project-files/bam-unity/` | The working copy: the Unity project's versioned files. `Assets/BAM/` is all ours. Git history is kept by the main thread only. |
 | `/mnt/project-files/bam-tools/` | `setup.sh`, `compilecheck/compilecheck.py`, `metagen.py`, Unity reference DLLs. See its README. |
+| `/mnt/project-files/bam-tools/simrunner/` | The headless bot-match runner for the rules (test thread "Testa reglerna med botmatcher"). |
+| `/mnt/project-files/bam-ref/oldsim/` | The old game's headless runner, its data dump and baseline results (read-only). |
 | `/mnt/project-files/bam-ref/xyz/` | Read-only snapshot of the old game: rules, old sound synth, old consent/analytics, Play documents, licenses, Lilita One. |
 | `/mnt/project-files/bam-ref/rickard-project/` | Read-only snapshot of Rickard's new project as created from the template (ProjectSettings, packages, URP assets). |
 | `C:\Users\Rickard\BattleArenaMasters` | Rickard's Unity project (Unity 6000.6.5f1, Universal 3D template, URP 17.6, Input System only, uGUI 2.6). **Only the main thread writes there**, after compiling and committing. |
@@ -35,9 +37,9 @@ Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
 
 | Folder (`Assets/BAM/...`) | Assembly | Owner | What |
 |---|---|---|---|
-| `Sim/` | BAM.Sim (no UnityEngine) | main thread | The rules: map, heroes, minions, towers, line of sight, bots. Deterministic, fixed 60 Hz step, seeded RNG, runs headless in .NET 8. Also the shared ids (`Ids.cs`) and hero texts (`HeroCatalog.cs`). |
+| `Sim/` | BAM.Sim (no UnityEngine) | main thread; `Sim/Bots/`: bots thread ("Porta bottarna") | The rules: map, heroes, minions, towers, line of sight, bots. Deterministic, fixed 60 Hz step, seeded RNG, runs headless in .NET 8. Also the shared ids (`Ids.cs`) and hero texts (`HeroCatalog.cs`). |
 | `Core/` | BAM.Core | main thread | Settings (`BamSettings`), `MatchSetup`/`MatchResult`, `IGameFlow` + `Flow.Game`, `BamInfo`. Tiny and stable. |
-| `Game/` | BAM.Game | main thread | Boot, match driver, input (joystick, special tap/drag), camera, view sync, HUD, guided match. References everything below. |
+| `Game/` | BAM.Game | match thread ("Bygg matchskärmen"); `Boot.cs` stays as the main thread wrote it | Boot, match driver, input (joystick, special tap/drag), camera, view sync, HUD, guided match. References everything below. |
 | `Art/` (+ `Art/Editor/`) | BAM.Art (+ BAM.Art.Editor) | graphics thread | Everything visible in the world, built in code: arena, heroes, wolf, minions, towers, projectiles, zones, effects, aim, health bars, materials. |
 | `Audio/` | BAM.Audio | sound thread | Every sound effect, synthesized in code. No music for now. |
 | `UI/`, `Fonts/` | BAM.UI | menus thread | Main menu, hero select, Settings, pause, result, consent dialog, licenses screen, hint bubble, and the shared UI kit the HUD uses. |

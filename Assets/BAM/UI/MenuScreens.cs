@@ -130,18 +130,18 @@ namespace BAM.UI
             VList(content, 14, new RectOffset(36, 36, 30, 36));
 
             var header = UiKit.NewRect("Header", content);
-            header.gameObject.AddComponent<LayoutElement>().preferredHeight = 200;
+            header.gameObject.AddComponent<LayoutElement>().preferredHeight = 210;
             var big = UiKit.HeroBadge(header, HeroId.Bram);
             UiKit.Place(big, 0, 0.5f, 0, 0, 190, 190);
             detailBadgeColor = big.GetChild(0).GetComponent<Image>();
             detailInitial = big.GetComponentInChildren<Text>();
             detailName = UiKit.Label(header, "", 84, TextAnchor.LowerLeft, UiKit.Gold);
-            HeaderText(detailName, 220, 100, 100);
+            HeaderText(detailName, 220, 4, 100);
             UiKit.AddOutline(detailName, 3);
             detailTitle = UiKit.Label(header, "", 44, TextAnchor.UpperLeft, UiKit.TextColor);
-            HeaderText(detailTitle, 220, 46, 58);
+            HeaderText(detailTitle, 220, -50, 54);
             detailRole = UiKit.Label(header, "", 36, TextAnchor.UpperLeft, UiKit.TextDim);
-            HeaderText(detailRole, 220, 4, 46);
+            HeaderText(detailRole, 220, -96, 46);
 
             statBars = new Image[StatNames.Length, 3];
             for (int s = 0; s < StatNames.Length; s++)

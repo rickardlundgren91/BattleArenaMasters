@@ -42,7 +42,14 @@ namespace BAM.Sim
     }
 
     /// <summary>Ground areas that last a while.</summary>
-    public enum ZoneKind : byte { HoneyField = 0, FireLane = 1, BombFuse = 2 }
+    public enum ZoneKind : byte
+    {
+        HoneyField = 0,
+        FireLane = 1,
+        BombFuse = 2,
+        WarnLine = 3,   // a red warning line before a shot (a strip: centre, direction, length, half width)
+        WarnCircle = 4, // a red warning circle
+    }
 
     [Flags]
     public enum StatusFlags : ushort

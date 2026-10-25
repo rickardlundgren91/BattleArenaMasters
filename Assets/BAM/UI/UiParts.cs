@@ -46,6 +46,31 @@ namespace BAM.UI
         }
     }
 
+    /// <summary>
+    /// Keeps the canvas at least 1920 units tall: on screens wider than 9:16 (tablets, a landscape Game view in the editor)
+    /// it scales by height only, so the portrait layouts never overlap; on taller phones it keeps the 0.5 width/height match.
+    /// </summary>
+    sealed class AdaptiveScaler : MonoBehaviour
+    {
+        CanvasScaler scaler;
+        int width, height;
+
+        void Awake() => scaler = GetComponent<CanvasScaler>();
+        void OnEnable() => Apply();
+        void Update()
+        {
+            if (Screen.width != width || Screen.height != height) Apply();
+        }
+
+        void Apply()
+        {
+            width = Screen.width;
+            height = Screen.height;
+            if (scaler == null || height <= 0) return;
+            scaler.matchWidthOrHeight = width * 1920f > height * 1080f ? 1f : 0.5f;
+        }
+    }
+
     /// <summary>Calls back when the finger leaves a slider, so a setting is saved once per drag instead of every frame.</summary>
     sealed class SliderRelease : MonoBehaviour, IPointerUpHandler
     {
