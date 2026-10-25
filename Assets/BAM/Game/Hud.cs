@@ -283,7 +283,10 @@ namespace BAM.Game
                 else if (d.Drag == AimShape.Circle)
                 {
                     float k = Mathf.Clamp01(o.magnitude / SpecialButton.MaxDrag);
-                    aim.ShowCircle(hero + dir * Mathf.Max(1.5f, k * d.DragReach), d.DragWidth, ready);
+                    float dist = Mathf.Min(d.DragReach, Mathf.Max(1.5f, k * d.DragReach)); // as the rules' AimPoint
+                    // Fenn's thrown wolf stops at the first wall: show where it really lands
+                    if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Mathf.Atan2(-o.y, o.x), dist);
+                    aim.ShowCircle(hero + dir * dist, d.DragWidth, ready);
                     aim.ShowRange(hero, d.DragReach);
                 }
             }

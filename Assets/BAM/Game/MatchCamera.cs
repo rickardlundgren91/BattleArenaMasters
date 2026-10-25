@@ -4,23 +4,28 @@ using UnityEngine;
 namespace BAM.Game
 {
     /// <summary>
-    /// Portrait camera looking down at the map from behind the player's side, about 11.5 tiles across at the focus.
+    /// The old game's camera: orthographic, tilted down 55 degrees (elevation asin 0.82), 11.5 tiles across a portrait screen,
+    /// the focus 52% down the frame. A wider window (the editor's Game view) keeps the portrait height and shows more across.
     /// Follows the player's hero a little ahead (towards the enemy); while it is dead it follows a living teammate and comes
     /// back at the respawn. The guided match frames Tyra and the enemy tower together (the old game's tutCamY).
     /// </summary>
     sealed class MatchCamera
     {
-        const float Pitch = 57f, Fov = 35f, TilesAcross = 11.5f;
+        const float TilesAcross = 11.5f, PortraitAspect = 0.5f, Back = 60f, FocusDown = 0.52f;
+        static readonly float Pitch = Mathf.Asin(0.82f) * Mathf.Rad2Deg;
         const float Lead = 1.2f;        // the focus sits this far ahead of the hero, so more of the way forward is seen
         const float Over = 3f;          // the focus may pass the map edge by this much (the hero is not stuck under the buttons)
         // the guided match: the enemy tower's foot this high on screen (share from the top), Tyra at most this low
         const float TutTowerAt = 0.27f, TutHeroAt = 0.75f;
 
+        static readonly Color IslandSky = new Color32(0x79, 0xb9, 0xee, 0xff);
         readonly Camera cam;
+        Color menuBackground;
+        bool skyChanged;
         Match m;
         Vector3 focus;
         Unit watched;
-        float distance;
+        float size; // orthographic half height
 
         public Vector3 Focus => focus;
         public Camera Camera => cam;
@@ -31,38 +36,46 @@ namespace BAM.Game
         {
             m = match;
             watched = null;
-            cam.fieldOfView = Fov;
-            cam.nearClipPlane = 1f;
-            cam.farClipPlane = 120f;
-            UpdateDistance();
+            cam.orthographic = true;
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 200f;
+            // the training island floats in a light-blue sky above a cloud sea
+            if (m.Tut != null && m.Tut.Island) { menuBackground = cam.backgroundColor; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = IslandSky; skyChanged = true; }
+            UpdateSize();
             focus = Target(out _);
             Place();
         }
 
-        public void End() { m = null; watched = null; }
+        public void End()
+        {
+            if (skyChanged) { cam.backgroundColor = menuBackground; skyChanged = false; }
+            cam.orthographic = false;
+            m = null; watched = null;
+        }
 
         /// <summary>Length of map the screen shows top to bottom at the focus (about; the view is a trapezoid).</summary>
-        float ViewLength => 2f * distance * Mathf.Tan(Fov * 0.5f * Mathf.Deg2Rad) / Mathf.Sin(Pitch * Mathf.Deg2Rad);
+        float ViewLength => 2f * size / Mathf.Sin(Pitch * Mathf.Deg2Rad);
 
         public void Frame(float alpha, float dt, bool over)
         {
             if (m == null) return;
-            UpdateDistance();
+            UpdateSize();
             Vector3 target = Target(out float speed);
             if (over) speed = 3.5f;
             float k = 1f - Mathf.Exp(-speed * dt);
             focus += (target - focus) * k;
-            float halfW = TilesAcross * 0.5f, halfH = ViewLength * 0.42f;
-            focus.x = Mathf.Clamp(focus.x, halfW - Over, m.Map.W - halfW + Over);
+            float halfW = size * cam.aspect, halfH = ViewLength * 0.42f;
+            focus.x = 2f * halfW >= m.Map.W + 2f * Over ? m.Map.W * 0.5f : Mathf.Clamp(focus.x, halfW - Over, m.Map.W - halfW + Over);
             if (m.Map.H > 2f * halfH) focus.z = Mathf.Clamp(focus.z, halfH - Over, m.Map.H - halfH + Over);
             Place();
         }
 
-        // far enough back that TilesAcross fit across the screen at the focus (phones differ in shape)
-        void UpdateDistance()
+        // TilesAcross fit across a portrait screen (phones differ in shape); wider than PortraitAspect keeps that height
+        void UpdateSize()
         {
-            float aspect = Mathf.Max(0.3f, cam.aspect);
-            distance = TilesAcross * 0.5f / (Mathf.Tan(Fov * 0.5f * Mathf.Deg2Rad) * aspect);
+            float aspect = Mathf.Clamp(cam.aspect, 0.3f, PortraitAspect);
+            size = TilesAcross * 0.5f / aspect;
+            cam.orthographicSize = size;
         }
 
         Vector3 Target(out float speed)
@@ -116,10 +129,12 @@ namespace BAM.Game
             return new Vector3(hero.x, 0f, Mathf.Max(hero.z + Lead, Mathf.Min(onTower, lead)));
         }
 
+        // the focus lands FocusDown of the way down the frame: the camera sits a little above it along its own up
         void Place()
         {
             var rot = Quaternion.Euler(Pitch, 0f, 0f);
-            cam.transform.SetPositionAndRotation(focus - rot * Vector3.forward * distance, rot);
+            Vector3 up = rot * Vector3.up;
+            cam.transform.SetPositionAndRotation(focus - rot * Vector3.forward * Back + up * (2f * size * (FocusDown - 0.5f)), rot);
         }
     }
 }

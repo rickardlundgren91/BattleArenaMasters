@@ -97,9 +97,13 @@ namespace BAM.Game
         // built with those rows left out, then built again whole.
         void BuildArena()
         {
-            if (arena != null) Object.Destroy(arena);
+            bool rebuild = arena != null;
+            if (rebuild) Object.Destroy(arena);
             bridgeShown = !Island || m.Tut.BridgeOpen;
-            arena = ArtKit.BuildArena(ArenaInfoOf(m.Map, bridgeShown ? int.MaxValue : IslandPlatformRows, !Island));
+            var info = ArenaInfoOf(m.Map, bridgeShown ? int.MaxValue : IslandPlatformRows, !Island);
+            info.Island = Island;
+            info.LaneRises = Island && rebuild; // the opened bridge and lane rise into place
+            arena = ArtKit.BuildArena(info);
         }
 
         const int IslandPlatformRows = 17; // the island's round platform is rows 0-16 (TutorialIsland.cs)
