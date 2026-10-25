@@ -130,8 +130,15 @@ namespace BAM.UI
                 UiKit.Band(label, false, 14, 44, 0);
                 label.horizontalOverflow = HorizontalWrapMode.Overflow;
                 navLabels[i] = label;
+                // the chosen tab: a gold line on top with a soft gold light falling from it
                 var mark = UiKit.Fill(tab, UiKit.Primary);
-                UiKit.Place(mark, 0.5f, 1, 0, 0, 120, 6);
+                UiKit.Place(mark, 0.5f, 1, 0, 0, 140, 6);
+                var light = UiKit.Fill(mark.rectTransform, new Color(UiKit.Gold.r, UiKit.Gold.g, UiKit.Gold.b, 0.22f), Glow);
+                light.rectTransform.anchorMin = new Vector2(0.5f, 1);
+                light.rectTransform.anchorMax = new Vector2(0.5f, 1);
+                tab.gameObject.AddComponent<RectMask2D>(); // only the half below the line shows
+                light.rectTransform.sizeDelta = new Vector2(340, 340);
+                light.rectTransform.anchoredPosition = Vector2.zero;
                 navMarks[i] = mark;
             }
             nav.SetActive(false);
@@ -202,7 +209,7 @@ namespace BAM.UI
             {
                 var c = i == active ? UiKit.Primary : Lavender;
                 navLabels[i].color = c;
-                navMarks[i].enabled = i == active;
+                navMarks[i].gameObject.SetActive(i == active);
                 var box = navIcons[i].transform.parent;
                 for (int k = 0; k < box.childCount; k++)
                 {
