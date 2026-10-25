@@ -151,9 +151,14 @@ namespace BAM.Sim
                     }
                 case HeroId.Fenn:
                     {   // the thrown wolf homes on an enemy hero but walls stop it (Rickard 2026-10-25), so throw it at the lowest
-                        // enemy hero within the throw that has no wall in between
+                        // enemy hero within the throw that has no wall in between and that the wolf's real flight gets near
                         float reach = FennS.ThrowReach; var hs = FoeHeroes(h, reach - 0.3f); Unit t = null;
-                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (!M.Map.ShotBlocked(h.X, h.Y, e.X, e.Y) && (t == null || e.Hp < t.Hp)) t = e; }
+                        for (int i = 0; i < hs.Count; i++)
+                        {
+                            var e = hs[i]; float d = Dist(h, e);
+                            if (M.Map.ShotBlocked(h.X, h.Y, e.X, e.Y) || M.WolfReach(h.X, h.Y, AngTo(e.X, e.Y), d) < d - FennS.HomeRadius - e.R) continue;
+                            if (t == null || e.Hp < t.Hp) t = e;
+                        }
                         if (t == null) return false;
                         ang = AngTo(t.X, t.Y); k = SimMath.Clamp(Dist(h, t) / reach, 0, 1); return true;
                     }

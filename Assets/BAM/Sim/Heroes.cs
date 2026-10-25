@@ -27,7 +27,9 @@ namespace BAM.Sim
     /// Hard bots, the decoy 62 %, the old game's Fenn 61 %). At most once per 18 s.</summary>
     public static class FennS
     {
-        public const float ThrowReach = 6, ThrowSpeed = 11, HomeRadius = 1.5f, PounceRadius = 1, RootDuration = 0.8f;
+        /// <summary>The thrown wolf turns onto an enemy hero within HomeRadius of its flight: as wide as the red warning over
+        /// its path (the old rush's warning was PounceRadius wide too).</summary>
+        public const float ThrowReach = 6, ThrowSpeed = 11, HomeRadius = 1, PounceRadius = 1, RootDuration = 0.8f;
         public const float HpPercent = 0.3f, Duration = 4, DamageCoeff = 0.4f, Leash = 6, Sight = 3.5f, FollowGap = 1.2f;
         public const float CloneCooldown = 18, CloneLife = 3, CloneSight = 5;
         /// <summary>The clone's damage as a share of Fenn's: none, it is a decoy (the old illusion dealt all of it).</summary>
@@ -281,20 +283,21 @@ namespace BAM.Sim
                 float ga = SimMath.Atan2(gy - wy, gx - wx), gd = WolfReach(wx, wy, ga, SimMath.Hypot(gx - wx, gy - wy));
                 gx = wx + SimMath.Cos(ga) * gd; gy = wy + SimMath.Sin(ga) * gd;
                 h.Facing = aa; w.Facing = aa; w.Wolf = WolfMode.Fly; w.WolfGx = gx; w.WolfGy = gy;
-                WarnCircle(w, gx, gy, FennS.PounceRadius, SimMath.Hypot(gx - wx, gy - wy) / FennS.ThrowSpeed + 0.05f, true);
+                // red warning over the whole flight (it can turn onto a hero anywhere along it) and the landing spot
+                WarnLine(w, ga, gd, FennS.HomeRadius, gd / FennS.ThrowSpeed + 0.05f, true);
+                WarnCircle(w, gx, gy, FennS.PounceRadius, gd / FennS.ThrowSpeed + 0.05f, true);
                 castX = gx; castY = gy;
             }
             Emit(EventType.WolfSummon, w, h, 0, 0, drag, wx, wy);
             return true;
         }
 
-        /// <summary>The wolf's brain: a thrown wolf flies (homing in on an enemy hero it passes) and pounces; after a pounce it hunts
-        /// its prey, else any enemy near it; a called wolf bites the nearest enemy near Fenn, else stays at his side. It walks
-        /// round walls on a path, as the old aiWolf.</summary>
+        /// <summary>The wolf's brain once it is on the ground (a thrown wolf flies in WolfFly first, stunned or not): after a pounce
+        /// it hunts its prey, else any enemy near it; a called wolf bites the nearest enemy near Fenn, else stays at his side. It
+        /// walks round walls on a path, as the old aiWolf.</summary>
         void AiWolf(Unit w, float dt)
         {
             var o = w.Owner;
-            if (w.Wolf == WolfMode.Fly) { WolfFly(w, dt); return; }
             w.AiT -= dt;
             Unit t = null;
             if (w.Wolf == WolfMode.Free)

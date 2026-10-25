@@ -73,7 +73,7 @@ namespace BAM.Sim
                     float d = SimMath.Dist(tw, u), min = tw.R + u.R;
                     if (d >= min) continue;
                     float nx = (u.X - tw.X) / (d != 0 ? d : 1), ny = (u.Y - tw.Y) / (d != 0 ? d : 1), side = u.X >= tw.X ? 1 : -1;
-                    if (u.Kind == UnitKind.Minion && Math.Abs(u.X - tw.X) < 0.08f) side = u.Serial % 2 == 0 ? 1 : -1; // straight behind a tower: one fixed side
+                    if (u.IsMinionLike && Math.Abs(u.X - tw.X) < 0.08f) side = u.Serial % 2 == 0 ? 1 : -1; // straight behind a tower: one fixed side (the wolf too, as the old "minion")
                     nx += -ny * side * 0.6f;
                     float m = SimMath.Hypot(nx, ny); if (m == 0) m = 1;
                     float px = u.X + nx / m * (min - d + 0.01f), py = u.Y + ny / m * (min - d + 0.01f);

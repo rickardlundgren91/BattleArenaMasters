@@ -242,7 +242,11 @@ namespace BAM.Sim
                     if (!u.IsClone) TrackMotion(u, dt);
                 }
                 else if (u.Kind == UnitKind.Minion) { if (CanAct(u)) AiMinion(u, dt); }
-                else if (u.Kind == UnitKind.Wolf) { if (CanAct(u)) AiWolf(u, dt); }
+                else if (u.Kind == UnitKind.Wolf)
+                {
+                    if (u.Wolf == WolfMode.Fly) WolfFly(u, dt); // a thrown wolf lands even when stunned in the air (the old forced rush)
+                    else if (CanAct(u)) AiWolf(u, dt);
+                }
                 else if (u.Kind == UnitKind.Tower)
                 {
                     if (!u.InCombat(Time) && u.Hp < u.MaxHp * Rules.TowerRegenBelow)
