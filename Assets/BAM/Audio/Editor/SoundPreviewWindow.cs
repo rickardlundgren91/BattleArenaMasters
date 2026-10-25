@@ -38,7 +38,11 @@ namespace BAM.Audio.Editor
                 volume = EditorGUILayout.Slider("Volume", volume, 0f, 1f);
                 distance = EditorGUILayout.Slider(new GUIContent("Distance (tiles)", "0 = Play (2D). Above 0 = PlayAt that far to the right of the listener."), distance, 0f, 25f);
                 burst = EditorGUILayout.Toggle(new GUIContent("Burst x20", "Plays the sound 20 times in one frame: the voice limit should let only one or two through."), burst);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Play music")) { if (!BamAudio.Ready) BamAudio.Init(); BamAudio.PlayMusic(MusicId.Match); }
+                if (GUILayout.Button("Stop music")) BamAudio.StopMusic();
                 if (GUILayout.Button("Stop all")) BamAudio.StopAll();
+                EditorGUILayout.EndHorizontal();
 
                 scroll = EditorGUILayout.BeginScrollView(scroll);
                 int perRow = Mathf.Max(1, (int)((position.width - 20) / 150));

@@ -14,6 +14,7 @@ own arena/tutorial textures; each such file gets a row under "Imported from the 
 | All game code | `Assets/BAM/**/*.cs` | The BAM project (Rickard, with Claude) | Ours. Ported rules and texts from the old game are Rickard's own code. |
 | 3D look built in code (minions, towers, wolf, bushes, rocks, effects, fallback heroes) | `Assets/BAM/Art` | Code | Ours. Hero models and arena textures: see "Imported from the old game". |
 | Sound effects | Synthesized at runtime by `Assets/BAM/Audio` | Code | Ours, no recorded samples. |
+| Music loop "Byte Strike" | `Assets/BAM/Audio/Resources/BAM/Music/ByteStrikeLoop.wav` (one 14.3 s cycle cut from Rickard's file "Byte Strike (13s Loop).mp3", 2026-10-25) | Rickard (artist tag TerreTrigger) with the AI music service FlowMusic | **Pending:** which FlowMusic (flowmusic.co or Google's Flow Music) and which plan. flowmusic.co gives a commercial license only on paid plans (Professional/Enterprise; the free plan lists none). Google's Flow Music lists commercial use for its Starter/Plus/Member tiers (Google AI Plus/Pro/Ultra) and does not claim ownership. Keep proof of the plan. Not legal advice. |
 | App icon layers, legacy icon | `Assets/BAM/Branding/icon_*.png` | `Docs/play/branding/make_branding.py` | Ours; uses Lilita One (OFL, see below). |
 | Store icon, feature graphic | `Docs/play/store-icon-512.png`, `Docs/play/feature-graphic-1024x500.png` | Same script | Ours; uses Lilita One. |
 | Store texts, privacy policy | `Docs/play/` | The BAM project | Ours. |
@@ -54,7 +55,7 @@ Skipped by the graphics thread on purpose (unclear rights): the old Barbarian-me
 Simon's TyraDemon, the Asset Store shrub, the original game's visuals and props.
 
 ## Not used
-Asset Store assets, other people's models, textures, images or music. Adding any needs a row here with proof first.
+Asset Store assets, other people's models, textures, images or music (Rickard's own FlowMusic loop above is the one exception). Adding any needs a row here with proof first.
 
 ### Menu pictures (menus thread, 2026-10-25)
 

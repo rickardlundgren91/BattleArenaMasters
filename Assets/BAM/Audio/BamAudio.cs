@@ -8,8 +8,12 @@ using Object = UnityEngine.Object;
 
 namespace BAM.Audio
 {
+    /// <summary>Background music. Entries are only ever added at the end.</summary>
+    public enum MusicId { None = 0, Match = 1, Menu = 2 }
+
     // CONTRACT between BAM.Audio (owner: the sound thread) and its callers (BAM.Game, BAM.UI). Docs/CONTRACTS.md explains it.
     // SfxId lives in SfxId.cs, the recipes in SfxRecipes.cs, the synth in SfxSynth.cs.
+    // Music is the one recorded asset: Rickard's own loop in Resources/BAM/Music (Docs/LICENSES.md).
     public static class BamAudio
     {
         const int Voices = 16;
@@ -37,6 +41,12 @@ namespace BAM.Audio
         static float master = 1f;
         static uint rng = 0x2545F491u;
 
+        // music sits under the effects: SfxVolume * MusicLevel, faded in and out so starts and stops never click
+        const float MusicLevel = 0.45f, MusicFadeIn = 1.2f, MusicFadeOut = 0.5f;
+        static AudioSource music;
+        static MusicId musicWant, musicLoaded;
+        static float musicGain; // 0..1 fade position
+
         internal static bool Ready => ready && host != null;
         internal static Vector3 ListenerPoint => listener;
         static bool AllBuilt => nextBuild >= SfxRecipes.Count;
@@ -62,6 +72,10 @@ namespace BAM.Audio
                 a.playOnAwake = false; a.loop = false; a.spatialBlend = 0f; a.dopplerLevel = 0f;
                 src[i] = a;
             }
+            music = host.AddComponent<AudioSource>();
+            music.playOnAwake = false; music.loop = true; music.spatialBlend = 0f; music.priority = 0; music.volume = 0f;
+            musicWant = musicLoaded = MusicId.None; musicGain = 0f; musicPaused = false;
+            host.AddComponent<MusicFader>();
             // the scene is empty and the camera is made in code, so make sure something hears us
             if (Object.FindAnyObjectByType<AudioListener>() == null) host.AddComponent<AudioListener>();
 
@@ -89,10 +103,44 @@ namespace BAM.Audio
         /// <summary>The game layer moves the listener point with the camera's focus every frame.</summary>
         public static void SetListener(Vector3 worldPosition) { listener = worldPosition; }
 
-        /// <summary>Silences everything at once (pause, leaving a match).</summary>
+        /// <summary>
+        /// Starts (or keeps) a looping music track with a short fade in; None fades it out. Calling it again with the
+        /// track that is already on does nothing, and after StopAll it resumes where it was.
+        /// </summary>
+        public static void PlayMusic(MusicId id)
+        {
+            if (!Ready) return;
+            musicWant = id;
+            if (id == MusicId.None) return;
+            if (musicLoaded != id)
+            {
+                var clip = Resources.Load<AudioClip>(MusicPath(id));
+                if (clip == null) { UnityEngine.Debug.Log("[BAM.Audio] music not found: Resources/" + MusicPath(id)); musicWant = MusicId.None; return; }
+                if (music.clip != clip) { music.Stop(); music.clip = clip; musicGain = 0f; musicPaused = false; }
+                musicLoaded = id;
+            }
+            Resume();
+        }
+
+        static bool musicPaused;
+        static void Resume()
+        {
+            if (music.isPlaying) return;
+            if (musicPaused) music.UnPause(); else music.Play();
+            musicPaused = false;
+        }
+
+        /// <summary>Fades the music out (it is paused, not rewound).</summary>
+        public static void StopMusic() => PlayMusic(MusicId.None);
+
+        // one track for now; the menu shares the match loop until there is a menu track of its own
+        static string MusicPath(MusicId id) => "BAM/Music/ByteStrikeLoop";
+
+        /// <summary>Silences everything at once (pause, leaving a match); the music fades out quickly and can be resumed.</summary>
         public static void StopAll()
         {
             if (!Ready) return;
+            musicWant = MusicId.None;
             for (int i = 0; i < Voices; i++)
             {
                 if (src[i] != null) src[i].Stop();
@@ -172,6 +220,21 @@ namespace BAM.Audio
             while (nextBuild < SfxRecipes.Count && clips[nextBuild] != null) nextBuild++;
             if (nextBuild < SfxRecipes.Count) Build(nextBuild++);
             if (AllBuilt) UnityEngine.Debug.Log($"[BAM.Audio] {SfxRecipes.Count - 1} sounds built in {buildMs:F0} ms");
+        }
+
+        /// <summary>Moves the music volume toward its target every frame and pauses the source once it is silent.</summary>
+        sealed class MusicFader : MonoBehaviour
+        {
+            void Update()
+            {
+                if (music == null || music.clip == null) return;
+                bool on = musicWant != MusicId.None && musicWant == musicLoaded;
+                float dt = Time.unscaledDeltaTime;
+                musicGain = on ? Mathf.Min(1f, musicGain + dt / MusicFadeIn) : Mathf.Max(0f, musicGain - dt / MusicFadeOut);
+                music.volume = musicGain * musicGain * MusicLevel * master; // squared: the fade sounds even to the ear
+                if (on) Resume();
+                else if (musicGain <= 0f && music.isPlaying) { music.Pause(); musicPaused = true; }
+            }
         }
 
         /// <summary>Builds the clips a few milliseconds per frame, then removes itself.</summary>
