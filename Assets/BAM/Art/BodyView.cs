@@ -40,6 +40,9 @@ namespace BAM.Art
         float[] clipLen;
         float atkSpeed = 1f, atkTotal = 0.5f, castLen = 0.6f, hitA = -1f, deathFadeAt = 0.55f;
         bool imported;
+        HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
+        float gearAct;            // how much the attack and cast clips play, for the gear's rest pose
+        int shadowRends;          // rends[0..shadowRends) may cast shadows; the gear after them never does
         const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5;
         Transform decalT;
         MeshFilter decalF;
@@ -68,6 +71,7 @@ namespace BAM.Art
             model.SetParent(transform, false);
             if (d.Art != null && d.Art.Model != null) BuildImported(d.Art);
             else BuildCode(d, mg);
+            shadowRends = rends.Length - (gear != null ? gear.Rends.Length : 0);
             BuildCommon(d);
         }
 
@@ -201,6 +205,7 @@ namespace BAM.Art
             anim.runtimeAnimatorController = null;
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            if (def.Gear != null) AddGear(art);
             AnimationClip idle = art.Idle;
             if (idle == null) { Debug.LogWarning("[BAM.Art] " + art.name + " has no idle clip; the model stands still"); return; }
             var src2 = new[] { art.Idle, art.Run, art.Attack, art.Cast, art.Hit, art.Death };
@@ -225,6 +230,26 @@ namespace BAM.Art
             castLen = Mathf.Min(0.9f, clipLen[CCast] / 1.2f);
             deathFadeAt = Mathf.Clamp(clipLen[CDeath] * 0.9f, 0.6f, 2f);
             graph.Play();
+        }
+
+        // the weapons go on in the bind pose, before the clips play (HeldGear), and join the body's renderers and materials
+        void AddGear(HeroArt art)
+        {
+            gear = HeldGear.Build(def.Gear, anim, art.Height * transform.lossyScale.y);
+            if (gear == null) return;
+            int n0 = rends.Length, ng = gear.Rends.Length;
+            var r2 = new Renderer[n0 + ng];
+            var o2 = new Material[n0 + ng][];
+            var f2 = new Material[n0 + ng][];
+            for (int i = 0; i < n0; i++) { r2[i] = rends[i]; o2[i] = opaqueSets[i]; f2[i] = fadeSets[i]; }
+            for (int i = 0; i < ng; i++) { r2[n0 + i] = gear.Rends[i]; o2[n0 + i] = new[] { gear.Opaque[i] }; f2[n0 + i] = new[] { gear.Fade[i] }; }
+            rends = r2; opaqueSets = o2; fadeSets = f2;
+            var m2 = new Material[mats.Length + ng * 2];
+            var fm2 = new Material[fadeMats.Length + ng];
+            mats.CopyTo(m2, 0);
+            fadeMats.CopyTo(fm2, 0);
+            for (int i = 0; i < ng; i++) { m2[mats.Length + i * 2] = gear.Opaque[i]; m2[mats.Length + i * 2 + 1] = gear.Fade[i]; fm2[fadeMats.Length + i] = gear.Fade[i]; }
+            mats = m2; fadeMats = fm2;
         }
 
         void OnDestroy()
@@ -262,6 +287,7 @@ namespace BAM.Art
             model.localScale = Vector3.one;
             for (int i = 0; i < bones.Length; i++) bones[i].localRotation = Quaternion.identity;
             if (def.ThrowsProp) bones[Hb.Prop].localScale = Vector3.one;
+            if (gear != null) gear.Reset();
             bar.Reset();
             bar.SetLevel(1);
             status.Set(StatusFlags.None);
@@ -289,12 +315,14 @@ namespace BAM.Art
                 clips[CAttack].SetTime(0.0);
                 clips[CAttack].SetSpeed(atkSpeed);
             }
+            if (gear != null) gear.Throw(windup);
         }
 
         public override void PlayCast()
         {
             castT = 0f;
             if (clips != null) { clips[CCast].SetTime(0.0); clips[CCast].SetTime(0.0); clips[CCast].SetSpeed(1.2f); }
+            if (gear != null) gear.Throw(castLen * 0.35f);
         }
 
         public override void PlayHit(bool big)
@@ -400,7 +428,7 @@ namespace BAM.Art
             }
             else if (fading)
             {
-                for (int i = 0; i < rends.Length; i++) { rends[i].sharedMaterials = opaqueSets[i]; rends[i].shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off; }
+                for (int i = 0; i < rends.Length; i++) { rends[i].sharedMaterials = opaqueSets[i]; rends[i].shadowCastingMode = i < shadowRends && ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off; }
                 fading = false;
             }
         }
@@ -419,7 +447,7 @@ namespace BAM.Art
             {
                 lastQuality = ArtKit.QualityVersion;
                 if (!fading && !def.Ghost)
-                    for (int i = 0; i < rends.Length; i++) rends[i].shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                    for (int i = 0; i < shadowRends; i++) rends[i].shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
             }
             idleT += dt;
             moveW = Mathf.MoveTowards(moveW, moving && !dead ? 1f : 0f, dt * 6f);
@@ -441,6 +469,7 @@ namespace BAM.Art
             recoil = Mathf.MoveTowards(recoil, 0f, dt * 5f);
 
             if (imported) AnimateImported(dt);
+            if (gear != null) gear.Tick(dt, moveW, gearAct, dead);
             if (dead) AnimateDeath(dt);
             else
             {
@@ -498,6 +527,7 @@ namespace BAM.Art
                     if (hitA >= 0.3f) hitA = -1f;
                 }
             }
+            gearAct = wAtk + wCast;
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
             float rest = 1f - over;

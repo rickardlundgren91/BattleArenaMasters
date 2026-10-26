@@ -22,6 +22,8 @@ namespace BAM.Art
         public bool Ghost;
         /// <summary>Rickard's imported model and clips; null = the model built in code.</summary>
         public HeroArt Art;
+        /// <summary>Weapons and shield held by an imported hero (<see cref="Weapons"/>); null = none.</summary>
+        public GearDef Gear;
         /// <summary>Rickard's Meshy model (Props), hung on bone PropBone; null = only the code mesh.</summary>
         public Mesh PropMesh;
         public Texture2D PropTex;
@@ -90,6 +92,7 @@ namespace BAM.Art
             {
                 d.Height = d.Art.Height;
                 d.ThrowsProp = false;
+                d.Gear = Weapons.For(hero);
             }
             cache[k] = d;
             return d;
