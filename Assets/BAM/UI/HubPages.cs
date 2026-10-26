@@ -117,7 +117,7 @@ namespace BAM.UI
         static ScrollRect heroScroll;
         static readonly string[] HeroRoles = { "Tank", "Fighter", "Assassin", "Mage", "Marksman", "Support" };
 
-        sealed class HeroCard { public int Index; public Image Fill, Edge, EdgeOn; public GameObject Check; }
+        sealed class HeroCard { public int Index; public Image Fill, Edge, EdgeOn; public GameObject Check; public RectTransform Box, Pic; public float Aspect; }
 
         static void BuildHeroSelect()
         {
@@ -247,9 +247,7 @@ namespace BAM.UI
             br.pivot = new Vector2(0.5f, 1);
             br.offsetMin = new Vector2(1.5f * Cw, 0);
             br.offsetMax = new Vector2(-1.5f * Cw, -1.5f * Cw);
-            var fit = box.gameObject.AddComponent<AspectRatioFitter>();
-            fit.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
-            fit.aspectRatio = 1 / 0.82f;
+            c.Box = br; // pic * 0.82 tall: FitHeroCards sets it from the cell width
             var clip = Pic(br, "Clip", UiKit.Rounded, Color.white); // the portrait keeps to the rounded box; the name below does not
             Radius(clip, 2.6f * Cw);
             clip.gameObject.AddComponent<Mask>().showMaskGraphic = false;
@@ -259,9 +257,8 @@ namespace BAM.UI
             var raw = pic.gameObject.AddComponent<RawImage>();
             raw.texture = Portrait(info.Id);
             raw.raycastTarget = false;
-            var contain = pic.gameObject.AddComponent<AspectRatioFitter>();
-            contain.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            contain.aspectRatio = raw.texture != null ? (float)raw.texture.width / raw.texture.height : 1.3f;
+            c.Pic = pic;
+            c.Aspect = raw.texture != null ? (float)raw.texture.width / raw.texture.height : 400f / 308f;
 
             var name = UiKit.Label(br, info.Name, Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, UiKit.TextColor);
             name.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -522,6 +519,24 @@ namespace BAM.UI
             b.navigation = new Navigation { mode = Navigation.Mode.None };
             b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiConfirm); StartHeroTest(HeroCatalog.All[heroPeek].Id); });
             rt.gameObject.AddComponent<ButtonFx>();
+        }
+
+        // PageHeroes3: the picture box is pic wide and pic * 0.82 tall (pic = the card less cw(1.5) each side), the portrait
+        // contained in it below a cw(1) margin, whole and undistorted. Set here, not by AspectRatioFitters inside the grid.
+        internal static void FitHeroCards(float cell)
+        {
+            float pic = cell - 3 * Cw, ph = pic * 0.82f, ah = ph - Cw;
+            foreach (var c in heroCards)
+            {
+                if (c.Box == null) continue;
+                c.Box.offsetMin = new Vector2(1.5f * Cw, -1.5f * Cw - ph);
+                c.Box.offsetMax = new Vector2(-1.5f * Cw, -1.5f * Cw);
+                float w = pic, h = pic / c.Aspect;
+                if (h > ah) { h = ah; w = ah * c.Aspect; }
+                c.Pic.anchorMin = c.Pic.anchorMax = c.Pic.pivot = new Vector2(0.5f, 0.5f);
+                c.Pic.anchoredPosition = Vector2.zero;
+                c.Pic.sizeDelta = new Vector2(w, h);
+            }
         }
 
         // Special or passive: the icon on a dark rounded square, KIND · note, the name, the text under it
@@ -918,7 +933,7 @@ namespace BAM.UI
         float lastWidth = -1;
 
         void OnRectTransformDimensionsChange() => Fit();
-        void OnEnable() => Fit();
+        void OnEnable() { lastWidth = -1; Fit(); } // again on every show: the cards are built after the grid
 
         void Fit()
         {
@@ -928,6 +943,7 @@ namespace BAM.UI
             lastWidth = w;
             float cell = (w - Grid.spacing.x * 2) / 3;
             Grid.cellSize = new Vector2(cell, cell - 3 * 10.8f + 13 * 10.8f);
+            Screens.FitHeroCards(cell);
         }
     }
 
