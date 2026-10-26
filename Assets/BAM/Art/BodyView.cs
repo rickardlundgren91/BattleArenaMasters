@@ -491,6 +491,7 @@ namespace BAM.Art
 
         void LateUpdate()
         {
+            if (def == null) return; // a script reload in Play mode clears the view's state: stay still instead of throwing every frame
             float dt = Time.deltaTime;
             if (lastQuality != ArtKit.QualityVersion)
             {
