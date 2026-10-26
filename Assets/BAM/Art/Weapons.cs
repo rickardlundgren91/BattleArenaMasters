@@ -64,6 +64,9 @@ namespace BAM.Art
                 Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true } },
                 Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true },
             };
+            // her ornate bow (Rickard's Tripo model 2026-10-24, old fig_ornateBow; Rickard 2026-10-26: "ja", put it in her hand),
+            // held at the middle in the left fist, upright along the forearm like Moa's staff
+            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, Along = true } } };
             // the Needle Wing in each fist (Rickard's Tripo model 2026-10-24)
             g[(int)HeroId.Tikta] = new GearDef
             {
