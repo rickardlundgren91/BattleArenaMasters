@@ -14,6 +14,8 @@ namespace BAM.Art
         /// <summary>The colour picture (taken out of the FBX); null = whatever the FBX material has.</summary>
         public Texture2D Texture;
         public AnimationClip Idle, Run, Attack, Cast, Hit, Death;
+        /// <summary>The slow stride, blended into the run by the speed over the ground (old Speltest's HeroMixamoGait).</summary>
+        public AnimationClip Walk;
         /// <summary>Standing height in units the model is scaled to.</summary>
         public float Height = 1f;
         /// <summary>Where in the attack clip (0..1) the blow lands or the shot leaves; PlayAttack's windup is lined up with it.</summary>

@@ -149,37 +149,39 @@ namespace BAM.Art.Editor
         struct Spec
         {
             public string Out; // null = Heroes
-            public string Hero, Model, Idle, Run, Attack, Cast, Hit, Death;
+            public string Hero, Model, Idle, Run, Attack, Cast, Hit, Death, Walk;
             public float Height, Release;
         }
 
         // The shared animation pool (Rickard 2026-10-25): every Mixamo clip retargets onto every humanoid model, so a hero or
         // minion without a clip of its own for a slot borrows the pool's. A slot left null below, or whose file is missing,
-        // uses the pool. Order: Idle, Run, Attack, Cast, Hit, Death.
-        static readonly string[] pool = { "Tikta/Anim/Idle", "Tikta/Anim/Run", "Fenn/Anim/Attack1", "Fenn/Anim/Cast", "Tikta/Anim/Hit", "Tikta/Anim/Dying" };
+        // uses the pool. Order: Idle, Run, Attack, Cast, Hit, Death, Walk.
+        // Walk and Run are each hero's clips in current Speltest (Resources/Mixamo/Anim/<hero>/Walk|Run, Rickard 2026-10-26: Tikta and
+        // Tyra "hukar och går snabbt": BAM played only the run, Tyra's crouched longbow RunBow, at a fixed rate). Bonk walks with Knut's walk.
+        static readonly string[] pool = { "Tikta/Anim/Idle", "Tikta/Anim/Run", "Fenn/Anim/Attack1", "Fenn/Anim/Cast", "Tikta/Anim/Hit", "Tikta/Anim/Dying", "Tikta/Anim/Walk" };
         // Height: a hero's sole-to-crown height in tiles as old Speltest draws it in a match (HeroScale.cs: its measured visible
         // height x 1.8 tiles x GlobalMul 0.9; Fenn 1.35, Tikta 1.20, Blast 1.16, Knut 1.14, StdVis 1.10 for Tyra, Moa 1.07, Bram 0.98).
         // Rickard 2026-10-26: the heroes looked smaller than in Speltest (they were 1.25-1.55)
         // Moa and Blast have their own Mixamo clips from Speltest (Resources/Mixamo/Anim/<hero>, HeroMixamoOwn.cs), since 2026-10-26
         static readonly Spec[] specs =
         {
-            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 1.59f, Release = 0.45f },
-            new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Height = 2.19f, Release = 0.45f },
-            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Tyra/Anim/IdleBow", Run = "Tyra/Anim/RunBow", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Height = 1.78f, Release = 0.55f },
-            new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Moa/Anim/Idle", Run = "Moa/Anim/Run", Attack = "Moa/Anim/Attack1", Cast = "Moa/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Height = 1.73f, Release = 0.4f },
-            new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Height = 1.85f, Release = 0.45f },
-            new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 1.94f, Release = 0.4f },
+            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.45f },
+            new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.45f },
+            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Tyra/Anim/IdleBow", Run = "Tyra/Anim/Run", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Walk = "Tyra/Anim/Walk", Height = 1.78f, Release = 0.55f },
+            new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Moa/Anim/Idle", Run = "Moa/Anim/Run", Attack = "Moa/Anim/Attack1", Cast = "Moa/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.73f, Release = 0.4f },
+            new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.85f, Release = 0.45f },
+            new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.94f, Release = 0.4f },
             // the lane minions: the old game's Mixamo goblin creeps (one figure, three paint jobs), moving with the heroes' clips
             new Spec { Out = "Minions", Hero = "Melee", Model = "Creeps/Melee", Attack = "Tikta/Anim/Attack1", Height = 0.8f, Release = 0.4f },
             new Spec { Out = "Minions", Hero = "Ranged", Model = "Creeps/Ranged", Attack = "Knut/Anim/Throw", Height = 0.78f, Release = 0.4f },
-            new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.9f, Release = 0.45f },
-            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Blast/Anim/Idle", Run = "Blast/Anim/Run", Attack = "Blast/Anim/Attack1", Cast = "Blast/Anim/Cast", Hit = "Blast/Anim/Hit", Death = "Blast/Anim/Dying", Height = 1.88f, Release = 0.4f },
+            new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 0.9f, Release = 0.45f },
+            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Blast/Anim/Idle", Run = "Blast/Anim/Run", Attack = "Blast/Anim/Attack1", Cast = "Blast/Anim/Cast", Hit = "Blast/Anim/Hit", Death = "Blast/Anim/Dying", Walk = "Blast/Anim/Walk", Height = 1.88f, Release = 0.4f },
             // Bonk (hero 8, Rickard's Tripo body rigged in Mixamo 2026-10-26; his wolf pelt reweighted to the chest so it no longer
             // stretches with his left arm and head). His own Mixamo clips (Orc Idle, Mutant Run, Standing Melee Attack Downward with
             // the club landing at 46 %, Hit Reaction, Dying); the slam borrows Bram's Anvil Strike, since Mixamo's jump attack is
             // airborne for longer than a cast lasts. Idle is Knut's: on Bonk the Orc Idle bent his feet and lifted him off the ground
             // (Rickard 2026-10-26: "fötterna böjer sig")
-            new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Knut/Anim/Idle", Run = "Bonk/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Height = 2.0f, Release = 0.46f },
+            new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Knut/Anim/Idle", Run = "Bonk/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 2.0f, Release = 0.46f },
         };
 
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
@@ -196,7 +198,7 @@ namespace BAM.Art.Editor
                 {
                     var art = AssetDatabase.LoadAssetAtPath<HeroArt>(OutOf(s) + "/" + s.Hero + ".asset");
                     if (art == null || art.Model == null || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
-                        || art.Idle == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null) { BuildAll(); return; }
+                        || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null) { BuildAll(); return; }
                 }
             };
         }
@@ -207,7 +209,7 @@ namespace BAM.Art.Editor
         {
             var paths = new System.Collections.Generic.HashSet<string>();
             foreach (Spec s in specs)
-                foreach (string p in new[] { s.Model, s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death })
+                foreach (string p in new[] { s.Model, s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
                     if (p != null) paths.Add(ModelsDir + p + ".fbx");
             foreach (string p in pool) paths.Add(ModelsDir + p + ".fbx");
             bool any = false;
@@ -219,7 +221,7 @@ namespace BAM.Art.Editor
                     if (!(AssetImporter.GetAtPath(path) is ModelImporter mi)) continue;
                     bool stale = mi.animationType != ModelImporterAnimationType.Human;
                     string name = Path.GetFileNameWithoutExtension(path);
-                    if (!stale && path.Contains("/Anim/") && (name.StartsWith("Idle") || name.StartsWith("Run")))
+                    if (!stale && path.Contains("/Anim/") && (name.StartsWith("Idle") || name.StartsWith("Run") || name.StartsWith("Walk")))
                     {
                         ModelImporterClipAnimation[] c = mi.clipAnimations;
                         stale = c == null || c.Length == 0 || !c[0].loopTime;
@@ -238,7 +240,7 @@ namespace BAM.Art.Editor
         static void Rebuild()
         {
             foreach (Spec s in specs)
-                foreach (string p in new[] { s.Model, s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death })
+                foreach (string p in new[] { s.Model, s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
                     if (p != null) AssetDatabase.ImportAsset(ModelsDir + p + ".fbx", ImportAssetOptions.ForceUpdate);
             BuildAll();
         }
@@ -259,7 +261,7 @@ namespace BAM.Art.Editor
                 art.Model = model;
                 art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ModelsDir + s.Model + "_Tex.jpg");
                 art.Idle = Clip(s.Idle, 0); art.Run = Clip(s.Run, 1); art.Attack = Clip(s.Attack, 2);
-                art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5);
+                art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
                 art.Height = s.Height;
                 art.AttackRelease = s.Release;
                 if (isNew) AssetDatabase.CreateAsset(art, path);

@@ -56,7 +56,12 @@ namespace BAM.Art
         bool breathTried;
         float gearAct;            // how much the attack and cast clips play, for the gear's rest pose
         int shadowRends;          // rends[0..shadowRends) may cast shadows; the gear after them never does
-        const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5;
+        const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5, CWalk = 6;
+        // the walk and the run with the feet on the ground (old Speltest's HeroMixamoGait): each clip's own speed over the ground in
+        // hip heights a second, measured once from its planted foot; the hips' height above the model's root; one stride phase for both
+        float walkSpd = 2.2f, runSpd = 5f, hipsH, gaitPh, gSpd;
+        Vector3 lastPos;
+        bool hasLast, gaitMeasured;
         Transform decalT;
         MeshFilter decalF;
         MeshRenderer decalR;
@@ -296,7 +301,10 @@ namespace BAM.Art
             if (def.Gear != null) AddGear(art);
             AnimationClip idle = art.Idle;
             if (idle == null) { Debug.LogWarning("[BAM.Art] " + art.name + " has no idle clip; the model stands still"); return; }
-            var src2 = new[] { art.Idle, art.Run, art.Attack, art.Cast, art.Hit, art.Death };
+            var src2 = new[] { art.Idle, art.Run, art.Attack, art.Cast, art.Hit, art.Death, art.Walk != null ? art.Walk : art.Run };
+            Transform hips = anim.GetBoneTransform(HumanBodyBones.Hips);
+            hipsH = hips != null ? Mathf.Max(0.05f, anim.transform.InverseTransformPoint(hips.position).y) : 0f;
+            MeasureGait(src2[CWalk], src2[CRun]);
             graph = PlayableGraph.Create("BAM " + art.name);
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             var output = AnimationPlayableOutput.Create(graph, "Anim", anim);
@@ -308,11 +316,14 @@ namespace BAM.Art
             {
                 AnimationClip clip = src2[c] != null ? src2[c] : idle;
                 clips[c] = AnimationClipPlayable.Create(graph, clip);
-                clips[c].SetApplyFootIK(false);
+                // the feet stay planted in idle, walk and run as in Speltest (its clips play with foot IK); the blows as they were
+                clips[c].SetApplyFootIK(c == CIdle || c == CRun || c == CWalk);
                 clipLen[c] = Mathf.Max(0.1f, clip.length);
                 graph.Connect(clips[c], 0, mixer, c);
                 mixer.SetInputWeight(c, c == CIdle ? 1f : 0f);
             }
+            // walk and run are posed by hand each frame (AnimateImported): their time is the stride phase, not the clock
+            clips[CWalk].Pause(); clips[CRun].Pause();
             // one-shot clips must hold their last frame, not loop back
             clips[CDeath].SetDuration(clipLen[CDeath]);
             castLen = Mathf.Min(0.9f, clipLen[CCast] / 1.2f);
@@ -371,7 +382,7 @@ namespace BAM.Art
         /// <summary>Fresh state for a new life out of the pool.</summary>
         public void ResetState()
         {
-            moving = false; speed01 = 0f; moveW = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
+            moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
@@ -707,15 +718,116 @@ namespace BAM.Art
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
             float rest = 1f - over;
+            float runK = Stride(dt);
             mixer.SetInputWeight(CIdle, rest * (1f - moveW));
-            mixer.SetInputWeight(CRun, rest * moveW);
+            mixer.SetInputWeight(CWalk, rest * moveW * (1f - runK));
+            mixer.SetInputWeight(CRun, rest * moveW * runK);
             mixer.SetInputWeight(CAttack, wAtk);
             mixer.SetInputWeight(CCast, wCast);
             mixer.SetInputWeight(CHit, wHit);
             mixer.SetInputWeight(CDeath, wDeath);
-            clips[CRun].SetSpeed(0.8f + 0.4f * speed01);
-            // idle and run always loop here, even when a clip was imported without Loop Time (it would play once and freeze)
-            Wrap(CIdle); Wrap(CRun);
+            // idle always loops here, even when a clip was imported without Loop Time (it would play once and freeze)
+            Wrap(CIdle);
+        }
+
+        // Old Speltest's stride (HeroMixamoGait.MxStride, Rickard 2026-10-26: Tikta and Tyra "hukar och går snabbt"): BAM played only
+        // the run at 0.8-1.6x whatever the speed, so the feet slid and pattered. Now the speed over the ground, in hip heights a second,
+        // picks how much walk and how much run play, and the stride runs at the rate that keeps the planted foot still on the ground.
+        // Returns the run's share of the blend.
+        float Stride(float dt)
+        {
+            if (!gaitMeasured) MeasureGait(clips[CWalk].GetAnimationClip(), clips[CRun].GetAnimationClip());
+            Vector3 p = transform.position;
+            float raw = 0f;
+            if (hasLast && dt > 1e-4f)
+            {
+                Vector3 d = p - lastPos; d.y = 0f;
+                if (d.magnitude < 1f) raw = d.magnitude / dt; // a respawn or a pull jumps: not a step
+            }
+            lastPos = p; hasLast = true;
+            gSpd += (raw - gSpd) * Mathf.Min(1f, dt * (raw < gSpd ? 22f : 10f)); // Speltest's CombatFeel.GroundSpeed: stops faster than it starts
+            float hipsW = hipsH * anim.transform.lossyScale.y;
+            float rel = hipsW > 1e-4f ? gSpd / hipsW : 0f;
+            // the menu's preview walks on the spot: a steady jog for its speed
+            if (moving && rel < 0.3f) rel = 3f * Mathf.Max(0.5f, speed01);
+            float wLen = clipLen[CWalk], rLen = clipLen[CRun];
+            float top = Mathf.Max(walkSpd + 0.5f, 0.6f * runSpd);
+            float runK = Mathf.Clamp01((rel - walkSpd) / (top - walkSpd));
+            float stride = Mathf.Lerp(walkSpd * wLen, runSpd * rLen, runK), len = Mathf.Lerp(wLen, rLen, runK);
+            float rate = Mathf.Clamp(rel / Mathf.Max(0.05f, stride), 0.6f / len, 1.8f / len);
+            if (moveW > 0.01f) gaitPh = Mathf.Repeat(gaitPh + dt * rate, 1f);
+            clips[CWalk].SetTime(gaitPh * wLen);
+            clips[CRun].SetTime(gaitPh * rLen);
+            return runK;
+        }
+
+        // a view built under the hidden pool root can't play its clips yet: measured the first frame it is out
+        void MeasureGait(AnimationClip walk, AnimationClip run)
+        {
+            if (anim == null || !anim.isActiveAndEnabled) return;
+            gaitMeasured = true;
+            float w = GroundSpeed(anim, walk), r = GroundSpeed(anim, run);
+            walkSpd = w > 0f ? w : 2.2f;
+            runSpd = r > 0f ? r : 5f;
+            if (runSpd < walkSpd + 0.5f) runSpd = walkSpd + 0.5f; // a hero whose walk is its run (no own walk)
+        }
+
+        // a clip's speed over the ground in hip heights a second, from how fast its planted foot passes back under the hips (Speltest's
+        // MxGroundSpeed); the same on every humanoid rig, so measured once per clip
+        static readonly Dictionary<AnimationClip, float> groundSpd = new Dictionary<AnimationClip, float>();
+        static float GroundSpeed(Animator an, AnimationClip c)
+        {
+            if (c == null || an == null || !an.isHuman) return -1f;
+            if (groundSpd.TryGetValue(c, out float known)) return known;
+            Transform root = an.transform, hips = an.GetBoneTransform(HumanBodyBones.Hips);
+            Transform lf = an.GetBoneTransform(HumanBodyBones.LeftFoot), rf = an.GetBoneTransform(HumanBodyBones.RightFoot);
+            if (hips == null || lf == null || rf == null) return -1f;
+            float hipsY = root.InverseTransformPoint(hips.position).y;
+            if (hipsY < 1e-4f) return -1f;
+            Transform[] bones = root.GetComponentsInChildren<Transform>(true);
+            var lp = new Vector3[bones.Length];
+            var lr = new Quaternion[bones.Length];
+            for (int i = 0; i < bones.Length; i++) { lp[i] = bones[i].localPosition; lr[i] = bones[i].localRotation; }
+            PlayableGraph g = PlayableGraph.Create("BAM gait");
+            g.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            float v = -1f;
+            try
+            {
+                var output = AnimationPlayableOutput.Create(g, "gait", an);
+                int n = Mathf.Max(8, Mathf.CeilToInt(c.length * 60f)) + 1;
+                var H = new Vector3[n]; var L = new Vector3[n]; var R = new Vector3[n];
+                var cp = AnimationClipPlayable.Create(g, c);
+                cp.Pause();
+                output.SetSourcePlayable(cp);
+                for (int i = 0; i < n; i++)
+                {
+                    cp.SetTime(c.length * i / (n - 1)); g.Evaluate(0f);
+                    H[i] = root.InverseTransformPoint(hips.position); L[i] = root.InverseTransformPoint(lf.position); R[i] = root.InverseTransformPoint(rf.position);
+                }
+                // a foot is planted while it is near its lowest; there it moves back under the hips at the speed of the ground
+                var s = new List<float>();
+                float step = c.length / (n - 1);
+                foreach (Vector3[] F in new[] { L, R })
+                {
+                    float lo = float.MaxValue, hi = float.MinValue;
+                    foreach (Vector3 q in F) { lo = Mathf.Min(lo, q.y); hi = Mathf.Max(hi, q.y); }
+                    float cut = lo + 0.2f * (hi - lo);
+                    for (int i = 1; i < n - 1; i++)
+                    {
+                        if (F[i].y > cut) continue;
+                        Vector3 d = (F[i + 1] - H[i + 1]) - (F[i - 1] - H[i - 1]); d.y = 0f;
+                        if (d.z < 0f) s.Add(d.magnitude / (2f * step) / hipsY); // backwards: the forward end of a step is still swinging
+                    }
+                }
+                if (s.Count >= 3) { s.Sort(); v = Mathf.Clamp(s[s.Count / 2], 0.6f, 12f); }
+            }
+            finally
+            {
+                g.Destroy();
+                for (int i = 0; i < bones.Length; i++) if (bones[i] != null) { bones[i].localPosition = lp[i]; bones[i].localRotation = lr[i]; }
+            }
+            if (v > 0f) groundSpd[c] = v;
+            return v;
         }
 
         void Wrap(int c)
