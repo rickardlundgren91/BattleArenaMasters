@@ -1,0 +1,932 @@
+using System.Collections.Generic;
+using BAM.Audio;
+using BAM.Core;
+using BAM.Sim;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace BAM.UI
+{
+    // The old game's v3 pages with ONE_PLAY (ABC2 MenuHome.cs HubPage, Menu.cs DrawPage/H2, MenuPages3.cs PageHeroes3 and
+    // StickySelect, MenuHeroFit.cs PageHero3Fit), ported exactly (Rickard 2026-10-26, read from his live Speltest):
+    // - every subpage: the menu gradient with a mint glow, "‹ Back" at the top left, one glass sheet with a gold top edge, an H2
+    //   title with a gold rule and diamond
+    // - Heroes: the grid only looks (ALL / BY ROLE); a tap opens the hero's own page with the 3D figure (tap = attack, drag =
+    //   turn), ‹ › to browse, role, stat bars against the best in the roster, special and passive, and SELECT at the bottom
+    public static partial class Screens
+    {
+        const float PageTop = 14 * Cw, PageX = 3.5f * Cw;
+        static readonly Color HubPanel = new Color(16 / 255f, 20 / 255f, 54 / 255f, 0.8f);
+        static readonly Color HubLine = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.42f);
+        static readonly Color HubBody = new Color32(0xd6, 0xda, 0xfa, 0xff);
+        static readonly Color HubRole = new Color32(0xc9, 0xcd, 0xf0, 0xff);
+        static readonly Color HubPicBack = new Color32(0x1d, 0x23, 0x50, 0xff);
+        static readonly Color HubSelFill = new Color32(0x18, 0x20, 0x4f, 0xff);
+        static readonly Color HubDark = new Color32(0x06, 0x23, 0x1a, 0xff);
+        static readonly Color HubToggleOn = new Color(0.102f, 0.186f, 0.317f); // HubToggle: #161b46 under rgba(62,230,176,0.10)
+
+        /// <summary>A subpage: background, Back pill, the glass sheet and (with a title) the H2. Returns the scroll content.</summary>
+        static RectTransform NewPage(string title, out GameObject go, out RectTransform panelRt, bool scroll = true, float headExtra = 0)
+        {
+            var rt = UiKit.NewRect(title ?? "Page", root);
+            UiKit.Stretch(rt);
+            go = rt.gameObject;
+            UiKit.Fill(rt, Color.black).raycastTarget = true; // black outside the standing frame
+            var body = UiKit.SafeArea(rt);
+            UiKit.Background(body);
+            var glow = UiKit.Fill(body, Color.white, HomeArt.PageGlow);
+            glow.rectTransform.anchorMin = new Vector2(-0.35f, 0.32f);
+            glow.rectTransform.anchorMax = new Vector2(1.35f, 1.04f);
+
+            // DrawPage: a dark shadow, the glass from #1a1f4a to #0a0d26 with rounded top corners and the gold edge
+            panelRt = UiKit.NewRect("Sheet", body);
+            UiKit.Stretch(panelRt, 0, PageTop, 0, NavH);
+            float r = 4 * Cw;
+            var shadow = Pic(panelRt, "Shadow", UiKit.Rounded, new Color(0, 0, 0, 0.35f));
+            Radius(shadow, r);
+            UiKit.Stretch(shadow.rectTransform, 0, -Cw, 0, -r);
+            var glass = Pic(panelRt, "Glass", UiKit.Rounded, Color.white);
+            Radius(glass, r);
+            UiKit.Stretch(glass.rectTransform, 0, 0, 0, -r); // the bottom corners hide under the tab bar
+            glass.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var grad = UiKit.NewRect("Gradient", glass.rectTransform);
+            UiKit.Stretch(grad);
+            var gi = grad.gameObject.AddComponent<RawImage>();
+            gi.texture = HomeArt.Gradient(new Color32(0x1a, 0x1f, 0x4a, 0xff), new Color32(0x0a, 0x0d, 0x26, 0xff));
+            gi.raycastTarget = false;
+            var edge = Pic(glass.rectTransform, "Gold", HomeArt.RoundRing(0.4f / 4f), HubGold);
+            RingRadius(edge, r);
+
+            float contentTop = 2 * Cw;
+            if (title != null) contentTop = H2(panelRt, title);
+
+            // Back: the same as the Android back button
+            var back = UiKit.NewRect("Back", body);
+            var pill = Pic(back, "Pill", UiKit.Rounded, new Color(1, 1, 1, 0.1f));
+            float bh = 3.6f * Cw * 1.2f + 3.6f * Cw;
+            Radius(pill, bh / 2);
+            var label = UiKit.Label(pill.transform, "‹ Back", Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, Color.white);
+            UiKit.Stretch(label.rectTransform);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            float bw = label.preferredWidth + 8 * Cw;
+            TopLeft(pill.rectTransform, 3 * Cw, 2.5f * Cw, bw, bh);
+            TopLeft(back, 0, 0, bw + 6 * Cw, 13 * Cw); // a larger touch area from the frame's corner
+            var hit = back.gameObject.AddComponent<Image>();
+            hit.color = Color.clear;
+            var b = back.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.onClick.AddListener(() => HandleBack());
+            back.gameObject.AddComponent<ButtonFx>().PressScale = false;
+            back.gameObject.AddComponent<HomePress>();
+
+            go.SetActive(false);
+            if (!scroll) return panelRt;
+            var area = UiKit.NewRect("Area", panelRt);
+            UiKit.Stretch(area, PageX, contentTop + headExtra, PageX, 0);
+            return ScrollContent(area, out _);
+        }
+
+        // H2: the title in Lilita with a dark drop, a short gold rule and a diamond under it. Returns where the page starts.
+        static float H2(RectTransform sheet, string text)
+        {
+            float s = 6.4f * Cw, by = 2 * Cw + Cw + s * 0.6f; // the old baseline
+            var t = UiKit.Label(sheet, text, Mathf.RoundToInt(s), TextAnchor.MiddleLeft, Color.white);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var sh = t.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color32(0x0b, 0x13, 0x30, 0xff);
+            sh.effectDistance = new Vector2(0, -0.6f * Cw);
+            TopLeft(t.rectTransform, PageX, by - 0.35f * s - 0.6f * s, 80 * Cw, 1.2f * s);
+            float ly = by + 1.6f * Cw, lw = 16 * Cw, k = 0.8f * Cw;
+            TopLeft(Pic(sheet, "Rule", null, HubGold).rectTransform, PageX, ly - 0.15f * Cw, lw, 0.3f * Cw);
+            var d = Pic(sheet, "Diamond", null, UiKit.Gold).rectTransform;
+            TopLeft(d, PageX + lw + 1.6f * Cw - k * 0.707f, ly - k * 0.707f, k * 1.414f, k * 1.414f);
+            d.pivot = new Vector2(0.5f, 0.5f);
+            d.anchoredPosition = new Vector2(PageX + lw + 1.6f * k, -ly);
+            d.localRotation = Quaternion.Euler(0, 0, 45);
+            return 2 * Cw + Cw + s + 4.5f * Cw;
+        }
+
+        // ---- Heroes: the grid ----
+
+        static GameObject heroGridAll, heroGridRoles;
+        static readonly List<HeroCard> heroCards = new List<HeroCard>();
+        static Image sortAll, sortRole, sortAllEdge, sortRoleEdge;
+        static Text sortAllText, sortRoleText;
+        static bool heroesByRole;
+        static ScrollRect heroScroll;
+        static readonly string[] HeroRoles = { "Tank", "Fighter", "Assassin", "Mage", "Marksman", "Support" };
+
+        sealed class HeroCard { public int Index; public Image Fill, Edge, EdgeOn; public GameObject Check; }
+
+        static void BuildHeroSelect()
+        {
+            float sh = 8.5f * Cw;
+            var content = NewPage("Heroes", out heroSelect, out var panel, true, sh + Cw);
+            tabPanels[1] = panel;
+            heroScroll = panel.GetComponentInChildren<ScrollRect>();
+            VList(content, 0, new RectOffset(0, 0, 0, Mathf.RoundToInt(4 * Cw)));
+
+            // ALL / BY ROLE, fixed above the grid (HeroesHead3); ALL each time the game starts
+            float head = 2 * Cw + Cw + 6.4f * Cw + 4.5f * Cw;
+            var bar = Pic(panel, "Sort", UiKit.Rounded, new Color(8 / 255f, 10 / 255f, 30 / 255f, 0.7f));
+            Radius(bar, sh / 2);
+            bar.raycastTarget = false;
+            TopLeft(bar.rectTransform, PageX, head, 1080 - 2 * PageX, sh);
+            bar.rectTransform.anchorMax = new Vector2(1, 1);
+            bar.rectTransform.offsetMax = new Vector2(-PageX, -head);
+            var barEdge = Pic(bar.rectTransform, "Edge", HomeArt.RoundRing(0.4f / (sh / 2)), HubLine);
+            RingRadius(barEdge, sh / 2);
+            SortHalf(bar.rectTransform, 0, "ALL", out sortAll, out sortAllEdge, out sortAllText);
+            SortHalf(bar.rectTransform, 1, "BY ROLE", out sortRole, out sortRoleEdge, out sortRoleText);
+
+            var gridAll = HeroGrid(content, "All");
+            heroGridAll = gridAll.gameObject;
+            for (int i = 0; i < HeroCatalog.Count; i++) BuildHeroCard(gridAll, i);
+
+            var roles = UiKit.NewRect("ByRole", content);
+            heroGridRoles = roles.gameObject;
+            var rl = VList(roles, 0, new RectOffset(0, 0, 0, 0));
+            rl.childControlHeight = true;
+            foreach (var role in HeroRoles)
+            {
+                bool any = false;
+                for (int i = 0; i < HeroCatalog.Count; i++) any |= HeroCatalog.All[i].Role == role;
+                if (!any) continue;
+                var headRow = UiKit.NewRect(role, roles);
+                headRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 7 * Cw;
+                var icon = UiKit.NewRect("Icon", headRow);
+                Mid(icon, 0, 1, 2 * Cw, -3 * Cw, 0, 0);
+                RoleIcon(icon, role, 1.8f * Cw, UiKit.Primary);
+                var name = UiKit.Label(headRow, role.ToUpperInvariant(), Mathf.RoundToInt(4.2f * Cw), TextAnchor.MiddleLeft, Color.white);
+                name.horizontalOverflow = HorizontalWrapMode.Overflow;
+                TopLeft(name.rectTransform, 5.5f * Cw, 3 * Cw - 3 * Cw, 60 * Cw, 6 * Cw);
+                var grid = HeroGrid(roles, role);
+                for (int i = 0; i < HeroCatalog.Count; i++) if (HeroCatalog.All[i].Role == role) BuildHeroCard(grid, i);
+                var gap = UiKit.NewRect("Gap", roles);
+                gap.gameObject.AddComponent<LayoutElement>().preferredHeight = 2 * Cw + 2.4f * Cw;
+            }
+            SetSort(false);
+            BuildHeroPage();
+        }
+
+        static void SortHalf(RectTransform bar, int k, string text, out Image fill, out Image edge, out Text label)
+        {
+            float sh = 8.5f * Cw, th = sh - 2 * Cw;
+            var half = UiKit.NewRect(text, bar);
+            half.anchorMin = new Vector2(k * 0.5f, 0);
+            half.anchorMax = new Vector2(k * 0.5f + 0.5f, 1);
+            half.offsetMin = new Vector2(k == 0 ? Cw : 0, Cw);
+            half.offsetMax = new Vector2(k == 0 ? 0 : -Cw, -Cw);
+            fill = half.gameObject.AddComponent<Image>();
+            fill.sprite = UiKit.Rounded;
+            fill.type = Image.Type.Sliced;
+            Radius(fill, th / 2);
+            edge = Pic(half, "Edge", HomeArt.RoundRing(0.45f / (th / 2 / Cw)), UiKit.Primary);
+            RingRadius(edge, th / 2);
+            label = UiKit.Label(half, text, Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, UiKit.TextDim);
+            UiKit.Stretch(label.rectTransform);
+            bool byRole = k == 1;
+            var b = half.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiToggle); SetSort(byRole); });
+            half.gameObject.AddComponent<ButtonFx>().PressScale = false;
+        }
+
+        // HubToggle: the chosen half dark with a mint wash and edge, the other a faint button shape with a lavender edge
+        static void SetSort(bool byRole)
+        {
+            heroesByRole = byRole;
+            heroGridAll.SetActive(!byRole);
+            heroGridRoles.SetActive(byRole);
+            SortLook(sortAll, sortAllEdge, sortAllText, !byRole);
+            SortLook(sortRole, sortRoleEdge, sortRoleText, byRole);
+            if (heroScroll != null) heroScroll.verticalNormalizedPosition = 1;
+        }
+
+        static void SortLook(Image fill, Image edge, Text label, bool on)
+        {
+            fill.color = on ? HubToggleOn : new Color(1, 1, 1, 0.05f);
+            edge.color = on ? UiKit.Primary : new Color(150 / 255f, 160 / 255f, 1f, 0.35f);
+            label.color = on ? Color.white : UiKit.TextDim;
+        }
+
+        static RectTransform HeroGrid(RectTransform parent, string name)
+        {
+            var grid = UiKit.NewRect(name, parent);
+            var gl = grid.gameObject.AddComponent<GridLayoutGroup>();
+            gl.spacing = new Vector2(2.4f * Cw, 2.4f * Cw);
+            gl.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gl.constraintCount = 3;
+            gl.childAlignment = TextAnchor.UpperLeft;
+            grid.gameObject.AddComponent<HeroGridFit>().Grid = gl;
+            return grid;
+        }
+
+        // One card (PageHeroes3 Card): the portrait on a dark rounded box, the name, the role with its sign, a mint check if chosen
+        static void BuildHeroCard(RectTransform grid, int index)
+        {
+            var info = HeroCatalog.All[index];
+            var card = UiKit.NewRect(info.Name, grid);
+            var c = new HeroCard { Index = index };
+            c.Fill = card.gameObject.AddComponent<Image>();
+            c.Fill.sprite = UiKit.Rounded;
+            c.Fill.type = Image.Type.Sliced;
+            Radius(c.Fill, 3.4f * Cw);
+            c.Edge = Pic(card, "Edge", HomeArt.RoundRing(0.4f / 3.4f), HubLine);
+            RingRadius(c.Edge, 3.4f * Cw);
+            c.EdgeOn = Pic(card, "EdgeOn", HomeArt.RoundRing(0.6f / 3.4f), UiKit.Primary);
+            RingRadius(c.EdgeOn, 3.4f * Cw);
+
+            var box = Pic(card, "Picture", UiKit.Rounded, HubPicBack);
+            Radius(box, 2.6f * Cw);
+            var br = box.rectTransform;
+            br.anchorMin = new Vector2(0, 1);
+            br.anchorMax = new Vector2(1, 1);
+            br.pivot = new Vector2(0.5f, 1);
+            br.offsetMin = new Vector2(1.5f * Cw, 0);
+            br.offsetMax = new Vector2(-1.5f * Cw, -1.5f * Cw);
+            var fit = box.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+            fit.aspectRatio = 1 / 0.82f;
+            var clip = Pic(br, "Clip", UiKit.Rounded, Color.white); // the portrait keeps to the rounded box; the name below does not
+            Radius(clip, 2.6f * Cw);
+            clip.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var area = UiKit.NewRect("Area", clip.rectTransform);
+            UiKit.Stretch(area, 0, Cw, 0, 0);
+            var pic = UiKit.NewRect("Portrait", area);
+            var raw = pic.gameObject.AddComponent<RawImage>();
+            raw.texture = Portrait(info.Id);
+            raw.raycastTarget = false;
+            var contain = pic.gameObject.AddComponent<AspectRatioFitter>();
+            contain.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            contain.aspectRatio = raw.texture != null ? (float)raw.texture.width / raw.texture.height : 1.3f;
+
+            var name = UiKit.Label(br, info.Name, Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, UiKit.TextColor);
+            name.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Mid(name.rectTransform, 0.5f, 0, 0, -3.4f * Cw, 40 * Cw, 5 * Cw);
+            RoleTag(br, info.Role, -7.8f * Cw, HubRole, 2.9f, 1.9f);
+
+            // the old "selected" mark: a mint circle with a dark tick, top right
+            var check = Pic(card, "Check", UiKit.Circle, UiKit.Primary);
+            Mid(check.rectTransform, 1, 1, -3 * Cw, -3 * Cw, 5.2f * Cw, 5.2f * Cw);
+            Tick(check.rectTransform, 1.3f * Cw, HubDark);
+            c.Check = check.gameObject;
+
+            var b = card.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); OpenHero(index); });
+            card.gameObject.AddComponent<ButtonFx>();
+            heroCards.Add(c);
+        }
+
+        // The role's sign and name side by side, centred at y under the parent's bottom edge.
+        static void RoleTag(RectTransform parent, string role, float y, Color color, float sizeCw, float iconCw)
+        {
+            var text = UiKit.Label(parent, role, Mathf.RoundToInt(sizeCw * Cw), TextAnchor.MiddleLeft, color);
+            text.font = UiKit.BodyFont;
+            text.fontStyle = FontStyle.Bold;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            float rw = text.preferredWidth + 5.6f * Cw;
+            var tr = text.rectTransform;
+            tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0);
+            tr.pivot = new Vector2(0, 0.5f);
+            tr.anchoredPosition = new Vector2(-rw / 2 + 4.6f * Cw, y);
+            tr.sizeDelta = new Vector2(rw, sizeCw * Cw * 1.5f);
+            var icon = UiKit.NewRect("RoleIcon", parent);
+            Mid(icon, 0.5f, 0, -rw / 2 + 1.9f * Cw, y, 0, 0);
+            RoleIcon(icon, role, iconCw * Cw, color);
+        }
+
+        static void RefreshHeroSelect()
+        {
+            int chosen = BamSettings.LastHero;
+            foreach (var c in heroCards)
+            {
+                bool on = c.Index == chosen;
+                c.Fill.color = on ? HubSelFill : HubPanel;
+                c.Edge.enabled = !on;
+                c.EdgeOn.enabled = on;
+                c.Check.SetActive(on);
+            }
+        }
+
+        // ---- one hero (PageHero3Fit) ----
+
+        static GameObject heroPage;
+        static int heroPeek;
+        static RectTransform heroContent, heroStageRt, heroSelectRt;
+        static LayoutElement heroStageSize, heroNameSize, heroStatsSize;
+        static HeroStage heroStage;
+        static Image heroRing, heroRingGlow, heroRingShadow;
+        static GameObject heroSelectedTag;
+        static Text heroCount, heroName, heroTitle, heroRoleText, heroSelectText;
+        static RectTransform heroRolePill, heroRoleIcon;
+        static readonly Image[] heroBars = new Image[5];
+        static readonly Text[] heroValues = new Text[5];
+        static readonly AbilityCard[] heroAbilities = new AbilityCard[2];
+        static float[] heroMax;
+
+        sealed class AbilityCard { public RectTransform Rect; public LayoutElement Size; public Image Icon; public Text Kind, Name, Desc; }
+
+        static void BuildHeroPage()
+        {
+            var content = NewPage(null, out heroPage, out var panel);
+            tabPanels[3] = panel;
+            heroContent = content;
+            var list = VList(content, 2.2f * Cw, new RectOffset(0, 0, 0, Mathf.RoundToInt(20 * Cw)));
+            list.childControlHeight = true;
+
+            // the stage: dark glass, a mint glow, the ring, the 3D figure; ‹ › browse; SELECTED and i/n on top
+            heroStageRt = UiKit.NewRect("Stage", content);
+            heroStageSize = heroStageRt.gameObject.AddComponent<LayoutElement>();
+            heroStageSize.preferredHeight = 50 * Cw;
+            var stageBack = Pic(heroStageRt, "Glass", UiKit.Rounded, HubPanel);
+            Radius(stageBack, 4 * Cw);
+            stageBack.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+            var glow = Pic(stageBack.rectTransform, "Glow", HomeArt.StageGlow, Color.white);
+            glow.rectTransform.anchorMin = new Vector2(-0.1f, -0.1f);
+            glow.rectTransform.anchorMax = new Vector2(1.1f, 1.0f);
+            heroRingShadow = Pic(stageBack.rectTransform, "Shadow", HomeArt.RingShadow, Color.white);
+            heroRingGlow = Pic(stageBack.rectTransform, "RingGlow", null, new Color(UiKit.Primary.r, UiKit.Primary.g, UiKit.Primary.b, 0.3f));
+            heroRing = Pic(stageBack.rectTransform, "Ring", null, UiKit.Primary);
+            var pic = UiKit.NewRect("Hero3D", stageBack.rectTransform);
+            UiKit.Stretch(pic);
+            var picture = pic.gameObject.AddComponent<RawImage>();
+            picture.raycastTarget = false;
+            picture.enabled = false;
+
+            var hit = UiKit.NewRect("Swing", heroStageRt);
+            UiKit.Stretch(hit, 14 * Cw, 0, 14 * Cw, 0);
+            hit.gameObject.AddComponent<Image>().color = Color.clear;
+            heroStage = hit.gameObject.AddComponent<HeroStage>();
+            heroStage.Picture = picture;
+            heroStage.Spot = new Vector3(540, 0, 500);
+            heroStage.HeroFill = 0.74f;
+            heroStage.Tapped = () => heroStage.Swing();
+
+            Arrow(heroStageRt, -1, () => OpenHero((heroPeek + HeroCatalog.Count - 1) % HeroCatalog.Count));
+            Arrow(heroStageRt, 1, () => OpenHero((heroPeek + 1) % HeroCatalog.Count));
+
+            var tag = Pic(heroStageRt, "Selected", UiKit.Rounded, new Color(10 / 255f, 40 / 255f, 34 / 255f, 0.85f));
+            Radius(tag, 3.2f * Cw);
+            TopLeft(tag.rectTransform, 3 * Cw, 3 * Cw, 24 * Cw, 6.4f * Cw);
+            var tickBox = UiKit.NewRect("Tick", tag.rectTransform);
+            Mid(tickBox, 0, 0.5f, 3.4f * Cw, -0.2f * Cw, 0, 0);
+            Tick(tickBox, 1.2f * Cw, UiKit.Primary);
+            var selText = Treb(tag.rectTransform, "SELECTED", 2.8f, UiKit.Primary);
+            Mid(selText.rectTransform, 0, 0.5f, 6 * Cw, -0.2f * Cw, 20 * Cw, 5 * Cw);
+            selText.rectTransform.pivot = new Vector2(0, 0.5f);
+            heroSelectedTag = tag.gameObject;
+            heroCount = Treb(heroStageRt, "", 2.8f, UiKit.TextDim);
+            heroCount.alignment = TextAnchor.MiddleRight;
+            Mid(heroCount.rectTransform, 1, 1, -4 * Cw, -6.2f * Cw, 20 * Cw, 5 * Cw);
+            heroCount.rectTransform.pivot = new Vector2(1, 0.5f);
+
+            // the name and title on the left, the role on the right
+            var nameRow = UiKit.NewRect("Name", content);
+            heroNameSize = nameRow.gameObject.AddComponent<LayoutElement>();
+            heroNameSize.preferredHeight = 11 * Cw;
+            heroName = UiKit.Label(nameRow, "", Mathf.RoundToInt(6.4f * Cw), TextAnchor.MiddleLeft, Color.white);
+            heroName.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var nsh = heroName.gameObject.AddComponent<Shadow>();
+            nsh.effectColor = new Color32(0x0b, 0x13, 0x30, 0xff);
+            nsh.effectDistance = new Vector2(0, -0.5f * Cw);
+            TopLeft(heroName.rectTransform, Cw, 3.6f * Cw - 4 * Cw, 60 * Cw, 8 * Cw);
+            heroTitle = Treb(nameRow, "", 3, UiKit.TextDim);
+            TopLeft(heroTitle.rectTransform, Cw, 8.6f * Cw - 2.5f * Cw, 60 * Cw, 5 * Cw);
+            heroRolePill = Pic(nameRow, "Role", UiKit.Rounded, new Color(UiKit.Primary.r, UiKit.Primary.g, UiKit.Primary.b, 0.14f)).rectTransform;
+            Radius(heroRolePill.GetComponent<Image>(), 3.2f * Cw);
+            heroRolePill.anchorMin = heroRolePill.anchorMax = heroRolePill.pivot = new Vector2(1, 1);
+            heroRoleText = Treb(heroRolePill, "", 2.9f, UiKit.Primary);
+            heroRoleText.rectTransform.anchorMin = heroRoleText.rectTransform.anchorMax = heroRoleText.rectTransform.pivot = new Vector2(0, 0.5f);
+
+            // stats: label | bar | value, the bars against the best in the roster
+            var stats = UiKit.NewRect("Stats", content);
+            heroStatsSize = stats.gameObject.AddComponent<LayoutElement>();
+            float rowH = 5.4f * Cw;
+            heroStatsSize.preferredHeight = 2.6f * Cw + 5 * rowH + 1.2f * Cw;
+            CardBack(stats, 4 * Cw);
+            string[] labels = { "Health", "Damage", "Attack speed", "Range", "Move speed" };
+            float bh = 1.5f * Cw;
+            for (int i = 0; i < 5; i++)
+            {
+                float cy = 1.3f * Cw + i * rowH + rowH / 2 + 0.6f * Cw;
+                var lab = Treb(stats, labels[i], 2.9f, UiKit.TextColor);
+                TopLeft(lab.rectTransform, 4 * Cw, cy - 2.5f * Cw, 22 * Cw, 5 * Cw);
+                var track = Pic(stats, "Bar", UiKit.Rounded, new Color(1, 1, 1, 0.1f));
+                Radius(track, bh / 2);
+                var trt = track.rectTransform;
+                trt.anchorMin = new Vector2(0, 1);
+                trt.anchorMax = new Vector2(1, 1);
+                trt.pivot = new Vector2(0, 0.5f);
+                trt.offsetMin = new Vector2(26 * Cw, -cy - bh / 2);
+                trt.offsetMax = new Vector2(-25 * Cw, -cy + bh / 2);
+                var fill = Pic(trt, "Fill", UiKit.Rounded, UiKit.Primary);
+                Radius(fill, bh / 2);
+                fill.rectTransform.anchorMax = new Vector2(0.5f, 1);
+                heroBars[i] = fill;
+                var val = Treb(stats, "", 2.8f, UiKit.TextDim);
+                val.alignment = TextAnchor.MiddleRight;
+                var vr = val.rectTransform;
+                vr.anchorMin = vr.anchorMax = vr.pivot = new Vector2(1, 1);
+                vr.anchoredPosition = new Vector2(-4 * Cw, -cy + 2.5f * Cw);
+                vr.sizeDelta = new Vector2(22 * Cw, 5 * Cw);
+                heroValues[i] = val;
+            }
+
+            for (int k = 0; k < 2; k++) heroAbilities[k] = BuildAbilityCard(content, k == 0);
+
+            // SELECT: fixed at the bottom of the sheet over a dark fade (StickySelect)
+            var fadeRt = UiKit.NewRect("SelectFade", panel);
+            float h = 14 * Cw, y = 3.2f * Cw;
+            fadeRt.anchorMin = new Vector2(0, 0);
+            fadeRt.anchorMax = new Vector2(1, 0);
+            fadeRt.pivot = new Vector2(0.5f, 0);
+            fadeRt.sizeDelta = new Vector2(0, y + h + 7 * Cw);
+            var fade = fadeRt.gameObject.AddComponent<RawImage>();
+            fade.texture = HomeArt.Gradient(new Color(16 / 255f, 26 / 255f, 60 / 255f, 0), new Color32(0x10, 0x1a, 0x3c, 0xff), (h - 2 * Cw) / (y + h + 7 * Cw));
+            fade.raycastTarget = false;
+
+            heroSelectRt = UiKit.NewRect("Select", panel);
+            heroSelectRt.anchorMin = new Vector2(0, 0);
+            heroSelectRt.anchorMax = new Vector2(1, 0);
+            heroSelectRt.pivot = new Vector2(0.5f, 0);
+            heroSelectRt.offsetMin = new Vector2(PageX, y);
+            heroSelectRt.offsetMax = new Vector2(-PageX, y + h);
+            var drop = Pic(heroSelectRt, "Shadow", UiKit.Rounded, new Color(0, 0, 0, 0.45f));
+            Radius(drop, 4 * Cw);
+            UiKit.Stretch(drop.rectTransform, 0, Cw, 0, -Cw);
+            var face = Pic(heroSelectRt, "Face", UiKit.Rounded, Color.white);
+            Radius(face, 4 * Cw);
+            face.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var mint = UiKit.NewRect("Mint", face.rectTransform);
+            UiKit.Stretch(mint);
+            var mi = mint.gameObject.AddComponent<RawImage>();
+            mi.texture = HomeArt.Gradient(new Color32(0x43, 0xf0, 0xbd, 0xff), new Color32(0x22, 0xb8, 0x8c, 0xff));
+            mi.raycastTarget = false;
+            var sheen = Pic(face.rectTransform, "Sheen", UiKit.Rounded, new Color(1, 1, 1, 0.18f));
+            Radius(sheen, 3.4f * Cw);
+            TopLeft(sheen.rectTransform, 0.7f * Cw, 0.7f * Cw, 1080, h * 0.42f);
+            sheen.rectTransform.anchorMax = new Vector2(1, 1);
+            sheen.rectTransform.offsetMax = new Vector2(-0.7f * Cw, -0.7f * Cw);
+            heroSelectText = UiKit.Label(heroSelectRt, "", Mathf.RoundToInt(5.2f * Cw), TextAnchor.MiddleCenter, HubDark);
+            UiKit.Stretch(heroSelectText.rectTransform);
+            heroSelectText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var hitImg = heroSelectRt.gameObject.AddComponent<Image>();
+            hitImg.color = Color.clear;
+            var sb = heroSelectRt.gameObject.AddComponent<Button>();
+            sb.transition = Selectable.Transition.None;
+            sb.navigation = new Navigation { mode = Navigation.Mode.None };
+            sb.onClick.AddListener(() =>
+            {
+                BamAudio.Play(SfxId.UiConfirm);
+                BamSettings.LastHero = heroPeek;
+                ShowTab(0);
+            });
+            heroSelectRt.gameObject.AddComponent<ButtonFx>().PressScale = false;
+            heroSelectRt.gameObject.AddComponent<HomePress>();
+        }
+
+        // Special or passive: the icon on a dark rounded square, KIND · note, the name, the text under it
+        static AbilityCard BuildAbilityCard(RectTransform content, bool special)
+        {
+            var a = new AbilityCard();
+            a.Rect = UiKit.NewRect(special ? "Special" : "Passive", content);
+            a.Size = a.Rect.gameObject.AddComponent<LayoutElement>();
+            CardBack(a.Rect, 4 * Cw);
+            float ic = 10.5f * Cw, tx = 3 * Cw + ic + 2.5f * Cw;
+            var box = Pic(a.Rect, "IconBox", UiKit.Rounded, HubPicBack);
+            Radius(box, 2.6f * Cw);
+            TopLeft(box.rectTransform, 3 * Cw, 2 * Cw, ic, ic);
+            a.Icon = Pic(box.rectTransform, "Icon", null, Color.white);
+            UiKit.Stretch(a.Icon.rectTransform, ic * 0.12f, ic * 0.12f, ic * 0.12f, ic * 0.12f);
+            a.Icon.preserveAspect = true;
+            a.Kind = Treb(a.Rect, "", 2.5f, special ? new Color32(0xff, 0xb4, 0x3a, 0xff) : (Color32)UiKit.TextDim);
+            Stretched(a.Kind.rectTransform, tx, 3.3f * Cw - 2.5f * Cw, 3 * Cw, 5 * Cw);
+            a.Name = UiKit.Label(a.Rect, "", Mathf.RoundToInt(3.9f * Cw), TextAnchor.MiddleLeft, UiKit.TextColor);
+            a.Name.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Stretched(a.Name.rectTransform, tx, 7.2f * Cw - 3 * Cw, 3 * Cw, 6 * Cw);
+            a.Desc = UiKit.Label(a.Rect, "", Mathf.RoundToInt(2.9f * Cw), TextAnchor.UpperLeft, HubBody);
+            a.Desc.font = UiKit.BodyFont;
+            a.Desc.lineSpacing = 1.1f;
+            Stretched(a.Desc.rectTransform, tx, 11.4f * Cw - 2 * Cw, 3 * Cw, 40 * Cw);
+            return a;
+        }
+
+        static void OpenHero(int index)
+        {
+            heroPeek = Mathf.Clamp(index, 0, HeroCatalog.Count - 1);
+            if (stack.Count == 0 || stack[stack.Count - 1] != heroPage) Push(heroPage);
+            else RefreshHeroPage();
+        }
+
+        static void RefreshHeroPage()
+        {
+            var info = HeroCatalog.All[heroPeek];
+            var def = Defs.Hero(info.Id);
+            bool chosen = BamSettings.LastHero == heroPeek;
+
+            if (heroMax == null)
+            {
+                heroMax = new float[5];
+                foreach (var d in Defs.Heroes)
+                {
+                    heroMax[0] = Mathf.Max(heroMax[0], d.Hp);
+                    heroMax[1] = Mathf.Max(heroMax[1], d.Dmg);
+                    heroMax[2] = Mathf.Max(heroMax[2], 1 / Mathf.Max(0.1f, d.Cd));
+                    heroMax[3] = Mathf.Max(heroMax[3], d.Range);
+                    heroMax[4] = Mathf.Max(heroMax[4], d.Speed);
+                }
+            }
+            float[] v = { def.Hp, def.Dmg, 1 / Mathf.Max(0.1f, def.Cd), def.Range, def.Speed };
+            string[] txt = { Num(def.Hp) + " (+" + Num(def.HpGrowth) + ")", Num(def.Dmg) + " (+" + Num(def.DmgGrowth) + ")", Num(def.Cd) + " s", Num(def.Range), Num(def.Speed) };
+            for (int i = 0; i < 5; i++)
+            {
+                heroBars[i].rectTransform.anchorMax = new Vector2(Mathf.Clamp01(v[i] / Mathf.Max(0.001f, heroMax[i])), 1);
+                heroValues[i].text = txt[i];
+            }
+
+            heroName.text = info.Name;
+            heroTitle.text = info.Title;
+            heroRoleText.text = info.Role.ToUpperInvariant();
+            float rw = heroRoleText.preferredWidth + 9 * Cw;
+            heroRolePill.anchoredPosition = new Vector2(0, -2 * Cw);
+            heroRolePill.sizeDelta = new Vector2(rw, 6.4f * Cw);
+            heroRoleText.rectTransform.anchoredPosition = new Vector2(6 * Cw, 0);
+            heroRoleText.rectTransform.sizeDelta = new Vector2(rw, 5 * Cw);
+            if (heroRoleIcon != null) Object.Destroy(heroRoleIcon.gameObject);
+            heroRoleIcon = UiKit.NewRect("RoleIcon", heroRolePill);
+            Mid(heroRoleIcon, 0, 0.5f, 3.2f * Cw, 0, 0, 0);
+            RoleIcon(heroRoleIcon, info.Role, 1.5f * Cw, UiKit.Primary);
+
+            string lower = Lower(info.Id);
+            FillAbility(heroAbilities[0], "SPECIAL · " + def.MaxCharge + " hits to charge", info.SpecialName, info.SpecialDesc, "special_" + lower);
+            FillAbility(heroAbilities[1], "PASSIVE", info.PassiveName, info.PassiveDesc, "passive_" + lower);
+
+            heroSelectedTag.SetActive(chosen);
+            heroCount.text = (heroPeek + 1) + "/" + HeroCatalog.Count;
+            heroSelectRt.gameObject.SetActive(!chosen); // already chosen: SELECTED on the stage says it
+            heroSelectText.text = "SELECT " + info.Name.ToUpperInvariant();
+
+            // the stage takes the height that is left, so everything fits without scrolling on a phone
+            LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);
+            float view = ((RectTransform)heroContent.parent).rect.height;
+            float below = heroNameSize.preferredHeight + heroStatsSize.preferredHeight + heroAbilities[0].Size.preferredHeight
+                          + heroAbilities[1].Size.preferredHeight + 3 * 2.2f * Cw;
+            float stH = Mathf.Clamp(view - 19 * Cw - below - 2.2f * Cw, 40 * Cw, 66 * Cw);
+            heroStageSize.preferredHeight = stH;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);
+
+            float feet = 6 * Cw, figH = stH * 0.74f, rx = figH * 0.3f, ry = figH * 0.075f;
+            EllipseAt(heroRingShadow, null, rx * 1.1f, ry * 1.4f, feet);
+            EllipseAt(heroRingGlow, HomeArt.EllipseRing(1.8f * Cw / rx, out float f1), rx, f1, feet);
+            EllipseAt(heroRing, HomeArt.EllipseRing((chosen ? 0.65f : 0.45f) * Cw / rx, out float f2), rx, f2, feet);
+            heroRingGlow.enabled = chosen;
+            heroStage.FeetAt = feet / stH;
+            heroStage.Show(info.Id);
+            heroStage.Frame();
+            var scroll = heroContent.GetComponentInParent<ScrollRect>();
+            if (scroll != null) scroll.verticalNormalizedPosition = 1;
+        }
+
+        static void FillAbility(AbilityCard a, string kind, string name, string desc, string icon)
+        {
+            a.Kind.text = kind;
+            a.Name.text = name;
+            a.Desc.text = desc;
+            a.Icon.sprite = IconSprite(icon);
+            a.Icon.enabled = a.Icon.sprite != null;
+            float w = heroContent.rect.width - (3 * Cw + 10.5f * Cw + 2.5f * Cw) - 3 * Cw;
+            var settingsFor = a.Desc.GetGenerationSettings(new Vector2(Mathf.Max(100, w), 0));
+            float dh = a.Desc.cachedTextGeneratorForLayout.GetPreferredHeight(desc, settingsFor) / a.Desc.pixelsPerUnit;
+            a.Size.preferredHeight = Mathf.Max(10.5f * Cw + 4 * Cw, 10.2f * Cw + dh + 1.6f * Cw);
+        }
+
+        static string Num(float x) => x.ToString(Mathf.Approximately(x, Mathf.Round(x)) ? "0" : "0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+        // An ellipse on the stage centred feet up from its bottom: a soft shadow (sprite null keeps RingShadow) or a ring.
+        static void EllipseAt(Image img, Sprite ring, float rx, float ryOrScale, float feet)
+        {
+            var r = img.rectTransform;
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0);
+            if (ring == null)
+            {
+                r.sizeDelta = new Vector2(2 * rx, 2 * ryOrScale);
+                r.anchoredPosition = new Vector2(0, feet - ryOrScale);
+                return;
+            }
+            img.sprite = ring;
+            float w = 2 * rx * ryOrScale, h = w * ring.rect.height / ring.rect.width;
+            r.sizeDelta = new Vector2(w, h);
+            r.anchoredPosition = new Vector2(0, feet - h / 2);
+        }
+
+        // HubArrow: a faint circle with a white triangle, cw(11), on the stage's side
+        static void Arrow(RectTransform stage, int dir, System.Action go)
+        {
+            float s = 11 * Cw, t = s / 2 * 0.38f;
+            var rt = UiKit.NewRect(dir < 0 ? "Prev" : "Next", stage);
+            Mid(rt, dir < 0 ? 0 : 1, 0.5f, dir < 0 ? 2 * Cw + s / 2 : -2 * Cw - s / 2, 0, 9 * Cw, 11 * Cw);
+            var circle = Pic(rt, "Circle", UiKit.Circle, new Color(1, 1, 1, 0.08f));
+            Mid(circle.rectTransform, 0.5f, 0.5f, 0, 0, s, s);
+            var tri = Pic(rt, "Triangle", HomeArt.Roof, Color.white);
+            Mid(tri.rectTransform, 0.5f, 0.5f, dir * 0.15f * t, 0, 2 * t, 1.7f * t);
+            tri.rectTransform.localRotation = Quaternion.Euler(0, 0, -90 * dir);
+            var hit = rt.gameObject.AddComponent<Image>();
+            hit.color = Color.clear;
+            var b = rt.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); go(); });
+            rt.gameObject.AddComponent<ButtonFx>().PressScale = false;
+        }
+
+        /// <summary>HubSwitch: a pill track (mint when on), a knob with a soft shadow that slides over. The row is the button.</summary>
+        sealed class HubSwitch : MonoBehaviour
+        {
+            Image track, edge, knob;
+            RectTransform knobRt, shadowRt;
+            System.Action<bool> changed;
+            float k, target;
+            public bool On { get; private set; }
+            const float Tw = 12.5f * Cw, Th = 7 * Cw;
+
+            public void Build(RectTransform row, System.Action<bool> onChange)
+            {
+                changed = onChange;
+                var box = UiKit.NewRect("Switch", row);
+                Mid(box, 1, 0.5f, -3.5f * Cw - Tw / 2, 0, Tw, Th);
+                track = Pic(box, "Track", UiKit.Rounded, Color.white);
+                Radius(track, Th / 2);
+                edge = Pic(box, "Edge", HomeArt.RoundRing(0.35f / 3.5f), new Color(154 / 255f, 162 / 255f, 214 / 255f, 0.45f));
+                RingRadius(edge, Th / 2);
+                float r = Th / 2 - 0.8f * Cw;
+                shadowRt = Pic(box, "Shadow", UiKit.Circle, new Color(0, 0, 0, 0.25f)).rectTransform;
+                knob = Pic(box, "Knob", UiKit.Circle, Color.white);
+                knobRt = knob.rectTransform;
+                Mid(shadowRt, 0, 0.5f, 0, -0.3f * Cw, 2 * r, 2 * r);
+                Mid(knobRt, 0, 0.5f, 0, 0, 2 * r, 2 * r);
+                var b = gameObject.AddComponent<Button>();
+                b.transition = Selectable.Transition.None;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiToggle); Set(!On, false); changed?.Invoke(On); });
+                gameObject.AddComponent<ButtonFx>().PressScale = false;
+            }
+
+            public void Set(bool on, bool instant)
+            {
+                On = on;
+                target = on ? 1 : 0;
+                if (instant) k = target;
+                track.color = on ? new Color(UiKit.Primary.r, UiKit.Primary.g, UiKit.Primary.b, 0.85f) : new Color(1, 1, 1, 0.14f);
+                edge.enabled = !on;
+                knob.color = on ? Color.white : (Color)new Color32(0xc3, 0xc8, 0xf0, 0xff);
+                Place();
+            }
+
+            void Update()
+            {
+                if (Mathf.Approximately(k, target)) return;
+                k += (target - k) * (1 - Mathf.Exp(-18 * Time.unscaledDeltaTime));
+                if (Mathf.Abs(k - target) < 0.002f) k = target;
+                Place();
+            }
+
+            void Place()
+            {
+                float x = Th / 2 + (Tw - Th) * k;
+                knobRt.anchoredPosition = new Vector2(x, 0);
+                shadowRt.anchoredPosition = new Vector2(x, -0.3f * Cw);
+            }
+        }
+
+        /// <summary>HubSegments: short choices side by side in a dark box on the right of the row; the chosen one mint.</summary>
+        sealed class HubChoice
+        {
+            readonly Image[] fills, edges;
+            readonly Text[] labels;
+
+            public HubChoice(RectTransform row, string[] names, System.Action<int> chosen)
+            {
+                var box = Pic(row, "Choices", UiKit.Rounded, new Color(8 / 255f, 10 / 255f, 30 / 255f, 0.55f));
+                Radius(box, 2.6f * Cw);
+                box.rectTransform.anchorMin = new Vector2(0.58f, 0.5f);
+                box.rectTransform.anchorMax = new Vector2(1, 0.5f);
+                box.rectTransform.pivot = new Vector2(1, 0.5f);
+                box.rectTransform.offsetMin = new Vector2(0, -5.5f * Cw);
+                box.rectTransform.offsetMax = new Vector2(-2.5f * Cw, 5.5f * Cw);
+                int n = names.Length;
+                fills = new Image[n]; edges = new Image[n]; labels = new Text[n];
+                for (int i = 0; i < n; i++)
+                {
+                    int index = i;
+                    var cell = UiKit.NewRect(names[i], box.rectTransform);
+                    cell.anchorMin = new Vector2((float)i / n, 0);
+                    cell.anchorMax = new Vector2((float)(i + 1) / n, 1);
+                    cell.offsetMin = new Vector2(i == 0 ? Cw : Cw / 2, Cw);
+                    cell.offsetMax = new Vector2(i == n - 1 ? -Cw : -Cw / 2, -Cw);
+                    fills[i] = cell.gameObject.AddComponent<Image>();
+                    fills[i].sprite = UiKit.Rounded;
+                    fills[i].type = Image.Type.Sliced;
+                    Radius(fills[i], 2 * Cw);
+                    edges[i] = Pic(cell, "Edge", HomeArt.RoundRing(0.45f / 2f), UiKit.Primary);
+                    RingRadius(edges[i], 2 * Cw);
+                    labels[i] = UiKit.Label(cell, names[i], Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, UiKit.TextDim);
+                    UiKit.Stretch(labels[i].rectTransform);
+                    var b = cell.gameObject.AddComponent<Button>();
+                    b.transition = Selectable.Transition.None;
+                    b.navigation = new Navigation { mode = Navigation.Mode.None };
+                    b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiToggle); Set(index); chosen?.Invoke(index); });
+                    cell.gameObject.AddComponent<ButtonFx>().PressScale = false;
+                }
+            }
+
+            public void Set(int sel)
+            {
+                for (int i = 0; i < fills.Length; i++)
+                {
+                    bool on = i == sel;
+                    fills[i].color = on ? HubToggleOn : new Color(1, 1, 1, 0.04f);
+                    edges[i].enabled = on;
+                    labels[i].color = on ? Color.white : UiKit.TextDim;
+                }
+            }
+        }
+
+        // ---- shared pieces ----
+
+        // HubCardBack: the glass card with the gold edge
+        static void CardBack(RectTransform rt, float r)
+        {
+            var back = Pic(rt, "Card", UiKit.Rounded, HubPanel);
+            Radius(back, r);
+            back.transform.SetAsFirstSibling();
+            var edge = Pic(rt, "Edge", HomeArt.RoundRing(0.4f * Cw / r), HubLine);
+            RingRadius(edge, r);
+            edge.transform.SetSiblingIndex(1);
+        }
+
+        // HubCheck: a tick of two strokes, s from the middle
+        static void Tick(RectTransform parent, float s, Color color)
+        {
+            var a = Pic(parent, "Tick", null, color);
+            Mid(a.rectTransform, 0.5f, 0.5f, -0.65f * s, -0.35f * s, 0.99f * s + 0.45f * s * 0.5f, 0.45f * s);
+            a.rectTransform.localRotation = Quaternion.Euler(0, 0, -45);
+            var b = Pic(parent, "Tick", null, color);
+            Mid(b.rectTransform, 0.5f, 0.5f, 0.35f * s, 0, 1.91f * s + 0.45f * s * 0.5f, 0.45f * s);
+            b.rectTransform.localRotation = Quaternion.Euler(0, 0, 47);
+        }
+
+        // HubRoleIcon: a shield (Tank), crossed swords (Fighter), a dagger (Assassin), a star (Mage), a target (Marksman), a plus (Support)
+        static void RoleIcon(RectTransform box, string role, float s, Color col)
+        {
+            switch (role)
+            {
+                case "Marksman":
+                    Mid(Pic(box, "Ring", HomeArt.CircleRing(0.3f), col).rectTransform, 0.5f, 0.5f, 0, 0, 2.3f * s, 2.3f * s);
+                    Mid(Pic(box, "Dot", UiKit.Circle, col).rectTransform, 0.5f, 0.5f, 0, 0, 0.7f * s, 0.7f * s);
+                    break;
+                case "Mage":
+                    Mid(Pic(box, "Star", HomeArt.Diamond, col).rectTransform, 0.5f, 0.5f, 0, 0, 0.8f * s, 2.2f * s);
+                    Mid(Pic(box, "Star", HomeArt.Diamond, col).rectTransform, 0.5f, 0.5f, 0, 0, 2.2f * s, 0.8f * s);
+                    break;
+                case "Tank":
+                    Mid(Pic(box, "Shield", HomeArt.Shield, col).rectTransform, 0.5f, 0.5f, 0, -0.1f * s, 1.7f * s, 2f * s);
+                    break;
+                case "Fighter":
+                    for (int k = -1; k <= 1; k += 2)
+                    {
+                        var sword = UiKit.NewRect("Sword", box);
+                        Mid(sword, 0.5f, 0.5f, 0, 0, 0, 0);
+                        sword.localRotation = Quaternion.Euler(0, 0, -45 * k);
+                        Mid(Pic(sword, "Blade", null, col).rectTransform, 0.5f, 0.5f, 0, 0.35f * s, 0.28f * s, 1.6f * s);
+                        Mid(Pic(sword, "Guard", null, col).rectTransform, 0.5f, 0.5f, 0, -0.51f * s, s, 0.22f * s);
+                    }
+                    break;
+                case "Assassin":
+                    var dagger = UiKit.NewRect("Dagger", box);
+                    Mid(dagger, 0.5f, 0.5f, 0, 0, 0, 0);
+                    dagger.localRotation = Quaternion.Euler(0, 0, -45);
+                    Mid(Pic(dagger, "Blade", HomeArt.Roof, col).rectTransform, 0.5f, 0.5f, 0, 0.45f * s, 0.44f * s, 1.6f * s);
+                    Mid(Pic(dagger, "Guard", null, col).rectTransform, 0.5f, 0.5f, 0, -0.46f * s, 1.1f * s, 0.22f * s);
+                    Mid(Pic(dagger, "Grip", null, col).rectTransform, 0.5f, 0.5f, 0, -0.85f * s, 0.24f * s, 0.55f * s);
+                    break;
+                default: // Support
+                    Mid(Pic(box, "Plus", null, col).rectTransform, 0.5f, 0.5f, 0, 0, 0.6f * s, 2 * s);
+                    Mid(Pic(box, "Plus", null, col).rectTransform, 0.5f, 0.5f, 0, 0, 2 * s, 0.6f * s);
+                    break;
+            }
+        }
+
+        static Text Treb(Transform parent, string text, float sizeCw, Color color)
+        {
+            var t = UiKit.Label(parent, text, Mathf.RoundToInt(sizeCw * Cw), TextAnchor.MiddleLeft, color);
+            t.font = UiKit.BodyFont;
+            t.fontStyle = FontStyle.Bold;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            return t;
+        }
+
+        static Image Pic(Transform parent, string name, Sprite sprite, Color color)
+        {
+            var img = UiKit.Fill(parent, color, sprite);
+            img.name = name;
+            return img;
+        }
+
+        // UiKit.Rounded has 28 px corners at 100 px per unit: this gives corners of radius r.
+        static void Radius(Image img, float r) => img.pixelsPerUnitMultiplier = 28f / Mathf.Max(1f, r);
+        static void RingRadius(Image img, float r) { img.type = Image.Type.Sliced; img.pixelsPerUnitMultiplier = HomeArt.RingRadius / Mathf.Max(1f, r); }
+
+        // Top-left corner at (x, y), y measured down from the parent's top.
+        static RectTransform TopLeft(RectTransform r, float x, float y, float w, float h)
+        {
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0, 1);
+            r.anchoredPosition = new Vector2(x, -y);
+            r.sizeDelta = new Vector2(w, h);
+            return r;
+        }
+
+        // Centred on (x, y) from the anchor point (ax, ay) of the parent, y up.
+        static RectTransform Mid(RectTransform r, float ax, float ay, float x, float y, float w, float h)
+        {
+            r.anchorMin = r.anchorMax = new Vector2(ax, ay);
+            r.pivot = new Vector2(0.5f, 0.5f);
+            r.anchoredPosition = new Vector2(x, y);
+            r.sizeDelta = new Vector2(w, h);
+            return r;
+        }
+
+        // Full width minus left/right, top at y down from the parent's top, h tall.
+        static void Stretched(RectTransform r, float left, float y, float right, float h)
+        {
+            r.anchorMin = new Vector2(0, 1);
+            r.anchorMax = new Vector2(1, 1);
+            r.pivot = new Vector2(0.5f, 1);
+            r.offsetMin = new Vector2(left, -y - h);
+            r.offsetMax = new Vector2(-right, -y);
+        }
+    }
+
+    /// <summary>Three cards a row (PageHeroes3): the cell width from the grid's width, the height the picture plus cw(13).</summary>
+    sealed class HeroGridFit : MonoBehaviour
+    {
+        public GridLayoutGroup Grid;
+        float lastWidth = -1;
+
+        void OnRectTransformDimensionsChange() => Fit();
+        void OnEnable() => Fit();
+
+        void Fit()
+        {
+            if (Grid == null) return;
+            float w = ((RectTransform)transform).rect.width;
+            if (w <= 0 || Mathf.Abs(w - lastWidth) < 0.5f) return;
+            lastWidth = w;
+            float cell = (w - Grid.spacing.x * 2) / 3;
+            Grid.cellSize = new Vector2(cell, cell - 3 * 10.8f + 13 * 10.8f);
+        }
+    }
+
+    static partial class HomeArt
+    {
+        static Sprite pageGlow, stageGlow, shield;
+        static readonly Dictionary<long, Texture2D> gradients = new Dictionary<long, Texture2D>();
+
+        /// <summary>A vertical gradient, top colour to bottom colour; with solidFrom the bottom part that long (0..1) is solid.</summary>
+        public static Texture2D Gradient(Color top, Color bottom, float solidFrom = 0)
+        {
+            long key = ((long)((Color32)top).GetHashCode() << 32) ^ (uint)((Color32)bottom).GetHashCode() ^ (long)(solidFrom * 1000) << 16;
+            if (gradients.TryGetValue(key, out var tex)) return tex;
+            const int N = 128;
+            tex = new Texture2D(1, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "BAM.UI.Gradient" };
+            for (int y = 0; y < N; y++)
+            {
+                float v = y / (N - 1f); // 0 at the bottom
+                float k = solidFrom > 0 ? Mathf.Clamp01((1 - v) / (1 - solidFrom)) : 1 - v;
+                tex.SetPixel(0, y, Color.Lerp(top, bottom, v <= solidFrom ? 1 : k));
+            }
+            tex.Apply(false, true);
+            gradients[key] = tex;
+            return tex;
+        }
+
+        // the pages' mint glow (DrawHub): rgba(62,230,176,0.16) in the middle, rgba(62,120,230,0.06) at 60 %, clear at the edge
+        public static Sprite PageGlow => pageGlow != null ? pageGlow : pageGlow = Radial("PageGlow",
+            (0f, new Color(0.24f, 0.9f, 0.69f, 0.16f)), (0.6f, new Color(0.24f, 0.47f, 0.9f, 0.06f)), (1f, new Color(0.24f, 0.47f, 0.9f, 0f)));
+        public static Sprite StageGlow => stageGlow != null ? stageGlow : stageGlow = PageGlow;
+
+        // a shield: straight top and sides, curving down to a point
+        public static Sprite Shield => shield != null ? shield : shield = Make("Shield", 68, 80, (x, y) =>
+        {
+            float u = (x - 34) / 34f, v = 1 - y / 80f; // v 0 at the top
+            float a;
+            if (v < 0.45f) a = Mathf.Clamp01((1 - Mathf.Abs(u)) * 34 + 0.5f);
+            else { float k = (v - 0.45f) / 0.55f, half = 1 - k * k; a = Mathf.Clamp01((half - Mathf.Abs(u)) * 34 + 0.5f); }
+            return White(a * Mathf.Clamp01(y + 0.5f) * Mathf.Clamp01(80 - y + 0.5f));
+        });
+    }
+}

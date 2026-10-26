@@ -193,13 +193,6 @@ namespace BAM.UI
         }
     }
 
-    /// <summary>Calls back when the finger leaves a slider, so a setting is saved once per drag instead of every frame.</summary>
-    sealed class SliderRelease : MonoBehaviour, IPointerUpHandler
-    {
-        public Action Released;
-        public void OnPointerUp(PointerEventData e) => Released?.Invoke();
-    }
-
     /// <summary>Lives on the menu canvas: the Android back button outside a match and the hint bubble's bob.</summary>
     sealed class UiRoot : MonoBehaviour
     {
@@ -211,53 +204,6 @@ namespace BAM.UI
             if (kb != null && kb.escapeKey.wasPressedThisFrame && (Flow.Game == null || !Flow.Game.InMatch))
                 Screens.HandleBack();
             Screens.Tick();
-        }
-    }
-
-    /// <summary>An on/off switch like the old game's: green track when on, dark with a lavender knob when off.</summary>
-    sealed class SwitchView
-    {
-        static readonly Color OnColor = new Color(0.13f, 0.72f, 0.37f);
-        static readonly Color OffColor = new Color(0.1f, 0.11f, 0.25f);
-        static readonly Color KnobOff = new Color(0.48f, 0.5f, 0.82f);
-        static readonly Color KnobOn = new Color(0.94f, 0.95f, 0.98f);
-        readonly Image track, knobImg;
-        readonly RectTransform knob;
-        readonly Action<bool> changed;
-        public bool On { get; private set; }
-
-        public SwitchView(Transform parent, Action<bool> changed)
-        {
-            this.changed = changed;
-            var rt = UiKit.NewRect("Switch", parent);
-            rt.sizeDelta = new Vector2(136, 72);
-            track = rt.gameObject.AddComponent<Image>();
-            track.sprite = UiKit.Rounded;
-            track.type = Image.Type.Sliced;
-            track.pixelsPerUnitMultiplier = 0.75f; // fully round ends
-            var button = rt.gameObject.AddComponent<Button>();
-            button.transition = Selectable.Transition.None;
-            button.navigation = new Navigation { mode = Navigation.Mode.None };
-            button.onClick.AddListener(() =>
-            {
-                Set(!On);
-                BamAudio.Play(SfxId.UiToggle);
-                this.changed?.Invoke(On);
-            });
-            knobImg = UiKit.Fill(rt, KnobOn, UiKit.Circle);
-            knob = knobImg.rectTransform;
-            knob.anchorMin = knob.anchorMax = knob.pivot = new Vector2(0.5f, 0.5f);
-            knob.sizeDelta = new Vector2(56, 56);
-        }
-
-        public RectTransform Rect => (RectTransform)track.transform;
-
-        public void Set(bool on)
-        {
-            On = on;
-            track.color = on ? OnColor : OffColor;
-            knobImg.color = on ? KnobOn : KnobOff;
-            knob.anchoredPosition = new Vector2(on ? 32 : -32, 0);
         }
     }
 
@@ -328,53 +274,4 @@ namespace BAM.UI
         }
     }
 
-    static class SliderFactory
-    {
-        /// <summary>A horizontal 0..1 slider with a fat handle that is easy to grab with a thumb.</summary>
-        public static Slider Create(Transform parent, Action<float> released)
-        {
-            var rt = UiKit.NewRect("Slider", parent);
-            rt.sizeDelta = new Vector2(420, 100);
-            var bg = UiKit.Fill(rt, new Color(0.1f, 0.11f, 0.25f), UiKit.Rounded);
-            bg.rectTransform.anchorMin = new Vector2(0, 0.5f);
-            bg.rectTransform.anchorMax = new Vector2(1, 0.5f);
-            bg.rectTransform.sizeDelta = new Vector2(0, 28);
-            bg.pixelsPerUnitMultiplier = 2f;
-
-            var fillArea = UiKit.NewRect("Fill Area", rt);
-            fillArea.anchorMin = new Vector2(0, 0.5f);
-            fillArea.anchorMax = new Vector2(1, 0.5f);
-            fillArea.sizeDelta = new Vector2(-50, 28);
-            var fill = UiKit.Fill(fillArea, new Color(0.13f, 0.72f, 0.37f), UiKit.Rounded);
-            fill.pixelsPerUnitMultiplier = 2f;
-            fill.rectTransform.sizeDelta = new Vector2(50, 0);
-
-            var handleArea = UiKit.NewRect("Handle Slide Area", rt);
-            UiKit.Stretch(handleArea, 40, 0, 40, 0);
-            var handle = UiKit.Fill(handleArea, Color.white, UiKit.Circle);
-            handle.rectTransform.sizeDelta = new Vector2(80, 0);
-            handle.rectTransform.anchorMin = new Vector2(0, 0);
-            handle.rectTransform.anchorMax = new Vector2(0, 1);
-            handle.rectTransform.offsetMin = new Vector2(-40, 10);
-            handle.rectTransform.offsetMax = new Vector2(40, -10);
-            handle.preserveAspect = true;
-            UiKit.AddShadow(handle, 3);
-
-            // The whole row reacts to touches, not just the thin bar.
-            var hit = rt.gameObject.AddComponent<Image>();
-            hit.color = Color.clear;
-
-            var slider = rt.gameObject.AddComponent<Slider>();
-            slider.fillRect = fill.rectTransform;
-            slider.handleRect = handle.rectTransform;
-            slider.targetGraphic = handle;
-            slider.direction = Slider.Direction.LeftToRight;
-            slider.minValue = 0;
-            slider.maxValue = 1;
-            slider.navigation = new Navigation { mode = Navigation.Mode.None };
-            var release = rt.gameObject.AddComponent<SliderRelease>();
-            release.Released = () => released?.Invoke(slider.value);
-            return slider;
-        }
-    }
 }

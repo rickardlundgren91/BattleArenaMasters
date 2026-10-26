@@ -27,84 +27,138 @@ namespace BAM.UI
     public static partial class Screens
     {
         static GameObject settings, licenses;
-        static Slider volume;
-        static Segmented graphics;
-        static SwitchView leftHanded, shareData;
+        static HubSwitch soundSwitch, leftSwitch, shareSwitch;
+        static HubChoice quality;
+        static Text activeValue;
         static bool licensesLoaded;
         static RectTransform licensesContent;
 
+        // The old Settings page (MenuHome.PageHubSet with the v3 rows of MenuV3.cs): green section heads, glass rows with a
+        // switch, a choice or a value pill. Rows the game has no feature for yet (Music, Vibration, Frame rate, Player name)
+        // come when those settings exist. Left-handed controls and the privacy rows are BAM's own.
         static void BuildSettings()
         {
             var content = NewPage("Settings", out settings, out var panel);
             tabPanels[2] = panel;
-            VList(content, 14, new RectOffset(8, 8, 0, 30));
+            VList(content, 2 * Cw, new RectOffset(0, 0, 0, Mathf.RoundToInt(6 * Cw)));
 
-            SectionHeader(content, "AUDIO");
-            var row = PageRow(content, "Sound volume", 124, out _);
-            volume = SliderFactory.Create(row, v =>
+            SetHead(content, "AUDIO");
+            soundSwitch = SwitchRow(content, "Sound", on =>
             {
-                BamSettings.SfxVolume = v;
-                BamAudio.Play(SfxId.UiTap); // lets the player hear the new volume
+                BamSettings.SfxVolume = on ? 0.8f : 0f;
+                if (on) BamAudio.Play(SfxId.UiTap);
             });
-            UiKit.Place(volume, 1, 0.5f, -28, 0, 360, 90);
 
-            SectionHeader(content, "GRAPHICS");
-            row = PageRow(content, "Quality", 210, out var qualityLabel);
-            qualityLabel.rectTransform.offsetMin = new Vector2(36, 110);
-            var seg = UiKit.NewRect("Quality", row);
-            UiKit.Band(seg, false, 22, 92, 26);
-            // Shown High first, like the old game.
-            graphics = new Segmented(seg, new[] { "High", "Low" }, i => BamSettings.Graphics = i == 0 ? GraphicsQuality.High : GraphicsQuality.Low);
+            SetHead(content, "GRAPHICS");
+            quality = ChoiceRow(content, "Quality", new[] { "High", "Low" }, i =>
+            {
+                BamSettings.Graphics = i == 0 ? GraphicsQuality.High : GraphicsQuality.Low;
+                RefreshActive();
+            });
+            activeValue = PlainRow(content, "Active", "");
 
-            SectionHeader(content, "CONTROLS");
-            row = PageRow(content, "Left-handed controls", 124, out _);
-            leftHanded = new SwitchView(row, on => BamSettings.LeftHanded = on);
-            UiKit.Place(leftHanded.Rect, 1, 0.5f, -28, 0, 136, 72);
+            SetHead(content, "CONTROLS");
+            leftSwitch = SwitchRow(content, "Left-handed controls", on => BamSettings.LeftHanded = on);
 
-            SectionHeader(content, "PRIVACY");
-            row = PageRow(content, ConsentText.SettingsLabel, 236, out var shareLabel);
-            shareLabel.rectTransform.offsetMin = new Vector2(36, 130);
-            var note = UiKit.Label(row, ConsentText.SettingsNote, 30, TextAnchor.UpperLeft, UiKit.TextDim);
-            note.font = UiKit.BodyFont;
-            note.rectTransform.anchorMin = new Vector2(0, 0);
-            note.rectTransform.anchorMax = new Vector2(1, 0);
-            note.rectTransform.offsetMin = new Vector2(36, 16);
-            note.rectTransform.offsetMax = new Vector2(-36, 130);
-            shareData = new SwitchView(row, on => BamSettings.AnalyticsConsent = on ? Consent.Granted : Consent.Denied);
-            UiKit.Place(shareData.Rect, 1, 1, -28, -30, 136, 72);
+            SetHead(content, "PRIVACY");
+            shareSwitch = SwitchRow(content, ConsentText.SettingsLabel, on => BamSettings.AnalyticsConsent = on ? Consent.Granted : Consent.Denied);
+            var note = Treb(content, ConsentText.SettingsNote, 2.9f, UiKit.TextDim);
+            note.fontStyle = FontStyle.Normal;
+            note.horizontalOverflow = HorizontalWrapMode.Wrap;
+            note.alignment = TextAnchor.UpperLeft;
             // The privacy policy row only appears once the Play thread has a public address for it.
             if (!string.IsNullOrEmpty(BamInfo.PrivacyPolicyUrl))
-                LinkRow(content, "Privacy policy", () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
+                LinkRow(content, "Privacy policy", "Open", () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
 
-            SectionHeader(content, "ABOUT");
-            LinkRow(content, "Licenses", () => Push(licenses));
-            row = PageRow(content, "Version", 124, out _);
-            var version = UiKit.Label(row, Application.version, 36, TextAnchor.MiddleRight, Lavender);
-            version.font = UiKit.BodyFont;
-            UiKit.Stretch(version.rectTransform, 300, 0, 36, 0);
+            SetHead(content, "HELP");
+            LinkRow(content, "How to play", "Tutorial", () => StartTutorial());
+            LinkRow(content, "Licenses", "Open", () => Push(licenses));
+            PlainRow(content, "Version", Application.version);
         }
 
-        /// <summary>A row that opens something, with a "&gt;" on the right.</summary>
-        static void LinkRow(RectTransform list, string text, Action onClick)
+        // HubSetHead: a small mint heading, cw(1) in from the rows
+        static void SetHead(RectTransform list, string text)
         {
-            var row = PageRow(list, text, 124, out _);
-            var bg = row.GetComponent<Image>();
-            bg.raycastTarget = true;
+            var head = UiKit.NewRect(text, list);
+            head.gameObject.AddComponent<LayoutElement>().preferredHeight = 4.5f * Cw;
+            var t = Treb(head, text, 2.8f, UiKit.Primary);
+            t.alignment = TextAnchor.LowerLeft;
+            Stretched(t.rectTransform, Cw, 0, 0, 4.5f * Cw);
+        }
+
+        static RectTransform SetRow(RectTransform list, string label, float h)
+        {
+            var row = UiKit.NewRect(label, list);
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = h;
+            CardBack(row, 3 * Cw);
+            var t = Treb(row, label, 3.4f, UiKit.TextColor);
+            Stretched(t.rectTransform, 4 * Cw, 0, 30 * Cw, h);
+            return row;
+        }
+
+        // On/Off: a switch; the whole row toggles it
+        static HubSwitch SwitchRow(RectTransform list, string label, Action<bool> changed)
+        {
+            var row = SetRow(list, label, 12.5f * Cw);
+            var hit = row.gameObject.AddComponent<Image>();
+            hit.color = Color.clear;
+            var sw = row.gameObject.AddComponent<HubSwitch>();
+            sw.Build(row, changed);
+            return sw;
+        }
+
+        // two short choices side by side on the right (HubSegments)
+        static HubChoice ChoiceRow(RectTransform list, string label, string[] names, Action<int> chosen)
+        {
+            var row = SetRow(list, label, 14 * Cw);
+            return new HubChoice(row, names, chosen);
+        }
+
+        // a row that opens something: the value in a mint pill with a small arrow
+        static void LinkRow(RectTransform list, string label, string value, Action onClick)
+        {
+            float rh = 11 * Cw, vh = rh - 3.6f * Cw;
+            var row = SetRow(list, label, rh);
+            var pill = Pic(row, "Value", UiKit.Rounded, new Color(UiKit.Primary.r, UiKit.Primary.g, UiKit.Primary.b, 0.16f));
+            Radius(pill, vh / 2);
+            var text = UiKit.Label(pill.transform, value, Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleLeft, UiKit.Primary);
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            float vw = text.preferredWidth + 9 * Cw;
+            Mid(pill.rectTransform, 1, 0.5f, -2.5f * Cw - vw / 2, 0, vw, vh);
+            Stretched(text.rectTransform, 3.5f * Cw, 0, 0, vh);
+            var arrow = Pic(pill.rectTransform, "Arrow", HomeArt.Roof, UiKit.Primary);
+            Mid(arrow.rectTransform, 1, 0.5f, -3 * Cw, 0, 2.6f * Cw, 1.6f * Cw);
+            arrow.rectTransform.localRotation = Quaternion.Euler(0, 0, -90);
+            var hit = row.gameObject.AddComponent<Image>();
+            hit.color = Color.clear;
             var b = row.gameObject.AddComponent<Button>();
-            b.targetGraphic = bg;
+            b.transition = Selectable.Transition.None;
             b.navigation = new Navigation { mode = Navigation.Mode.None };
             b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); onClick?.Invoke(); });
-            row.gameObject.AddComponent<ButtonFx>();
-            var arrow = UiKit.Label(row, ">", 48, TextAnchor.MiddleRight, Lavender);
-            UiKit.Stretch(arrow.rectTransform, 300, 0, 36, 0);
+            row.gameObject.AddComponent<ButtonFx>().PressScale = false;
         }
+
+        // a row that only shows a value, dim on the right
+        static Text PlainRow(RectTransform list, string label, string value)
+        {
+            var row = SetRow(list, label, 11 * Cw);
+            var t = UiKit.Label(row, value, Mathf.RoundToInt(3 * Cw), TextAnchor.MiddleRight, UiKit.TextDim);
+            t.font = UiKit.BodyFont;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Stretched(t.rectTransform, 30 * Cw, 0, 4 * Cw, 11 * Cw);
+            return t;
+        }
+
+        static void RefreshActive() =>
+            activeValue.text = (BamSettings.Graphics == GraphicsQuality.High ? "High" : "Low") + " · " + Application.targetFrameRate + " fps";
 
         static void RefreshSettings()
         {
-            volume.SetValueWithoutNotify(BamSettings.SfxVolume);
-            graphics.Set(BamSettings.Graphics == GraphicsQuality.High ? 0 : 1);
-            leftHanded.Set(BamSettings.LeftHanded);
-            shareData.Set(BamSettings.AnalyticsConsent == Consent.Granted);
+            soundSwitch.Set(BamSettings.SfxVolume > 0.001f, true);
+            quality.Set(BamSettings.Graphics == GraphicsQuality.High ? 0 : 1);
+            leftSwitch.Set(BamSettings.LeftHanded, true);
+            shareSwitch.Set(BamSettings.AnalyticsConsent == Consent.Granted, true);
+            RefreshActive();
         }
 
         static void BuildLicenses()

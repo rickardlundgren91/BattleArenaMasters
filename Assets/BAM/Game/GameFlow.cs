@@ -141,6 +141,7 @@ namespace BAM.Game
                 {
                     PlayerInput input = hud.TakeInput();
                     match.Step(in input);
+                    Screens.CountEvents(match); // the result card's ratings (damage, healing, shields per hero)
                     views.AfterStep();
                     juice.AfterStep();
                     hud.AfterStep();
@@ -207,7 +208,7 @@ namespace BAM.Game
             SendEnd(false);
             hud.CancelTouches();
             BamAudio.StopMusic(); // the victory or defeat jingle first; Update brings the music back after it
-            Screens.ShowResult(r);
+            Screens.ShowResult(r, match); // with the match: both teams' K/D/A, ratings and MVP (the old HudV3 result card)
         }
 
         // Exactly one MatchEnded per match: at the result, or as a quit when the player leaves or restarts before it.

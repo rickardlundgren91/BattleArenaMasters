@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BAM.Audio;
 using BAM.Core;
+using BAM.Sim;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -85,13 +86,16 @@ namespace BAM.UI
             }
         }
 
-        public static void ShowResult(MatchResult result)
+        public static void ShowResult(MatchResult result) => ShowResult(result, null);
+
+        /// <summary>The result card; with the match it shows every hero's K/D/A, rating and MVP (count them with CountEvents).</summary>
+        public static void ShowResult(MatchResult result, Match match)
         {
             Init();
             ClearStack();
             dialog.Hide();
             HideHint();
-            FillResult(result);
+            FillResult(result, match);
             Push(resultScreen);
             if (!result.Quit) BamAudio.Play(result.Won ? SfxId.Victory : SfxId.Defeat);
         }
@@ -168,6 +172,7 @@ namespace BAM.UI
         {
             if (screen == mainMenu) RefreshHome();
             else if (screen == heroSelect) RefreshHeroSelect();
+            else if (screen == heroPage) RefreshHeroPage();
             else if (screen == settings) RefreshSettings();
             else if (screen == modes) modeDifficulty.Set((int)BamSettings.LastDifficulty);
         }

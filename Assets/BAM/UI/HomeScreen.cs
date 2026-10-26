@@ -660,7 +660,7 @@ namespace BAM.UI
     }
 
     /// <summary>The soft shapes the old code drew with gradients and strokes, made once as small white textures.</summary>
-    static class HomeArt
+    static partial class HomeArt
     {
         delegate Color Paint(float x, float y);
 

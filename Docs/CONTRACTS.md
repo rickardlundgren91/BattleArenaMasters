@@ -17,6 +17,10 @@ calls mean, when they happen and what the caller expects. All calls happen on Un
   Blast 0.25), melee/ranged minions about 0.3, siege about 0.45, towers about 1.0, wolf about 0.3. Models may be a bit
   bigger than the radius; heroes stand about 0.9-1.1 units tall.
 - **Quality:** `BamSettings.Graphics` Low or High; each module applies it itself when `BamSettings.Changed` fires.
+- **Music, vibration, frame rate (2026-10-26, for the old Settings page):** `BamSettings.MusicOn` (BamAudio fades the music
+  out and pauses it while off), `BamSettings.Vibration` (gates `BAM.Core.BamHaptics.Pulse(strength)`, strength 0..1 on the
+  old Haptics.cs scale: 0.12 a button press, 0.3 a hit on the player, 0.6 its death, 0.8 a kill; 12-45 ms, at most one per
+  0.08 s), `BamSettings.Fps` 30 or 60 (Boot applies `Application.targetFrameRate` on every change).
 
 ## Art (BAM.Art) - called by BAM.Game
 
@@ -69,7 +73,10 @@ at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, 
   `BamSettings.AnalyticsConsent`), privacy policy (opens `BamInfo.PrivacyPolicyUrl` when set), licenses
   (`Resources/BAM/Licenses`), version (`Application.version`).
 - Pause (`ShowPause`/`HidePause`, called by the game layer): Resume -> `Flow.Game.Resume()`, Settings, Quit -> `Flow.Game.QuitToMenu()`.
-- Result (`ShowResult`): Victory/Defeat, time, kills/deaths, Play again -> `Flow.Game.RestartMatch()`, Menu -> `Flow.Game.QuitToMenu()`.
+- Result (`ShowResult(result, match)`, the old HudV3 card): VICTORY/DEFEAT, difficulty · length, then both teams with K/D/A,
+  rating 0-10 and MVP (SimScore.cs); PLAY AGAIN -> `Flow.Game.RestartMatch()`, HOME -> `Flow.Game.QuitToMenu()`. The game calls
+  `Screens.CountEvents(match)` after every `Match.Step` so the ratings count damage, damage taken, heals and shields.
+  `ShowResult(result)` without the match (and the guided match) shows the old small card: portrait, name, K/D/A.
 - Hint bubble (`ShowHint`/`HideHint`) for the guided match.
 - `UiKit` is the shared look (Lilita One, colours, buttons, panels, safe area). The HUD in BAM.Game uses it.
 - `Screens.IsBlockingInput` is true while any menu or dialog is open.

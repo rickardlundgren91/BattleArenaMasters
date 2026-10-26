@@ -92,148 +92,7 @@ namespace BAM.UI
             modes.SetActive(false);
         }
 
-        // ---- Heroes ----
-
-        static Image[] cardFrames;
-        static GameObject[] cardChecks;
-        static Text detailName, detailTitle, detailRole, specialName, specialDesc, passiveName, passiveDesc;
-        static Image[,] statBars;
-        static ScrollRect heroScroll;
-
-        static void BuildHeroSelect()
-        {
-            var content = NewPage("Heroes", out heroSelect, out var panel);
-            tabPanels[1] = panel;
-            heroScroll = panel.GetComponentInChildren<ScrollRect>();
-            VList(content, 16, new RectOffset(8, 8, 8, 30));
-
-            cardFrames = new Image[HeroCatalog.Count];
-            cardChecks = new GameObject[HeroCatalog.Count];
-            // 3 cards a row on a phone held upright; on a wide screen as many as fit, so the details stay in view.
-            var grid = UiKit.NewRect("Grid", content);
-            var gl = grid.gameObject.AddComponent<GridLayoutGroup>();
-            gl.spacing = new Vector2(16, 16);
-            gl.padding = new RectOffset(8, 8, 0, 0);
-            gl.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            gl.childAlignment = TextAnchor.UpperCenter;
-            grid.gameObject.AddComponent<HeroGridFit>().Grid = gl;
-            for (int i = 0; i < HeroCatalog.Count; i++)
-            {
-                int index = i;
-                var info = HeroCatalog.All[i];
-                var card = UiKit.NewRect(info.Name, grid);
-                var bg = card.gameObject.AddComponent<Image>();
-                bg.sprite = UiKit.Rounded;
-                bg.type = Image.Type.Sliced;
-                bg.color = CardFill;
-                var b = card.gameObject.AddComponent<Button>();
-                b.transition = Selectable.Transition.None;
-                b.navigation = new Navigation { mode = Navigation.Mode.None };
-                b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); PickHero(index); });
-                card.gameObject.AddComponent<ButtonFx>();
-                cardFrames[i] = UiKit.Frame(card);
-
-                // The whole portrait in the top of the card, rounded corners, never stretched or cut.
-                var holder = UiKit.NewRect("PortraitArea", card);
-                holder.anchorMin = new Vector2(0, 1);
-                holder.anchorMax = new Vector2(1, 1);
-                holder.pivot = new Vector2(0.5f, 1);
-                holder.offsetMin = new Vector2(8, -248);
-                holder.offsetMax = new Vector2(-8, -8);
-                var mask = UiKit.Fill(holder, Color.white, UiKit.Rounded);
-                var fit = mask.gameObject.AddComponent<AspectRatioFitter>();
-                fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-                var tex = Portrait(info.Id);
-                fit.aspectRatio = tex != null ? (float)tex.width / tex.height : 1.3f;
-                mask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-                var pic = UiKit.NewRect("Portrait", mask.rectTransform);
-                UiKit.Stretch(pic);
-                var raw = pic.gameObject.AddComponent<RawImage>();
-                raw.texture = tex;
-                raw.raycastTarget = false;
-                var heroName = UiKit.Label(card, info.Name, 44, TextAnchor.MiddleCenter, UiKit.TextColor);
-                UiKit.Band(heroName, false, 62, 56, 4);
-                UiKit.AddShadow(heroName, 2);
-                var role = UiKit.Label(card, info.Role, 30, TextAnchor.MiddleCenter, Lavender);
-                role.font = UiKit.BodyFont;
-                role.fontStyle = FontStyle.Bold;
-                UiKit.Band(role, false, 22, 40, 4);
-
-                // The old "selected" mark: a mint circle with a white tick in the top right corner.
-                var check = UiKit.Fill(card, UiKit.Primary, UiKit.Circle);
-                UiKit.Place(check, 1, 1, 10, 10, 56, 56);
-                var tick1 = UiKit.Fill(check.rectTransform, Color.white);
-                UiKit.Place(tick1, 0.5f, 0.5f, -8, -3, 16, 6).localRotation = Quaternion.Euler(0, 0, -45);
-                var tick2 = UiKit.Fill(check.rectTransform, Color.white);
-                UiKit.Place(tick2, 0.5f, 0.5f, 5, 1, 26, 6).localRotation = Quaternion.Euler(0, 0, 50);
-                cardChecks[i] = check.gameObject;
-            }
-
-            // The chosen hero's details under the grid.
-            var detail = UiKit.NewRect("Details", content);
-            var dbg = detail.gameObject.AddComponent<Image>();
-            dbg.sprite = UiKit.Rounded;
-            dbg.type = Image.Type.Sliced;
-            dbg.color = CardFill;
-            dbg.raycastTarget = false;
-            UiKit.Frame(detail).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.75f);
-            VList(detail, 10, new RectOffset(36, 36, 28, 36));
-
-            detailName = DetailText(detail, 72, UiKit.Gold, 0);
-            UiKit.AddOutline(detailName, 3);
-            detailTitle = DetailText(detail, 42, UiKit.TextColor, 0);
-            detailRole = DetailText(detail, 32, Lavender, 0);
-            detailRole.font = UiKit.BodyFont;
-            detailRole.fontStyle = FontStyle.Bold;
-
-            statBars = new Image[StatNames.Length, 3];
-            for (int s = 0; s < StatNames.Length; s++)
-            {
-                var statRow = UiKit.NewRect(StatNames[s], detail);
-                statRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 50;
-                var label = UiKit.Label(statRow, StatNames[s], 36, TextAnchor.MiddleLeft, UiKit.TextColor);
-                label.rectTransform.anchorMin = new Vector2(0, 0);
-                label.rectTransform.anchorMax = new Vector2(0.42f, 1);
-                label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
-                for (int k = 0; k < 3; k++)
-                {
-                    var seg = UiKit.Fill(statRow, UiKit.Muted, UiKit.Rounded);
-                    seg.pixelsPerUnitMultiplier = 2.5f;
-                    var r = seg.rectTransform;
-                    r.anchorMin = new Vector2(0.42f + 0.58f * k / 3f, 0.22f);
-                    r.anchorMax = new Vector2(0.42f + 0.58f * (k + 1) / 3f, 0.78f);
-                    r.offsetMin = new Vector2(5, 0);
-                    r.offsetMax = new Vector2(-5, 0);
-                    statBars[s, k] = seg;
-                }
-            }
-
-            specialName = IconTitle(detail, out specialIcon, 14);
-            specialDesc = DetailText(detail, 34, UiKit.TextDim, 0);
-            specialDesc.font = UiKit.BodyFont;
-            passiveName = IconTitle(detail, out passiveIcon, 10);
-            passiveDesc = DetailText(detail, 34, UiKit.TextDim, 0);
-            passiveDesc.font = UiKit.BodyFont;
-        }
-
-        static Image specialIcon, passiveIcon;
-
-        // "Special: Hammer Throw" with the ability's icon in front, like the old hero page.
-        static Text IconTitle(RectTransform list, out Image icon, float spaceAbove)
-        {
-            var gap = UiKit.NewRect("Gap", list);
-            gap.gameObject.AddComponent<LayoutElement>().preferredHeight = spaceAbove;
-            var row = UiKit.NewRect("Ability", list);
-            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 72;
-            var disc = UiKit.Fill(row, new Color(0.1f, 0.11f, 0.25f), UiKit.Circle);
-            UiKit.Place(disc, 0, 0.5f, 0, 0, 72, 72);
-            icon = UiKit.Fill(disc.rectTransform, UiKit.Gold);
-            UiKit.Stretch(icon.rectTransform, 12, 12, 12, 12);
-            icon.preserveAspect = true;
-            var t = UiKit.Label(row, "", 44, TextAnchor.MiddleLeft, UiKit.Gold);
-            UiKit.Stretch(t.rectTransform, 90, 0, 0, 0);
-            return t;
-        }
+        // ---- Heroes (HubPages.cs) ----
 
         static Sprite IconSprite(string name)
         {
@@ -248,27 +107,6 @@ namespace BAM.UI
         }
 
         static readonly System.Collections.Generic.Dictionary<string, Sprite> iconSprites = new System.Collections.Generic.Dictionary<string, Sprite>();
-
-        static void HeaderText(Text t, float left, float y, float h)
-        {
-            var r = t.rectTransform;
-            r.anchorMin = new Vector2(0, 0.5f);
-            r.anchorMax = new Vector2(1, 0.5f);
-            r.pivot = new Vector2(0.5f, 0);
-            r.offsetMin = new Vector2(left, y);
-            r.offsetMax = new Vector2(0, y + h);
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-        }
-
-        static Text DetailText(RectTransform list, int size, Color color, float spaceAbove)
-        {
-            if (spaceAbove > 0)
-            {
-                var gap = UiKit.NewRect("Gap", list);
-                gap.gameObject.AddComponent<LayoutElement>().preferredHeight = spaceAbove;
-            }
-            return UiKit.Label(list, "", size, TextAnchor.UpperLeft, color);
-        }
 
         /// <summary>A vertical scroll area filling its parent; returns the content to fill (it grows with its children).</summary>
         static RectTransform ScrollContent(RectTransform parent, out ScrollRect scroll)
@@ -294,68 +132,6 @@ namespace BAM.UI
             scroll.scrollSensitivity = 30;
             return content;
         }
-
-        static void RefreshHeroSelect()
-        {
-            PickHero(BamSettings.LastHero, false);
-            if (heroScroll != null) heroScroll.verticalNormalizedPosition = 1;
-        }
-
-        // Picking a card makes that hero the one PLAY uses (saved at once, like the old game).
-        static void PickHero(int index, bool save = true)
-        {
-            index = Mathf.Clamp(index, 0, HeroCatalog.Count - 1);
-            if (save) BamSettings.LastHero = index;
-            for (int i = 0; i < cardFrames.Length; i++)
-            {
-                bool on = i == index;
-                cardFrames[i].color = on ? UiKit.Primary : new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.75f);
-                cardChecks[i].SetActive(on);
-            }
-
-            var info = HeroCatalog.All[index];
-            detailName.text = info.Name;
-            detailTitle.text = info.Title;
-            detailRole.text = info.Role + (info.Ranged ? "  /  Ranged" : "  /  Melee");
-            SetBar(0, info.Health);
-            SetBar(1, info.Damage);
-            SetBar(2, info.Speed);
-            SetBar(3, info.Difficulty);
-            specialName.text = "Special: " + info.SpecialName;
-            specialIcon.sprite = IconSprite("special_" + Lower(info.Id));
-            passiveIcon.sprite = IconSprite("passive_" + Lower(info.Id));
-            specialDesc.text = info.SpecialDesc;
-            passiveName.text = "Passive: " + info.PassiveName;
-            passiveDesc.text = info.PassiveDesc;
-        }
-
-        static void SetBar(int stat, int value)
-        {
-            for (int k = 0; k < 3; k++) statBars[stat, k].color = k < value ? UiKit.Gold : UiKit.Muted;
-        }
-    }
-
-    /// <summary>Picks the hero grid's column count and card size from its width (3 upright, more on wide screens).</summary>
-    sealed class HeroGridFit : MonoBehaviour
-    {
-        public GridLayoutGroup Grid;
-        float lastWidth = -1;
-
-        void OnRectTransformDimensionsChange() => Fit();
-        void OnEnable() => Fit();
-
-        void Fit()
-        {
-            if (Grid == null) return;
-            float w = ((RectTransform)transform).rect.width;
-            if (w <= 0 || Mathf.Abs(w - lastWidth) < 0.5f) return;
-            lastWidth = w;
-            float inner = w - Grid.padding.left - Grid.padding.right;
-            int count = transform.childCount;
-            int cols = Mathf.Clamp(Mathf.FloorToInt((inner + Grid.spacing.x) / (380 + Grid.spacing.x)), 3, Mathf.Max(3, count));
-            Grid.constraintCount = cols;
-            Grid.cellSize = new Vector2((inner - Grid.spacing.x * (cols - 1)) / cols, 370);
-        }
     }
 
     /// <summary>
@@ -371,9 +147,9 @@ namespace BAM.UI
         float yaw = StartYaw, spin;   // spin: degrees per second left after a flick, slowing down
         bool dragging, dragged;
         float lastDragAt;
-        static readonly Vector3 Spot = new Vector3(500, 0, 500);
 
         public RawImage Picture;
+        public Vector3 Spot = new Vector3(500, 0, 500); // far from the arena; each stage needs its own spot
         public System.Action Tapped;
         public float FeetAt = 0.07f, HeroFill = 0.75f;
 
@@ -395,7 +171,7 @@ namespace BAM.UI
             if (view == null) { Picture.enabled = false; return false; }
             view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, yaw, 0));
             view.SetMoving(false, 0);
-            heroHeight = MeasureHeight(view);
+            heroHeight = MeasureHeight(view, Spot.y);
             shownId = id;
             hasHero = true;
             Picture.enabled = true;
@@ -405,13 +181,13 @@ namespace BAM.UI
         }
 
         // From the feet to the top of the model's meshes; 1.8 if that looks wrong.
-        static float MeasureHeight(UnitView v)
+        static float MeasureHeight(UnitView v, float feet)
         {
             float top = 0;
             foreach (var r in v.GetComponentsInChildren<Renderer>())
             {
                 if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
-                top = Mathf.Max(top, r.bounds.max.y - Spot.y);
+                top = Mathf.Max(top, r.bounds.max.y - feet);
             }
             return top > 0.6f && top < 4f ? top : 1.8f;
         }
@@ -440,6 +216,9 @@ namespace BAM.UI
             cam.aspect = size.x / size.y;
             cam.transform.position = Spot + new Vector3(0, viewH / 2 - FeetAt * viewH, -6f);
         }
+
+        /// <summary>Plays one attack (a tap on the hero page's stage).</summary>
+        public void Swing() { if (hasHero) view.PlayAttack(0.3f); }
 
         void Setup()
         {
