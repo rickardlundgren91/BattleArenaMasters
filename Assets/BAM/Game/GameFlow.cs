@@ -29,6 +29,8 @@ namespace BAM.Game
         MatchViews views;
         MatchCamera cam;
         Hud hud;
+        readonly MatchJuice juice = new MatchJuice();
+        readonly MatchIntro intro = new MatchIntro();
         bool inMatch, paused, over, resultShown, resultMusic, endSent;
         float acc, overAt;
         // the guided match is two matches: Fenn's training island, then Tyra's first battle in the arena
@@ -94,7 +96,10 @@ namespace BAM.Game
             views = new MatchViews(match);
             if (cam == null) cam = new MatchCamera(Camera);
             cam.Begin(match);
+            juice.Begin(match);
+            intro.Begin(match, views);
             if (hud == null) hud = new Hud(this);
+            hud.Intro = intro;
             hud.Begin(match, views, cam);
             inMatch = true; paused = false; over = false; resultShown = false; resultMusic = false; endSent = false;
             acc = 0f;
@@ -110,6 +115,7 @@ namespace BAM.Game
             if (match == null) return;
             inMatch = false; paused = false;
             hud.End();
+            intro.End(cam.Camera);
             views.Dispose();
             views = null;
             cam.End();
@@ -129,13 +135,14 @@ namespace BAM.Game
             float dt = Time.deltaTime;
             if (!paused && !over)
             {
-                acc += dt;
+                acc += juice.Stopping ? dt * 0.1f : dt; // the old hit-stop: ticks come slower for a moment
                 int n = 0;
                 while (acc >= Rules.Tick && n < MaxTicksPerFrame)
                 {
                     PlayerInput input = hud.TakeInput();
                     match.Step(in input);
                     views.AfterStep();
+                    juice.AfterStep();
                     hud.AfterStep();
                     acc -= Rules.Tick;
                     n++;
@@ -147,6 +154,9 @@ namespace BAM.Game
             float alpha = paused || over ? 1f : Mathf.Clamp01(acc / Rules.Tick);
             views.Frame(alpha, dt);
             cam.Frame(alpha, dt, over);
+            juice.Frame(paused ? 0f : dt);
+            if (intro.Active) intro.Frame(cam.Camera);
+            else juice.Apply(cam.Camera);
             BamAudio.SetListener(cam.Focus);
             hud.Frame(dt, paused || resultShown);
 

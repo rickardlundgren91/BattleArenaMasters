@@ -11,7 +11,8 @@ namespace BAM.Game
     /// edges (gold edge on the player, dark with the respawn seconds while dead), the towers' health bars with their percent
     /// (emptying towards the edge, a light trail behind), skull kill counters, the centre box with level, clock and level
     /// progress, the team stars under the bars. Also the floating damage numbers (drawFloatText: white for the player's damage,
-    /// red for damage to the player, on heroes only) and the kill feed.
+    /// red for damage to the player, gold for the player's big hits, on heroes only). No kill feed: Rickard took the kill texts
+    /// out of the old game on 2026-10-20.
     /// </summary>
     sealed partial class Hud
     {
@@ -19,6 +20,7 @@ namespace BAM.Game
         static readonly Color TopOwn = Hex(0x2fe3d0), TopFoe = Hex(0xff9a2e), TopPanel = Hex(0x0b1a3a), TopEdge = Hex(0x1b2d5e);
         static readonly Color PortraitBack = Hex(0x2b3a6a), PlayerEdge = Hex(0xffd75a), DeadEdge = new Color(0.59f, 0.63f, 0.75f, 0.6f);
         static readonly Color OwnTrail = Hex(0xb8fff6), FoeTrail = Hex(0xffe0a8), DmgToPlayer = Hex(0xff6b6b);
+        static readonly Color BigHit = Hex(0xffc857);
         static readonly Color StarOff = new Color(1f, 1f, 1f, 0.18f);
         static string[] intStrings;
 
@@ -64,13 +66,6 @@ namespace BAM.Game
         readonly FloatText[] floats = new FloatText[FloatCount];
         int nextFloat;
 
-        // ---------------------------------------------------------------- kill feed
-
-        const int FeedLines = 3;
-        const float FeedLife = 3.5f;
-        readonly Text[] feed = new Text[FeedLines];
-        readonly float[] feedAt = new float[FeedLines];
-
         static Color Hex(int rgb) => new Color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f);
 
         static string Int(int n)
@@ -100,7 +95,6 @@ namespace BAM.Game
             }
             for (int i = 0; i < 2; i++) { bars[i].Trailing = 1f; bars[i].Shown = -1; }
             for (int i = 0; i < floats.Length; i++) { floats[i].Born = -99f; floats[i].Unit = null; floats[i].Label.gameObject.SetActive(false); }
-            for (int i = 0; i < FeedLines; i++) { feedAt[i] = -99f; feed[i].gameObject.SetActive(false); }
         }
 
         // ---------------------------------------------------------------- after every tick: damage numbers and the kill feed
@@ -138,10 +132,10 @@ namespace BAM.Game
             var t = floats[nextFloat];
             nextFloat = (nextFloat + 1) % floats.Length;
             t.Unit = b; t.Born = now; t.Value = e.V; t.ToPlayer = toPlayer;
-            t.Big = e.V >= 0.18f * b.MaxHp;
+            t.Big = e.V >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
             t.At = views.DrawnAt(b);
             t.Label.text = Int(Mathf.RoundToInt(e.V));
-            t.Label.color = toPlayer ? DmgToPlayer : Color.white;
+            t.Label.color = toPlayer ? DmgToPlayer : t.Big ? BigHit : Color.white;
             t.Label.fontSize = t.Big ? 66 : 50;
             t.Label.gameObject.SetActive(true);
         }
@@ -150,17 +144,7 @@ namespace BAM.Game
         {
             var victim = e.B;
             if (victim == m.Player) killedBy = e.A;
-            if (tutorial) return;
-            string vName = Colored(victim);
-            string line = e.A != null && (e.A.IsHero || e.A.Kind == UnitKind.Wolf)
-                ? Colored(e.A.Kind == UnitKind.Wolf && e.A.Owner != null ? e.A.Owner : e.A) + "  defeated  " + vName
-                : vName + "  was defeated";
-            // the newest line on top, the older ones move down
-            for (int i = FeedLines - 1; i > 0; i--) { feed[i].text = feed[i - 1].text; feedAt[i] = feedAt[i - 1]; }
-            feed[0].text = line;
-            feedAt[0] = Time.unscaledTime;
         }
-
         string Colored(Unit u)
         {
             var hu = u.Owner != null && u.IsClone ? u.Owner : u;
@@ -174,7 +158,6 @@ namespace BAM.Game
         void Top(float dt)
         {
             Floats();
-            Feed();
             if (tutorial) return;
             int secs = Mathf.Max(0, Mathf.FloorToInt(m.Time));
             if (secs != shownSeconds) { shownSeconds = secs; timeText.text = (secs / 60) + ":" + (secs % 60).ToString("00"); }
@@ -250,21 +233,6 @@ namespace BAM.Game
             }
         }
 
-        void Feed()
-        {
-            float now = Time.unscaledTime;
-            for (int i = 0; i < FeedLines; i++)
-            {
-                float age = now - feedAt[i];
-                bool on = age < FeedLife;
-                if (feed[i].gameObject.activeSelf != on) feed[i].gameObject.SetActive(on);
-                if (!on) continue;
-                var c = feed[i].color;
-                c.a = age < FeedLife - 0.5f ? 1f : (FeedLife - age) / 0.5f;
-                feed[i].color = c;
-            }
-        }
-
         // ---------------------------------------------------------------- building
 
         void BuildTop()
@@ -322,17 +290,6 @@ namespace BAM.Game
                 var s = Circle(topRoot, "Star", 26f, StarOff);
                 UiKit.Place(s, 0.5f, 1f, foe ? x : -x, barY - BarH - 6f, 26f, 26f);
                 stars[i] = s.GetComponent<Image>();
-            }
-
-            // the kill feed under the top HUD
-            for (int i = 0; i < FeedLines; i++)
-            {
-                feed[i] = UiKit.Label(safe, "", 34, TextAnchor.MiddleCenter, Color.white);
-                UiKit.Place(feed[i], 0.5f, 1f, 0f, -(TopM + PortraitS + BarH + 60f + i * 44f), 900f, 44f);
-                UiKit.AddOutline(feed[i], 2);
-                feed[i].raycastTarget = false;
-                feed[i].supportRichText = true;
-                feed[i].gameObject.SetActive(false);
             }
         }
 

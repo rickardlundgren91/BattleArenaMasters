@@ -32,7 +32,7 @@ namespace BAM.Game
         RectTransform safe;
         Text centerText, respawnTitle, respawnText, defeatedText, bannerText, deniedText, specialName;
         RectTransform specialRoot, joyArea;
-        Image specialFill, specialFace, specialGlow, specialIcon, gainRing;
+        Image specialFill, specialFace, specialGlow, specialIcon, specialOff, gainRing;
         SpecialButton special;
         JoystickZone joy;
         AimView aim, marks;
@@ -57,6 +57,8 @@ namespace BAM.Game
         bool specialQueued;
         float queuedAngle, queuedK;
 
+        readonly MatchRings rings = new MatchRings();
+
         public Hud(GameFlow owner) { flow = owner; }
 
         public void Begin(Match match, MatchViews matchViews, MatchCamera camera)
@@ -79,6 +81,8 @@ namespace BAM.Game
             lastState = m.State;
             specialQueued = false; hintShown = false;
             BeginTop();
+            BeginIntro();
+            rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
             var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
             if (specialIcon.sprite != null) Object.Destroy(specialIcon.sprite); // the last match's sprite (the texture stays)
@@ -105,6 +109,8 @@ namespace BAM.Game
             aim = null;
             if (marks != null) ArtKit.Release(marks);
             marks = null;
+            rings.End();
+            if (introRoot != null) ShowIntro(false);
             if (canvas != null) canvas.gameObject.SetActive(false);
             if (hintShown) Screens.HideHint();
             hintShown = false;
@@ -184,6 +190,7 @@ namespace BAM.Game
             }
             lastState = m.State;
             ReadEvents();
+            rings.AfterStep();
             if (m.Tut != null && m.Tut.Step != lastTutStep)
             {
                 // one numbering over both halves: the island's steps 0-5, then the arena's as 6-9
@@ -200,6 +207,8 @@ namespace BAM.Game
         {
             if (m == null) return;
             canvas.enabled = !hidden;
+            rings.Frame(hidden || (Intro != null && Intro.Active));
+            if (IntroFrame()) return; // the match intro: its own bars and name tags, no controls
             var kb = Keyboard.current;
             if (!hidden && kb != null && kb.spaceKey.wasPressedThisFrame) OnTap();
 
@@ -288,12 +297,13 @@ namespace BAM.Game
             var p = m.Player;
             bool ready = p.Alive && p.SpecialReady;
             specialFill.fillAmount = p.Alive ? p.Charge01 : 0f;
-            specialFill.color = ready ? UiKit.Gold : UiKit.Trim; // charging reads darker than ready
-            float pulse = 0.55f + 0.45f * Mathf.Sin(Time.unscaledTime * 6f);
-            specialGlow.color = ready ? new Color(1f, 0.85f, 0.3f, 0.35f + 0.35f * pulse) : Color.clear;
-            specialGlow.rectTransform.localScale = Vector3.one * (ready ? 1f + 0.05f * pulse : 1f);
-            // the old button: a blue disc (brighter when ready), the icon over it, greyed while charging or dead
-            specialFace.color = ready ? new Color32(0x1d, 0x4f, 0xb8, 0xff) : new Color32(0x1d, 0x2a, 0x55, 0xff);
+            specialFill.color = ready ? ChargeReady : Charging; // the old #ffc94a ready, #f0b640 charging
+            // the old ready ring: breathes slowly (sin 3.5 t)
+            float pulse = Mathf.Sin(Time.unscaledTime * 3.5f);
+            specialGlow.color = ready ? new Color(1f, 1f, 1f, 0.55f + 0.3f * pulse) : Color.clear;
+            specialGlow.rectTransform.localScale = Vector3.one * (ready ? 1f + 0.03f * pulse : 1f);
+            if (specialOff.enabled == p.Alive) specialOff.enabled = !p.Alive;
+            // the icon over the old button's disc, greyed while charging or dead
             specialIcon.color = !p.Alive ? new Color(0.45f, 0.45f, 0.5f, 0.6f) : ready ? Color.white : new Color(0.7f, 0.72f, 0.8f, 0.85f);
             // a charge just came in: a short gold ring swells out of the button
             if (p.Alive && p.Charge > lastCharge + 0.001f) gainAt = Time.unscaledTime;
@@ -335,7 +345,6 @@ namespace BAM.Game
                     aim.ShowRange(hero, d.DragReach);
                 }
             }
-            else if (ready && d.TapReach > 0f) aim.ShowRange(hero, d.TapReach);
         }
 
         void Hint(bool hidden)
@@ -475,8 +484,9 @@ namespace BAM.Game
             joy.Look = look.gameObject.AddComponent<CanvasGroup>();
             joy.Look.blocksRaycasts = false;
             joy.Look.interactable = false;
-            joy.Base = Circle(look, "Base", 2f * JoystickZone.Radius + 40f, new Color(1f, 1f, 1f, 0.22f));
-            joy.Knob = Circle(look, "Knob", 130f, new Color(1f, 1f, 1f, 0.75f));
+            // the old game's pictures, at its sizes (base 2.5 R across, stick 1.2 R)
+            joy.Base = Picture(look, "Base", 2.5f * JoystickZone.Radius, "ui_ingameView_joystick_base", Color.white).rectTransform;
+            joy.Knob = Picture(look, "Knob", 1.2f * JoystickZone.Radius, "ui_ingameView_joystick", Color.white).rectTransform;
 
             // special button
             specialRoot = UiKit.NewRect("Special", safe);
@@ -487,20 +497,24 @@ namespace BAM.Game
             special.Rect = specialRoot;
             special.Tapped = OnTap;
             special.Aimed = OnAimed;
-            specialGlow = Circle(specialRoot, "Glow", 340f, Color.clear).GetComponent<Image>();
-            Circle(specialRoot, "Back", 270f, new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.75f));
-            specialFill = Circle(specialRoot, "Charge", 270f, UiKit.Gold).GetComponent<Image>();
+            // the old game's button pictures (ui_ingameView_specialButton_*): glow, dark disc, ring track, the charge ring
+            specialGlow = Picture(specialRoot, "Glow", 440f, "ui_ingameView_specialButton_glow", Color.clear);
+            Picture(specialRoot, "Back", 270f, "ui_ingameView_specialButton_base", Color.white);
+            Picture(specialRoot, "Track", 270f, "ui_ingameView_specialButton_fillBG", Color.white);
+            specialFill = Picture(specialRoot, "Charge", 270f, "ui_ingameView_specialButton_fill", Charging);
             specialFill.type = Image.Type.Filled;
             specialFill.fillMethod = Image.FillMethod.Radial360;
             specialFill.fillOrigin = (int)Image.Origin360.Top;
             specialFill.fillClockwise = true;
-            specialFace = Circle(specialRoot, "Face", 236f, UiKit.Primary).GetComponent<Image>();
-            specialFace.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+            specialFace = Circle(specialRoot, "Face", 228f, Color.white).GetComponent<Image>();
+            specialFace.gameObject.AddComponent<Mask>().showMaskGraphic = false;
             var iconRt = UiKit.NewRect("Icon", specialFace.transform);
             UiKit.Stretch(iconRt);
             specialIcon = iconRt.gameObject.AddComponent<Image>();
             specialIcon.preserveAspect = false;
             specialIcon.raycastTarget = false;
+            specialOff = Picture(specialRoot, "Disabled", 270f, "ui_ingameView_specialButton_disable", new Color(1f, 1f, 1f, 0.85f));
+            specialOff.enabled = false;
             gainRing = Circle(specialRoot, "Gain", 290f, Color.clear).GetComponent<Image>();
             gainRing.sprite = UiKit.CircleRing;
             gainRing.enabled = false;
@@ -550,6 +564,7 @@ namespace BAM.Game
             // the guided match: chevrons over what to look at, and the black for the jump to the arena (on top of everything)
             canvasRect = (RectTransform)canvas.transform;
             BuildFloats();
+            BuildIntro();
             pointChevron = MakeChevron(canvasRect);
             ringChevron = MakeChevron(canvasRect);
             fade = UiKit.Fill(canvasRect, Color.clear);
@@ -584,6 +599,18 @@ namespace BAM.Game
             }
             rt.gameObject.SetActive(false);
             return rt;
+        }
+
+        static readonly Color Charging = new Color32(0xf0, 0xb6, 0x40, 0xff), ChargeReady = new Color32(0xff, 0xc9, 0x4a, 0xff);
+
+        // A round picture from the old game (Resources/BAM/Hud), a plain circle if it is missing.
+        static Image Picture(Transform parent, string name, float size, string file, Color color)
+        {
+            var img = Circle(parent, name, size, color).GetComponent<Image>();
+            var tex = Resources.Load<Texture2D>("BAM/Hud/" + file);
+            if (tex != null) img.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            else Debug.LogError("[BAM.Game] HUD picture missing: Resources/BAM/Hud/" + file);
+            return img;
         }
 
         static RectTransform Circle(Transform parent, string name, float size, Color color)

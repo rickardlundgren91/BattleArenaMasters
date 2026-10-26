@@ -128,6 +128,9 @@ namespace BAM.Game
         /// <summary>The view of a unit (null when it has none), e.g. for the camera or the aim.</summary>
         public Transform ViewOf(Unit u) => u != null && unitBySerial.TryGetValue(u.Serial, out UnitRec r) ? r.V.transform : null;
 
+        /// <summary>Units the match intro keeps out of sight for now (null = none).</summary>
+        public System.Predicate<Unit> Hidden;
+
         /// <summary>Where a unit is drawn now (between ticks).</summary>
         public Vector3 DrawnAt(Unit u)
         {
@@ -585,6 +588,7 @@ namespace BAM.Game
             if (flags != r.Flags) { r.Flags = flags; v.SetStatus(flags); }
 
             float vis = !m.IsVisibleTo(u, Teams.Player) ? 0f : u.Team == Teams.Player && u.Kind == UnitKind.Hero && m.HiddenFromFoes(u) ? 0.5f : 1f;
+            if (Hidden != null && Hidden(u)) vis = 0f; // the match intro: not yet beamed in
             if (vis != r.Vis) { r.Vis = vis; v.SetVisibility(vis); }
         }
 

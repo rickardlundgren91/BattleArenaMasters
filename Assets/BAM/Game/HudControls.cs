@@ -41,7 +41,7 @@ namespace BAM.Game
             Base.anchoredPosition = origin;
             Knob.anchoredPosition = origin;
             Value = Vector2.zero;
-            Look.alpha = 1f;
+            Look.alpha = 0.85f; // the old game: 0.85 in use, 0.45 resting
         }
 
         public void OnDrag(PointerEventData e)

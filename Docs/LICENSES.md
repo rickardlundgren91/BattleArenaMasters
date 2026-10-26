@@ -67,3 +67,11 @@ Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources
 | `home_bg.jpg` (was `home_bg_soft.jpg`) | Home background painting | Old game Home | Rickard ("bilden är min egen", 2026-10-25) | Rickard's own | None |
 | `portrait_<hero>.png` (7) | Hero portraits on the Heroes cards and the Home top bar | Old game `profile_<hero>.png` | Renders of Rickard's own hero models | Rickard's own (he confirmed 2026-10-25 15:07) | None |
 | `special_<hero>.png`, `passive_<hero>.png` (14) | Ability icons on the Heroes page | Old game `ui_abilities_<hero>_*.png` | Rickard / the old project | Rickard's own (he confirmed 2026-10-25 15:14) | None |
+
+### Match HUD pictures (match thread, 2026-10-26)
+
+Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources/AbcUI/` into `Assets/BAM/Game/Resources/BAM/Hud/`.
+
+| Files | What | Origin | Made by | Rights / proof | Credit |
+|---|---|---|---|---|---|
+| `ui_ingameView_joystick.png`, `ui_ingameView_joystick_base.png`, `ui_ingameView_specialButton_{base,fill,fillBG,glow,disable}.png` (7) | The joystick and the SPECIAL button in a match | Old game `ui_ingameView_*.png` | Rickard / the old project | Rickard's own (he confirmed on a decision card 2026-10-26 13:05: "Ja, jag äger dem") | None |
