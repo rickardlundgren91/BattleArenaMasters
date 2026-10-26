@@ -21,7 +21,10 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched, mirror, struck;
+        bool melee, launched, mirror, struck, arc;
+        Color arcColor;
+        static Texture2D arcTex;
+        static bool arcLoaded;
         MeshFilter visF;
         static int swings; // every other swing comes from the other side (MLBB: the combo alternates left and right)
 
@@ -35,18 +38,22 @@ namespace BAM.Art
             var go = new GameObject("Look");
             vis = go.transform;
             vis.SetParent(transform, false);
-            bool painted = melee && FxAtlas.Texture != null; // the painted sword arc from the effect atlas
+            if (!arcLoaded) { arcLoaded = true; arcTex = RickardFx.Load("tx_fx_slash_arc"); }
+            arc = melee && arcTex != null; // Rickard's own slash arc (2026-10-26), white on black: drawn additive
+            bool painted = melee && !arc && FxAtlas.Texture != null; // else the painted sword arc from the effect atlas
             visF = go.AddComponent<MeshFilter>();
-            visF.sharedMesh = painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            visF.sharedMesh = arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot;
             if (melee)
             {
                 visR.sharedMaterial = painted ? FxAtlas.Material(ArtMaterials.UnlitAdd) : ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                if (arc) { visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, arcTex); visR.sharedMaterial.mainTexture = arcTex; }
                 // the heroes' own swing colours (MLBB analysis 8): Fenn silver-cyan, Knut steel blue; the wolf ghost blue, minions the team's
                 Color c = k == ProjKind.WolfBite ? new Color(0.6f, 0.9f, 1f, 1f) : k == ProjKind.KnutHit ? (Color)Fx.HeroMain(HeroId.Knut)
                     : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : (Color)Pal.Get(Pal.TeamLight(t));
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, c);
+                arcColor = c;
             }
             else visR.sharedMaterial = glowy ? ArtMaterials.Unlit : ArtMaterials.Lit;
             visR.shadowCastingMode = ShadowCastingMode.Off;
@@ -114,10 +121,10 @@ namespace BAM.Art
             if (trail != null) { trail.Clear(); trail.emitting = ArtKit.High; }
             if (melee)
             {
-                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, WithAlpha(visR.sharedMaterial.GetColor(ArtMaterials.BaseColor), 1f));
+                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, arc ? arcColor : WithAlpha(visR.sharedMaterial.GetColor(ArtMaterials.BaseColor), 1f));
                 mirror = (++swings & 1) == 0;
                 struck = false;
-                if (FxAtlas.Texture != null) visF.sharedMesh = FxAtlas.SlashQuad(mirror);
+                if (!arc && FxAtlas.Texture != null) visF.sharedMesh = FxAtlas.SlashQuad(mirror);
             }
         }
 
@@ -167,7 +174,7 @@ namespace BAM.Art
                 // the swing arc sweeps and fades over a short moment, however long the hit takes
                 float life = Mathf.Min(flight, 0.18f) + 0.12f;
                 float k = Mathf.Clamp01(age / life);
-                float s = 0.7f + k * 0.5f;
+                float s = (0.7f + k * 0.5f) * (arc ? 1.6f : 1f);
                 vis.localScale = new Vector3(s, 1f, s);
                 vis.rotation = Quaternion.LookRotation(dir) * Quaternion.Euler(0f, mirror ? Mathf.Lerp(40f, -40f, k) : Mathf.Lerp(-40f, 40f, k), 0f);
                 if (!struck && age >= Mathf.Min(flight, 0.18f))
@@ -181,7 +188,8 @@ namespace BAM.Art
                     if (kind == ProjKind.KnutHit) Fx.Drops(at, 5, Fx.HeroAccent(HeroId.Knut), 0.12f, 2.2f, 0.4f, 1.2f, 0.1f);
                 }
                 Material m = visR.sharedMaterial;
-                m.SetColor(ArtMaterials.BaseColor, WithAlpha(m.GetColor(ArtMaterials.BaseColor), 1f - k));
+                if (arc) m.SetColor(ArtMaterials.BaseColor, new Color(arcColor.r * (1f - k), arcColor.g * (1f - k), arcColor.b * (1f - k), 1f)); // additive on black: dim to fade
+                else m.SetColor(ArtMaterials.BaseColor, WithAlpha(m.GetColor(ArtMaterials.BaseColor), 1f - k));
             }
             if (kind == ProjKind.BlastBomb || kind == ProjKind.BlastFire)
             {
