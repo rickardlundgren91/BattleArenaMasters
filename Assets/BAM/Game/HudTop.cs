@@ -249,8 +249,14 @@ namespace BAM.Game
                 Vector3 sp = cam.Camera.WorldToScreenPoint(f.At + Vector3.up * 1.6f);
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, sp, null, out Vector2 local);
                 float t = age / FloatLife;
-                // a small pop, then it rises and fades over its last third
-                float pop = age < 0.12f ? 1f + (f.Big ? 0.45f : 0.25f) * (1f - age / 0.12f) : 1f;
+                // a bounce (Brawl Stars idea 5): it springs in big, dips under its size and settles by 0.3 s, then rises and fades
+                // over its last third
+                float pop = 1f;
+                if (age < 0.3f)
+                {
+                    float k = age / 0.3f, amp = f.Big ? 0.7f : 0.4f;
+                    pop = 1f + amp * Mathf.Cos(k * Mathf.PI * 2.5f) * (1f - k);
+                }
                 f.Label.rectTransform.anchoredPosition = local + new Vector2(f.ToPlayer ? -26f : 26f, 30f + 90f * t);
                 f.Label.rectTransform.localScale = Vector3.one * pop;
                 var c = f.Label.color;

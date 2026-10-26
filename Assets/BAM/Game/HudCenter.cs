@@ -137,13 +137,12 @@ namespace BAM.Game
             Line(respawnText, W * 0.14f, -H * 0.44f + W * 0.05f, W);
             Line(defeatedText, W * 0.045f, -H * 0.5f + W * 0.02f, W);
             Line(centerText, W * 0.115f, -H * 0.22f, W);
-            // the pause button: the old glass tool's place under the strip at the right edge
+            // the glass tool (score tab, or pause in the guided match): the old glass tool's place under the strip at the right edge
             float r = W * 0.034f, pad = W * 0.01f, gb = Mathf.Max(4f, H * 0.01f) + (W * 0.064f + W * 0.024f) + Mathf.Max(7f, W * 0.02f) * 1.6f;
             pauseRoot.anchorMin = pauseRoot.anchorMax = pauseRoot.pivot = new Vector2(1f, 1f);
             pauseRoot.sizeDelta = Vector2.one * (2f * (r + pad));
             pauseRoot.anchoredPosition = new Vector2(-(W * 0.025f - pad), -(gb + H * 0.012f - pad));
-            var face = pauseRoot.GetComponentInChildren<Text>(true);
-            if (face != null) face.fontSize = Mathf.RoundToInt(r * 1.1f);
+            toolPause.fontSize = Mathf.RoundToInt(r * 1.1f);
         }
 
         static void Box(RectTransform rt, float w, float h, float top)
@@ -256,10 +255,13 @@ namespace BAM.Game
             edge.raycastTarget = false;
             var b = pauseRoot.gameObject.AddComponent<Button>();
             b.targetGraphic = plate;
-            b.onClick.AddListener(() => { BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.UiTap); flow.Pause(); });
-            var t = TopLabel(pauseRoot, Color.white, TextAnchor.MiddleCenter);
-            t.text = "II";
-            UiKit.Stretch(t.rectTransform);
+            b.onClick.AddListener(ToolTapped); // the score tab (HudScore.cs); pause in the guided match
+            toolIcon = UiKit.Fill(pauseRoot, Color.white, ScoreIconSprite);
+            UiKit.Stretch(toolIcon.rectTransform, 0f, 0f, 0f, 0f);
+            toolPause = TopLabel(pauseRoot, Color.white, TextAnchor.MiddleCenter);
+            toolPause.text = "II";
+            toolPause.enabled = false;
+            UiKit.Stretch(toolPause.rectTransform);
         }
     }
 }

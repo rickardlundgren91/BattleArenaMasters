@@ -10,7 +10,8 @@ namespace BAM.Game
     /// The marks the old game draws by the heroes' health bars (ABC2 Hud.cs drawHero): the name over the player's own hero only
     /// (white with a dark edge), a thin crossed-out eye over a hero of the player's team while the enemy cannot see it (fading in
     /// and out over about 0.15 s), a small pulsing diamond by another hero's bar while its special is ready
-    /// (HudTelegraph.cs drawCharged), and the interrupt window as a bar under the health bar (drawChannel). Placed each frame over the art's 3D bars.
+    /// (HudTelegraph.cs drawCharged), the interrupt window as a bar under the health bar (drawChannel),
+    /// and the player's special charge as a small orange bar under its own bar. Placed each frame over the art's 3D bars.
     /// </summary>
     sealed partial class Hud
     {
@@ -20,7 +21,8 @@ namespace BAM.Game
         {
             public RectTransform Root;
             public Text Name;
-            public Image Eye, Diamond, ChanBack, ChanFill;
+            public Image Eye, Diamond, ChanBack, ChanFill, ChargeBack, ChargeFill;
+            public Outline NameEdge, DiamondEdge;   // kept from the build, so no GetComponent every frame
             public float EyeA;
         }
 
@@ -44,9 +46,9 @@ namespace BAM.Game
                 o.Name.rectTransform.sizeDelta = new Vector2(300f, 40f);
                 o.Name.horizontalOverflow = HorizontalWrapMode.Overflow;
                 o.Name.raycastTarget = false;
-                var edge = o.Name.gameObject.AddComponent<Outline>();
-                edge.effectColor = new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.9f);
-                edge.effectDistance = new Vector2(1.5f, -1.5f);
+                o.NameEdge = o.Name.gameObject.AddComponent<Outline>();
+                o.NameEdge.effectColor = new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.9f);
+                o.NameEdge.effectDistance = new Vector2(1.5f, -1.5f);
                 var eye = UiKit.NewRect("Eye", o.Root);
                 eye.anchorMin = eye.anchorMax = eye.pivot = new Vector2(0.5f, 0.5f);
                 o.Eye = eye.gameObject.AddComponent<Image>();
@@ -57,12 +59,15 @@ namespace BAM.Game
                 dia.localRotation = Quaternion.Euler(0f, 0f, 45f);
                 o.Diamond = dia.gameObject.AddComponent<Image>();
                 o.Diamond.raycastTarget = false;
-                var dEdge = o.Diamond.gameObject.AddComponent<Outline>();
-                dEdge.effectColor = new Color(0.07f, 0.05f, 0.09f, 0.9f);
-                dEdge.effectDistance = new Vector2(1.5f, -1.5f);
+                o.DiamondEdge = o.Diamond.gameObject.AddComponent<Outline>();
+                o.DiamondEdge.effectColor = new Color(0.07f, 0.05f, 0.09f, 0.9f);
+                o.DiamondEdge.effectDistance = new Vector2(1.5f, -1.5f);
                 o.ChanBack = Plain(o.Root, "ChannelBack", new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.85f));
                 o.ChanFill = Plain(o.ChanBack.rectTransform, "Fill", Color.white);
                 o.ChanFill.rectTransform.anchorMin = o.ChanFill.rectTransform.anchorMax = o.ChanFill.rectTransform.pivot = new Vector2(0f, 0.5f);
+                o.ChargeBack = Plain(o.Root, "ChargeBack", new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.85f));
+                o.ChargeFill = Plain(o.ChargeBack.rectTransform, "Fill", GlassOrange);
+                o.ChargeFill.rectTransform.anchorMin = o.ChargeFill.rectTransform.anchorMax = o.ChargeFill.rectTransform.pivot = new Vector2(0f, 0.5f);
                 o.Root.gameObject.SetActive(false);
                 overheads[i] = o;
             }
@@ -76,7 +81,9 @@ namespace BAM.Game
         void OverheadFrame(bool hidden)
         {
             bool on = !hidden && !(m.Tut != null && m.Tut.Island) && m.State != MatchState.Over;
-            float ts = canvasRect.rect.width / 11.5f; // one tile in canvas units (the camera frames 11.5 tiles across)
+            // one tile in canvas units: the camera frames 11.5 tiles over the standing frame, which is narrower than the canvas
+            // on a wide window, so the marks are sized from the camera, not from the canvas
+            float ts = cam.PixelsPerTile * (Screen.width > 1f ? canvasRect.rect.width / Screen.width : 1f);
             float dt = Time.unscaledDeltaTime;
             for (int i = 0; i < overheads.Length; i++)
             {
@@ -91,15 +98,18 @@ namespace BAM.Game
                 o.Root.anchoredPosition = at;
                 float size = ts * 1.05f;
 
-                // the name: over your own hero only (K3 clutter budget 2026-10-19), just above its bar
+                // the name: over your own hero only (K3 clutter budget 2026-10-19), small, white with a dark edge, just above the
+                // bar. The old game calls the player's own hero "You", not by its hero name.
                 bool mine = u == m.Player;
                 if (o.Name.gameObject.activeSelf != mine) o.Name.gameObject.SetActive(mine);
                 if (mine)
                 {
-                    string nm = HeroCatalog.Get(u.Hero).Name;
-                    if (!ReferenceEquals(o.Name.text, nm)) o.Name.text = nm;
-                    o.Name.fontSize = Mathf.RoundToInt(ts * 0.27f);
-                    o.Name.rectTransform.anchoredPosition = new Vector2(0f, size * 0.12f);
+                    if (o.Name.text != "You") o.Name.text = "You";
+                    o.Name.fontSize = Mathf.Max(8, Mathf.RoundToInt(ts * 0.27f));
+                    o.Name.rectTransform.sizeDelta = new Vector2(ts * 4f, ts * 0.5f);
+                    o.Name.rectTransform.anchoredPosition = new Vector2(0f, size * 0.17f);
+                    float ew = Mathf.Max(1f, ts * 0.035f);
+                    o.NameEdge.effectDistance = new Vector2(ew, -ew);
                 }
 
                 // the crossed-out eye while the enemy cannot see this hero of yours
@@ -126,8 +136,23 @@ namespace BAM.Game
                     o.Diamond.rectTransform.sizeDelta = new Vector2(side, side);
                     o.Diamond.rectTransform.anchoredPosition = new Vector2(bw * ts / 2f + 8f, 0f);
                     o.Diamond.color = ally ? new Color(0.25f, 0.95f, 0.7f, 0.95f) : new Color(1f, 0.16f, 0.2f, 0.95f);
-                    var ol = o.Diamond.GetComponent<Outline>();
-                    ol.effectColor = ally ? new Color(0.85f, 1f, 0.93f, 0.9f) : new Color(1f, 0.85f, 0.85f, 0.9f);
+                    o.DiamondEdge.effectColor = ally ? new Color(0.85f, 1f, 0.93f, 0.9f) : new Color(1f, 0.85f, 0.85f, 0.9f);
+                }
+
+                // the special's charge under your own hero's bar (Brawl Stars idea 3, Rickard 2026-10-26: a small marker under the
+                // hero that says whether the special is ready): orange filling up, bright and pulsing once it is ready
+                if (o.ChargeBack.enabled != mine) { o.ChargeBack.enabled = mine; o.ChargeFill.enabled = mine; }
+                float under = -ts * 0.12f - 6f;
+                if (mine)
+                {
+                    float k = u.Charge01, cw = bw * ts * 0.8f;
+                    bool ready = u.SpecialReady;
+                    o.ChargeBack.rectTransform.sizeDelta = new Vector2(cw + 2f, 7f);
+                    o.ChargeBack.rectTransform.anchoredPosition = new Vector2(0f, under);
+                    o.ChargeFill.rectTransform.anchoredPosition = new Vector2(1f, 0f);
+                    o.ChargeFill.rectTransform.sizeDelta = new Vector2(cw * k, 5f);
+                    o.ChargeFill.color = ready ? Color.Lerp(GlassOrange, GlassOrangeHi, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f)) : new Color(GlassOrange.r, GlassOrange.g, GlassOrange.b, 0.7f);
+                    under -= 9f;
                 }
 
                 // the interrupt window (drawChannel): a small bar under the health bar empties as it closes, orange and
@@ -145,7 +170,7 @@ namespace BAM.Game
                     bool foe = u.Team != m.Player.Team;
                     float k = Mathf.Clamp01(chT / chV), cw = bw * ts * 0.8f;
                     o.ChanBack.rectTransform.sizeDelta = new Vector2(cw + 2f, 6f);
-                    o.ChanBack.rectTransform.anchoredPosition = new Vector2(0f, -ts * 0.12f - 6f);
+                    o.ChanBack.rectTransform.anchoredPosition = new Vector2(0f, under);
                     o.ChanFill.rectTransform.anchoredPosition = new Vector2(1f, 0f);
                     o.ChanFill.rectTransform.sizeDelta = new Vector2(cw * k, 4f);
                     o.ChanFill.color = foe ? new Color(1f, 0.62f, 0.15f, 0.6f + 0.4f * Mathf.Sin(Time.unscaledTime * 30f)) : new Color(1f, 1f, 1f, 0.7f);

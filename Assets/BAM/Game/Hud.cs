@@ -48,7 +48,7 @@ namespace BAM.Game
         Match m;
         MatchViews views;
         MatchCamera cam;
-        bool built, leftHanded, tutorial, island;
+        bool built, leftHanded, laidOutHand, tutorial, island;
         int lastTutStep;
         float lastDenied, deniedUntil, shakeUntil, bannerUntil, gainAt, lastCharge;
         // who killed the player last ("Defeated by" under the respawn countdown)
@@ -86,6 +86,7 @@ namespace BAM.Game
             BeginTop();
             BeginIntro();
             BeginOverhead();
+            BeginScore();
             rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
             var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
@@ -208,12 +209,14 @@ namespace BAM.Game
             canvas.enabled = !hidden;
             rings.Frame(hidden || (Intro != null && Intro.Active));
             OverheadFrame(hidden || (Intro != null && Intro.Active));
+            VignetteFrame(hidden || (Intro != null && Intro.Active));
             if (IntroFrame()) return; // the match intro: its own bars and name tags, no controls
             var kb = Keyboard.current;
             if (!hidden && kb != null && kb.spaceKey.wasPressedThisFrame) OnTap();
 
             Top(dt);
             Center();
+            ScoreFrame();
             Special();
             Aim(hidden);
             Hint(hidden);
@@ -307,6 +310,7 @@ namespace BAM.Game
             if (aim == null) return;
             var p = m.Player;
             aim.Hide();
+            rings.SetAim(false, false, Vector2.zero, Vector2.zero, 0f);
             if (hidden || !p.Alive || m.State != MatchState.Play) return;
             var d = p.HDef;
             Vector3 hero = views.DrawnAt(p);
@@ -315,7 +319,12 @@ namespace BAM.Game
             {
                 Vector2 o = special.Offset;
                 Vector3 dir = new Vector3(o.x, 0f, o.y).normalized;
-                if (d.Drag == AimShape.Line) aim.ShowLine(hero, dir, d.DragReach, d.DragWidth * 2f, ready);
+                Vector2 from = new Vector2(p.X, p.Y), sdir = new Vector2(dir.x, -dir.z); // the rules' y runs the other way
+                if (d.Drag == AimShape.Line)
+                {
+                    aim.ShowLine(hero, dir, d.DragReach, d.DragWidth * 2f, ready);
+                    rings.SetAim(true, true, from, from + sdir * d.DragReach, d.DragWidth);
+                }
                 else if (d.Drag == AimShape.Circle)
                 {
                     float k = Mathf.Clamp01(o.magnitude / SpecialButton.MaxDrag);
@@ -323,6 +332,7 @@ namespace BAM.Game
                     // Fenn's thrown wolf stops at the first wall: show where it really lands
                     if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Mathf.Atan2(-o.y, o.x), dist);
                     aim.ShowCircle(hero + dir * dist, d.DragWidth, ready);
+                    rings.SetAim(true, false, from + sdir * dist, Vector2.zero, d.DragWidth);
                     aim.ShowRange(hero, d.DragReach);
                 }
             }
@@ -431,8 +441,9 @@ namespace BAM.Game
 
         void ApplyLayout()
         {
-            if (!built || leftHanded == BamSettings.LeftHanded) return;
+            if (!built || (laidOutHand && leftHanded == BamSettings.LeftHanded)) return;
             leftHanded = BamSettings.LeftHanded;
+            laidOutHand = true; // the first call lays the controls out even when the setting is still the default (right-handed)
             CancelTouches();
             // right-handed: joystick on the left half, special bottom right; left-handed mirrors both
             joyArea.anchorMin = new Vector2(leftHanded ? 0.5f : 0f, 0f);
@@ -547,6 +558,7 @@ namespace BAM.Game
             BuildTop();
 
             BuildPause();
+            BuildScore();
 
             BuildCenter();
 
@@ -565,6 +577,7 @@ namespace BAM.Game
             BuildFloats();
             BuildIntro();
             BuildOverhead();
+            BuildVignette();
             pointChevron = MakeChevron(canvasRect);
             ringChevron = MakeChevron(canvasRect);
             fade = UiKit.Fill(canvasRect, Color.clear);

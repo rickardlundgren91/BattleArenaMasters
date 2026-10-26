@@ -36,6 +36,9 @@ namespace BAM.Game
         Vector2 screen;
         float upp = 0.02f, lift;        // world units per screen pixel; the camera's height above the focus along its own up
 
+        /// <summary>Screen pixels one tile wide at the focus (the HUD's overhead marks size themselves by it).</summary>
+        public float PixelsPerTile => upp > 1e-6f ? 1f / upp : 1f;
+
         public Vector3 Focus => focus;
         public Camera Camera => cam;
 

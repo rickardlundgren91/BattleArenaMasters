@@ -383,7 +383,8 @@ namespace BAM.Game
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
                         : b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
                         : e.Big ? SfxId.HitHeavy : SfxId.HitLight;
-                    BamAudio.PlayAt(id, at, b != null && b.Kind == UnitKind.Minion ? 0.5f : 0.8f);
+                    // Rickard 2026-10-26: minions fight silently; only heroes, the wolf and towers make combat sounds
+                    if (e.A == null || e.A.Kind != UnitKind.Minion) BamAudio.PlayAt(id, at, b != null && b.Kind == UnitKind.Minion ? 0.5f : 0.8f);
                     break;
                 }
                 case EventType.Blocked:
@@ -401,10 +402,11 @@ namespace BAM.Game
                     ArtKit.PlayFx(FxKind.Death, Coords.Of(b), b.Kind == UnitKind.Hero ? 1.2f : 0.8f, b.Team);
                     if (b.Kind == UnitKind.Hero)
                     {
+                        bool myKill = b.Team != m.Player.Team && b.IsRealHero && e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
                         if (b == m.Player) BamAudio.Play(SfxId.HeroDeath);
+                        else if (myKill) { BamAudio.Play(SfxId.HeroDeath); BamAudio.Play(SfxId.HitHeavy); } // the kill confirm: loud, not by distance (Brawl Stars idea 5)
                         else BamAudio.PlayAt(b.Team == Teams.Player ? SfxId.AllyDeath : SfxId.HeroDeath, Coords.Of(b));
                     }
-                    else BamAudio.PlayAt(SfxId.MinionDeath, Coords.Of(b), 0.5f);
                     break;
                 }
                 case EventType.Respawn:
@@ -502,7 +504,7 @@ namespace BAM.Game
                 case UnitKind.Hero: return SfxId.AttackBram + (int)a.Hero;
                 case UnitKind.Tower: return SfxId.TowerShot;
                 case UnitKind.Wolf: return SfxId.WolfBite;
-                default: return a.Minion == MinionKind.Ranged ? SfxId.MinionRanged : a.Minion == MinionKind.Siege ? SfxId.SiegeShot : SfxId.MinionMelee;
+                default: return SfxId.None; // minions are silent (Rickard 2026-10-26)
             }
         }
 

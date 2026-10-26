@@ -27,6 +27,13 @@ namespace BAM.Game
 
         // range: three rings side by side make it thicker on a hit; target: an outer dark edge, three gold, one pulsing inner
         readonly Ring[] range = new Ring[3], charge = new Ring[2], reach = new Ring[1], target = new Ring[5], tower = new Ring[3];
+        // Brawl Stars ideas 2 and 3 (Rickard 2026-10-26): a red ring under each enemy the dragged special would hit, and an orange
+        // ring at the hero's feet while its special is ready
+        readonly Ring[] hits = new Ring[8], ready = new Ring[2];
+        static readonly Color ReadyOrange = new Color(1f, 0.54f, 0.12f), HitRed = new Color(1f, 0.2f, 0.25f);
+        bool aimOn, aimLine;
+        Vector2 aimA, aimB;
+        float aimHalf;
         Match m;
         MatchViews views;
         Unit autoTarget;
@@ -36,12 +43,13 @@ namespace BAM.Game
         {
             m = match; views = matchViews;
             autoTarget = null; autoAt = swingAt = -99f;
-            Make(range); Make(charge); Make(reach); Make(target); Make(tower);
+            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready);
+            aimOn = false;
         }
 
         public void End()
         {
-            Free(range); Free(charge); Free(reach); Free(target); Free(tower);
+            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready);
             m = null; views = null; autoTarget = null;
         }
 
@@ -71,6 +79,13 @@ namespace BAM.Game
             }
         }
 
+        /// <summary>The special being dragged, in the rules' coordinates: a line from a to b (half wide), or a circle at a (half its
+        /// radius). Set every frame by the HUD; off when the finger is not aiming.</summary>
+        public void SetAim(bool on, bool line, Vector2 a, Vector2 b, float half)
+        {
+            aimOn = on; aimLine = line; aimA = a; aimB = b; aimHalf = half;
+        }
+
         public void AfterStep()
         {
             var ev = m.Events;
@@ -96,11 +111,12 @@ namespace BAM.Game
 
             // the auto range: thin and faint, a hit flashes it thicker and brighter for a quarter second
             float hit = Mathf.Clamp01(1f - (Time.time - swingAt) / 0.25f);
-            Show(range[0], at, r, new Color(1f, 1f, 1f, hit > 0f ? 0.35f + 0.45f * hit : 0.35f));
+            // the old game's alphas (View3D.SyncRange): 0.2 resting, up to 0.6 on a swing. Faint, or it frames the hero.
+            Show(range[0], at, r, new Color(1f, 1f, 1f, hit > 0f ? 0.2f + 0.4f * hit : 0.2f));
             if (hit > 0f)
             {
-                Show(range[1], at, r * (1f + 0.025f * hit), new Color(1f, 1f, 1f, 0.6f * hit));
-                Show(range[2], at, r * (1f - 0.025f * hit), new Color(1f, 1f, 1f, 0.6f * hit));
+                Show(range[1], at, r * (1f + 0.02f * hit), new Color(1f, 1f, 1f, 0.35f * hit));
+                Show(range[2], at, r * (1f - 0.02f * hit), new Color(1f, 1f, 1f, 0.35f * hit));
             }
 
             // the attack charge grows out to the range until the next swing (none while stunned or disarmed)
@@ -108,15 +124,15 @@ namespace BAM.Game
             float k = blocked ? 0f : Mathf.Clamp01(p.AtkTimer / Mathf.Max(0.05f, p.AttackCd));
             if (k > 0.02f && k < 1f)
             {
-                Show(charge[0], at, r * k, new Color(1f, 1f, 1f, 0.25f + 0.45f * k));
-                Show(charge[1], at, r * k * 0.985f, new Color(1f, 1f, 1f, 0.15f + 0.3f * k));
+                Show(charge[0], at, r * k, new Color(1f, 1f, 1f, 0.15f + 0.3f * k)); // the old charge ring's own alpha
+                Show(charge[1], at, r * k * 0.985f, new Color(1f, 1f, 1f, 0.1f + 0.2f * k));
             }
 
             // the special's own reach while it is ready, if it differs from the auto range
             if (p.SpecialReady && p.HDef != null)
             {
                 float sr = p.HDef.TapReach;
-                if (sr > 0.5f && Mathf.Abs(sr - r) > 0.25f) Show(reach[0], at, sr, new Color(1f, 1f, 1f, 0.3f));
+                if (sr > 0.5f && Mathf.Abs(sr - r) > 0.25f) Show(reach[0], at, sr, new Color(1f, 1f, 1f, 0.12f));
             }
 
             // a thick gold ring on who the last auto attack picked: held, then fading over the last 0.4 s
@@ -131,6 +147,38 @@ namespace BAM.Game
                 Show(target[2], tp, rr * 1.035f, new Color(Gold.r, Gold.g, Gold.b, fa));
                 Show(target[3], tp, rr, new Color(Gold.r, Gold.g, Gold.b, fa));
                 Show(target[4], tp, rr * (0.72f + 0.06f * Mathf.Sin(age * 18f)), new Color(Gold.r, Gold.g, Gold.b, 0.7f * fa));
+            }
+
+            // ready: an orange ring at the hero's feet, breathing
+            if (p.SpecialReady)
+            {
+                float br = 0.5f + 0.5f * Mathf.Sin(Time.time * 5f);
+                Show(ready[0], at, p.R + 0.2f, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.65f + 0.3f * br));
+                Show(ready[1], at, (p.R + 0.2f) * (1.06f + 0.05f * br), new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.35f * br));
+            }
+
+            // the dragged special's hit preview: who is inside the shape now (walls are not checked: a guide, not a promise)
+            if (aimOn)
+            {
+                int n = 0;
+                var us = m.Units;
+                for (int i = 0; i < us.Count && n < hits.Length; i++)
+                {
+                    var u = us[i];
+                    if (!u.Alive || u.Team == p.Team || u.Kind == UnitKind.Tower || !m.IsVisibleTo(u, p.Team)) continue;
+                    var q = new Vector2(u.X, u.Y);
+                    float d;
+                    if (aimLine)
+                    {
+                        Vector2 ab = aimB - aimA;
+                        float t = Mathf.Clamp01(Vector2.Dot(q - aimA, ab) / Mathf.Max(1e-6f, ab.sqrMagnitude));
+                        d = (aimA + ab * t - q).magnitude;
+                    }
+                    else d = (q - aimA).magnitude;
+                    if (d > aimHalf + u.R) continue;
+                    Vector3 up = views.DrawnAt(u); up.y = 0f;
+                    Show(hits[n++], up, u.R + 0.25f, new Color(HitRed.r, HitRed.g, HitRed.b, 0.9f));
+                }
             }
 
             // an enemy tower near the player: its reach, red while it shoots at the player
@@ -154,7 +202,7 @@ namespace BAM.Game
 
         void HideAll()
         {
-            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower);
+            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready);
         }
 
         static void Hide(Ring[] rings)
