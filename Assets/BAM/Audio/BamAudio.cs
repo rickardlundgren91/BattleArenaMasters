@@ -115,14 +115,15 @@ namespace BAM.Audio
             if (musicLoaded != id)
             {
                 var clip = Resources.Load<AudioClip>(MusicPath(id));
-                if (clip == null) { UnityEngine.Debug.Log("[BAM.Audio] music not found: Resources/" + MusicPath(id)); musicWant = MusicId.None; return; }
+                // no file = no music, quietly: taking the track out of the build only means removing the file
+                if (clip == null) { if (!musicMissingLogged) UnityEngine.Debug.Log("[BAM.Audio] no music file at Resources/" + MusicPath(id) + ", music is off"); musicMissingLogged = true; musicWant = MusicId.None; return; }
                 if (music.clip != clip) { music.Stop(); music.clip = clip; musicGain = 0f; musicPaused = false; }
                 musicLoaded = id;
             }
             Resume();
         }
 
-        static bool musicPaused;
+        static bool musicPaused, musicMissingLogged;
         static void Resume()
         {
             if (music.isPlaying) return;
