@@ -158,6 +158,8 @@ namespace BAM.Art.Editor
         // uses the pool. Order: Idle, Run, Attack, Cast, Hit, Death, Walk.
         // Walk and Run are each hero's clips in current Speltest (Resources/Mixamo/Anim/<hero>/Walk|Run, Rickard 2026-10-26: Tikta and
         // Tyra "hukar och går snabbt": BAM played only the run, Tyra's crouched longbow RunBow, at a fixed rate). Bonk walks with Knut's walk.
+        // Bram's Idle, Hit and Dying are Speltest's current ones too (2026-10-26); his Attack1 and Attack2 stay the older clips their timing
+        // (Release) was set for, and Bonk's slam borrows that Attack2.
         static readonly string[] pool = { "Tikta/Anim/Idle", "Tikta/Anim/Run", "Fenn/Anim/Attack1", "Fenn/Anim/Cast", "Tikta/Anim/Hit", "Tikta/Anim/Dying", "Tikta/Anim/Walk" };
         // Height: a hero's sole-to-crown height in tiles as old Speltest draws it in a match (HeroScale.cs: its measured visible
         // height x 1.8 tiles x GlobalMul 0.9; Fenn 1.35, Tikta 1.20, Blast 1.16, Knut 1.14, StdVis 1.10 for Tyra, Moa 1.07, Bram 0.98).
