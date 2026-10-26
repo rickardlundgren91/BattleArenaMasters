@@ -22,7 +22,7 @@ namespace BAM.Art.Editor
         void OnPreprocessTexture()
         {
             var ti = (TextureImporter)assetImporter;
-            if (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Props/"))
+            if (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Props/") || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Wolf/"))
             {
                 // the heroes' and props' colour pictures: 1024 is plenty on a phone, compressed
                 ti.textureType = TextureImporterType.Default;
@@ -57,8 +57,23 @@ namespace BAM.Art.Editor
             ti.textureCompression = TextureImporterCompression.Compressed;
         }
 
+        // Fenn's wolf (Resources/BAMArt/Wolf): Rickard's Meshy beast on four legs can't be Humanoid, so Generic with its own
+        // skeleton, no materials (the ghost material goes on at runtime) and Meshy's one clip, the walk, looping in place (old AbcKovaFormsImport)
+        bool IsWolf => assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Wolf/") && assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase);
+
         void OnPreprocessModel()
         {
+            if (IsWolf)
+            {
+                var wm = (ModelImporter)assetImporter;
+                wm.animationType = ModelImporterAnimationType.Generic;
+                wm.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+                wm.materialImportMode = ModelImporterMaterialImportMode.None;
+                wm.importAnimation = true;
+                wm.importBlendShapes = false; wm.importCameras = false; wm.importLights = false;
+                wm.isReadable = false;
+                return;
+            }
             if (!Ours) return;
             var mi = (ModelImporter)assetImporter;
             mi.animationType = ModelImporterAnimationType.Human;
@@ -82,6 +97,21 @@ namespace BAM.Art.Editor
 
         void OnPreprocessAnimation()
         {
+            if (IsWolf)
+            {
+                var wm = (ModelImporter)assetImporter;
+                ModelImporterClipAnimation[] wc = wm.defaultClipAnimations;
+                if (wc == null) return;
+                foreach (ModelImporterClipAnimation c in wc)
+                {
+                    c.name = "Walk"; c.loopTime = true;
+                    c.lockRootRotation = true; c.keepOriginalOrientation = true;
+                    c.lockRootHeightY = true; c.keepOriginalPositionY = true;
+                    c.lockRootPositionXZ = true; c.keepOriginalPositionXZ = true;
+                }
+                wm.clipAnimations = wc;
+                return;
+            }
             if (!Ours || !IsClip) return;
             var mi = (ModelImporter)assetImporter;
             ModelImporterClipAnimation[] clips = mi.defaultClipAnimations;

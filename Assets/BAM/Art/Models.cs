@@ -27,6 +27,8 @@ namespace BAM.Art
         /// <summary>Rickard's Meshy model (Props), hung on bone PropBone; null = only the code mesh.</summary>
         public Mesh PropMesh;
         public Texture2D PropTex;
+        /// <summary>Fenn's wolf: Rickard's rigged Meshy wolf with its walk (Resources/BAMArt/Wolf, as old Speltest's KovaForms/Wolf).</summary>
+        public GameObject RigModel;
         public int PropBone;
         public Vector3 PropOffset, PropEuler;
         public float PropScale = 1f;
@@ -146,8 +148,11 @@ namespace BAM.Art
             int k = Key(3, 0, team);
             if (cache.TryGetValue(k, out RigDef d)) return d;
             b.Clear();
-            Mesh wolfProp = Props.Mesh("fenn_wolf");
-            d = BuildWolf(team, wolfProp != null);
+            // the rigged wolf that runs with its own walk, as old Speltest (View3DWolf.cs); the still mesh only without it
+            GameObject rig = Resources.Load<GameObject>("BAMArt/Wolf/Wolf");
+            Mesh wolfProp = rig != null ? null : Props.Mesh("fenn_wolf");
+            d = BuildWolf(team, wolfProp != null || rig != null);
+            if (rig != null) { d.RigModel = rig; d.Height = 1.6f; d.Radius = 0.55f; }
             if (wolfProp != null)
             {
                 // the Meshy wolf faces -z; scaled 1.05 as old Speltest (View3D.cs): about 2 tiles nose to tail, 1.6 high

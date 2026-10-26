@@ -129,6 +129,7 @@ namespace BAM.Art
             fadeMats = new[] { fade };
             ghostMats = d.Ghost ? new[] { opaque } : new Material[0];
             if (d.PropMesh != null) AddProp(d);
+            if (d.RigModel != null) AddWolfRig(d);
         }
 
         // Rickard's Meshy model on one bone, with its own texture on our materials (flash, fade and ghost work as on the rest)
@@ -168,6 +169,74 @@ namespace BAM.Art
             rends = new[] { rends[0], r };
             opaqueSets = new[] { opaqueSets[0], new[] { o } };
             fadeSets = new[] { fadeSets[0], new[] { f } };
+        }
+
+        AnimationClipPlayable wolfWalk;
+
+        // Fenn's wolf as old Speltest draws it (View3DWolf.cs): Rickard's rigged Meshy wolf on the body bone, turned so hips to head
+        // points forward, about 2 tiles nose to tail, see-through turquoise like the rest of the ghost, its walk played as it runs
+        void AddWolfRig(RigDef d)
+        {
+            Transform holder = bones[Models.WolfBody];
+            var go = Instantiate(d.RigModel, holder, false);
+            go.name = "SpectralWolf";
+            Transform t = go.transform;
+            t.localPosition = Vector3.zero; t.localRotation = Quaternion.identity; t.localScale = Vector3.one;
+            Transform hips = null, head = null;
+            foreach (Transform tr in go.GetComponentsInChildren<Transform>(true)) { if (tr.name == "Hips") hips = tr; else if (tr.name == "head") head = tr; }
+            if (hips != null && head != null)
+            {
+                Vector3 dd = t.InverseTransformPoint(head.position) - t.InverseTransformPoint(hips.position);
+                if (dd.x * dd.x + dd.z * dd.z > 1e-8f) t.localRotation = Quaternion.Euler(0f, -Mathf.Atan2(dd.x, dd.z) * Mathf.Rad2Deg, 0f);
+            }
+            // size and ground from the bones (a skinned mesh's own bounds are not reliable before it has drawn)
+            Bounds kb = default; bool any = false;
+            foreach (Transform tr in go.GetComponentsInChildren<Transform>(true))
+                if (tr != t && tr.GetComponent<Renderer>() == null) { Vector3 p = holder.InverseTransformPoint(tr.position); if (!any) { kb = new Bounds(p, Vector3.zero); any = true; } else kb.Encapsulate(p); }
+            if (any && kb.size.z > 1e-4f)
+            {
+                float s = 2.0f / (kb.size.z * 1.12f);
+                t.localScale = new Vector3(s, s, s);
+                t.localPosition = new Vector3(-kb.center.x * s, -d.Pivots[Models.WolfBody].y - kb.min.y * s + 0.03f, -kb.center.z * s);
+            }
+            Texture2D tex = Resources.Load<Texture2D>("BAMArt/Wolf/Wolf_Tex");
+            Material o = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+            if (tex != null) { o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex; }
+            Renderer[] rs = go.GetComponentsInChildren<Renderer>(true);
+            var r2 = new Renderer[rends.Length + rs.Length];
+            var o2 = new Material[rends.Length + rs.Length][];
+            var f2 = new Material[rends.Length + rs.Length][];
+            for (int i = 0; i < rends.Length; i++) { r2[i] = rends[i]; o2[i] = opaqueSets[i]; f2[i] = fadeSets[i]; }
+            for (int i = 0; i < rs.Length; i++)
+            {
+                Renderer r = rs[i];
+                var ms = new Material[Mathf.Max(1, r.sharedMaterials.Length)];
+                for (int j = 0; j < ms.Length; j++) ms[j] = o;
+                r.sharedMaterials = ms;
+                r.shadowCastingMode = ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                if (r is SkinnedMeshRenderer sk) sk.updateWhenOffscreen = true;
+                r2[rends.Length + i] = r; o2[rends.Length + i] = ms; f2[rends.Length + i] = ms;
+            }
+            rends = r2; opaqueSets = o2; fadeSets = f2;
+            ghostMats = new[] { ghostMats.Length > 0 ? ghostMats[0] : opaque, o };
+            ghostTint = new Color(0.55f, 1f, 0.95f, 1f);
+
+            AnimationClip clip = null;
+            foreach (AnimationClip c in Resources.LoadAll<AnimationClip>("BAMArt/Wolf/Wolf")) if (!c.name.StartsWith("__preview__")) { clip = c; break; }
+            if (clip == null) return;
+            Animator an = go.GetComponent<Animator>();
+            if (an == null) an = go.AddComponent<Animator>();
+            an.runtimeAnimatorController = null;
+            an.applyRootMotion = false;
+            an.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            graph = PlayableGraph.Create("BAM spectral wolf");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            var output = AnimationPlayableOutput.Create(graph, "Anim", an);
+            wolfWalk = AnimationClipPlayable.Create(graph, clip);
+            wolfWalk.SetSpeed(0.0);
+            output.SetSourcePlayable(wolfWalk);
+            graph.Play();
         }
 
         // Rickard's model: scaled to the hero's height, feet on the ground, his texture on our lit material (so the hit flash
@@ -572,13 +641,17 @@ namespace BAM.Art
 
             if (!dead && renderersOn && vis >= 0.99f) SpellLooks(dt);
             // Fenn's wolf leaves a ghostly trail of wisps as it runs (MLBB analysis 4, Fenn)
-            if (def.Kind == RigKind.Wolf && moving && !dead && renderersOn && vis >= 0.99f)
+            // as old Speltest's SpectralWolf: turquoise wisps burn off its back and trail behind (more on the run), white-turquoise sparks rise
+            if (def.Kind == RigKind.Wolf && !dead && renderersOn && vis >= 0.99f)
             {
                 dustT -= dt;
                 if (dustT <= 0f)
                 {
-                    dustT = ArtKit.High ? 0.08f : 0.16f;
-                    Fx.Wisps(transform.position + new Vector3(0f, 0.35f, 0f) - transform.forward * 0.3f, 1, Fx.HeroMain(HeroId.Fenn), 0.35f, 0.15f, 0.45f, 0.3f, 0.12f);
+                    float rate = 22f + 30f * moveW;
+                    dustT = (ArtKit.High ? 1f : 2f) / rate;
+                    Vector3 f = transform.forward, p = transform.position + f * Random.Range(-0.5f, 0.3f) + new Vector3(Random.Range(-0.2f, 0.2f), Random.Range(0.35f, 1.1f), Random.Range(-0.2f, 0.2f));
+                    Fx.Wisps(p, 1, new Color32(89, 255, 235, 200), Random.Range(0.3f, 0.5f), 0.3f, Random.Range(0.45f, 0.9f), 0.7f, 0.05f);
+                    if (Random.value < 10f / rate) Fx.Sparks(transform.position + new Vector3(0f, Random.Range(0.2f, 0.9f), 0f), 2, new Color32(220, 255, 250, 255), 0.07f, 0.5f, 0.7f, 1.3f, 0.35f);
                 }
             }
 
@@ -778,6 +851,7 @@ namespace BAM.Art
 
         void PoseWolf(float dt)
         {
+            if (wolfWalk.IsValid()) wolfWalk.SetSpeed(moveW * (1.1f + speed01 * 0.3f)); // the walk runs as it moves and holds when it stands
             float s = Mathf.Sin(phase * 1.2f) * 40f * moveW;
             float idle = Mathf.Sin(idleT * 3f + seed);
             float lunge = 0f, headX = idle * 3f * (1f - moveW);
