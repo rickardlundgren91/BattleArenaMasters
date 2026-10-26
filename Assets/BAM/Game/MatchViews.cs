@@ -428,7 +428,8 @@ namespace BAM.Game
                     // Bonk's club has no shot: it lands e.V s later as an Explosion of ProjKind.BonkClub (cracks and dust)
                     if ((ProjKind)e.Kind == ProjKind.BonkClub) { Sound(SfxId.BonkSlamWindup, a, e.Big ? 0.8f : 0.55f); break; }
                     pending.Add(new Pending { A = a.Serial, Src = a, Tgt = e.B, Kind = (ProjKind)e.Kind });
-                    Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
+                    // a tower's shot is heard only when it aims at you (Speltest)
+                    if (a.Kind != UnitKind.Tower || e.B == m.Player) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
                     break;
                 }
                 case EventType.Hit:
@@ -448,9 +449,11 @@ namespace BAM.Game
                     if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? b.Team : 0);
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
                         : b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
-                        : e.Big ? SfxId.HitHeavy : SfxId.HitLight;
+                        // as in Speltest's sound mix v2: the plain hit thumps only when a hero's (or the wolf's) blow lands on you
+                        : b == m.Player && e.A != null && (e.A.Kind == UnitKind.Hero || e.A.Kind == UnitKind.Wolf) ? (e.Big ? SfxId.HitHeavy : SfxId.HitLight)
+                        : SfxId.None;
                     // Rickard 2026-10-26: minions fight silently; only heroes, the wolf and towers make combat sounds
-                    if (e.A == null || e.A.Kind != UnitKind.Minion) BamAudio.PlayAt(id, at, b != null && b.Kind == UnitKind.Minion ? 0.5f : 0.8f);
+                    if (id != SfxId.None && (e.A == null || e.A.Kind != UnitKind.Minion)) BamAudio.PlayAt(id, at, b != null && b.Kind == UnitKind.Minion ? 0.5f : 0.8f);
                     break;
                 }
                 case EventType.Blocked:
@@ -471,7 +474,7 @@ namespace BAM.Game
                     {
                         bool myKill = b.Team != m.Player.Team && b.IsRealHero && e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
                         if (b == m.Player) BamAudio.Play(SfxId.HeroDeath);
-                        else if (myKill) { BamAudio.Play(SfxId.HeroDeath); BamAudio.Play(SfxId.HitHeavy); } // the kill confirm: loud, not by distance (Brawl Stars idea 5)
+                        else if (myKill) BamAudio.Play(SfxId.HeroDeath); // the kill confirm: loud, not by distance (Brawl Stars idea 5); no extra chime (Speltest sound mix v2)
                         else BamAudio.PlayAt(b.Team == Teams.Player ? SfxId.AllyDeath : SfxId.HeroDeath, Coords.Of(b));
                     }
                     break;
@@ -546,7 +549,8 @@ namespace BAM.Game
                     float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? e.A.Team : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
-                        : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk : SfxId.HitHeavy;
+                        : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
+                        : pk == ProjKind.BramHammer ? SfxId.BramHammerBounce : SfxId.None;
                     BamAudio.PlayAt(boom, at);
                     break;
                 }

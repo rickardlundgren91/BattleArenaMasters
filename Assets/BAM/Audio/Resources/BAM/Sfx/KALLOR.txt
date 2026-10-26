@@ -1,0 +1,10 @@
+Rickard's AI clips from Speltest ABC2/Resources/Sfx (copied 2026-10-26). File here <- Speltest file:
+UiTap/UiBack/UiConfirm/UiToggle <- click | Countdown <- tick | CountdownGo <- go | Victory <- victory | Defeat <- defeat
+Attack<Hero> <- atk_<hero> (Bram Fenn Tyra Moa Knut Tikta Blast)
+BramHammerThrow <- hammer | BramHammerBounce <- clank | FennWolfCall/FennWolfThrow <- sp_fenn | TyraRelease <- sp_tyra
+MoaShield/MoaField <- sp_moa | KnutAnchorThrow <- sp_knut | KnutAnchorHook <- clink | TiktaNeedles <- sp_tikta
+BlastBombThrow/BlastFireLane <- sp_blast | BlastExplosion/BlastChainBoom <- boom
+HitLight/HitHeavy <- hit (only when a hero hits you) | CloneAppear <- blink | TowerShot <- tower (only when aimed at you)
+TowerDestroyed <- towerdown | HeroDeath/AllyDeath <- herodeath | Respawn <- respawn | LevelUp <- levelUp | LowHealth <- heartbeat
+Bonk (new hero, no Speltest sounds of his own): BonkSlamWindup <- warrior_swing | BonkSlam <- rockcrack | BonkBoulderThrow <- sp_oaken | BonkKnock <- wallcrash
+Silent (no file, synth muted): TyraDraw, ShieldBlock, Stunned, WolfBite, CloneVanish, MinionMelee, MinionRanged, SiegeShot, MinionDeath, WaveSpawn, GrassEnter, SpecialReady, AttackBonk
