@@ -33,6 +33,8 @@ namespace BAM.Audio
         static readonly AudioClip[] clips = new AudioClip[SfxRecipes.Count];
         static readonly SfxInfo[] info = new SfxInfo[SfxRecipes.Count];
         static readonly float[] lastStart = new float[SfxRecipes.Count], lastVol = new float[SfxRecipes.Count];
+        // 1 for synth clips; for a recorded file, the gain that brings it to the synth clips' loudness
+        static readonly float[] clipGain = new float[SfxRecipes.Count];
         static SfxSynth synth;
         static int nextBuild = 1;
         static double buildMs;
@@ -115,6 +117,7 @@ namespace BAM.Audio
             if (musicLoaded != id)
             {
                 var clip = Resources.Load<AudioClip>(MusicPath(id));
+                if (clip == null && id == MusicId.Menu) clip = Resources.Load<AudioClip>(MusicPath(MusicId.Match)); // Rickard: Byte Strike for all music for now
                 // no file = no music, quietly: taking the track out of the build only means removing the file
                 if (clip == null) { if (!musicMissingLogged) UnityEngine.Debug.Log("[BAM.Audio] no music file at Resources/" + MusicPath(id) + ", music is off"); musicMissingLogged = true; musicWant = MusicId.None; return; }
                 if (music.clip != clip) { music.Stop(); music.clip = clip; musicGain = 0f; musicPaused = false; }
@@ -134,8 +137,8 @@ namespace BAM.Audio
         /// <summary>Fades the music out (it is paused, not rewound).</summary>
         public static void StopMusic() => PlayMusic(MusicId.None);
 
-        // one track for now; the menu shares the match loop until there is a menu track of its own
-        static string MusicPath(MusicId id) => "BAM/Music/ByteStrikeLoop";
+        // the menu track is optional: until Rickard drops Resources/BAM/Music/Menu in, the menu plays the match loop
+        static string MusicPath(MusicId id) => id == MusicId.Menu ? "BAM/Music/Menu" : "BAM/Music/ByteStrikeLoop";
 
         /// <summary>Silences everything at once (pause, leaving a match); the music fades out quickly and can be resumed.</summary>
         public static void StopAll()
@@ -183,6 +186,7 @@ namespace BAM.Audio
             a.clip = clip;
             a.pitch = pitch;
             a.panStereo = pan;
+            v *= clipGain[k];
             a.volume = Mathf.Min(1f, v * master);
             a.Play();
 
@@ -208,12 +212,43 @@ namespace BAM.Audio
         static AudioClip Build(int k)
         {
             var sw = Stopwatch.StartNew();
+            // a recorded clip dropped in Resources/BAM/Sfx/<SfxId name> replaces the synth recipe (Rickard's own AI clips)
+            var file = Resources.Load<AudioClip>(SfxFolder + ((SfxId)k).ToString());
+            if (file != null)
+            {
+                clips[k] = file;
+                clipGain[k] = FileGain(file, info[k].Level);
+                buildMs += sw.Elapsed.TotalMilliseconds;
+                return file;
+            }
+            clipGain[k] = 1f;
             var data = SfxRecipes.Render(synth, (SfxId)k);
             var clip = AudioClip.Create("bam_" + (SfxId)k, data.Length, 1, SfxSynth.Rate, false);
             clip.SetData(data, 0);
             clips[k] = clip;
             buildMs += sw.Elapsed.TotalMilliseconds;
             return clip;
+        }
+
+        const string SfxFolder = "BAM/Sfx/";
+        const float FileTargetRms = 0.15f; // the synth's own target (SfxSynth.Finish)
+
+        // Loudness of a file over its sounding part, so files from different sessions sit at the same level as the synth.
+        // A clip that cannot be read (streamed or compressed in memory) keeps its own level.
+        static float FileGain(AudioClip c, float level)
+        {
+            int n = c.samples * c.channels;
+            if (n <= 0 || n > 44100 * 2 * 4) return level;
+            var d = new float[n];
+            if (!c.GetData(d, 0)) return level;
+            float peak = 0f;
+            for (int i = 0; i < n; i++) { float a = Math.Abs(d[i]); if (a > peak) peak = a; }
+            if (peak < 1e-4f) return 1f;
+            double sum = 0; int cnt = 0; float floor = peak * 0.05f;
+            for (int i = 0; i < n; i++) { float a = Math.Abs(d[i]); if (a > floor) { sum += (double)a * a; cnt++; } }
+            float rms = (float)Math.Sqrt(sum / Math.Max(1, cnt));
+            // never push a peak past full scale
+            return Mathf.Clamp(Mathf.Min(FileTargetRms * level / Mathf.Max(rms, 1e-4f), 0.95f / peak), 0.2f, 3f);
         }
 
         static void BuildNext()
