@@ -20,6 +20,7 @@ namespace BAM.UI
         static RectTransform homeHero; // the letter badge, only if the 3D model could not be made
         static RawImage homePortraitImg;
         static Text homeName, homeTitle, playSub;
+        static GameObject homeTutCard;
 
         const float Cw = 10.8f;                 // cw(1) at the design width
         const float HeroH = 70 * Cw;            // the old heroH: min(cw(70), room under the top bar), always cw(70) on a phone
@@ -49,6 +50,7 @@ namespace BAM.UI
             homeName.text = info.Name;
             homeTitle.text = info.Title;
             playSub.text = "3V3 · VS BOTS · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant();
+            homeTutCard.SetActive(BamSettings.TutorialCard);
             homeFx.Layout();
         }
 
@@ -182,6 +184,7 @@ namespace BAM.UI
                 BuildStage();
                 BuildRow();
                 BuildTopBar();
+                BuildTutCard();
                 top.SetAsLastSibling(); // the top bar over the hero
                 Layout();
             }
@@ -484,6 +487,33 @@ namespace BAM.UI
                 b.navigation = new Navigation { mode = Navigation.Mode.None };
                 b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); ShowTab(2); });
                 btn.gameObject.AddComponent<ButtonFx>();
+            }
+
+            // HubTutCard (the old MenuNewPlayer.cs): after the first tutorial, "Tutorial done" and "Next: your first match" on a dark
+            // mint card under the top bar; a tap or the first finished match takes it away. The old card said "+100 XP"; BAM has no
+            // XP yet, so that part is left out. It sits under the gear, which the old Home did not have there.
+            void BuildTutCard()
+            {
+                float y = 29 * Cw, h = 13 * Cw, r = 3 * Cw;
+                var card = Img(top, "TutorialCard", UiKit.Rounded, new Color(10 / 255f, 40 / 255f, 34 / 255f, 0.92f));
+                Round(card, r);
+                card.raycastTarget = true;
+                AtTop(card.rectTransform, 4 * Cw, y, 1080 - 8 * Cw, h);
+                var edge = Img(card.rectTransform, "Edge", HomeArt.RoundRing(0.4f * Cw / r), UiKit.Primary);
+                RoundRing(edge, r);
+                var title = Lil(card.rectTransform, "Tutorial done", 4f, Color.white);
+                At(title, 540 - 4 * Cw, h * (1 - 0.36f), 1000, 6 * Cw);
+                var next = Lil(card.rectTransform, "Next: your first match", 3f, UiKit.Primary);
+                next.font = UiKit.BodyFont;
+                next.fontStyle = FontStyle.Bold;
+                At(next, 540 - 4 * Cw, h * (1 - 0.72f), 1000, 5 * Cw);
+                var b = card.gameObject.AddComponent<Button>();
+                b.targetGraphic = card;
+                b.transition = Selectable.Transition.None;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); BamSettings.TutorialCard = false; homeTutCard.SetActive(false); });
+                homeTutCard = card.gameObject;
+                homeTutCard.SetActive(false);
             }
 
             // ---- per frame ----

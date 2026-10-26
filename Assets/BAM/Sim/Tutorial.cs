@@ -3,17 +3,20 @@ using System;
 namespace BAM.Sim
 {
     /// <summary>
-    /// The guided first match (the old game's "first battle", SimLoop.cs): one walk up the lane of the real arena with Tyra. Four
+    /// The guided first match (the old game's "first battle", SimLoop.cs): one walk up the lane of the real arena with Tyra. Five
     /// moments, one short line at a time: 1 move, 2 auto attack a harmless practice target, 3 its hits charge the real special and
-    /// the special bursts the target, 4 break the enemy tower, which falls to exactly TowerHits of Tyra's auto attacks while Knut
-    /// walks to and fro in front of it (harmless, never a target). No waves, no timers, no failure. The match screen reads this.
+    /// the special bursts the target, 4 (new, Rickard 2026-10-26) Knut, who walked to and fro in front of the tower until then,
+    /// comes down the lane and fights back weakly until Tyra takes him down, 5 break the enemy tower, which falls to exactly
+    /// TowerHits of Tyra's auto attacks. No waves, no timers, no failure. The match screen reads this.
     /// </summary>
     public sealed class Tutorial
     {
-        public const int StepMove = 0, StepAuto = 1, StepSpecial = 2, StepTower = 3;
+        public const int StepMove = 0, StepAuto = 1, StepSpecial = 2, StepFight = 3, StepTower = 4;
         /// <summary>The opening: the camera rests on the enemy tower for OpenHold s, then glides down the lane to Tyra by OpeningTime.</summary>
         public const float OpenHold = 1.3f, OpeningTime = 2.4f;
         public const int TowerHits = 6;
+        /// <summary>Moment 1's ring on the lane (Tyra walks to it, or any 2.5 tiles).</summary>
+        public const float MarkX = 7.5f, MarkY = 16.2f;
         /// <summary>The practice target bursts this long after the special hit it (the special's own effect shows first).</summary>
         public const float BurstDelay = 0.15f;
 
@@ -28,13 +31,25 @@ namespace BAM.Sim
         public float HitAt = -99;
         /// <summary>The enemy tower fell: the guided match is complete.</summary>
         public bool Done;
+        /// <summary>When the tower fell (Match.Time), for the end screen.</summary>
+        public float DoneAt = -99;
+        /// <summary>Tyra's confirmed hits (a rise of the real charge) at these match times, newest last: "+ CHARGE" flies from her to the button.</summary>
+        public readonly float[] ChargeTimes = new float[8];
+        public int ChargeCount;
+        /// <summary>Confirmed hits on the tower so far (its bar is TowerHits blocks) and when the last one landed.</summary>
+        public int TowerHitsTaken => TowerHitCount;
+        public float LastTowerHit => TowerHitAt;
 
-        internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1;
+        internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1;
         internal int Gained, TowerHitCount;
         internal bool Burst;
+        /// <summary>The special hit the practice target (it bursts a moment later).</summary>
+        public bool BurstDone => Burst;
+        /// <summary>How long the current line has been up (the screen fades it in over its first 0.3 s).</summary>
+        public float LineShown => Shown;
 
         // ---------- the training island (the first half, Fenn; TutorialIsland.cs). Unused in the arena half. ----------
-        public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandRandom = 3, IslandOnly = 4, IslandPad = 5;
+        public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandTarget = 3, IslandPad = 4;
         /// <summary>This is the island half: Step is one of the Island* steps, Done means the boost pad threw Fenn and the
         /// picture has faded to black, so the game starts the arena half (a new Match with Tutorial and without Island).</summary>
         public bool Island;
@@ -68,16 +83,18 @@ namespace BAM.Sim
     public sealed partial class Match
     {
         // positions: the old ones mirrored onto our map (y -> 35 - y); the enemy tower is at (7.5, 5.5)
-        const float TutStartX = 7.5f, TutStartY = 19f, TutMarkX = 7.5f, TutMarkY = 16.2f, TutDummyX = 7.5f, TutDummyY = 12f;
+        const float TutStartX = 7.5f, TutStartY = 19f, TutMarkX = Tutorial.MarkX, TutMarkY = Tutorial.MarkY, TutDummyX = 7.5f, TutDummyY = 12f;
         // Knut walks calmly side to side 2 tiles in front of the tower, right of the lane, so he never crosses Tyra's shots at it
         const float TutGuardY = 7.5f, TutGuardX0 = 9.0f, TutGuardX1 = 10.3f, TutGuardPace = 0.5f;
         const float TutMoveDist = 2.5f;   // tiles walked (any way) that end moment 1
         const float TutLineMin = 1.3f;    // the least time a line stays up
         const float TutRefill = 0.35f;    // the practice target refills below this share of its health, so it lasts until the special
         const float TutAfterBurst = 0.7f; // then moment 4
+        // moment 4: Knut comes down the lane and fights back, weakly (Tyra takes about 5 hits to beat him, he barely scratches her)
+        const float TutKnutHp = 260f, TutKnutDmg = 0.4f, TutKnutPace = 0.8f, TutAfterFight = 0.8f, TutPlayerFloor = 0.4f;
 
         const string LineMove = "Move with the joystick!", LineAuto = "Get close. Tyra attacks automatically!",
-            LineSpecial = "SPECIAL READY! Tap to use it!", LineTower = "Towers shoot! Destroy this one!";
+            LineSpecial = "SPECIAL READY! Tap to use it!", LineFight = "An enemy hero! Take Knut down!", LineTower = "Towers shoot! Destroy this one!";
 
         void StartTutorial()
         {
@@ -101,7 +118,7 @@ namespace BAM.Sim
             d.MaxHp = d.Hp = Rules.TutorialMinionHp;
             tu.Dummy = d;
 
-            // the guard: no bot, no attacks, no special, never in a target list
+            // the guard: no bot, no attacks, no special, never in a target list until moment 4 (StartFight)
             var k = NewHero(HeroId.Knut, Teams.Enemy, TutGuardX0, TutGuardY);
             k.Dummy = true;
             AddStatus(k, St.Disarm, 1e9f); AddStatus(k, St.Untargetable, 1e9f);
@@ -119,6 +136,7 @@ namespace BAM.Sim
                 case Tutorial.StepAuto: return LineAuto;
                 // no line until the special is ready: the screen flies "+ CHARGE" into the button instead
                 case Tutorial.StepSpecial: return !tu.Burst && Player.SpecialReady ? LineSpecial : null;
+                case Tutorial.StepFight: return tu.Guard != null && tu.Guard.Alive ? LineFight : null;
                 default: return LineTower;
             }
         }
@@ -138,7 +156,12 @@ namespace BAM.Sim
             tu.T += dt;
             RefreshTutorial();
             // a confirmed hit is a rise of the real charge (no charge for misses, wall-blocked or dropped shots, or the special)
-            if (p.Charge > tu.LastCharge) tu.Gained++;
+            if (p.Charge > tu.LastCharge)
+            {
+                tu.Gained++;
+                if (tu.ChargeCount == tu.ChargeTimes.Length) { Array.Copy(tu.ChargeTimes, 1, tu.ChargeTimes, 0, tu.ChargeCount - 1); tu.ChargeCount--; }
+                tu.ChargeTimes[tu.ChargeCount++] = Time;
+            }
             tu.LastCharge = p.Charge;
             var d = tu.Dummy;
             if (d != null && d.Alive)
@@ -148,12 +171,21 @@ namespace BAM.Sim
                 else if (d.Hp < d.MaxHp * TutRefill) d.Hp = d.MaxHp; // refilled quietly (no heal numbers)
             }
             var k = tu.Guard;
-            if (k != null && k.Alive)
+            if (k != null && k.Alive && tu.Step < Tutorial.StepFight)
             {
                 if (k.X >= TutGuardX1) tu.GuardDir = -1; else if (k.X <= TutGuardX0) tu.GuardDir = 1;
                 MoveUnit(k, tu.GuardDir * TutGuardPace, 0, dt);
                 k.Y = TutGuardY;
             }
+            else if (k != null && k.Alive)
+            {
+                // the fight: Knut walks at Tyra until she is in his reach, then stands and swings
+                float dx = p.X - k.X, dy = p.Y - k.Y, dist = SimMath.Hypot(dx, dy);
+                if (p.Alive && dist > (k.Range + p.R) * 0.9f) MoveUnit(k, dx / dist * TutKnutPace, dy / dist * TutKnutPace, dt);
+                // Tyra cannot lose the guided match
+                if (p.Alive && p.Hp < p.MaxHp * TutPlayerFloor) p.Hp = p.MaxHp * TutPlayerFloor;
+            }
+            else if (k != null) k.RespawnT = 1e9f; // Knut stays down
             if (!tu.Opening) tu.Moved += SimMath.Hypot(p.X - tu.Lx, p.Y - tu.Ly);
             tu.Lx = p.X; tu.Ly = p.Y;
             if (tu.Line != null) tu.Shown += dt;
@@ -167,9 +199,22 @@ namespace BAM.Sim
                     }
                     break;
                 case Tutorial.StepAuto: if (tu.Gained > 0 && tu.Shown >= TutLineMin) TutNext(Tutorial.StepSpecial); break; // once Tyra has hit and the line could be read
-                case Tutorial.StepSpecial: if (tu.Burst && Time - tu.BurstAt >= TutAfterBurst) TutNext(Tutorial.StepTower); break;
+                case Tutorial.StepSpecial: if (tu.Burst && Time - tu.BurstAt >= TutAfterBurst) { TutNext(Tutorial.StepFight); StartFight(); } break;
+                case Tutorial.StepFight:
+                    if (k == null || !k.Alive) { if (tu.KnutDownAt < 0) tu.KnutDownAt = Time; if (Time - tu.KnutDownAt >= TutAfterFight) TutNext(Tutorial.StepTower); }
+                    break;
             }
             RefreshTutorial();
+        }
+
+        // moment 4: Knut becomes a real (weak) enemy: a target for Tyra, and his own swings hurt her a little
+        void StartFight()
+        {
+            var k = Tut.Guard;
+            if (k == null || !k.Alive) return;
+            k.RemoveAll(St.Disarm); k.RemoveAll(St.Untargetable);
+            k.MaxHp = k.Hp = TutKnutHp; k.DmgMult = TutKnutDmg;
+            Tut.KnutDownAt = -1;
         }
 
         /// <summary>DealDamage, for the guided match's enemy tower and practice target only. The tower: only Tyra's own auto attacks
@@ -186,7 +231,7 @@ namespace BAM.Sim
             }
             if (tu.Step != Tutorial.StepTower || kind != DmgKind.Auto || src == null || src != p) return 0;
             tu.TowerHitCount++; tu.TowerHitAt = Time;
-            if (tu.TowerHitCount >= Tutorial.TowerHits) { tu.Done = true; tu.Line = null; return tgt.Hp; } // the tower falls and the match ends (team 0 wins)
+            if (tu.TowerHitCount >= Tutorial.TowerHits) { tu.Done = true; tu.DoneAt = Time; tu.Line = null; return tgt.Hp; } // the tower falls and the match ends (team 0 wins)
             return tgt.Hp / (Tutorial.TowerHits - tu.TowerHitCount + 1);
         }
     }

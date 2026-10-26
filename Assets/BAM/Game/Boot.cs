@@ -40,7 +40,12 @@ namespace BAM.Game
             BamAnalytics.Init();
             Flow.Game = flow;
 
-            Screens.ShowConsentIfNeeded(Screens.ShowMainMenu);
+            // the very first start goes straight into the guided match (GameFlow.StartFirstTutorial), with a Skip button
+            Screens.ShowConsentIfNeeded(() =>
+            {
+                Screens.ShowMainMenu();
+                if (!BamSettings.TutorialDone) flow.StartFirstTutorial();
+            });
             Debug.Log("[BAM.Game] " + BamInfo.AppName + " " + Application.version + " started");
         }
 

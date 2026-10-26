@@ -14,7 +14,6 @@ namespace BAM.UI
     public static partial class Screens
     {
         static GameObject mainMenu, heroSelect, modes;
-        static bool tutorialOffered; // once per app run, so Play is never nagging
 
         static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard" };
         static readonly string[] StatNames = { "Health", "Damage", "Speed", "Difficulty" };
@@ -25,19 +24,9 @@ namespace BAM.UI
             badge.GetComponentInChildren<Text>().text = HeroCatalog.Get(id).Name.Substring(0, 1);
         }
 
-        static void OnPlay()
-        {
-            if (!BamSettings.TutorialDone && !tutorialOffered)
-            {
-                tutorialOffered = true;
-                dialog.Show("New to the arena?", "Play a short guided match first to learn how to move, attack and use your special.",
-                    "Skip", StartBotMatch,
-                    "Tutorial", StartTutorial,
-                    UiKit.Muted, UiKit.Primary, () => dialog.Hide());
-                return;
-            }
-            StartBotMatch();
-        }
+        // The tutorial is not offered here any more: the very first start goes into it by itself (GameFlow.StartFirstTutorial,
+        // the old MenuNewPlayer), with a Skip button. Training in MODES plays it again.
+        static void OnPlay() => StartBotMatch();
 
         static void StartBotMatch()
         {

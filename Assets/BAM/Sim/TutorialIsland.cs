@@ -22,20 +22,24 @@ namespace BAM.Sim
         const int IslandW = 13, IslandH = 50, IslandBridgeX0 = 5; // the bridge is 3 tiles wide from this column
         const float IslandNeckY = 16.5f;   // until the bridge opens Fenn cannot walk past the platform's edge
         const float IslandCamY = 11.4f;    // the island is framed on one screen until then
-        const float IslandFirstPause = 1.8f, IslandStepPause = 1f, IslandFadeOut = 0.6f;
+        // Rickard 2026-10-26 (a shorter, Brawl Stars-like tutorial): half the pause between steps
+        const float IslandFirstPause = 1.8f, IslandStepPause = 0.5f, IslandFadeOut = 0.6f;
         const int IslandPadTx = IslandBridgeX0 + 1, IslandPadTy = 19;
         // the old gamedata pad: a push of (0, 3.6) at speed 12, flown at half speed for its length + 0.8
         const float IslandJumpDist = 3.6f + 0.8f, IslandJumpSpeed = 6f;
 
-        // Rickard 2026-10-25: the old Focus steps, said plainly (the new HUD has no Focus counter; the rule is the same)
+        // Rickard 2026-10-25: the old Focus steps, said plainly (the new HUD has no Focus counter; the rule is the same).
+        // Rickard 2026-10-26: one short line per step, and the old "random enemy" and "only target" steps are one: the three
+        // come in, the leader is pointed out, and Fenn takes it down from the ring where it is the only one in his reach.
+        // The ring is left of the leader's spot (4.5, 13), out of reach of the other two (6.5, 14) and (7.5, 13); the old ring
+        // at (4.5, 13) had all three within Fenn's reach of 3 tiles.
         static readonly IslandStepDef[] IslandSteps =
         {
-            new IslandStepDef { Text = "Use the joystick to move here!", HasTarget = true, TargetX = IslandDiscX, TargetY = IslandDiscY },
-            new IslandStepDef { Text = "You attack automatically!\nTake down this |Minion|!", Spawn0 = 0, SpawnN = 1, Kill = true, Point = 1 },
-            new IslandStepDef { Text = "Step into the |grass| to hide!\nEnemies only see you up close. Walls block shots too.", HasTarget = true, TargetX = 9.5f, TargetY = 14f },
-            new IslandStepDef { Text = "Your hero attacks a |random enemy| in range.\nMore enemies in range means fewer hits\non the one you want.", Time = 10, Spawn0 = 1, SpawnN = 3 },
-            new IslandStepDef { Text = "Make one enemy the |only target| in your range\nto hit it every time!", Kill = true, Point = 2, HasTarget = true, TargetX = 4.5f, TargetY = 13f },
-            new IslandStepDef { Text = "More of the map opens up!\nHop on the |boost pad| to reach the battle!", HasTarget = true, TargetX = IslandBridgeX0 + 1.5f, TargetY = 19.5f, Pad = true, Tip = true },
+            new IslandStepDef { Text = "Move here with the joystick!", HasTarget = true, TargetX = IslandDiscX, TargetY = IslandDiscY },
+            new IslandStepDef { Text = "You attack automatically! Take down the |Minion|!", Spawn0 = 0, SpawnN = 1, Kill = true, Point = 1 },
+            new IslandStepDef { Text = "Hide in the |grass|! Enemies only see you up close.", HasTarget = true, TargetX = 9.5f, TargetY = 14f },
+            new IslandStepDef { Text = "You hit a |random enemy| in reach. Make the leader your |only target|!", Spawn0 = 1, SpawnN = 3, Kill = true, Point = 2, HasTarget = true, TargetX = 2f, TargetY = 12.5f },
+            new IslandStepDef { Text = "Hop on the |boost pad| to reach the battle!", HasTarget = true, TargetX = IslandBridgeX0 + 1.5f, TargetY = 19.5f, Pad = true, Tip = true },
         };
         static readonly string[] IslandPlain = MakePlain();
         static string[] MakePlain()
@@ -48,7 +52,7 @@ namespace BAM.Sim
         // the practice minions' spawners (old gamedata tutorial.spawners 0-3): they come in over the platform's far edge (row 6)
         // and walk down to their own spot (the old lane point, which the old tutStatic walk read as (wp.x + 0.5, wp.y + 1))
         static readonly float[] IslandSpawnX = { 6, 5, 6, 7 }, IslandWpX = { 6, 4, 6, 7 }, IslandWpY = { 13, 12, 13, 12 };
-        const float IslandSpawnRow = 6, IslandInvulnerable = 8;
+        const float IslandSpawnRow = 6, IslandInvulnerable = 3; // the three walk in to their spots first (was 8 s under the old 10 s step)
 
         // rows 17-49: the bridge and the old "Tutorial" map's lane below it (shown only once the bridge opens; walkable only
         // for the pad's flight). Rows 0-16 are the round platform, made in IslandMap. ' ' void, '.' ground, 'g' grass, '#' wall
@@ -111,7 +115,7 @@ namespace BAM.Sim
             var m = NewMinion(MinionKind.Melee, Teams.Enemy, IslandSpawnX[id] + 0.5f, IslandSpawnRow + 0.5f);
             m.SpawnX = IslandWpX[id] + 0.5f; m.SpawnY = IslandWpY[id] + 1f;
             m.DmgOverride = 0; m.TutStatic = true; // it swings (every attack shows) but does no harm
-            m.MaxHp = m.Hp = id == 0 ? Rules.TutorialMinionHp * 0.5f : Rules.TutorialMinionHp; // the very first falls fast
+            m.MaxHp = m.Hp = id <= 1 ? Rules.TutorialMinionHp * 0.5f : Rules.TutorialMinionHp; // the very first and the leader fall fast
             if (id >= 1) AddStatus(m, St.Invulnerable, IslandInvulnerable);
             if (id == 1) Tut.Leader = m;
             Tut.Minions.Add(m);

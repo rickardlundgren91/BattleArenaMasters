@@ -19,7 +19,7 @@ namespace BAM.Core
         static bool loaded;
         static float sfxVolume;
         static GraphicsQuality graphics;
-        static bool leftHanded, tutorialDone, musicOn, vibration;
+        static bool leftHanded, tutorialDone, tutorialCard, musicOn, vibration;
         static int fps;
         static Consent consent;
         static int lastHero, lastDifficulty;
@@ -80,6 +80,17 @@ namespace BAM.Core
             set { Load(); if (tutorialDone == value) return; tutorialDone = value; PlayerPrefs.SetInt(Key + "tut", value ? 1 : 0); Commit(); }
         }
 
+        /// <summary>The card on Home after the first finished (or skipped) tutorial, "Tutorial done · Next: your first match"
+        /// (the old HubTutCard): a tap on it or the first finished bot match takes it away.</summary>
+        public static bool TutorialCard
+        {
+            get { Load(); return tutorialCard; }
+            set { Load(); if (tutorialCard == value) return; tutorialCard = value; PlayerPrefs.SetInt(Key + "tutcard", value ? 1 : 0); Commit(); }
+        }
+
+        /// <summary>The player has picked a hero or a bot difficulty before (the tutorial then leaves the picks alone).</summary>
+        public static bool PickedBefore => PlayerPrefs.HasKey(Key + "hero") || PlayerPrefs.HasKey(Key + "diff");
+
         /// <summary>The hero picked last time (index into HeroCatalog.All), so hero select opens on it.</summary>
         public static int LastHero
         {
@@ -105,6 +116,7 @@ namespace BAM.Core
             fps = PlayerPrefs.GetInt(Key + "fps", 60) <= 30 ? 30 : 60;
             consent = (Consent)PlayerPrefs.GetInt(Key + "consent", 0);
             tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;
+            tutorialCard = PlayerPrefs.GetInt(Key + "tutcard", 0) == 1;
             lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", 0), 0, BAM.Sim.HeroCatalog.Count - 1);
             lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, 2);
         }

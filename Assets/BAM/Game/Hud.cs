@@ -22,8 +22,8 @@ namespace BAM.Game
         const int HudOrder = 10; // under the hint bubble (60) and the menus (100)
         const float DeniedTime = 1.2f, ShakeTime = 0.35f;
         static readonly string[] Numbers = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20" };
-        static readonly string[] TutStepNames = { "move", "auto_attack", "special", "tower" };
-        static readonly string[] IslandStepNames = { "island_walk", "island_minion", "island_grass", "island_random", "island_only", "island_pad" };
+        static readonly string[] TutStepNames = { "move", "auto_attack", "special", "fight", "tower" };
+        static readonly string[] IslandStepNames = { "island_walk", "island_minion", "island_grass", "island_target", "island_pad" };
         const float FadeInTime = 0.6f;
         const string MarkRed = "<color=#E0392B>", MarkTeal = "<color=#13A89E>", MarkEnd = "</color>";
 
@@ -96,6 +96,7 @@ namespace BAM.Game
             specialIcon.enabled = icon != null;
             specialName.text = icon != null ? "" : HeroCatalog.Get(m.Player.Hero).SpecialName;
             BeginCenter();
+            BeginTutorial();
             deniedText.gameObject.SetActive(false);
             leftHanded = !BamSettings.LeftHanded; // forces the first layout
             ApplyLayout();
@@ -194,7 +195,7 @@ namespace BAM.Game
             rings.AfterStep();
             if (m.Tut != null && m.Tut.Step != lastTutStep)
             {
-                // one numbering over both halves: the island's steps 0-5, then the arena's as 6-9
+                // one numbering over both halves: the island's steps 0-4, then the arena's as 5-9
                 lastTutStep = m.Tut.Step;
                 var names = island ? IslandStepNames : TutStepNames;
                 string name = lastTutStep >= 0 && lastTutStep < names.Length ? names[lastTutStep] : "step";
@@ -223,6 +224,7 @@ namespace BAM.Game
             Aim(hidden);
             Hint(hidden);
             IslandMarks(hidden);
+            TutorialFrame(hidden); // the arena half's line, arrows, "+ CHARGE", tower blocks and end; Skip (HudTutorial.cs)
             Fade();
             Fps(dt);
             joy.Rest();
@@ -342,7 +344,8 @@ namespace BAM.Game
 
         void Hint(bool hidden)
         {
-            string line = m.Tut != null && !hidden ? m.Tut.Line : null;
+            // the island's lines in the bubble; the arena half has the old pill at the top instead (HudTutorial.cs)
+            string line = island && !hidden ? m.Tut.Line : null;
             if (line == null)
             {
                 if (hintShown) { Screens.HideHint(); hintShown = false; }
@@ -351,21 +354,9 @@ namespace BAM.Game
             hintShown = true;
             Vector2? at = null;
             var tut = m.Tut;
-            if (island)
-            {
-                if (tut.PointAt != null) at = cam.Camera.WorldToScreenPoint(views.DrawnAt(tut.PointAt) + Vector3.up * 1.3f);
-                else if (tut.RingOn) at = cam.Camera.WorldToScreenPoint(Coords.World(tut.RingX, tut.RingY) + Vector3.up * 0.8f);
-                Screens.ShowHint(IslandText(tut), at);
-                return;
-            }
-            switch (tut.Step)
-            {
-                case Tutorial.StepMove: at = RectTransformUtility.WorldToScreenPoint(null, joy.Base.position); break;
-                case Tutorial.StepAuto: if (tut.Dummy != null) at = cam.Camera.WorldToScreenPoint(views.DrawnAt(tut.Dummy) + Vector3.up * 1.2f); break;
-                case Tutorial.StepSpecial: at = RectTransformUtility.WorldToScreenPoint(null, specialRoot.position); break;
-                case Tutorial.StepTower: if (tut.Tower != null) at = cam.Camera.WorldToScreenPoint(Coords.Of(tut.Tower) + Vector3.up * 2.4f); break;
-            }
-            Screens.ShowHint(line, at);
+            if (tut.PointAt != null) at = cam.Camera.WorldToScreenPoint(views.DrawnAt(tut.PointAt) + Vector3.up * 1.3f);
+            else if (tut.RingOn) at = cam.Camera.WorldToScreenPoint(Coords.World(tut.RingX, tut.RingY) + Vector3.up * 0.8f);
+            Screens.ShowHint(IslandText(tut), at);
         }
 
         // The island's line with its |marked| words coloured and "FENN SAYS" above it; rebuilt only when the line changes.
@@ -585,6 +576,7 @@ namespace BAM.Game
             ringChevron = MakeChevron(canvasRect);
             fade = UiKit.Fill(canvasRect, Color.clear);
             fade.enabled = false;
+            BuildTutorial(); // the guided match's own pieces; its picture of Home over everything, even the black
 
             canvas.gameObject.SetActive(false);
         }

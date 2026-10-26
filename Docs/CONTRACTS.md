@@ -64,9 +64,12 @@ at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, 
 - Boot order: `Screens.Init()`, then `Screens.ShowConsentIfNeeded(done)`, then `ShowMainMenu()` in `done`.
 - Layout copied from the old game's Hub (Rickard 2026-10-25). Home: the chosen hero on a platform, a top bar, "<Hero>
   selected", MODES and a big orange PLAY, and a bottom bar HOME / HEROES / SETTINGS (only outside a match). PLAY calls
-  `Flow.Game.StartMatch` at once with `BamSettings.LastHero/LastDifficulty`; before the first finished tutorial it
-  offers the tutorial first (once per run, skippable). MODES: Easy/Normal/Hard (saves `LastDifficulty`) and Training
-  (`StartMatch` with `Tutorial = true`, Easy). The game sets `BamSettings.TutorialDone`.
+  `Flow.Game.StartMatch` at once with `BamSettings.LastHero/LastDifficulty`. The very first start goes into the guided
+  match by itself (Boot -> `GameFlow.StartFirstTutorial`, a picture of Home zooms in and fades; Skip in the match), as the
+  old MenuNewPlayer did. MODES: Easy/Normal/Hard (saves `LastDifficulty`) and Training (`StartMatch` with `Tutorial = true`,
+  Easy). The game sets `BamSettings.TutorialDone` (finished or skipped) and, the first time, `BamSettings.TutorialCard`
+  (Home's "Tutorial done · Next: your first match" card; a tap or the first finished bot match clears it) and picks
+  Tyra vs Easy unless `BamSettings.PickedBefore`.
 - Heroes: a card grid of the seven heroes from `HeroCatalog`; tapping a card saves `BamSettings.LastHero`; the chosen
   hero's texts and 1-3 bars sit under the grid. No Start button there.
 - Settings: sound volume, graphics Low/High, left-handed controls, share anonymous usage data (on/off, writes
@@ -77,7 +80,8 @@ at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, 
   rating 0-10 and MVP (SimScore.cs); PLAY AGAIN -> `Flow.Game.RestartMatch()`, HOME -> `Flow.Game.QuitToMenu()`. The game calls
   `Screens.CountEvents(match)` after every `Match.Step` so the ratings count damage, damage taken, heals and shields.
   `ShowResult(result)` without the match (and the guided match) shows the old small card: portrait, name, K/D/A.
-- Hint bubble (`ShowHint`/`HideHint`) for the guided match.
+- Hint bubble (`ShowHint`/`HideHint`) for the guided match's island half; the arena half draws its own line, arrows and end
+  screen in the HUD (Game/HudTutorial.cs) and shows no result card.
 - `UiKit` is the shared look (Lilita One, colours, buttons, panels, safe area). The HUD in BAM.Game uses it.
 - `Screens.IsBlockingInput` is true while any menu or dialog is open.
 - Android back: outside a match the UI handles it; in a match the game calls `Screens.HandleBack()` and opens pause only

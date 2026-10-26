@@ -1,3 +1,4 @@
+using System.Collections;
 using BAM.Analytics;
 using BAM.Audio;
 using BAM.Core;
@@ -35,9 +36,65 @@ namespace BAM.Game
         float acc, overAt;
         // the guided match is two matches: Fenn's training island, then Tyra's first battle in the arena
         float islandSeconds;
+        // the first start shows Home this long before the guided match takes over (its picture zooms in and fades, Hud.Dissolve)
+        const float FirstTutorialDelay = 0.6f;
 
         public bool InMatch => inMatch;
         public bool Paused => paused;
+        /// <summary>Seconds since the match ended (the tower fell), -1 before.</summary>
+        public float OverSeconds => over ? Time.unscaledTime - overAt : -1f;
+        // the guided match's arena half ended with the tower down: its own end screen (Hud.TutorialEnd), no result card
+        bool TutorialEnd => setup.Tutorial && match != null && match.Tut != null && match.Tut.Done && !match.Tut.Island;
+
+        /// <summary>
+        /// The very first start (the old MenuNewPlayer.NewPlayerTick, Tutorial 2.0): no question, the guided match starts by itself
+        /// a moment after Home comes up, under a picture of Home that zooms in and fades into the island.
+        /// </summary>
+        public void StartFirstTutorial() => StartCoroutine(FirstTutorial());
+
+        IEnumerator FirstTutorial()
+        {
+            yield return new WaitForSecondsRealtime(FirstTutorialDelay);
+            if (inMatch || BamSettings.TutorialDone) yield break; // the player was quicker
+            yield return new WaitForEndOfFrame();
+            var home = ScreenCapture.CaptureScreenshotAsTexture();
+            StartMatch(new MatchSetup { Hero = HeroId.Tyra, Difficulty = Difficulty.Easy, Tutorial = true });
+            hud.Dissolve(home);
+        }
+
+        /// <summary>The guided match's Skip button: the tutorial counts as done, then Home (the old skipTutorial).</summary>
+        public void SkipTutorial()
+        {
+            if (!inMatch || !setup.Tutorial) return;
+            TutorialFinished();
+            SendEnd(true); // in the analytics a skip is a quit
+            Teardown();
+            Screens.ShowMainMenu();
+        }
+
+        /// <summary>A tap on the guided match's end screen (TOWER DESTROYED!): Home, with the "Tutorial done" card.</summary>
+        public void FinishTutorial()
+        {
+            if (!inMatch || !TutorialEnd) return;
+            TutorialFinished();
+            SendEnd(false);
+            Teardown();
+            Screens.ShowMainMenu();
+        }
+
+        // The first time only (the old NewPlayer.FinishTutorial and FirstPicks): the card on Home, and the first match is Tyra
+        // against Easy bots unless the player has already picked something.
+        static void TutorialFinished()
+        {
+            if (BamSettings.TutorialDone) return;
+            BamSettings.TutorialDone = true;
+            if (!BamSettings.PickedBefore)
+            {
+                BamSettings.LastHero = (int)HeroId.Tyra;
+                BamSettings.LastDifficulty = Difficulty.Easy;
+            }
+            BamSettings.TutorialCard = true;
+        }
 
         public void StartMatch(MatchSetup s)
         {
@@ -161,7 +218,7 @@ namespace BAM.Game
             BamAudio.SetListener(cam.Focus);
             hud.Frame(dt, paused || resultShown);
 
-            if (over && !resultShown && Time.unscaledTime - overAt >= ResultDelay) ShowResult();
+            if (over && !resultShown && !TutorialEnd && Time.unscaledTime - overAt >= ResultDelay) ShowResult();
             else if (resultShown && !resultMusic && Time.unscaledTime - overAt >= ResultDelay + ResultMusicDelay)
             {
                 resultMusic = true;
@@ -204,7 +261,7 @@ namespace BAM.Game
         {
             resultShown = true;
             var r = Result(false);
-            if (r.Tutorial && r.Won) BamSettings.TutorialDone = true;
+            if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
             SendEnd(false);
             hud.CancelTouches();
             BamAudio.StopMusic(); // the victory or defeat jingle first; Update brings the music back after it
