@@ -38,6 +38,14 @@ namespace BAM.Game
         float dissolveAt = -1f;
         string pillShown, islandSrc;
         Text islandLine, islandWho;
+        RectTransform islandPanel, islandTab;
+        CanvasGroup islandGroup;
+        Image islandPlate, islandEdge, islandShadow, islandSheen, islandTabPlate, tutPillShadow, tutPillSheen;
+        float islandShownAt, pillShownAt;
+        // healing: green "+N" over Fenn on every regen tick, and a soft green glow round him while the heal moment lasts
+        float lastTutHp = -1f;
+        Image healGlow, healRing;
+        static readonly Color HealGreen = Hex(0x5dff8a), TabTeal = Hex(0x13a89e);
 
         // ---------------------------------------------------------------- the first start
 
@@ -106,12 +114,15 @@ namespace BAM.Game
             {
                 float fs = Mathf.Round(W * 0.05f), ph = H * TutLineH;
                 tutPillText.fontSize = Mathf.RoundToInt(fs);
-                if (!ReferenceEquals(line, pillShown)) { pillShown = line; tutPillText.text = line; }
+                if (!ReferenceEquals(line, pillShown)) { pillShown = line; tutPillText.text = line; pillShownAt = Time.unscaledTime; }
                 float pw = Mathf.Min(W - 32f, tutPillText.preferredWidth + fs * 1.6f);
                 Top(tutPill, W * 0.5f, H * TutLineY, pw, ph, W, H);
-                Corners(tutPillPlate, ph / 2f);
+                Corners(tutPillPlate, ph / 2f); Corners(tutPillShadow, ph / 2f); Corners(tutPillSheen, ph * 0.3f);
                 RoundRing(tutPillEdge, ph / 2f, 2.5f * W / 400f);
-                tutPillGroup.alpha = Mathf.Clamp01(tu.LineShown / 0.3f);
+                tutPillShadow.rectTransform.anchoredPosition = new Vector2(0f, -fs * 0.18f);
+                tutPillSheen.rectTransform.sizeDelta = new Vector2(-ph * 0.8f, -ph * 0.6f);
+                tutPillSheen.rectTransform.anchoredPosition = new Vector2(0f, ph * 0.2f);
+                Pop(tutPill, tutPillGroup, pillShownAt);
             }
 
             // the arrows over the joystick (moment 1) and over SPECIAL when it is ready (moment 3), and SPECIAL's gold pulse
@@ -130,42 +141,91 @@ namespace BAM.Game
             }
 
             IslandLine(on && island, tu, W, H);
+            HealFrame(play, tu, p);
             ChargeFly(play, p, W, H);
             Trail(play && !opening, tu, p);
             TutTowerBar(arena && m.State != MatchState.Over, tu);
             TutorialEnd(arena && over >= 0f && tu.Done, over, W, H);
         }
 
-        // The island's line as the old drawIslandHUD drew it (Rickard 2026-10-26: the bubble covered the action): no box, white
-        // words with a dark navy edge in the sky above the island at 0.3 H, the marked ones red (teal for a tip), FENN SAYS in teal
-        // over them, wrapped inside 0.92 W
+        // The island's line (Rickard 2026-10-26: the bubble covered the action, then "snyggare text"): a dark navy card with a
+        // soft drop shadow, a gold edge and a faint sheen, in the sky above the island (its top at 0.25 H), the marked words red
+        // (teal for a tip), and the speaker on a teal tab over its top left edge, as a speaker in MLBB's tutorial. It pops in.
         void IslandLine(bool on, Tutorial tu, float W, float H)
         {
             string src = on ? tu.LineMarked ?? tu.Line : null;
             bool show = src != null;
-            if (islandLine.gameObject.activeSelf != show) { islandLine.gameObject.SetActive(show); islandWho.gameObject.SetActive(show && !string.IsNullOrEmpty(tu.Speaker)); }
+            if (islandPanel.gameObject.activeSelf != show) islandPanel.gameObject.SetActive(show);
             if (!show) { islandSrc = null; return; }
-            float fs = Mathf.Round(W * 0.05f);
+            float fs = Mathf.Round(W * 0.048f), pad = fs * 0.75f, w = W * 0.88f;
             if (!ReferenceEquals(src, islandSrc))
             {
                 islandSrc = src;
+                islandShownAt = Time.unscaledTime;
                 sb.Length = 0;
                 bool open = false;
                 for (int i = 0; i < src.Length; i++)
                 {
                     char c = src[i];
                     if (c != '|') { sb.Append(c); continue; }
-                    sb.Append(open ? "</color>" : tu.LineTip ? "<color=#7fe8d8>" : "<color=#ff3b4e>");
+                    sb.Append(open ? "</color>" : tu.LineTip ? "<color=#7fe8d8>" : "<color=#ff6b78>");
                     open = !open;
                 }
                 if (open) sb.Append("</color>");
                 islandLine.text = sb.ToString();
                 islandWho.text = tu.Speaker ?? "";
+                islandTab.gameObject.SetActive(!string.IsNullOrEmpty(tu.Speaker));
             }
             islandLine.fontSize = Mathf.RoundToInt(fs);
-            islandLine.rectTransform.sizeDelta = new Vector2(W * 0.92f, fs * 4f);
-            islandLine.rectTransform.anchoredPosition = new Vector2(0f, H / 2f - H * 0.3f + fs * 0.9f); // its top line's baseline at 0.3 H
-            Title(islandWho, fs * 0.7f, H * 0.3f - fs * 1.5f, W, H);
+            islandLine.rectTransform.offsetMin = new Vector2(pad, pad * 0.8f);
+            islandLine.rectTransform.offsetMax = new Vector2(-pad, -pad * 0.9f);
+            islandPanel.sizeDelta = new Vector2(w, 10f);
+            float th = islandLine.cachedTextGeneratorForLayout.GetPreferredHeight(islandLine.text,
+                islandLine.GetGenerationSettings(new Vector2(w - 2f * pad, 0f))) / islandLine.pixelsPerUnit;
+            float h = th + pad * 1.7f;
+            islandPanel.sizeDelta = new Vector2(w, h);
+            islandPanel.anchoredPosition = new Vector2(0f, H / 2f - H * 0.25f - h / 2f);
+            float r = Mathf.Min(h / 2f, fs * 0.9f);
+            Corners(islandPlate, r); Corners(islandShadow, r); Corners(islandSheen, r * 0.8f);
+            RoundRing(islandEdge, r, Mathf.Max(2f, W * 0.005f));
+            islandShadow.rectTransform.anchoredPosition = new Vector2(0f, -fs * 0.18f);
+            islandSheen.rectTransform.sizeDelta = new Vector2(-pad * 0.6f, -h * 0.55f);
+            islandSheen.rectTransform.anchoredPosition = new Vector2(0f, h * 0.2f);
+            // the speaker tab: Fenn's name on teal, half over the card's top edge
+            islandWho.fontSize = Mathf.RoundToInt(fs * 0.62f);
+            float tw = islandWho.preferredWidth + fs * 1.1f, tab = fs * 1.15f;
+            islandTab.sizeDelta = new Vector2(tw, tab);
+            islandTab.anchoredPosition = new Vector2(pad + tw / 2f, tab * 0.2f); // mostly above the card, over its edge
+            Corners(islandTabPlate, tab / 2f);
+            Pop(islandPanel, islandGroup, islandShownAt);
+        }
+
+        // a new line springs in: from 0.85 of its size with a little overshoot, fading in over 0.2 s
+        static void Pop(RectTransform rt, CanvasGroup g, float at)
+        {
+            float k = Mathf.Clamp01((Time.unscaledTime - at) / 0.32f);
+            float sc = k >= 1f ? 1f : 1f - 0.15f * Mathf.Cos(k * Mathf.PI * 1.5f) * (1f - k);
+            rt.localScale = Vector3.one * sc;
+            g.alpha = Mathf.Clamp01((Time.unscaledTime - at) / 0.2f);
+        }
+
+        // Healing shows (Rickard 2026-10-26: "ingen reg syntes"): every rise of Fenn's health in the arena half floats a green
+        // "+N" over him, and in the heal moment a soft green glow breathes round his feet while he is below full.
+        void HealFrame(bool play, Tutorial tu, Unit p)
+        {
+            if (play && p.Alive && lastTutHp >= 0f && p.Hp > lastTutHp + 0.5f) FloatWord(p, "+" + Mathf.RoundToInt(p.Hp - lastTutHp), HealGreen);
+            lastTutHp = p.Alive ? p.Hp : -1f;
+            bool glow = play && p.Alive && tu.Step == Tutorial.StepHeal && p.Hp < p.MaxHp - 0.5f;
+            if (healGlow.enabled != glow) { healGlow.enabled = glow; healRing.enabled = glow; }
+            if (!glow) return;
+            float ts = TilePx(), k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f), ring = (Time.unscaledTime * 0.9f) % 1f;
+            Vector2 at = Local(cam.Camera.WorldToScreenPoint(views.DrawnAt(p)));
+            healGlow.rectTransform.anchoredPosition = at;
+            healGlow.rectTransform.sizeDelta = new Vector2(ts * (1.5f + 0.2f * k), ts * (1.1f + 0.15f * k));
+            healGlow.color = new Color(HealGreen.r, HealGreen.g, HealGreen.b, 0.22f + 0.12f * k);
+            healRing.rectTransform.anchoredPosition = at;
+            healRing.rectTransform.sizeDelta = new Vector2(ts * (0.6f + 1.4f * ring), ts * (0.45f + 1.05f * ring));
+            healRing.color = new Color(HealGreen.r, HealGreen.g, HealGreen.b, 0.8f * (1f - ring));
         }
 
         // "+ CHARGE" rises from Fenn and flies along an arc into the SPECIAL button, which takes it in with a gold ring
@@ -340,6 +400,25 @@ namespace BAM.Game
             a.GetComponent<CanvasGroup>().alpha = 0.6f + 0.4f * Mathf.Abs(Mathf.Sin(now * 1000f / 320f));
         }
 
+        static Image Sliced(RectTransform parent, Color color)
+        {
+            var img = UiKit.Fill(parent, color, UiKit.Rounded);
+            img.type = Image.Type.Sliced;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        // the words get a dark navy edge and a soft shadow under them, so they stand off the card
+        static void TextDepth(Text t)
+        {
+            var o = t.gameObject.AddComponent<Outline>();
+            o.effectColor = new Color(10f / 255f, 14f / 255f, 40f / 255f, 0.9f);
+            o.effectDistance = new Vector2(2f, -2f);
+            var sh = t.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            sh.effectDistance = new Vector2(0f, -4f);
+        }
+
         Text Centred(RectTransform parent, string text, Color color, float edge)
         {
             var t = InkLabel(parent, text, color, edge);
@@ -402,15 +481,22 @@ namespace BAM.Game
             tutPill = CentredRect("Line", safe);
             tutPillGroup = tutPill.gameObject.AddComponent<CanvasGroup>();
             tutPillGroup.blocksRaycasts = false;
+            tutPillShadow = UiKit.Fill(tutPill, new Color(0f, 0f, 0.05f, 0.4f), UiKit.Rounded);
+            tutPillShadow.type = Image.Type.Sliced;
+            tutPillShadow.raycastTarget = false;
             tutPillPlate = UiKit.Fill(tutPill, TutPillFill, UiKit.Rounded);
             tutPillPlate.type = Image.Type.Sliced;
             tutPillPlate.raycastTarget = false;
+            tutPillSheen = UiKit.Fill(tutPill, new Color(1f, 1f, 1f, 0.07f), UiKit.Rounded);
+            tutPillSheen.type = Image.Type.Sliced;
+            tutPillSheen.raycastTarget = false;
             tutPillEdge = UiKit.Fill(tutPill, new Color(1f, 207f / 255f, 74f / 255f, 0.85f));
             tutPillEdge.raycastTarget = false;
             tutPillText = UiKit.Label(tutPill, "", 40, TextAnchor.MiddleCenter, Color.white);
             tutPillText.horizontalOverflow = HorizontalWrapMode.Overflow;
             tutPillText.raycastTarget = false;
             UiKit.Stretch(tutPillText.rectTransform);
+            TextDepth(tutPillText);
             tutPill.gameObject.SetActive(false);
 
             joyArrow = MakeChevron(safe);
@@ -429,15 +515,38 @@ namespace BAM.Game
             }
 
             // the island's line: no box, so it never hides what Fenn is doing
-            islandWho = Centred(safe, "", Hex(0x7fe8d8), 3);
-            islandWho.gameObject.SetActive(false);
-            islandLine = Centred(safe, "", Color.white, 3);
-            islandLine.alignment = TextAnchor.UpperCenter;
-            islandLine.rectTransform.pivot = new Vector2(0.5f, 1f);
+            islandPanel = CentredRect("IslandLine", safe);
+            islandGroup = islandPanel.gameObject.AddComponent<CanvasGroup>();
+            islandGroup.blocksRaycasts = false;
+            islandShadow = Sliced(islandPanel, new Color(0f, 0f, 0.05f, 0.4f));
+            islandPlate = Sliced(islandPanel, new Color(14f / 255f, 20f / 255f, 58f / 255f, 0.84f));
+            islandSheen = Sliced(islandPanel, new Color(1f, 1f, 1f, 0.07f));
+            islandEdge = UiKit.Fill(islandPanel, new Color(1f, 207f / 255f, 74f / 255f, 0.8f));
+            islandEdge.raycastTarget = false;
+            islandLine = UiKit.Label(islandPanel, "", 40, TextAnchor.MiddleCenter, Color.white);
+            UiKit.Stretch(islandLine.rectTransform);
             islandLine.horizontalOverflow = HorizontalWrapMode.Wrap;
             islandLine.verticalOverflow = VerticalWrapMode.Overflow;
             islandLine.supportRichText = true;
-            islandLine.gameObject.SetActive(false);
+            islandLine.raycastTarget = false;
+            islandLine.lineSpacing = 1.05f;
+            TextDepth(islandLine);
+            islandTab = UiKit.NewRect("Speaker", islandPanel);
+            islandTab.anchorMin = islandTab.anchorMax = new Vector2(0f, 1f);
+            islandTab.pivot = new Vector2(0.5f, 0.5f);
+            islandTabPlate = Sliced(islandTab, TabTeal);
+            islandWho = UiKit.Label(islandTab, "", 28, TextAnchor.MiddleCenter, Color.white);
+            UiKit.Stretch(islandWho.rectTransform);
+            islandWho.horizontalOverflow = HorizontalWrapMode.Overflow;
+            islandWho.raycastTarget = false;
+            TextDepth(islandWho);
+            islandPanel.gameObject.SetActive(false);
+
+            // the heal glow round Fenn's feet, under the controls
+            healGlow = Plain(world, "HealGlow", Color.clear);
+            healGlow.sprite = UiKit.Circle;
+            healRing = Plain(world, "HealRing", Color.clear);
+            healRing.sprite = UiKit.CircleRing;
 
             // Skip: small and quiet, always there, never the thing to look at
             tutSkip = CentredRect("Skip", safe);
@@ -482,7 +591,8 @@ namespace BAM.Game
         void BeginTutorial()
         {
             pillShown = null; islandSrc = null;
-            islandLine.gameObject.SetActive(false); islandWho.gameObject.SetActive(false);
+            islandPanel.gameObject.SetActive(false); lastTutHp = -1f;
+            healGlow.enabled = healRing.enabled = false;
             tutSkip.gameObject.SetActive(false);
             tutPill.gameObject.SetActive(false);
             tutBar.gameObject.SetActive(false);
