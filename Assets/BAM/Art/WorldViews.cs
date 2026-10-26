@@ -21,10 +21,11 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched, mirror, struck, arc, hit, honey;
+        bool melee, launched, mirror, struck, arc, hit, honey, boulder;
+        float roll; // Bonk's boulder: degrees rolled so far, on screen
         Color arcColor;
-        static Texture2D arcTex;
-        static bool arcLoaded;
+        static Texture2D arcTex, boulderTex;
+        static bool arcLoaded, boulderLoaded;
         MeshFilter visF;
         Transform bombT;
         float bombTop = 0.27f;
@@ -68,7 +69,10 @@ namespace BAM.Art
             }
             // Moa's honey shot: Rickard's drop picture (atlas cell 7) facing the camera, its tail trailing, a warm glow inside (no ball)
             honey = k == ProjKind.MoaBolt && FxAtlas.Texture != null;
-            visF.sharedMesh = honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            // Bonk's boulder: Rickard's own picture (tx_fx_bonk_boulder) facing the camera and rolling, big and heavy
+            if (k == ProjKind.BonkBoulder && !boulderLoaded) { boulderLoaded = true; boulderTex = RickardFx.Load("tx_fx_bonk_boulder"); }
+            boulder = k == ProjKind.BonkBoulder && boulderTex != null;
+            visF.sharedMesh = boulder ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot;
@@ -86,6 +90,13 @@ namespace BAM.Art
             {
                 visR.sharedMaterial = FxAtlas.Material(ArtMaterials.UnlitFade);
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, new Color(1f, 0.78f, 0.22f, 1f));
+                visR.sharedMaterial.renderQueue = 3020;
+            }
+            else if (boulder)
+            {
+                visR.sharedMaterial = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, boulderTex);
+                visR.sharedMaterial.mainTexture = boulderTex;
                 visR.sharedMaterial.renderQueue = 3020;
             }
             else visR.sharedMaterial = glowy ? ArtMaterials.Unlit : ArtMaterials.Lit;
@@ -205,6 +216,15 @@ namespace BAM.Art
                     vis.localScale = new Vector3(0.5f, 0.5f, 0.5f);
                     break;
                 }
+                case ProjKind.BonkBoulder when boulder:
+                {
+                    // face the camera and roll the way it moves across the screen; the stone fills 0.92 of the picture, so a
+                    // 1.2 quad is a boulder about 1.1 tiles across standing on the ground
+                    Quaternion cam = ArtDriver.CamRot;
+                    vis.rotation = cam * Quaternion.Euler(0f, 0f, roll) * Quaternion.Euler(-90f, 0f, 0f);
+                    vis.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+                    break;
+                }
                 default:
                     if (lob > 0f) vis.rotation = look * Quaternion.Euler(Mathf.Lerp(-35f, 35f, t), 0f, 0f);
                     else vis.rotation = look;
@@ -219,6 +239,7 @@ namespace BAM.Art
             Vector3 p = transform.position;
             Vector3 d = p - lastPos; d.y = 0f;
             if (d.sqrMagnitude > 1e-6f) dir = d.normalized;
+            if (boulder) roll -= Vector3.Dot(d, ArtDriver.CamRot * Vector3.right) / 0.55f * Mathf.Rad2Deg; // rolls without slipping
             lastPos = p;
             spin += dt * 900f;
             float t = Mathf.Clamp01(age / flight);

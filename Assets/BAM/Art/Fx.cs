@@ -134,6 +134,9 @@ namespace BAM.Art
         static ParticleSystem star, flame, burst, wisp, dust, drop, bubble, leaf, chunk;
         // Rickard's pictures: ground-flat rings, cracks and swirls, the light pillar, shard rays and the nova (null when missing)
         static ParticleSystem shock, crackPs, swirl, pillar, rays, nova;
+        // Bonk's own pictures (Rickard 2026-10-26, coloured with alpha, drawn alpha-blended): cracks and a dust ring flat on the
+        // ground, dust puffs and a 4x4 sheet of stone chips (null when missing: GroundSmash then uses the shared helpers)
+        static ParticleSystem bCrack, bShock, bDust, bRocks;
         static ParticleSystem.EmitParams ep;
         public static float Amount = 1f; // 1 on High, about half on Low
 
@@ -185,6 +188,7 @@ namespace BAM.Art
                 }
             }
             RickardSystems();
+            BonkSystems();
             var shardMat = ArtMaterials.Instance(ArtMaterials.ParticleAlpha);
             shardMat.SetTexture(ArtMaterials.BaseMap, Texture2D.whiteTexture);
             shardMat.mainTexture = Texture2D.whiteTexture;
@@ -265,6 +269,56 @@ namespace BAM.Art
                 nova = Flat(MakeSystem("BAM Novas", ArtMaterials.ParticleAdd, 0f, 0.35f, 1.1f, 30));
                 Retexture(nova, t, 1, 1, 0, false);
             }
+        }
+
+        static void BonkSystems()
+        {
+            Texture2D t;
+            if ((t = RickardFx.Load("tx_fx_bonk_crack")) != null)
+                RetextureAlpha(bCrack = Flat(MakeSystem("BAM Bonk Cracks", ArtMaterials.ParticleAlpha, 0f, 1f, 1f, 24)), t, false);
+            if ((t = RickardFx.Load("tx_fx_bonk_shockwave")) != null)
+            {
+                bShock = Flat(MakeSystem("BAM Bonk Dust Rings", ArtMaterials.ParticleAlpha, 0f, 1f, 1f, 24));
+                RetextureAlpha(bShock, t, false);
+                // rolls out fast, then slows to its edge
+                var size = bShock.sizeOverLifetime;
+                size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.25f, 2.6f, 2.6f), new Keyframe(1f, 1f, 0f, 0f)));
+            }
+            if ((t = RickardFx.Load("tx_fx_bonk_dust")) != null)
+            {
+                bDust = MakeSystem("BAM Bonk Dust", ArtMaterials.ParticleAlpha, -0.03f, 0.6f, 1.7f, 160);
+                RetextureAlpha(bDust, t, false);
+                var spin = bDust.rotationOverLifetime;
+                spin.enabled = true;
+                spin.z = new ParticleSystem.MinMaxCurve(-1f, 1f);
+            }
+            if ((t = RickardFx.Load("tx_fx_bonk_rocks")) != null)
+            {
+                bRocks = MakeSystem("BAM Bonk Rocks", ArtMaterials.ParticleAlpha, 2.4f, 1f, 0.9f, 160);
+                RetextureAlpha(bRocks, t, true);
+                var spin = bRocks.rotationOverLifetime;
+                spin.enabled = true;
+                spin.z = new ParticleSystem.MinMaxCurve(-6f, 6f);
+            }
+        }
+
+        // a coloured picture with its own alpha; sheet = his 4x4 stone chips, one chip picked per particle
+        static void RetextureAlpha(ParticleSystem ps, Texture2D tex, bool sheet)
+        {
+            var m = ArtMaterials.Instance(ArtMaterials.ParticleAlpha);
+            m.SetTexture(ArtMaterials.BaseMap, tex);
+            m.mainTexture = tex;
+            ps.GetComponent<ParticleSystemRenderer>().sharedMaterial = m;
+            var tsa = ps.textureSheetAnimation;
+            tsa.enabled = sheet;
+            if (!sheet) return;
+            tsa.mode = ParticleSystemAnimationMode.Grid;
+            tsa.numTilesX = 4;
+            tsa.numTilesY = 4;
+            tsa.animation = ParticleSystemAnimationType.WholeSheet;
+            tsa.startFrame = new ParticleSystem.MinMaxCurve(0f);
+            tsa.cycleCount = 1;
+            tsa.frameOverTime = new ParticleSystem.MinMaxCurve(0f, 0.999f); // two constants: a random chip that stays the same
         }
 
         static ParticleSystem Flat(ParticleSystem ps)
@@ -708,19 +762,24 @@ namespace BAM.Art
                 }
                 case FxKind.GroundSmash:
                 {
-                    // Bonk (Rickard 2026-10-26: "slå sin enorma klubba kraftigt slag som gör aoe i marken och sprickor och damm"): a pale
-                    // impact flash, a dust ring rolling out to the true radius, the ground cracked (tx_fx_ground_crack, fading over ~2 s),
-                    // dust kicked up and stone chips thrown. Earth colours, no fire. size = the hit radius
-                    Color32 dustC = C(Pal.Ground, 220);
+                    // Bonk (Rickard 2026-10-26: "slå sin enorma klubba kraftigt slag som gör aoe i marken och sprickor och damm"), in
+                    // his own pictures: the ground cracks open (held, then fading over ~2 s), his dust ring rolls out to the true
+                    // radius with a slower second one behind it, dust puffs kicked up and stone chips thrown. size = the hit radius
                     Flash(p + Vector3.up * 0.25f, 0.2f * size, 0.7f * size, new Color(1f, 0.95f, 0.85f, 0.85f), 0.08f);
-                    Ring(p, 0.25f * size, size, new Color(0.92f, 0.82f, 0.62f, 0.9f), 0.32f, 1.1f);
-                    Crack(p, 0.85f * size, 2f, new Color(0.35f, 0.27f, 0.2f, 0.85f));
-                    Dust(p + Vector3.up * 0.15f, 10, dustC, 0.55f * size, 2.2f * size, 0.9f, 0.6f, 0.5f * size);
-                    Smoke(p + Vector3.up * 0.2f, 4, C(Pal.Ground, 150), 0.7f * size, 0.8f, 1.1f, 0.5f, 0.4f * size);
-                    Chunks(p + Vector3.up * 0.2f, 7 + Mathf.RoundToInt(3f * size), C(Pal.Rock), 0.13f + 0.03f * size, 4f + size, 0.7f, 3.5f, 0.4f * size);
-                    // weight (MLBB bar, Rickard "känns inte mäktig"): a fast white shockwave past the edge and a slower dust wave behind it
-                    Ring(p, 0.3f * size, 1.25f * size, new Color(1f, 1f, 1f, 0.75f), 0.18f, 0.6f);
-                    Ring(p, 0.5f * size, 1.45f * size, new Color(0.8f, 0.68f, 0.5f, 0.55f), 0.5f, 1.4f);
+                    Ring(p, 0.3f * size, 1.15f * size, new Color(1f, 1f, 1f, 0.6f), 0.18f, 0.6f); // a fast white punch past the edge
+                    if (bCrack != null) Emit1(bCrack, new Vector3(p.x, 0.03f, p.z), Color.white, 2.6f * 0.95f * size, 2.2f, Random.value * 360f); // rim at 0.76 of the picture
+                    else Crack(p, 0.85f * size, 2f, new Color(0.35f, 0.27f, 0.2f, 0.85f));
+                    if (bShock != null)
+                    {
+                        // the dust ring's middle sits at 0.64 of the picture's half width: sized so it lands on the radius
+                        Emit1(bShock, new Vector3(p.x, 0.07f, p.z), Color.white, 3.1f * size, 0.6f, Random.value * 360f);
+                        Emit1(bShock, new Vector3(p.x, 0.06f, p.z), new Color(1f, 1f, 1f, 0.55f), 3.1f * 1.3f * size, 1.1f, Random.value * 360f);
+                    }
+                    else Ring(p, 0.25f * size, size, new Color(0.92f, 0.82f, 0.62f, 0.9f), 0.32f, 1.1f);
+                    if (bDust != null) Burst(bDust, p + Vector3.up * 0.2f, 6 + Mathf.RoundToInt(3f * size), new Color32(255, 250, 240, 235), 0.75f * size, 2.4f * size, 1f, 0.5f, 0.45f * size);
+                    else Dust(p + Vector3.up * 0.15f, 10, C(Pal.Ground, 220), 0.55f * size, 2.2f * size, 0.9f, 0.6f, 0.5f * size);
+                    if (bRocks != null) Burst(bRocks, p + Vector3.up * 0.25f, 7 + Mathf.RoundToInt(3f * size), new Color32(255, 255, 255, 255), 0.26f + 0.05f * size, 4f + size, 0.8f, 3.8f, 0.35f * size);
+                    else Chunks(p + Vector3.up * 0.2f, 7 + Mathf.RoundToInt(3f * size), C(Pal.Rock), 0.13f + 0.03f * size, 4f + size, 0.7f, 3.5f, 0.4f * size);
                     break;
                 }
                 case FxKind.ChainBoom:
@@ -894,6 +953,16 @@ namespace BAM.Art
                     SpecialHit((int)HeroId.Bram, p, 1f);
                     Crack(new Vector3(p.x, 0f, p.z), 0.6f, 0.9f);
                     break;
+                case ProjKind.BonkBoulder:
+                {
+                    // the boulder stops (on a hero or at its range): a dull thump of dust and chips, a small crack
+                    Vector3 g = new Vector3(p.x, 0f, p.z);
+                    if (bDust != null) Burst(bDust, g + Vector3.up * 0.3f, 5, new Color32(255, 250, 240, 230), 0.7f, 1.6f, 0.9f, 0.4f, 0.3f);
+                    else Dust(g + Vector3.up * 0.3f, 6, C(Pal.Ground, 220), 0.5f, 1.5f, 0.8f, 0.4f, 0.3f);
+                    if (bRocks != null) Burst(bRocks, g + Vector3.up * 0.4f, 6, new Color32(255, 255, 255, 255), 0.22f, 3.2f, 0.7f, 3f, 0.2f);
+                    if (bCrack != null) Emit1(bCrack, new Vector3(p.x, 0.03f, p.z), new Color(1f, 1f, 1f, 0.8f), 1.3f, 1.4f, Random.value * 360f);
+                    break;
+                }
                 case ProjKind.TyraArrow:
                     Stars(p, 1, C(Pal.White), 0.3f, 0f, 0.15f);
                     Sparks(p, 3, C(Pal.Cream), 0.08f, 2.5f, 0.2f, 0.6f);
@@ -976,6 +1045,15 @@ namespace BAM.Art
                 case ProjKind.TyraBolt: Stars(p, 1, new Color32(200, 245, 255, 255), 0.25f, 0.2f, 0.25f, 0f, 0.05f); break;
                 case ProjKind.BramHammerSpecial: Sparks(p, 1, heroAccent[(int)HeroId.Bram], 0.1f, 1.5f, 0.25f, 0.3f); break; // a forge tail
                 case ProjKind.TowerShot: Glow(p, 1, C(Pal.TeamLight(team)), 0.35f, 0.1f, 0.2f); break;
+                case ProjKind.BonkBoulder:
+                {
+                    // dust thrown up behind the rolling boulder where it touches the ground, a chip now and then
+                    Vector3 g = new Vector3(p.x, 0.15f, p.z) - dir * 0.35f;
+                    if (bDust != null) Burst(bDust, g, 1, new Color32(255, 248, 235, 200), 0.55f, 0.5f, 0.7f, 0.35f, 0.15f);
+                    else Dust(g, 1, C(Pal.Ground, 200), 0.4f, 0.5f, 0.6f, 0.3f, 0.1f);
+                    if (bRocks != null && Random.value < 0.25f) Burst(bRocks, g, 1, new Color32(255, 255, 255, 255), 0.14f, 1.5f, 0.5f, 2f, 0.1f);
+                    break;
+                }
             }
         }
     }
