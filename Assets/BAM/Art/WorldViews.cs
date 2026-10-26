@@ -326,6 +326,18 @@ namespace BAM.Art
                 shape.localScale = new Vector3(radius, 1f, radius);
                 if (rim != null) rim.localScale = new Vector3(radius * 2.255f, 1f, radius * 2.255f); // his ring peaks at 0.887 of the picture: edge exactly on the radius
             }
+            // MLBB analysis 4: Blast's lane gets a glowing cracked floor, Moa's field a honey swirl and a ring as it opens
+            if (kind == ZoneKind.FireLane && length > 0f)
+            {
+                int n = Mathf.Clamp(Mathf.RoundToInt(length / 1.5f), 1, 6);
+                for (int i = 0; i < n; i++) Fx.Crack(center + dir * (length * (i + 0.5f) / n), radius * 1.1f, duration, 0.55f);
+            }
+            else if (kind == ZoneKind.HoneyField)
+            {
+                Fx.Swirl(center, radius, new Color(1f, 0.75f, 0.2f, 1f), Mathf.Min(duration, 1.2f));
+                Fx.Ring(center, radius * 0.3f, radius, new Color(1f, 0.85f, 0.35f, 0.9f), 0.45f);
+                Fx.Drops(center + Vector3.up * 0.4f, 8, Pal.Get(Pal.Honey), 0.14f, 2f, 0.5f, 1.2f, radius * 0.4f);
+            }
             Tick(0f);
         }
 
@@ -386,11 +398,18 @@ namespace BAM.Art
             {
                 Fx.Flames(p, 1, Pal.Get(Pal.Fire), 0.55f, 0.2f, 0.5f, 1.4f);
                 Fx.Glow(p, 1, Pal.Get(Pal.FireCore), 0.25f, 0.2f, 0.3f, 1.2f);
+                if (length > 0f)
+                {
+                    // the old Inferno Lane's two burning edges
+                    Vector3 side = new Vector3(dir.z, 0f, -dir.x) * (radius * (Random.value < 0.5f ? 1f : -1f));
+                    Fx.Flames(center + dir * (Random.value * length) + side + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.45f, 0.15f, 0.45f, 1.2f);
+                }
             }
             else if (kind == ZoneKind.HoneyField)
             {
                 Fx.Glow(p, 1, Pal.Get(Pal.Honey), 0.18f, 0.1f, 0.9f, 0.5f);
                 if (Random.value < 0.35f) Fx.Bubbles(p, 1, Pal.Get(Pal.Honey), 0.12f, 0.05f, 0.7f, 0.25f);
+                if (Random.value < 0.15f) Fx.Drops(p + Vector3.up * 0.6f, 1, Pal.Get(Pal.Honey), 0.12f, 0.1f, 0.6f, -0.4f); // slow honey drips
             }
             else Fx.Sparks(center + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.08f, 1.5f, 0.2f, 1f);
         }
