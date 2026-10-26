@@ -129,10 +129,10 @@ namespace BAM.Sim
             return !float.IsNaN(ang);
         }
 
-        /// <summary>A ground special's landing point: aimK of the reach the aimed way, at least 1.5 tiles out, inside the map.</summary>
-        void AimPoint(Unit h, float ang, float k, float reach, out float x, out float y)
+        /// <summary>A ground special's landing point: aimK of the reach the aimed way, at least minDist tiles out, inside the map.</summary>
+        void AimPoint(Unit h, float ang, float k, float reach, out float x, out float y, float minDist = 1.5f)
         {
-            float d = Math.Min(reach, Math.Max(1.5f, k * reach));
+            float d = Math.Min(reach, Math.Max(minDist, k * reach));
             x = SimMath.Clamp(h.X + SimMath.Cos(ang) * d, 0.5f, Map.W - 0.5f);
             y = SimMath.Clamp(h.Y + SimMath.Sin(ang) * d, 0.5f, Map.H - 0.5f);
         }
@@ -506,7 +506,7 @@ namespace BAM.Sim
         {
             if (Aimed(h, out float aa, out float ak))
             {
-                AimPoint(h, aa, ak, MoaS.Range, out float px, out float py);
+                AimPoint(h, aa, ak, MoaS.Range, out float px, out float py, 0f); // no minimum: Moa can drop the field on herself (Rickard 2026-10-26)
                 var f = NewProj(ProjMode.HoneyField, h, px, py);
                 f.Kind = ProjKind.MoaBolt; f.Radius = MoaS.AreaRadius; f.Dur = MoaS.FieldDuration;
                 HoneyFieldUpdate(f); // allies already inside get their shield in the cast's own tick
