@@ -22,7 +22,7 @@ namespace BAM.Game
         const int HudOrder = 10; // under the hint bubble (60) and the menus (100)
         const float DeniedTime = 1.2f, ShakeTime = 0.35f;
         static readonly string[] Numbers = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20" };
-        static readonly string[] TutStepNames = { "move", "auto_attack", "special", "fight", "tower" };
+        static readonly string[] TutStepNames = { "move", "auto_attack", "special_tap", "special_drag", "blink", "fight", "heal", "tower" };
         static readonly string[] IslandStepNames = { "island_walk", "island_minion", "island_grass", "island_target", "island_pad" };
         const float FadeInTime = 0.6f;
         const string MarkRed = "<color=#E0392B>", MarkTeal = "<color=#13A89E>", MarkEnd = "</color>";
@@ -201,7 +201,7 @@ namespace BAM.Game
             rings.AfterStep();
             if (m.Tut != null && m.Tut.Step != lastTutStep)
             {
-                // one numbering over both halves: the island's steps 0-4, then the arena's as 5-9
+                // one numbering over both halves: the island's steps 0-4, then the arena's as 5-12
                 lastTutStep = m.Tut.Step;
                 var names = island ? IslandStepNames : TutStepNames;
                 string name = lastTutStep >= 0 && lastTutStep < names.Length ? names[lastTutStep] : "step";

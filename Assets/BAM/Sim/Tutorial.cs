@@ -3,16 +3,18 @@ using System;
 namespace BAM.Sim
 {
     /// <summary>
-    /// The guided first match (the old game's "first battle", SimLoop.cs, played there with Tyra): one walk up the lane of the
-    /// real arena, with Fenn as on the island (Rickard 2026-10-26: the tutorial goes on after the island, no switch of hero). Five
-    /// moments, one short line at a time: 1 move, 2 auto attack a harmless practice target, 3 its hits charge the real special and
-    /// the special bursts the target, 4 (new, Rickard 2026-10-26) Knut, who walked to and fro in front of the tower until then,
-    /// comes down the lane and fights back weakly until Fenn takes him down, 5 break the enemy tower, which falls to exactly
-    /// TowerHits of Fenn's auto attacks. No waves, no timers, no failure. The match screen reads this.
+    /// The guided first match's arena half (the old game's "first battle", SimLoop.cs, played there with Tyra), with Fenn as on
+    /// the island (Rickard 2026-10-26: the tutorial goes on after the island, no switch of hero, and it must teach every control).
+    /// One walk up the lane of the real arena, one short line at a time: 1 move, 2 auto attack a harmless practice target (its hits
+    /// charge the real special), 3 TAP the special: the wolf comes and bites the target, which bursts, 4 DRAG the special: throw the
+    /// wolf onto a second target further up (the charge is full again for it), 5 the battle spell: tap BLINK, 6 Knut, who walked
+    /// to and fro in front of the tower until then, comes down the lane and fights back for real (Fenn cannot drop below 40 %), 7 out
+    /// of the fight Fenn heals back up (the real regen), 8 break the enemy tower, which falls to exactly TowerHits of Fenn's auto
+    /// attacks. No waves, no failure. The match screen reads this.
     /// </summary>
     public sealed class Tutorial
     {
-        public const int StepMove = 0, StepAuto = 1, StepSpecial = 2, StepFight = 3, StepTower = 4;
+        public const int StepMove = 0, StepAuto = 1, StepSpecial = 2, StepThrow = 3, StepBlink = 4, StepFight = 5, StepHeal = 6, StepTower = 7;
         /// <summary>The opening: the camera rests on the enemy tower for OpenHold s, then glides down the lane to Fenn by OpeningTime.</summary>
         public const float OpenHold = 1.3f, OpeningTime = 2.4f;
         public const int TowerHits = 6;
@@ -30,6 +32,8 @@ namespace BAM.Sim
         public Unit Dummy, Guard, Tower;
         /// <summary>The practice target was last hit at this time (the screen shakes it).</summary>
         public float HitAt = -99;
+        /// <summary>The battle spell (Blink) is on: from moment 5 (Match.SpellsOn).</summary>
+        public bool SpellOn;
         /// <summary>The enemy tower fell: the guided match is complete.</summary>
         public bool Done;
         /// <summary>When the tower fell (Match.Time), for the end screen.</summary>
@@ -41,7 +45,7 @@ namespace BAM.Sim
         public int TowerHitsTaken => TowerHitCount;
         public float LastTowerHit => TowerHitAt;
 
-        internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1;
+        internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1, BlinkAt = -1;
         internal int Gained, TowerHitCount;
         internal bool Burst;
         /// <summary>The special hit the practice target (it bursts a moment later).</summary>
@@ -90,12 +94,19 @@ namespace BAM.Sim
         const float TutMoveDist = 2.5f;   // tiles walked (any way) that end moment 1
         const float TutLineMin = 1.3f;    // the least time a line stays up
         const float TutRefill = 0.35f;    // the practice target refills below this share of its health, so it lasts until the special
-        const float TutAfterBurst = 0.7f; // then moment 4
-        // moment 4: Knut comes down the lane and fights back, weakly (Fenn takes about 5 hits to beat him, he barely scratches Fenn)
-        const float TutKnutHp = 260f, TutKnutDmg = 0.4f, TutKnutPace = 0.8f, TutAfterFight = 0.8f, TutPlayerFloor = 0.4f;
+        const float TutAfterBurst = 0.7f; // then the next moment
+        // moment 4's target: further up the lane, so the wolf is thrown at it
+        const float TutThrowX = 7.5f, TutThrowY = 8.8f;
+        const float TutAfterBlink = 0.8f;
+        // moment 6: Knut comes down the lane and fights back for real (long enough that Fenn feels it and has something to heal); Fenn never drops below 40 %
+        const float TutKnutHp = 340f, TutKnutDmg = 1.8f, TutKnutPace = 0.8f, TutAfterFight = 0.8f, TutPlayerFloor = 0.4f;
+        // moment 7 ends when Fenn has healed back to this share (from 40 % about 8 s of the real regen)
+        const float TutHealed = 0.95f;
 
         const string LineMove = "Move with the joystick!", LineAuto = "Get close. Fenn attacks automatically!",
-            LineSpecial = "SPECIAL READY! Tap to use it!", LineFight = "An enemy hero! Take Knut down!", LineTower = "Towers shoot! Destroy this one!";
+            LineSpecial = "SPECIAL READY! TAP it to call your wolf!", LineThrow = "Now DRAG SPECIAL to throw the wolf at the target!",
+            LineBlink = "Tap BLINK to dash forward!", LineFight = "An enemy hero! Take Knut down!",
+            LineHeal = "Stay out of fights to heal up!", LineTower = "Towers shoot! Destroy this one!";
 
         void StartTutorial()
         {
@@ -112,12 +123,8 @@ namespace BAM.Sim
 
             // the practice target: a melee minion inside (the screen draws it as a target board) that stands still, never attacks and
             // never dies until the special; no target until moment 2
-            var d = NewMinion(MinionKind.Melee, Teams.Enemy, TutDummyX, TutDummyY);
-            d.SpawnX = TutDummyX; d.SpawnY = TutDummyY;
-            d.DmgOverride = 0; d.TutStatic = true; d.TutUnkillable = true;
-            AddStatus(d, St.Disarm, 1e9f); AddStatus(d, St.Untargetable, 1e9f);
-            d.MaxHp = d.Hp = Rules.TutorialMinionHp;
-            tu.Dummy = d;
+            var d = TutTarget(TutDummyX, TutDummyY);
+            AddStatus(d, St.Untargetable, 1e9f);
 
             // the guard: no bot, no attacks, no special, never in a target list until moment 4 (StartFight)
             var k = NewHero(HeroId.Knut, Teams.Enemy, TutGuardX0, TutGuardY);
@@ -125,6 +132,19 @@ namespace BAM.Sim
             AddStatus(k, St.Disarm, 1e9f); AddStatus(k, St.Untargetable, 1e9f);
             tu.Guard = k;
             RefreshTutorial();
+        }
+
+        // a practice target: a melee minion inside (the screen draws it as a target board) that stands still, never attacks and
+        // never dies until the special
+        Unit TutTarget(float x, float y)
+        {
+            var d = NewMinion(MinionKind.Melee, Teams.Enemy, x, y);
+            d.SpawnX = x; d.SpawnY = y;
+            d.DmgOverride = 0; d.TutStatic = true; d.TutUnkillable = true;
+            AddStatus(d, St.Disarm, 1e9f);
+            d.MaxHp = d.Hp = Rules.TutorialMinionHp;
+            Tut.Dummy = d; Tut.Burst = false;
+            return d;
         }
 
         string TutLineNow()
@@ -137,7 +157,10 @@ namespace BAM.Sim
                 case Tutorial.StepAuto: return LineAuto;
                 // no line until the special is ready: the screen flies "+ CHARGE" into the button instead
                 case Tutorial.StepSpecial: return !tu.Burst && Player.SpecialReady ? LineSpecial : null;
+                case Tutorial.StepThrow: return !tu.Burst ? LineThrow : null;
+                case Tutorial.StepBlink: return Player.SpellAt <= Time ? LineBlink : null;
                 case Tutorial.StepFight: return tu.Guard != null && tu.Guard.Alive ? LineFight : null;
+                case Tutorial.StepHeal: return LineHeal;
                 default: return LineTower;
             }
         }
@@ -200,15 +223,45 @@ namespace BAM.Sim
                     }
                     break;
                 case Tutorial.StepAuto: if (tu.Gained > 0 && tu.Shown >= TutLineMin) TutNext(Tutorial.StepSpecial); break; // once Fenn has hit and the line could be read
-                case Tutorial.StepSpecial: if (tu.Burst && Time - tu.BurstAt >= TutAfterBurst) { TutNext(Tutorial.StepFight); StartFight(); } break;
-                case Tutorial.StepFight:
-                    if (k == null || !k.Alive) { if (tu.KnutDownAt < 0) tu.KnutDownAt = Time; if (Time - tu.KnutDownAt >= TutAfterFight) TutNext(Tutorial.StepTower); }
+                case Tutorial.StepSpecial:
+                    if (tu.Burst && Time - tu.BurstAt >= TutAfterBurst)
+                    {
+                        TutNext(Tutorial.StepThrow);
+                        TutTarget(TutThrowX, TutThrowY);
+                    }
                     break;
+                case Tutorial.StepThrow:
+                    // the charge comes back full until a throw lands on the target (a tap only calls the wolf again, which does not
+                    // count here); never while a thrown wolf is in the air, so a second cast cannot replace it before it lands
+                    if (!tu.Burst) { if (!p.SpecialReady && !WolfFlying(p)) p.Charge = p.HDef.MaxCharge; }
+                    else if (Time - tu.BurstAt >= TutAfterBurst)
+                    {
+                        TutNext(Tutorial.StepBlink);
+                        tu.SpellOn = true; p.Spell = SpellId.Blink; p.SpellAt = Time; p.SpellChanEnd = -1;
+                    }
+                    break;
+                case Tutorial.StepBlink:
+                    if (p.SpellAt > Time) { if (tu.BlinkAt < 0) tu.BlinkAt = Time; if (Time - tu.BlinkAt >= TutAfterBlink) { TutNext(Tutorial.StepFight); StartFight(); } }
+                    break;
+                case Tutorial.StepFight:
+                    if (k == null || !k.Alive)
+                    {
+                        if (tu.KnutDownAt < 0) tu.KnutDownAt = Time;
+                        if (Time - tu.KnutDownAt >= TutAfterFight) TutNext(p.Hp >= p.MaxHp * TutHealed ? Tutorial.StepTower : Tutorial.StepHeal);
+                    }
+                    break;
+                case Tutorial.StepHeal: if (p.Hp >= p.MaxHp * TutHealed && tu.Shown >= TutLineMin) TutNext(Tutorial.StepTower); break;
             }
             RefreshTutorial();
         }
 
-        // moment 4: Knut becomes a real (weak) enemy: a target for Fenn, and his own swings hurt Fenn a little
+        bool WolfFlying(Unit owner)
+        {
+            for (int i = 0; i < Units.Count; i++) { var u = Units[i]; if (u.Alive && u.Kind == UnitKind.Wolf && u.Owner == owner && u.Wolf == WolfMode.Fly) return true; }
+            return false;
+        }
+
+        // moment 6: Knut becomes a real enemy: a target for Fenn, and his own swings hurt
         void StartFight()
         {
             var k = Tut.Guard;
@@ -227,9 +280,11 @@ namespace BAM.Sim
             if (tu.Island) return amount;
             if (tgt == tu.Dummy)
             {
-                // Fenn's special is his wolf: its bites (or the pounce of a thrown one) count as the special
-                bool special = src == p ? kind == DmgKind.Special : src != null && src.Kind == UnitKind.Wolf && src.Owner == p;
-                if (special && tu.Step >= Tutorial.StepSpecial && !tu.Burst) { tu.Burst = true; tu.BurstAt = Time; }
+                // Fenn's special is his wolf. Moment 3 (tap): its bites, or a thrown wolf's pounce, burst the target. Moment 4 (drag):
+                // only a thrown wolf's pounce (Fenn's own special hit) does.
+                bool pounce = src == p && kind == DmgKind.Special, bite = src != null && src.Kind == UnitKind.Wolf && src.Owner == p;
+                bool special = tu.Step == Tutorial.StepSpecial ? pounce || bite : tu.Step == Tutorial.StepThrow && pounce;
+                if (special && !tu.Burst) { tu.Burst = true; tu.BurstAt = Time; }
                 return amount;
             }
             if (tu.Step != Tutorial.StepTower || kind != DmgKind.Auto || src == null || src != p) return 0;

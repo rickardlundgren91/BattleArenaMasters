@@ -33,8 +33,8 @@ namespace BAM.Sim
     {
         const float SpellShieldTag = -7f; // V of the shield a Shield spell gives, so a new one replaces it
 
-        /// <summary>Battle spells are on in every match but the guided one.</summary>
-        public bool SpellsOn => Tut == null;
+        /// <summary>Battle spells are on in every match; in the guided one only from its Blink moment (Tutorial.SpellOn).</summary>
+        public bool SpellsOn => Tut == null || Tut.SpellOn;
         public bool SpellReady(Unit h) => h != null && h.Alive && h.Spell != SpellId.None && SpellsOn && Time >= h.SpellAt && h.SpellChanEnd < 0;
         /// <summary>Seconds until h's spell is ready again (0 when ready).</summary>
         public float SpellLeft(Unit h) => h == null ? 0 : Math.Max(0, h.SpellAt - Time);

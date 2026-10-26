@@ -11,7 +11,7 @@ namespace BAM.Game
     /// - Skip, small and quiet in the top right corner in both halves: the tutorial counts as done, then Home.
     /// - The arena half: DESTROY THE / ENEMY TOWER while the camera rests on the tower, then one short line in a navy pill at the
     ///   top, a soft trail of gold lights up the lane to the next landmark (the ring, the target, Knut, the tower), a gold arrow
-    ///   over the joystick in moment 1 and over SPECIAL when it is ready (with a pulsing ring), "+ CHARGE" flying from Fenn into
+    ///   over the joystick in moment 1, over SPECIAL when it is ready for the tap and the drag (with a pulsing ring) and over BLINK, "+ CHARGE" flying from Fenn into
     ///   the button on every confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED!
     ///   Great job! You're ready for BAM! with Tap to continue (no VICTORY, no result card).
     /// - The very first start: a picture of Home zooms in and fades into the island (Dissolve).
@@ -25,7 +25,7 @@ namespace BAM.Game
         static readonly Color TutGold = Hex(0xffcf4a), ChargeGold = Hex(0xffc94a), ChargeEdge = Hex(0x3a1a00), TowerRed = Hex(0xff3b4e);
         static readonly Color TowerOff = new Color(0.25f, 0.12f, 0.2f, 1f), TutPillFill = new Color(14f / 255f, 20f / 255f, 58f / 255f, 0.86f);
 
-        RectTransform tutSkip, tutPill, tutBar, tutEnd, joyArrow, specialArrow;
+        RectTransform tutSkip, tutPill, tutBar, tutEnd, joyArrow, specialArrow, blinkArrow;
         CanvasGroup tutPillGroup, tutOpenGroup;
         Image tutPillEdge, tutPillPlate, specialPulse, chargeRing, tutEndDim;
         Text tutPillText, tutOpen1, tutOpen2, tutEnd1, tutEnd2, tutEnd3, tutEndTap, tutSkipText;
@@ -117,8 +117,10 @@ namespace BAM.Game
             // the arrows over the joystick (moment 1) and over SPECIAL when it is ready (moment 3), and SPECIAL's gold pulse
             bool joyOn = play && !opening && tu.Step == Tutorial.StepMove;
             Arrow(joyArrow, joyOn, joyOn ? Local(RectTransformUtility.WorldToScreenPoint(null, joy.Base.position)) : Vector2.zero, JoystickZone.Radius * 1.25f);
-            bool spOn = play && tu.Step == Tutorial.StepSpecial && !tu.BurstDone && p.Alive && p.SpecialReady;
+            bool spOn = play && (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow) && !tu.BurstDone && p.Alive && p.SpecialReady;
             Arrow(specialArrow, spOn, spOn ? Local(RectTransformUtility.WorldToScreenPoint(null, specialRoot.position)) : Vector2.zero, SpecialButton.Radius);
+            bool blinkOn = play && tu.Step == Tutorial.StepBlink && p.Alive && m.SpellReady(p) && spellRoot.gameObject.activeSelf;
+            Arrow(blinkArrow, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR);
             if (specialPulse.enabled != spOn) specialPulse.enabled = spOn;
             if (spOn)
             {
@@ -210,7 +212,7 @@ namespace BAM.Game
                 if (tu.Step == Tutorial.StepMove) { tx = Tutorial.MarkX; ty = Tutorial.MarkY; any = true; }
                 else if (tu.Step == Tutorial.StepTower) goal = tu.Tower;
                 else if (tu.Step == Tutorial.StepFight) goal = tu.Guard;
-                else if (tu.Dummy != null && tu.Dummy.Alive && !tu.BurstDone && (tu.Step == Tutorial.StepAuto || p.SpecialReady)) goal = tu.Dummy;
+                else if (tu.Step <= Tutorial.StepThrow && tu.Dummy != null && tu.Dummy.Alive && !tu.BurstDone && (tu.Step == Tutorial.StepAuto || p.SpecialReady)) goal = tu.Dummy;
                 if (goal != null && goal.Alive && SimMath.Hypot(goal.X - p.X, goal.Y - p.Y) > p.Range + goal.R)
                 {
                     tx = goal.X; ty = goal.Y; stop = p.Range * 0.8f; any = true;
@@ -415,6 +417,8 @@ namespace BAM.Game
             joyArrow.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
             specialArrow = MakeChevron(safe);
             specialArrow.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            blinkArrow = MakeChevron(safe);
+            blinkArrow.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
 
             for (int i = 0; i < chargeTexts.Length; i++)
             {
@@ -485,6 +489,7 @@ namespace BAM.Game
             tutEnd.gameObject.SetActive(false);
             joyArrow.gameObject.SetActive(false);
             specialArrow.gameObject.SetActive(false);
+            blinkArrow.gameObject.SetActive(false);
             specialPulse.enabled = chargeRing.enabled = false;
             for (int i = 0; i < chargeTexts.Length; i++) chargeTexts[i].gameObject.SetActive(false);
             for (int i = 0; i < TrailDots; i++) trailGlow[i].enabled = trailCore[i].enabled = false;
