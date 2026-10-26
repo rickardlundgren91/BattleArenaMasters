@@ -27,6 +27,9 @@ namespace BAM.Art
         public bool Reverse;
         /// <summary>Degrees the weapon is turned about its own handle after it is placed (a flat fan turned to lie along the knuckles).</summary>
         public float Twist;
+        /// <summary>Rickard's own touch-up (Weapon Tuner): a shift in the hero's right/up/forward as a share of the figure's height,
+        /// and degrees turned about the grip in the weapon's own x/y/z, on top of everything else, every frame.</summary>
+        public Vector3 Offset, Turn;
     }
 
     /// <summary>An off-hand shield in front of the left hand (old MX_SHIELD).</summary>
@@ -50,6 +53,9 @@ namespace BAM.Art
         /// <summary>At rest the right arm bends so the fist sits in front of the shoulder and the weapon lies back over it (Bonk);
         /// attack and cast clips play untouched.</summary>
         public bool Shoulder;
+        /// <summary>Shoulder: where the wrist goes from the upper arm (forward, down, in) and where the elbow points (down, forward,
+        /// out), as shares of the figure's height.</summary>
+        public Vector3 CarryAt = new Vector3(0.13f, 0.12f, 0.02f), Elbow = new Vector3(0.2f, 0.12f, 0.12f);
     }
 
     /// <summary>
@@ -59,9 +65,15 @@ namespace BAM.Art
     /// </summary>
     static class Weapons
     {
-        static readonly GearDef[] byHero = Make();
+        static readonly GearDef[] byHero = WeaponTuning.Apply(Make());
 
         public static GearDef For(HeroId hero) => (int)hero < byHero.Length ? byHero[(int)hero] : null;
+
+        /// <summary>The live table every view reads each frame (the Weapon Tuner changes it in place).</summary>
+        internal static GearDef[] All => byHero;
+
+        /// <summary>A fresh copy of the numbers in this file, without WeaponTune.json (the tuner's Reset).</summary>
+        internal static GearDef[] CodeDefaults() => Make();
 
         static GearDef[] Make()
         {
@@ -138,6 +150,85 @@ namespace BAM.Art
     }
 
     /// <summary>
+    /// Rickard's own numbers from the Weapon Tuner (BAM > Art > Weapon Tuner), saved as Resources/BAMArt/WeaponTune.json. Laid
+    /// over the numbers in <see cref="Weapons"/> once at start, per hero by name and per weapon by its place; without the file the
+    /// code's numbers stand.
+    /// </summary>
+    static class WeaponTuning
+    {
+        public const string ResourcePath = "BAMArt/WeaponTune";
+
+        [System.Serializable]
+        internal sealed class File { public Hero[] Heroes; }
+
+        [System.Serializable]
+        internal sealed class Hero
+        {
+            public string Name;
+            public Weapon[] Weapons;
+            public float ArmSpread;
+            public Vector3 CarryAt, Elbow;
+        }
+
+        [System.Serializable]
+        internal sealed class Weapon
+        {
+            public float Len, Grip, HoldUp, HoldOut;
+            public Vector3 Offset, Turn;
+        }
+
+        public static GearDef[] Apply(GearDef[] g)
+        {
+            var asset = Resources.Load<TextAsset>(ResourcePath);
+            if (asset == null) return g;
+            try
+            {
+                var f = JsonUtility.FromJson<File>(asset.text);
+                if (f != null && f.Heroes != null)
+                    foreach (Hero h in f.Heroes)
+                        for (int i = 0; i < g.Length; i++)
+                            if (g[i] != null && ((HeroId)i).ToString() == h.Name) Copy(h, g[i]);
+            }
+            catch (System.Exception e) { Debug.LogWarning("[BAM.Art] Could not read WeaponTune.json: " + e.Message); }
+            return g;
+        }
+
+        /// <summary>One hero's numbers onto its gear, in place (views keep reading the same objects).</summary>
+        internal static void Copy(Hero h, GearDef d)
+        {
+            d.ArmSpread = h.ArmSpread;
+            d.CarryAt = h.CarryAt; d.Elbow = h.Elbow;
+            if (h.Weapons == null || d.Weapons == null) return;
+            for (int w = 0; w < h.Weapons.Length && w < d.Weapons.Length; w++)
+            {
+                Weapon s = h.Weapons[w]; WeaponDef t = d.Weapons[w];
+                t.Len = s.Len; t.Grip = s.Grip; t.HoldUp = s.HoldUp; t.HoldOut = s.HoldOut; t.Offset = s.Offset; t.Turn = s.Turn;
+            }
+        }
+
+        internal static Hero From(string name, GearDef d)
+        {
+            var h = new Hero { Name = name, ArmSpread = d.ArmSpread, CarryAt = d.CarryAt, Elbow = d.Elbow };
+            int n = d.Weapons != null ? d.Weapons.Length : 0;
+            h.Weapons = new Weapon[n];
+            for (int w = 0; w < n; w++)
+            {
+                WeaponDef s = d.Weapons[w];
+                h.Weapons[w] = new Weapon { Len = s.Len, Grip = s.Grip, HoldUp = s.HoldUp, HoldOut = s.HoldOut, Offset = s.Offset, Turn = s.Turn };
+            }
+            return h;
+        }
+
+        /// <summary>Every hero's current numbers as the file's text.</summary>
+        internal static string ToJson(GearDef[] g)
+        {
+            var list = new List<Hero>();
+            for (int i = 0; i < g.Length; i++) if (g[i] != null) list.Add(From(((HeroId)i).ToString(), g[i]));
+            return JsonUtility.ToJson(new File { Heroes = list.ToArray() }, true);
+        }
+    }
+
+    /// <summary>
     /// One view's held weapons and shield. Built once in the bind pose and parented to the hand bones, so they follow every
     /// clip; <see cref="Tick"/> runs after the animation each frame (shield facing, Bram's hold angle, Blast's thrown bomb)
     /// and only writes transforms. The renderers and materials are handed to BodyView, so fades, hit flash and death go
@@ -155,12 +246,15 @@ namespace BAM.Art
         Vector3[] bindP, gripL;
         Quaternion[] bindR;
         Vector3[] bindS;
+        // the bind-pose placement in the hand's own space, so a tuned length or grip can be placed again live
+        Vector3[] palmL, handleV, shaftC;
+        float[] meshH, handS, placedLen, placedGrip;
         // shield
         ShieldDef sDef;
         Transform sAnchor, sModel, sHand;
         float sMeshH, sMeshD;
         // arms turned out after the clips
-        float spread;
+        GearDef gdef;
         Transform armR, armL;
         // the right arm bent to carry the weapon on the shoulder
         Transform carryUp, carryLo, carryHand;
@@ -172,7 +266,7 @@ namespace BAM.Art
         public static HeldGear Build(GearDef g, Animator an, float figH)
         {
             if (g == null || an == null || an.avatar == null || !an.isHuman) return null;
-            var h = new HeldGear { root = an.transform, figH = figH };
+            var h = new HeldGear { root = an.transform, figH = figH, gdef = g };
             var rends = new List<Renderer>();
             var op = new List<Material>();
             var fd = new List<Material>();
@@ -180,12 +274,10 @@ namespace BAM.Art
             h.defs = new WeaponDef[nw];
             h.wT = new Transform[nw]; h.hand = new Transform[nw]; h.index = new Transform[nw];
             h.bindP = new Vector3[nw]; h.gripL = new Vector3[nw]; h.bindR = new Quaternion[nw]; h.bindS = new Vector3[nw];
-            if (g.ArmSpread > 0f)
-            {
-                h.spread = g.ArmSpread;
-                h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
-                h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
-            }
+            h.palmL = new Vector3[nw]; h.handleV = new Vector3[nw]; h.shaftC = new Vector3[nw];
+            h.meshH = new float[nw]; h.handS = new float[nw]; h.placedLen = new float[nw]; h.placedGrip = new float[nw];
+            h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             if (g.Shoulder)
             {
                 h.carryUp = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -234,21 +326,34 @@ namespace BAM.Art
             Vector3 palm = hd.position + fingers * 0.6f;
             if (W.Along) { handle = -fn; palm = hd.position + root.forward * (0.03f * H); fingers = root.forward; }
             if (W.Reverse) handle = -handle;
-            float L = W.Len * H, mh = Mathf.Max(1e-4f, mesh.bounds.size.y);
+            float mh = Mathf.Max(1e-4f, mesh.bounds.size.y);
             var go = new GameObject("Weapon " + W.Model);
             MakeRenderer(go, mesh, W.Model, rends, op, fd);
             Transform t = go.transform;
             t.SetParent(hd, false);
             t.rotation = Quaternion.LookRotation(fingers.normalized, handle);
             if (W.Twist != 0f) t.rotation *= Quaternion.AngleAxis(W.Twist, Vector3.up);
-            t.position = palm - handle * (W.Grip * L);
-            float hs = Mathf.Max(1e-6f, hd.lossyScale.y), k = L / mh / hs;
-            t.localScale = new Vector3(k, k, k);
             wT[i] = t; hand[i] = hd; index[i] = ix;
-            bindP[i] = t.localPosition; bindR[i] = t.localRotation; bindS[i] = t.localScale;
-            float gy = W.Grip * mh;
-            Vector3 ax = W.HoldUp != 0f ? Weapons.ShaftAxis(mesh, gy) : Vector3.zero; // a hammer's box is not centred on its shaft
-            gripL[i] = new Vector3(ax.x, gy, ax.z);
+            bindR[i] = t.localRotation;
+            palmL[i] = hd.InverseTransformPoint(palm);
+            handleV[i] = hd.InverseTransformVector(handle);
+            meshH[i] = mh;
+            handS[i] = Mathf.Max(1e-6f, hd.lossyScale.y);
+            shaftC[i] = Weapons.ShaftAxis(mesh, W.Grip * mh); // a hammer's box is not centred on its shaft
+            Place(i);
+        }
+
+        // length and grip into the bind placement (again when the tuner changes them)
+        void Place(int i)
+        {
+            WeaponDef W = defs[i];
+            float L = W.Len * figH, k = L / meshH[i] / handS[i];
+            Transform t = wT[i];
+            bindP[i] = palmL[i] - handleV[i] * (W.Grip * L);
+            bindS[i] = new Vector3(k, k, k);
+            t.localPosition = bindP[i]; t.localRotation = bindR[i]; t.localScale = bindS[i];
+            gripL[i] = new Vector3(shaftC[i].x, W.Grip * meshH[i], shaftC[i].z);
+            placedLen[i] = W.Len; placedGrip[i] = W.Grip;
         }
 
         // as MxOwnShield: on an anchor under the model, placed from the hand every frame (Tick), so it never lies flat with the wrist
@@ -302,21 +407,30 @@ namespace BAM.Art
                 show = backIn > PopIn ? 0f : 1f - Mathf.Max(0f, backIn) / PopIn;
                 if (backIn < 0f) { backIn = -1f; show = 1f; }
             }
-            if (spread > 0f) ArmSpread();
+            if (gdef.ArmSpread > 0f) ArmSpread(gdef.ArmSpread);
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
             for (int i = 0; i < wT.Length; i++)
             {
                 Transform t = wT[i];
                 if (t == null) continue;
                 WeaponDef W = defs[i];
+                if (W.Len != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
                 if (W.Thrown) t.localScale = bindS[i] * show;
                 if (W.HoldUp != 0f) HoldAngle(i, W, dead ? 0f : 1f - Mathf.Clamp01(actW));
+                else { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
+                if (W.Turn != Vector3.zero)
+                {
+                    Vector3 gg = t.TransformPoint(gripL[i]);
+                    Quaternion q = t.rotation * Quaternion.Euler(W.Turn) * Quaternion.Inverse(t.rotation);
+                    t.SetPositionAndRotation(gg + q * (t.position - gg), q * t.rotation);
+                }
+                if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
             }
             if (sAnchor != null) ShieldFace(moveW);
         }
 
         // MxArmSpread: about the hero's forward axis, so a hanging arm swings out from the side (before the weapons read the hands)
-        void ArmSpread()
+        void ArmSpread(float spread)
         {
             Vector3 fwd = root.forward;
             if (armR != null) armR.rotation = Quaternion.AngleAxis(spread, fwd) * armR.rotation;
@@ -331,8 +445,9 @@ namespace BAM.Art
             Vector3 fwd = root.forward, upW = root.up, rt = root.right;
             Vector3 a = carryUp.position, b = carryLo.position, c = carryHand.position;
             float H = figH;
-            Vector3 goal = a + fwd * (0.13f * H) - upW * (0.12f * H) - rt * (0.02f * H);
-            Vector3 hint = a - upW * (0.2f * H) + fwd * (0.12f * H) + rt * (0.12f * H);
+            Vector3 ca = gdef.CarryAt, el = gdef.Elbow;
+            Vector3 goal = a + fwd * (ca.x * H) - upW * (ca.y * H) - rt * (ca.z * H);
+            Vector3 hint = a - upW * (el.x * H) + fwd * (el.y * H) + rt * (el.z * H);
             goal = Vector3.Lerp(c, goal, w);
             hint = Vector3.Lerp(b, hint, w);
             float la = (b - a).magnitude, lb = (c - b).magnitude;
