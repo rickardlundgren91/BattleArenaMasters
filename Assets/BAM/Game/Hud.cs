@@ -87,6 +87,7 @@ namespace BAM.Game
             BeginIntro();
             BeginOverhead();
             BeginScore();
+            BeginEmote();
             rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
             var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
@@ -217,6 +218,7 @@ namespace BAM.Game
             Top(dt);
             Center();
             ScoreFrame();
+            EmoteFrame(hidden);
             Special();
             Aim(hidden);
             Hint(hidden);
@@ -578,6 +580,7 @@ namespace BAM.Game
             BuildIntro();
             BuildOverhead();
             BuildVignette();
+            BuildEmote(); // after the overhead marks: its bubbles sit just above them
             pointChevron = MakeChevron(canvasRect);
             ringChevron = MakeChevron(canvasRect);
             fade = UiKit.Fill(canvasRect, Color.clear);
