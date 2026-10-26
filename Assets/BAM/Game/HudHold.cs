@@ -8,8 +8,8 @@ namespace BAM.Game
     /// <summary>
     /// Hold to read (the old HudHold.cs, Rickard 2026-10-14; asked for again 2026-10-26 "hålla inne för att läsa om skill och
     /// passiv"): keep a finger on the SPECIAL button for 0.4 s and a thin white ring fills round it, then a small see-through card
-    /// in the top right corner says what the special does, the hero's passive and how it charges. As in the old game a long press
-    /// still casts the special when the finger lifts; a drag aims as always and shows no card. Not in the tutorial.
+    /// in the top right corner says what the special does, the hero's passive and how it charges. Letting go after the card has
+    /// shown casts nothing (Rickard 2026-10-26); a short tap casts as always, a drag aims and shows no card. Not in the tutorial.
     /// </summary>
     sealed partial class Hud
     {

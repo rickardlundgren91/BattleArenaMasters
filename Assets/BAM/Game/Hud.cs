@@ -166,6 +166,8 @@ namespace BAM.Game
         void OnTap()
         {
             if (m == null || !m.Player.Alive) return;
+            // after the hold card has shown, letting go only hides it (Rickard 2026-10-26: reading must not cast)
+            if (m.Tut == null && Time.unscaledTime - special.PressedAt >= HoldTime) return;
             if (!m.Player.SpecialReady) { Denied("Special not ready"); return; }
             Queue(float.NaN, 0f);
         }
