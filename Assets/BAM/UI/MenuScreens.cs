@@ -44,7 +44,9 @@ namespace BAM.UI
             homeHero = UiKit.HeroBadge(body, HeroId.Bram);
             UiKit.Place(homeHero, 0.5f, 0, 0, platY - 20, 440, 440);
             var stageRt = UiKit.NewRect("Hero3D", body);
-            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 75, 620, 620);
+            // The camera sees 1.82 units from 0.11 below the feet, so tall heroes keep air above the head and the feet land
+            // 6 % up the picture: on the ring's middle (platY).
+            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 900 * 0.11f / 1.82f, 900, 900);
             homeStage = stageRt.gameObject.AddComponent<HeroStage>();
 
             // Top bar: portrait, the game's name.
@@ -593,7 +595,7 @@ namespace BAM.UI
     sealed class HeroStage : MonoBehaviour
     {
         static readonly Vector3 Spot = new Vector3(500, 0, 500);
-        const int Size = 512;
+        const int Size = 768;
 
         RawImage image;
         Camera cam;
@@ -637,10 +639,9 @@ namespace BAM.UI
             cam.farClipPlane = 8;
             cam.targetTexture = rt;
             cam.depth = -50;
-            // In front of the hero (who looks toward -z), a little above, looking at its middle.
-            var target = Spot + new Vector3(0, 0.5f, 0);
-            go.transform.position = Spot + new Vector3(0, 0.75f, -2.6f);
-            go.transform.LookAt(target);
+            // Level, straight in front of the hero (it looks toward -z): 30 degrees at 3.4 units shows y -0.11 to 1.71.
+            go.transform.position = Spot + new Vector3(0, 0.8f, -3.4f);
+            go.transform.rotation = Quaternion.identity;
             cam.enabled = false;
         }
 
