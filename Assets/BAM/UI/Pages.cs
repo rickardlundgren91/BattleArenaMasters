@@ -10,11 +10,13 @@ namespace BAM.UI
     // edge and the page title, and the bottom navigation bar on the tab pages (Home, Heroes, Settings).
     public static partial class Screens
     {
-        const float NavH = 150f;
+        const float NavH = 180f; // the old tab bar: cw(18)
         static readonly Color PageBg = new Color(0.02f, 0.024f, 0.075f);      // the near-black navy behind the panel
         static readonly Color PageFill = new Color(0.027f, 0.03f, 0.09f, 0.97f);
         static readonly Color CardFill = new Color(0.035f, 0.04f, 0.11f);
-        static readonly Color Lavender = new Color(0.45f, 0.47f, 0.85f);      // inactive tabs, choices not picked
+        static readonly Color Lavender = new Color(0.45f, 0.47f, 0.85f);      // choices not picked
+        static readonly Color NavIdle = new Color32(0xbc, 0xc2, 0xec, 0xff);  // the tabs not shown (HubNav, ONE_PLAY)
+        static readonly Color NavBg = new Color32(0x0a, 0x0d, 0x26, 0xff);
         static readonly Color Section = new Color(0.2f, 0.85f, 0.45f);        // the green section headers (AUDIO, GRAPHICS...)
 
         static GameObject nav;
@@ -91,7 +93,7 @@ namespace BAM.UI
             UiKit.Stretch(rt);
             nav = rt.gameObject;
             var safe = UiKit.SafeArea(rt);
-            var bar = UiKit.Fill(safe, new Color(0.04f, 0.045f, 0.12f));
+            var bar = UiKit.Fill(safe, NavBg);
             bar.raycastTarget = true;
             UiKit.Band(bar, false, 0, NavH, 0);
             // The bar's colour continues below the safe area to the screen's edge.
@@ -101,8 +103,8 @@ namespace BAM.UI
             below.rectTransform.pivot = new Vector2(0.5f, 1);
             below.rectTransform.sizeDelta = new Vector2(0, 400);
             below.rectTransform.anchoredPosition = Vector2.zero;
-            var edge = UiKit.Fill(bar.rectTransform, new Color(1, 1, 1, 0.06f));
-            UiKit.Band(edge, true, 0, 2, 0);
+            var edge = UiKit.Fill(bar.rectTransform, new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.42f)); // HUB_LINE
+            UiKit.Band(edge, true, 0, 3, 0);
 
             string[] names = { "HOME", "HEROES", "SETTINGS" };
             navPages = new[] { mainMenu, heroSelect, settings };
@@ -124,56 +126,60 @@ namespace BAM.UI
                 b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); ShowTab(index); });
                 tab.gameObject.AddComponent<ButtonFx>();
 
+                // HubNav: the icon at 40 % of the bar, the label at 78 %, a mint mark at the top of the shown tab
                 var icon = UiKit.NewRect("Icon", tab);
-                UiKit.Place(icon, 0.5f, 1, 0, -22, 64, 64);
+                UiKit.Place(icon, 0.5f, 1, 0, -NavH * 0.4f, 0, 0);
                 navIcons[i] = DrawIcon(icon, i);
-                var label = UiKit.Label(tab, names[i], 30, TextAnchor.MiddleCenter, Lavender);
-                UiKit.Band(label, false, 14, 44, 0);
+                var label = UiKit.Label(tab, names[i], 26, TextAnchor.MiddleCenter, NavIdle);
+                label.font = UiKit.BodyFont;
+                label.fontStyle = FontStyle.Bold;
+                UiKit.Place(label, 0.5f, 1, 0, -NavH * 0.78f + 20, 300, 40);
                 label.horizontalOverflow = HorizontalWrapMode.Overflow;
                 navLabels[i] = label;
-                var mark = UiKit.Fill(tab, UiKit.Primary);
-                UiKit.Place(mark, 0.5f, 1, 0, 0, 120, 6);
+                var mark = UiKit.Fill(tab, UiKit.Primary, UiKit.Rounded);
+                mark.pixelsPerUnitMultiplier = 28f / 4.5f;
+                UiKit.Place(mark, 0.5f, 1, 0, -3, 120, 9);
                 navMarks[i] = mark;
             }
             nav.SetActive(false);
             BuildModes(); // above the bar, so its veil covers it
         }
 
-        // Simple code-drawn icons: a house, a person, a gear. All parts share the icon's colour through a CanvasGroup-free trick:
-        // every part is a child Image, and RefreshNav tints them together.
+        // HubIcon, drawn like the old tab bar (s = cw(3.2)): a house with a door, a person, and HubGear for Settings. Every
+        // part is a child Image; RefreshNav tints the light ones together and the dark cut-outs keep the bar's colour.
         static Image DrawIcon(RectTransform box, int kind)
         {
-            Image Part(Sprite s, float x, float y, float w, float h, float rot = 0)
+            const float s = 32f;
+            Image Part(Sprite sprite, float x, float y, float w, float h)
             {
-                var p = UiKit.Fill(box, Lavender, s);
+                var p = UiKit.Fill(box, NavIdle, sprite);
                 var r = p.rectTransform;
                 r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
                 r.anchoredPosition = new Vector2(x, y);
                 r.sizeDelta = new Vector2(w, h);
-                r.localRotation = Quaternion.Euler(0, 0, rot);
-                if (s == UiKit.Rounded) p.pixelsPerUnitMultiplier = 4f;
                 return p;
             }
             Image first;
             switch (kind)
             {
-                case 0: // house: a roof (turned square) over a body with a door gap
-                    first = Part(UiKit.Rounded, 0, 10, 40, 40, 45);
-                    Part(UiKit.Rounded, 0, -10, 44, 34);
-                    Part(null, 0, -16, 12, 22).color = new Color(0.04f, 0.045f, 0.12f);
+                case 0: // house: a roof over a body with a door
+                    first = Part(HomeArt.Roof, 0, s * 0.55f, s * 2.2f, s);
+                    Part(null, 0, -s * 0.45f, s * 1.5f, s * 1.1f);
+                    var door = Part(UiKit.Rounded, 0, -s * 0.675f, s * 0.44f, s * 0.65f);
+                    door.color = NavBg;
+                    door.pixelsPerUnitMultiplier = 28f / (s * 0.12f);
                     break;
-                case 1: // person: head and shoulders
-                    first = Part(UiKit.Circle, 0, 14, 30, 30);
-                    Part(UiKit.Rounded, 0, -16, 52, 26);
+                case 1: // person: a head and the top half of an ellipse for the shoulders
+                    first = Part(UiKit.Circle, 0, s * 0.45f, s, s);
+                    var body = Part(UiKit.Circle, 0, -s * 1.0f, s * 1.9f, s * 1.6f);
+                    body.type = Image.Type.Filled;
+                    body.fillMethod = Image.FillMethod.Vertical;
+                    body.fillOrigin = (int)Image.OriginVertical.Top;
+                    body.fillAmount = 0.5f;
                     break;
-                default: // gear: eight teeth round a ring
-                    first = Part(UiKit.Circle, 0, 0, 44, 44);
-                    for (int t = 0; t < 8; t++)
-                    {
-                        float a = t * Mathf.PI / 4f;
-                        Part(null, Mathf.Cos(a) * 24, Mathf.Sin(a) * 24, 12, 12, t * 45f);
-                    }
-                    Part(UiKit.Circle, 0, 0, 18, 18).color = new Color(0.04f, 0.045f, 0.12f);
+                default: // gear
+                    Gear(box, s, NavIdle, NavBg);
+                    first = box.GetChild(0).GetComponent<Image>();
                     break;
             }
             return first;
@@ -201,7 +207,7 @@ namespace BAM.UI
             if (!show) return;
             for (int i = 0; i < 3; i++)
             {
-                var c = i == active ? UiKit.Primary : Lavender;
+                var c = i == active ? UiKit.Primary : NavIdle;
                 navLabels[i].color = c;
                 navMarks[i].enabled = i == active;
                 var box = navIcons[i].transform.parent;

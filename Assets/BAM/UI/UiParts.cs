@@ -8,17 +8,74 @@ using UnityEngine.UI;
 
 namespace BAM.UI
 {
-    /// <summary>Press feedback: the button shrinks a little while a finger is on it.</summary>
+    /// <summary>
+    /// Press feedback (the old MenuButtonFx.cs): the button shrinks a little while a finger is on it, and on release a soft
+    /// white flash grows round it and fades in 0.28 s. PLAY has its own spring and shine instead (HomeScreen.cs).
+    /// </summary>
     sealed class ButtonFx : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
         static readonly Vector3 Pressed = new Vector3(0.94f, 0.94f, 1f);
+        const float FlashTime = 0.28f, Grow = 15f; // cw(1.4) at the design width
+        public bool PressScale = true;
         Selectable selectable;
+        bool down;
+        Image flash, flashEdge;
+        float flashAt = -1;
 
         void Awake() => selectable = GetComponent<Selectable>();
-        public void OnPointerDown(PointerEventData e) { if (selectable == null || selectable.IsInteractable()) transform.localScale = Pressed; }
-        public void OnPointerUp(PointerEventData e) => transform.localScale = Vector3.one;
-        public void OnPointerExit(PointerEventData e) => transform.localScale = Vector3.one;
-        void OnDisable() => transform.localScale = Vector3.one;
+
+        public void OnPointerDown(PointerEventData e)
+        {
+            down = selectable == null || selectable.IsInteractable();
+            if (down && PressScale) transform.localScale = Pressed;
+        }
+
+        public void OnPointerUp(PointerEventData e)
+        {
+            transform.localScale = Vector3.one;
+            if (down) Flash();
+            down = false;
+        }
+
+        public void OnPointerExit(PointerEventData e) { transform.localScale = Vector3.one; down = false; }
+
+        void Flash()
+        {
+            if (flash == null)
+            {
+                flash = UiKit.Fill(transform, Color.clear, UiKit.Rounded);
+                flash.name = "Flash";
+                flash.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                flashEdge = UiKit.Fill(flash.transform, Color.clear, UiKit.Ring);
+            }
+            flash.transform.SetAsLastSibling();
+            flash.gameObject.SetActive(true);
+            flashAt = Time.unscaledTime;
+            Update();
+        }
+
+        void Update()
+        {
+            if (flashAt < 0) return;
+            float k = (Time.unscaledTime - flashAt) / FlashTime;
+            if (k >= 1) { flashAt = -1; flash.gameObject.SetActive(false); return; }
+            float g = Grow * k;
+            var r = flash.rectTransform;
+            r.offsetMin = new Vector2(-g, -g);
+            r.offsetMax = new Vector2(g, g);
+            float radius = Mathf.Min(((RectTransform)transform).rect.height * 0.3f, 43f) + g;
+            flash.pixelsPerUnitMultiplier = flashEdge.pixelsPerUnitMultiplier = 28f / Mathf.Max(1f, radius);
+            flash.color = new Color(1, 1, 1, 0.22f * (1 - k));
+            flashEdge.color = new Color(1, 1, 1, 0.54f * (1 - k));
+        }
+
+        void OnDisable()
+        {
+            transform.localScale = Vector3.one;
+            down = false;
+            flashAt = -1;
+            if (flash != null) flash.gameObject.SetActive(false);
+        }
     }
 
     /// <summary>

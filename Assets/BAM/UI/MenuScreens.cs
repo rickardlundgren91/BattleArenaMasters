@@ -8,8 +8,8 @@ using UnityEngine.UI;
 
 namespace BAM.UI
 {
-    // Home, the Modes sheet and the Heroes page, laid out like the old game's (ABC2 Hub v3, Rickard's screenshots 2026-10-25):
-    // Home shows the chosen hero on the platform with MODES and a big orange PLAY at the bottom; Heroes is a grid of cards.
+    // The Modes sheet and the Heroes page, laid out like the old game's (ABC2 Hub v3, Rickard's screenshots 2026-10-25); Home is in HomeScreen.cs.
+    // Heroes is a grid of cards.
     // Online, shop, rank, currencies and friends are left out. PLAY starts a match with the chosen hero and bot difficulty.
     public static partial class Screens
     {
@@ -18,243 +18,6 @@ namespace BAM.UI
 
         static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard" };
         static readonly string[] StatNames = { "Health", "Damage", "Speed", "Difficulty" };
-
-        // ---- Home ----
-
-        static RectTransform homePortrait, homeHero, homeBody;
-        static HeroStage homeStage;
-        static RawImage homeBg, homePortraitImg;
-        static Image homeTopFade, homeBottomFade, homeBottomFill, homeEdgeL, homeEdgeR;
-        const float HomePlatY = NavH + 24 + 200 + 260; // the platform's middle, from the bottom of the safe area
-        static Text homeSelected, playSub;
-
-        static void BuildMainMenu()
-        {
-            var body = NewScreen("Home", false, out mainMenu);
-            homeBody = body;
-            BuildHomeBackground(body);
-
-            // On the painted platform: a faint gold rune ring and a mint ring under the feet.
-            float platY = HomePlatY;
-            var gold = UiKit.Fill(body, new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.55f), UiKit.CircleRing);
-            UiKit.Place(gold, 0.5f, 0, 0, platY - 95, 720, 190);
-            var mint = UiKit.Fill(body, UiKit.Primary, UiKit.CircleRing);
-            UiKit.Place(mint, 0.5f, 0, 0, platY - 62, 470, 124);
-
-            // The hero: Rickard's 3D model, filmed by its own camera (HeroStage); the letter badge only if that fails.
-            homeHero = UiKit.HeroBadge(body, HeroId.Bram);
-            UiKit.Place(homeHero, 0.5f, 0, 0, platY - 20, 440, 440);
-            var stageRt = UiKit.NewRect("Hero3D", body);
-            // A soft dark shadow on the stone under the feet, so he stands on the platform and does not seem to float.
-            var shadow = UiKit.Fill(body, new Color(0.02f, 0.03f, 0.08f, 0.5f), UiKit.Circle);
-            UiKit.Place(shadow, 0.5f, 0, 0, platY - 34, 300, 64);
-            var shadowCore = UiKit.Fill(shadow.rectTransform, new Color(0.02f, 0.03f, 0.08f, 0.35f), UiKit.Circle);
-            UiKit.Stretch(shadowCore.rectTransform, 60, 14, 60, 14);
-            // The camera sees 1.82 units from 0.11 below the feet, so tall heroes keep air above the head and the feet land
-            // 6 % up the picture: a little below the ring's middle, on the shadow.
-            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 22 - 900 * 0.11f / 1.82f, 900, 900);
-            stageRt.SetAsLastSibling(); // the hero over its shadow
-            homeStage = stageRt.gameObject.AddComponent<HeroStage>();
-
-            // Top bar: portrait, the game's name.
-            var top = UiKit.Panel(body, new Color(0.04f, 0.05f, 0.13f, 0.92f));
-            UiKit.Band(top, true, 16, 130, 16);
-            UiKit.Frame(top.rectTransform).color = new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.6f);
-            homePortrait = PortraitCircle(top.transform, 104, out homePortraitImg);
-            UiKit.Place(homePortrait, 0, 0.5f, 14, 0, 104, 104);
-            var name = UiKit.Label(top.transform, BamInfo.ShortName, 52, TextAnchor.LowerLeft, UiKit.TextColor);
-            HeaderText(name, 140, 0, 64);
-            UiKit.AddShadow(name, 3);
-            var sub = UiKit.Label(top.transform, BamInfo.AppName, 32, TextAnchor.UpperLeft, UiKit.Orange);
-            HeaderText(sub, 140, -46, 46);
-
-            // "<Hero> selected", as in the old game.
-            var pill = UiKit.Panel(body, new Color(0f, 0f, 0f, 0.45f));
-            pill.pixelsPerUnitMultiplier = 0.7f;
-            pill.raycastTarget = false;
-            UiKit.Band(pill, true, 166, 76, 60);
-            homeSelected = UiKit.Label(pill.transform, "", 34, TextAnchor.MiddleCenter, UiKit.TextColor);
-            homeSelected.font = UiKit.BodyFont;
-            UiKit.Stretch(homeSelected.rectTransform);
-
-            // Bottom row: MODES and PLAY.
-            var row = UiKit.NewRect("Bottom row", body);
-            UiKit.Band(row, false, NavH + 24, 200, 24);
-            var modesButton = UiKit.Button(row, "MODES", () => Push(modes), UiKit.Muted, SfxId.UiTap, 30);
-            UiKit.Place(modesButton, 0, 0.5f, 0, 0, 200, 200);
-            UiKit.Frame((RectTransform)modesButton.transform).color = UiKit.Orange;
-            var modesLabel = UiKit.ButtonText(modesButton);
-            modesLabel.alignment = TextAnchor.LowerCenter;
-            modesLabel.rectTransform.offsetMin = new Vector2(0, 14);
-            RobotIcon(modesButton.targetGraphic.rectTransform);
-
-            var play = UiKit.Button(row, "PLAY  >", OnPlay, UiKit.Orange, SfxId.UiConfirm, 92);
-            var playRt = (RectTransform)play.transform;
-            playRt.anchorMin = new Vector2(0, 0);
-            playRt.anchorMax = new Vector2(1, 1);
-            playRt.offsetMin = new Vector2(224, 0);
-            playRt.offsetMax = Vector2.zero;
-            var playLabel = UiKit.ButtonText(play);
-            playLabel.rectTransform.offsetMin = new Vector2(12, 52);
-            UiKit.AddOutline(playLabel, 4);
-            playSub = UiKit.Label(play.targetGraphic.transform, "", 32, TextAnchor.MiddleCenter, UiKit.TextColor);
-            UiKit.Band(playSub, false, 22, 44, 10);
-            playSub.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var subEdge = playSub.gameObject.AddComponent<Outline>();
-            subEdge.effectColor = new Color(0.43f, 0.15f, 0f);
-            subEdge.effectDistance = new Vector2(2, -2);
-        }
-
-        // The old MODES icon: a small mint robot head.
-        static void RobotIcon(RectTransform face)
-        {
-            var head = UiKit.Fill(face, UiKit.Primary, UiKit.Rounded);
-            head.pixelsPerUnitMultiplier = 2.5f;
-            UiKit.Place(head, 0.5f, 1, 0, -50, 76, 60);
-            var stalk = UiKit.Fill(face, UiKit.Primary);
-            UiKit.Place(stalk, 0.5f, 1, 0, -36, 6, 16);
-            var knob = UiKit.Fill(face, UiKit.Primary, UiKit.Circle);
-            UiKit.Place(knob, 0.5f, 1, 0, -26, 14, 14);
-            var dark = new Color(0.04f, 0.06f, 0.16f);
-            UiKit.Place(UiKit.Fill(head.rectTransform, dark, UiKit.Circle), 0.5f, 0.5f, -16, 4, 14, 14);
-            UiKit.Place(UiKit.Fill(head.rectTransform, dark, UiKit.Circle), 0.5f, 0.5f, 16, 4, 14, 14);
-            UiKit.Place(UiKit.Fill(head.rectTransform, dark), 0.5f, 0.5f, 0, -14, 30, 5);
-        }
-
-        static void RefreshHome()
-        {
-            var id = (HeroId)BamSettings.LastHero;
-            var info = HeroCatalog.Get(id);
-            bool shown = homeStage.Show(id);
-            homeHero.gameObject.SetActive(!shown);
-            if (!shown) SetBadge(homeHero, id);
-            homePortraitImg.texture = Portrait(id);
-            LayoutHomeBackground();
-            homeSelected.text = info.Name + " - " + info.Title + " selected";
-            playSub.text = "3V3 · VS BOTS · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant();
-        }
-
-        // ---- pictures from the old game (Rickard's own, Resources/BAM/Menu) ----
-
-        static readonly System.Collections.Generic.Dictionary<string, Texture2D> pictures = new System.Collections.Generic.Dictionary<string, Texture2D>();
-        static Sprite fadeV, fadeH;
-
-        static Texture2D Picture(string name)
-        {
-            if (pictures.TryGetValue(name, out var t)) return t;
-            t = Resources.Load<Texture2D>("BAM/Menu/" + name);
-            if (t == null) Debug.LogError("[BAM.UI] picture missing: Resources/BAM/Menu/" + name);
-            pictures[name] = t;
-            return t;
-        }
-
-        static string Lower(HeroId id) => HeroCatalog.Get(id).Name.ToLowerInvariant();
-        static Texture2D Portrait(HeroId id) => Picture("portrait_" + Lower(id));
-
-        /// <summary>A round portrait with a gold ring (the old top bar's hero picture).</summary>
-        static RectTransform PortraitCircle(Transform parent, float size, out RawImage img)
-        {
-            var ring = UiKit.Fill(parent, UiKit.Trim, UiKit.Circle);
-            ring.rectTransform.sizeDelta = new Vector2(size, size);
-            var mask = UiKit.Fill(ring.rectTransform, Color.white, UiKit.Circle);
-            UiKit.Stretch(mask.rectTransform, 5, 5, 5, 5);
-            mask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-            var pic = UiKit.NewRect("Portrait", mask.rectTransform);
-            UiKit.Stretch(pic);
-            img = pic.gameObject.AddComponent<RawImage>();
-            img.raycastTarget = false;
-            img.uvRect = new Rect(0.115f, 0.1f, 0.77f, 0.9f); // the 400x308 portraits: a square around the face
-            return ring.rectTransform;
-        }
-
-        // The painting fills the screen behind Home like in the old game: scaled so its platform (at 47 % across, 79 % down
-        // the picture) sits under the hero, a little darker, with dark fades at the top, the sides and below it.
-        static RectTransform homeBackdrop;
-
-        // Everything sits in the standing frame (the phone-shaped middle of a wide window), clipped to it.
-        static void BuildHomeBackground(RectTransform body)
-        {
-            fadeV = MakeFade(true);
-            fadeH = MakeFade(false);
-            var screen = UiKit.NewRect("Backdrop", body);
-            UiKit.Stretch(screen);
-            screen.SetSiblingIndex(1); // over the plain gradient, under everything else on Home
-            screen.gameObject.AddComponent<RectMask2D>();
-            screen.gameObject.AddComponent<SizeWatch>().Changed = LayoutHomeBackground;
-            homeBackdrop = screen;
-            var bgRt = UiKit.NewRect("Painting", screen);
-            bgRt.anchorMin = bgRt.anchorMax = bgRt.pivot = new Vector2(0, 1);
-            homeBg = bgRt.gameObject.AddComponent<RawImage>();
-            homeBg.texture = Picture("home_bg");
-            homeBg.raycastTarget = false;
-            var shade = UiKit.Fill(bgRt, new Color(0.04f, 0.055f, 0.16f, 0.2f));
-            shade.name = "Shade";
-            int i = 1;
-            homeEdgeL = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
-            homeEdgeR = FadePart(screen, fadeH, new Color(0.024f, 0.035f, 0.12f, 0.5f), i++);
-            homeEdgeR.rectTransform.localScale = new Vector3(-1, 1, 1);
-            homeTopFade = FadePart(screen, fadeV, new Color(0.04f, 0.05f, 0.15f, 0.92f), i++);
-            homeBottomFade = FadePart(screen, fadeV, new Color(0.055f, 0.07f, 0.19f, 1f), i++);
-            homeBottomFade.rectTransform.localScale = new Vector3(1, -1, 1);
-            homeBottomFill = FadePart(screen, null, new Color(0.055f, 0.07f, 0.19f, 1f), i);
-        }
-
-        static Image FadePart(RectTransform screen, Sprite sprite, Color color, int sibling)
-        {
-            var img = UiKit.Fill(screen, color, sprite);
-            img.transform.SetSiblingIndex(sibling);
-            img.rectTransform.anchorMin = img.rectTransform.anchorMax = img.rectTransform.pivot = new Vector2(0.5f, 1);
-            return img;
-        }
-
-        // White with alpha 1 at the top (or left) fading to 0.
-        static Sprite MakeFade(bool vertical)
-        {
-            int n = 64;
-            var tex = new Texture2D(vertical ? 1 : n, vertical ? n : 1, TextureFormat.RGBA32, false)
-            { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "BAM.UI.Fade" };
-            for (int k = 0; k < n; k++)
-            {
-                float a = vertical ? k / (n - 1f) : 1f - k / (n - 1f);
-                var c = new Color(1, 1, 1, a * a * (3 - 2 * a));
-                if (vertical) tex.SetPixel(0, k, c); else tex.SetPixel(k, 0, c);
-            }
-            tex.Apply(false, true);
-            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-        }
-
-        static void LayoutHomeBackground()
-        {
-            if (homeBackdrop == null || homeBg == null) return;
-            Vector2 size = homeBackdrop.rect.size;
-            float W = size.x, H = size.y;
-            if (W <= 0 || H <= 0 || homeBg.texture == null) return;
-            float platFromTop = H - HomePlatY;
-            float iw = homeBg.texture.width, ih = homeBg.texture.height;
-            float s = Mathf.Max(platFromTop / (0.786f * ih), W / iw);
-            float dw = iw * s, dh = ih * s, dx = W / 2 - 0.4725f * dw, dy = platFromTop - 0.786f * dh;
-            if (dy > 0) dy = 0; // never a gap at the top
-            var r = homeBg.rectTransform;
-            r.anchoredPosition = new Vector2(dx, -dy);
-            r.sizeDelta = new Vector2(dw, dh);
-
-            float edge = W * 0.24f;
-            SetPart(homeEdgeL, -W / 2 + edge / 2, 0, edge, H);
-            SetPart(homeEdgeR, W / 2 - edge / 2, 0, edge, H);
-            SetPart(homeTopFade, 0, 0, W, W * 0.52f);
-            float fb = Mathf.Min(-dy + dh - W * 0.24f, platFromTop + 200f);
-            SetPart(homeBottomFade, 0, fb, W, W * 0.3f);
-            SetPart(homeBottomFill, 0, fb + W * 0.3f - 1, W, Mathf.Max(0, H - fb - W * 0.3f + 1));
-        }
-
-        // Places a fade part by its top edge (y measured down from the screen's top), centred at x.
-        static void SetPart(Image img, float x, float top, float w, float h)
-        {
-            var r = img.rectTransform;
-            // the flipped parts (scale -1) keep their pivot, so their top is the same edge
-            r.anchoredPosition = new Vector2(x, -top - (r.localScale.y < 0 ? h : 0));
-            r.sizeDelta = new Vector2(w, h);
-        }
 
         static void SetBadge(RectTransform badge, HeroId id)
         {
@@ -596,25 +359,30 @@ namespace BAM.UI
     }
 
     /// <summary>
-    /// Shows one hero's 3D model (ArtKit.CreateHeroPreview) in the UI: a small camera far from the arena films it into a
-    /// RenderTexture drawn by a RawImage. The camera only runs while this is visible.
+    /// Shows one hero's 3D model (ArtKit.CreateHeroPreview) in the UI: a small orthographic camera far from the arena films
+    /// it into a RenderTexture drawn by <see cref="Picture"/>, sized so the hero is HeroFill of the picture's height with the
+    /// feet FeetAt up from its bottom (the old HubHero3). The camera only runs while this is visible. Sits on the touch area:
+    /// a drag sideways turns the hero, a tap calls Tapped.
     /// </summary>
-    sealed class HeroStage : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    sealed class HeroStage : MonoBehaviour, IPointerDownHandler, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         const float StartYaw = 160f;  // faces the camera, a little turned
         const float DegPerUnit = 0.45f; // a finger across the whole screen turns him about one and a half times
         float yaw = StartYaw, spin;   // spin: degrees per second left after a flick, slowing down
-        bool dragging;
+        bool dragging, dragged;
         float lastDragAt;
         static readonly Vector3 Spot = new Vector3(500, 0, 500);
-        const int Size = 768;
 
-        RawImage image;
+        public RawImage Picture;
+        public System.Action Tapped;
+        public float FeetAt = 0.07f, HeroFill = 0.75f;
+
         Camera cam;
         RenderTexture rt;
         UnitView view;
         HeroId shownId;
         bool hasHero;
+        float heroHeight = 1.8f; // world units, measured from the model when shown
 
         /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback).</summary>
         public bool Show(HeroId id)
@@ -624,41 +392,78 @@ namespace BAM.UI
             if (hasHero) { ArtKit.Release(view); view = null; hasHero = false; }
             try { view = ArtKit.CreateHeroPreview(id); }
             catch (System.Exception e) { Debug.LogException(e); view = null; }
-            if (view == null) { image.enabled = false; return false; }
+            if (view == null) { Picture.enabled = false; return false; }
             view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, yaw, 0));
             view.SetMoving(false, 0);
+            heroHeight = MeasureHeight(view);
             shownId = id;
             hasHero = true;
-            image.enabled = true;
+            Picture.enabled = true;
             cam.enabled = isActiveAndEnabled;
+            Frame();
             return true;
+        }
+
+        // From the feet to the top of the model's meshes; 1.8 if that looks wrong.
+        static float MeasureHeight(UnitView v)
+        {
+            float top = 0;
+            foreach (var r in v.GetComponentsInChildren<Renderer>())
+            {
+                if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
+                top = Mathf.Max(top, r.bounds.max.y - Spot.y);
+            }
+            return top > 0.6f && top < 4f ? top : 1.8f;
+        }
+
+        /// <summary>Fits the RenderTexture and the camera to the picture's size on screen (call after a layout change).</summary>
+        public void Frame()
+        {
+            if (cam == null || Picture == null) return;
+            var r = Picture.rectTransform;
+            Vector2 size = r.rect.size;
+            if (size.x <= 1 || size.y <= 1) return;
+            float scale = Mathf.Abs(r.lossyScale.x);
+            int w = Mathf.Clamp(Mathf.RoundToInt(size.x * scale), 16, 1280);
+            int h = Mathf.Clamp(Mathf.RoundToInt(size.y * scale), 16, 1280);
+            if (rt == null || rt.width != w || rt.height != h)
+            {
+                if (rt != null) { cam.targetTexture = null; rt.Release(); Destroy(rt); }
+                rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { name = "BAM.UI.HeroStage", antiAliasing = 4 };
+                cam.targetTexture = rt;
+                Picture.texture = rt;
+            }
+            float viewH = heroHeight / HeroFill;
+            cam.orthographicSize = viewH / 2;
+            cam.aspect = size.x / size.y;
+            cam.transform.position = Spot + new Vector3(0, viewH / 2 - FeetAt * viewH, -6f);
         }
 
         void Setup()
         {
             if (cam != null) return;
-            image = gameObject.AddComponent<RawImage>();
-            image.raycastTarget = true; // drag sideways to turn the hero, as in the old game
-            rt = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGB32) { name = "BAM.UI.HeroStage", antiAliasing = 4 };
-            image.texture = rt;
             var go = new GameObject("BAM.HeroStageCamera");
             DontDestroyOnLoad(go);
             cam = go.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0, 0, 0, 0);
-            cam.fieldOfView = 30;
+            cam.orthographic = true;
             cam.nearClipPlane = 0.1f;
-            cam.farClipPlane = 8;
-            cam.targetTexture = rt;
+            cam.farClipPlane = 12;
             cam.depth = -50;
-            // Level, straight in front of the hero (it looks toward -z): 30 degrees at 3.4 units shows y -0.11 to 1.71.
-            go.transform.position = Spot + new Vector3(0, 0.8f, -3.4f);
-            go.transform.rotation = Quaternion.identity;
+            go.transform.rotation = Quaternion.identity; // level, straight in front of the hero (it looks toward -z)
             cam.enabled = false;
         }
 
         // Drag sideways to turn the hero; let go mid-drag and he keeps turning a moment, slowing down.
-        public void OnBeginDrag(PointerEventData e) { dragging = true; spin = 0; }
+        public void OnPointerDown(PointerEventData e) => dragged = false;
+
+        public void OnPointerClick(PointerEventData e)
+        {
+            if (!dragged && !e.dragging) Tapped?.Invoke();
+        }
+
+        public void OnBeginDrag(PointerEventData e) { dragging = true; dragged = true; spin = 0; }
 
         public void OnDrag(PointerEventData e)
         {
@@ -690,12 +495,5 @@ namespace BAM.UI
 
         void OnEnable() { if (cam != null) cam.enabled = hasHero; }
         void OnDisable() { if (cam != null) cam.enabled = false; }
-    }
-
-    /// <summary>Calls back when its RectTransform changes size (the window or the standing frame changed).</summary>
-    sealed class SizeWatch : MonoBehaviour
-    {
-        public System.Action Changed;
-        void OnRectTransformDimensionsChange() => Changed?.Invoke();
     }
 }
