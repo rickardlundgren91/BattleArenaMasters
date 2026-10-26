@@ -109,7 +109,7 @@ namespace BAM.Art
             // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
             // (Rickard 2026-10-26: "klubban ska vara för stor för honom"); at rest it leans back over his right shoulder instead of
             // standing up in front of his face, low enough that its top stays inside the menu stage's picture
-            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 30f, HoldOut = 165f } } };
+            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 38f, HoldOut = 172f } } };
             return g;
         }
 
