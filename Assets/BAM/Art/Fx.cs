@@ -72,17 +72,21 @@ namespace BAM.Art
         }
 
         /// <summary>The sword arc: the crescent cell sized so its blade runs at radius 0.5 in front of the origin, as Shapes.Slash.</summary>
-        public static Mesh SlashQuad()
+        public static Mesh SlashQuad(bool mirror = false)
         {
+            if (mirror) { if (slashM == null) slashM = Flat("Fx slash (mirrored)", Slash, -0.714f, 0.714f, -0.714f, 0.714f, true); return slashM; }
             if (slash == null) slash = Flat("Fx slash", Slash, -0.714f, 0.714f, -0.714f, 0.714f);
             return slash;
         }
 
-        static Mesh Flat(string name, int cell, float x0, float x1, float z0, float z1)
+        static Mesh slashM;
+
+        static Mesh Flat(string name, int cell, float x0, float x1, float z0, float z1, bool mirrorU = false)
         {
             var m = new Mesh { name = name };
+            float u0 = mirrorU ? 0.996f : 0.004f, u1 = mirrorU ? 0.004f : 0.996f; // mirrored picture, same winding (still faces up)
             m.vertices = new[] { new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1), new Vector3(x1, 0f, z0) };
-            m.uv = new[] { Uv(cell, 0.004f, 0.004f), Uv(cell, 0.004f, 0.996f), Uv(cell, 0.996f, 0.996f), Uv(cell, 0.996f, 0.004f) };
+            m.uv = new[] { Uv(cell, u0, 0.004f), Uv(cell, u0, 0.996f), Uv(cell, u1, 0.996f), Uv(cell, u1, 0.004f) };
             m.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
             m.triangles = new[] { 0, 1, 2, 0, 2, 3 };
             m.RecalculateBounds();
@@ -369,6 +373,28 @@ namespace BAM.Art
             ep.rotation = 0f;
         }
 
+        /// <summary>Streak sparks sprayed forward along dir within +-spread degrees: a melee hit bursts out behind its target.</summary>
+        public static void SparksAlong(Vector3 pos, Vector3 dir, int n, Color32 c, float size, float speed, float life, float spread = 35f)
+        {
+            if (spark == null) return;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 1e-6f) return;
+            dir.Normalize();
+            n = Count(n);
+            for (int i = 0; i < n; i++)
+            {
+                Vector3 d = Quaternion.Euler(Random.Range(-10f, 25f), Random.Range(-spread, spread), 0f) * Vector3.forward;
+                d = Quaternion.LookRotation(dir) * new Vector3(d.x, -d.y, d.z); // a little up, never into the ground
+                ep.position = pos;
+                ep.velocity = d * speed * Random.Range(0.7f, 1.2f);
+                ep.startColor = c;
+                ep.startSize = size * Random.Range(0.7f, 1.3f);
+                ep.startLifetime = life * Random.Range(0.75f, 1.25f);
+                ep.rotation = 0f;
+                spark.Emit(ep, 1);
+            }
+        }
+
         public static void Glow(Vector3 pos, int n, Color32 c, float size, float speed, float life, float up = 0f, float jitter = 0f) => Burst(glow, pos, n, c, size, speed, life, up, jitter);
         public static void Sparks(Vector3 pos, int n, Color32 c, float size, float speed, float life, float up = 0f, float jitter = 0f) => Burst(spark, pos, n, c, size, speed, life, up, jitter);
         public static void Smoke(Vector3 pos, int n, Color32 c, float size, float speed, float life, float up = 0f, float jitter = 0f) => Burst(smoke, pos, n, c, size, speed, life, up, jitter);
@@ -576,6 +602,8 @@ namespace BAM.Art
                     Ring(p, 0.2f * size, 0.8f * size, new Color(1f, 1f, 0.7f, 0.9f), 0.35f, 0.6f);
                     break;
                 case FxKind.Explosion:
+                    Flash(mid, 0.5f * size, 1.9f * size, new Color(1f, 1f, 1f, 0.95f), 0.08f); // the white core first
+                    Ring(p, 0.3f * size, 2.1f * size, (Color)heroAccent[(int)HeroId.Blast], 0.4f, 0.6f);
                     Pow(mid, 1, C(Pal.FireCore), 1.8f * size, 0.22f);
                     Flash(mid, 0.4f * size, 1.4f * size, new Color(1f, 0.6f, 0.2f, 1f), 0.25f);
                     Flames(mid, 14, C(Pal.Fire), 0.8f * size, 2.5f * size, 0.5f, 1.2f, 0.3f * size);
@@ -643,6 +671,8 @@ namespace BAM.Art
                     Glow(p, 6, teamL, 0.2f * size, 2f, 0.25f);
                     break;
                 case FxKind.AnchorHit:
+                    SpecialHit((int)HeroId.Knut, mid, 1.1f * size);
+                    Drops(mid, 10, heroAccent[(int)HeroId.Knut], 0.15f * size, 3f, 0.5f, 1.5f, 0.2f);
                     Pow(mid, 1, C(Pal.Steel), 0.9f * size, 0.16f);
                     Sparks(mid, 12, C(Pal.Steel), 0.13f, 4f, 0.35f, 1.4f);
                     Dust(p + Vector3.up * 0.1f, 6, C(Pal.Ground, 210), 0.6f * size, 1.4f, 0.6f, 0.3f, 0.2f);
@@ -651,6 +681,56 @@ namespace BAM.Art
                     Ring(p, 0.3f * size, 1.0f * size, new Color(0.75f, 0.8f, 0.9f, 0.9f), 0.3f);
                     break;
             }
+        }
+
+        // Each hero's two special colours (main, accent) from the MLBB clip analysis (bam-work/art/mlbb-miya/skill-fx-analys.md),
+        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast. Tyra keeps the cyan her bolt already has.
+        internal static Color32 HeroMain(HeroId h) => heroMain[(int)h];
+        internal static Color32 HeroAccent(HeroId h) => heroAccent[(int)h];
+
+        static readonly Color32[] heroMain =
+        {
+            new Color32(255, 138, 42, 255), new Color32(191, 239, 255, 255), new Color32(180, 240, 255, 255), new Color32(255, 179, 0, 255),
+            new Color32(47, 140, 255, 255), new Color32(124, 255, 79, 255), new Color32(255, 90, 31, 255),
+        };
+        static readonly Color32[] heroAccent =
+        {
+            new Color32(255, 227, 107, 255), new Color32(140, 123, 255, 255), new Color32(255, 255, 255, 255), new Color32(255, 246, 214, 255),
+            new Color32(127, 255, 224, 255), new Color32(176, 76, 255, 255), new Color32(255, 242, 160, 255),
+        };
+
+        /// <summary>The caster's own "release" when a hero fires the special, in that hero's colours, so you see who cast it even
+        /// when the hit lands far away: a short white flash, a thin pillar, rising glows and a few accent stars.</summary>
+        public static void HeroCast(int hero, Vector3 p)
+        {
+            if (hero < 0 || hero >= heroMain.Length) return;
+            Color32 m = heroMain[hero], a = heroAccent[hero];
+            Flash(p + Vector3.up * 0.6f, 0.2f, 0.7f, new Color(1f, 1f, 1f, 0.7f), 0.1f);
+            Pillar(p, 0.6f, 2.2f, (Color)m, 0.35f);
+            Glow(p + Vector3.up * 0.2f, 4, m, 0.22f, 0.8f, 0.3f, 1.4f, 0.25f);
+            Stars(p + Vector3.up * 0.7f, 2, a, 0.28f, 0.9f, 0.45f, 1f, 0.3f);
+            switch ((HeroId)hero)
+            {
+                case HeroId.Knut: Drops(p + Vector3.up * 0.5f, 6, m, 0.14f, 2f, 0.5f, 1.2f, 0.2f); break;
+                case HeroId.Blast: Flames(p + Vector3.up * 0.3f, 4, m, 0.4f, 1f, 0.4f, 1f, 0.2f); break;
+                case HeroId.Moa: Bubbles(p + Vector3.up * 0.4f, 5, m, 0.16f, 0.8f, 0.6f, 1f, 0.3f); break;
+                case HeroId.Tikta: Bubbles(p + Vector3.up * 0.4f, 3, a, 0.12f, 0.8f, 0.5f, 1f, 0.2f); break;
+                case HeroId.Fenn: Wisps(p + Vector3.up * 0.4f, 3, a, 0.5f, 0.6f, 0.6f, 0.8f, 0.3f); break;
+                case HeroId.Bram: Sparks(p + Vector3.up * 0.5f, 6, a, 0.1f, 3f, 0.3f, 1.2f); break;
+            }
+        }
+
+        /// <summary>A special's hit, MLBB order: a white core first (under 0.1 s), then the main colour's ring and nova and the
+        /// accent's sparks going outward.</summary>
+        static void SpecialHit(int hero, Vector3 p, float r)
+        {
+            Color32 m = heroMain[hero], a = heroAccent[hero];
+            Vector3 g = new Vector3(p.x, 0f, p.z);
+            Flash(p, 0.3f * r, 1.1f * r, new Color(1f, 1f, 1f, 0.95f), 0.08f);
+            Ring(g, 0.3f * r, r, (Color)m, 0.35f);
+            Ring(g, 0.2f * r, 0.7f * r, (Color)a, 0.3f, 0.6f);
+            Nova(g, (Color)m, r, 0.4f);
+            Sparks(p, 10, a, 0.12f, 4.5f * r, 0.3f, 0.8f);
         }
 
         /// <summary>Where a projectile ends: each hero's own splash (honey, poison, fire, sparks), so you see whose shot landed.</summary>
@@ -664,6 +744,8 @@ namespace BAM.Art
                     Sparks(p, 5, C(Pal.FireCore), 0.1f, 3f, 0.25f, 1f);
                     break;
                 case ProjKind.BramHammerSpecial:
+                    SpecialHit((int)HeroId.Bram, p, 1f);
+                    Crack(new Vector3(p.x, 0f, p.z), 0.6f, 0.9f);
                     Pow(p, 1, teamL, 0.8f, 0.15f);
                     Sparks(p, 8, C(Pal.Steel), 0.12f, 3.5f, 0.3f, 1.2f);
                     Stars(p, 2, teamL, 0.35f, 1.2f, 0.3f, 0.8f);
@@ -673,6 +755,7 @@ namespace BAM.Art
                     Sparks(p, 3, C(Pal.Cream), 0.08f, 2.5f, 0.2f, 0.6f);
                     break;
                 case ProjKind.TyraBolt:
+                    SpecialHit((int)HeroId.Tyra, p, 1f);
                     Pow(p, 1, new Color32(180, 240, 255, 255), 0.9f, 0.16f);
                     Rays(p, new Color(0.7f, 0.95f, 1f, 1f), 1.1f, 0.18f);
                     Stars(p, 3, new Color32(200, 245, 255, 255), 0.45f, 1.5f, 0.3f, 0.6f);
@@ -686,6 +769,7 @@ namespace BAM.Art
                     Bubbles(p, 3, C(Pal.Poison), 0.14f, 0.6f, 0.6f, 0.8f, 0.1f);
                     break;
                 case ProjKind.TiktaNeedleSpecial:
+                    SpecialHit((int)HeroId.Tikta, p, 0.6f);
                     Bubbles(p, 7, C(Pal.Poison), 0.18f, 0.9f, 0.8f, 1f, 0.2f);
                     Wisps(p, 2, C(Pal.Poison, 200), 0.5f, 0.4f, 0.7f, 0.8f, 0.1f);
                     break;

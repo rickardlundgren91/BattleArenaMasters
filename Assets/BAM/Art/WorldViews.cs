@@ -21,7 +21,9 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched;
+        bool melee, launched, mirror, struck;
+        MeshFilter visF;
+        static int swings; // every other swing comes from the other side (MLBB: the combo alternates left and right)
 
         const float Height = 0.55f;
 
@@ -34,13 +36,16 @@ namespace BAM.Art
             vis = go.transform;
             vis.SetParent(transform, false);
             bool painted = melee && FxAtlas.Texture != null; // the painted sword arc from the effect atlas
-            go.AddComponent<MeshFilter>().sharedMesh = painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            visF = go.AddComponent<MeshFilter>();
+            visF.sharedMesh = painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot;
             if (melee)
             {
                 visR.sharedMaterial = painted ? FxAtlas.Material(ArtMaterials.UnlitAdd) : ArtMaterials.Instance(ArtMaterials.UnlitAdd);
-                Color c = k == ProjKind.WolfBite ? new Color(0.6f, 0.9f, 1f, 1f) : k == ProjKind.KnutHit ? new Color(0.85f, 0.9f, 1f, 1f) : (Color)Pal.Get(Pal.TeamLight(t));
+                // the heroes' own swing colours (MLBB analysis 8): Fenn silver-cyan, Knut steel blue; the wolf ghost blue, minions the team's
+                Color c = k == ProjKind.WolfBite ? new Color(0.6f, 0.9f, 1f, 1f) : k == ProjKind.KnutHit ? (Color)Fx.HeroMain(HeroId.Knut)
+                    : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : (Color)Pal.Get(Pal.TeamLight(t));
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, c);
             }
             else visR.sharedMaterial = glowy ? ArtMaterials.Unlit : ArtMaterials.Lit;
@@ -107,7 +112,13 @@ namespace BAM.Art
             vis.localScale = Vector3.one;
             Place(0f);
             if (trail != null) { trail.Clear(); trail.emitting = ArtKit.High; }
-            if (melee) visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, WithAlpha(visR.sharedMaterial.GetColor(ArtMaterials.BaseColor), 1f));
+            if (melee)
+            {
+                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, WithAlpha(visR.sharedMaterial.GetColor(ArtMaterials.BaseColor), 1f));
+                mirror = (++swings & 1) == 0;
+                struck = false;
+                if (FxAtlas.Texture != null) visF.sharedMesh = FxAtlas.SlashQuad(mirror);
+            }
         }
 
         public override void SetTether(Transform anchor)
@@ -158,7 +169,17 @@ namespace BAM.Art
                 float k = Mathf.Clamp01(age / life);
                 float s = 0.7f + k * 0.5f;
                 vis.localScale = new Vector3(s, 1f, s);
-                vis.rotation = Quaternion.LookRotation(dir) * Quaternion.Euler(0f, Mathf.Lerp(-40f, 40f, k), 0f);
+                vis.rotation = Quaternion.LookRotation(dir) * Quaternion.Euler(0f, mirror ? Mathf.Lerp(40f, -40f, k) : Mathf.Lerp(-40f, 40f, k), 0f);
+                if (!struck && age >= Mathf.Min(flight, 0.18f))
+                {
+                    // the hit sprays out behind the target in the swing's direction, with a small white core (MLBB analysis 7-8)
+                    struck = true;
+                    Vector3 at = to + new Vector3(0f, 0.5f, 0f);
+                    Color32 sc = kind == ProjKind.KnutHit ? Fx.HeroAccent(HeroId.Knut) : kind == ProjKind.FennSlash ? Fx.HeroMain(HeroId.Fenn) : new Color32(255, 220, 160, 255);
+                    Fx.Flash(at, 0.1f, 0.4f, new Color(1f, 1f, 1f, 0.9f), 0.05f);
+                    Fx.SparksAlong(at, to - from, kind == ProjKind.MeleeMinionHit ? 3 : 7, sc, 0.11f, 4.5f, 0.2f);
+                    if (kind == ProjKind.KnutHit) Fx.Drops(at, 5, Fx.HeroAccent(HeroId.Knut), 0.12f, 2.2f, 0.4f, 1.2f, 0.1f);
+                }
                 Material m = visR.sharedMaterial;
                 m.SetColor(ArtMaterials.BaseColor, WithAlpha(m.GetColor(ArtMaterials.BaseColor), 1f - k));
             }

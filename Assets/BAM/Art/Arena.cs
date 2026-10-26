@@ -227,9 +227,10 @@ namespace BAM.Art
         // The old game's bush (View3DMapArena.ArenaBush, Rickard 2026-10-17: "the leaves built in code looked good, so they are the
         // bush"): on every grass tile about 24 pointed leaves on a jittered 5x5 grid, leaning away from the camera so on screen they
         // rise long and upward and fan out; tiles on an area's edge lean their outer leaves outward, so the outline is ragged. Two
-        // greens, each leaf dark at the root and light at the tip (a bilinear 4x2 ramp texture, as the old palette). One mesh.
+        // greens, each leaf dark at the root and light at the tip (a bilinear 4x2 ramp texture, as the old palette). One mesh per tile,
+        // one shared material (SRP batcher), so BushField can fade the tiles round the player and lean them away from heroes.
         static Texture2D leafRamp;
-        static Material leafMat;
+        static Material leafMat, leafFaded;
 
         static void LeafBushes(GameObject root, ArenaInfo info)
         {
@@ -240,10 +241,13 @@ namespace BAM.Art
             var t = new System.Collections.Generic.List<int>(24576);
             bool G(int x, int y) => x >= 0 && y >= 0 && x < w && y < h && info.Tile(x, y) == TGrass;
             const int N = 5;
+            GameObject holder = null;
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
                     if (!G(x, y)) continue;
+                    v.Clear(); n.Clear(); uv.Clear(); t.Clear();
+                    var mid0 = info.TileCenter(x, y); // each tile is its own piece round its middle, so it can fade and lean alone
                     // the old map's rows grew with z; here row y lies at z = h - 1 - y, so the old row y - 1 (toward -z) is y + 1
                     float ex = (G(x - 1, y) ? 0 : -1) + (G(x + 1, y) ? 0 : 1), ez = (G(x, y + 1) ? 0 : -1) + (G(x, y - 1) ? 0 : 1);
                     for (int j = 0; j < N; j++)
@@ -252,7 +256,7 @@ namespace BAM.Art
                             int hx = x * N + i, hy = y * N + j;
                             if (Hash(hx, hy, 31) < 0.06f) continue; // a few gaps
                             float u = (i + 0.15f + Hash(hx, hy, 32) * 0.7f) / N, vv = (j + 0.15f + Hash(hx, hy, 33) * 0.7f) / N;
-                            var at = new Vector3(x + u, 0f, h - 1 - y + vv);
+                            var at = new Vector3(x + u, 0f, h - 1 - y + vv) - mid0;
                             float a = (Hash(hx, hy, 34) - 0.5f) * 1.6f; // -46..46 degrees round +z
                             var dir = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
                             float edgeW = Mathf.Clamp01(Mathf.Max(ex * (u - 0.5f), ez * (vv - 0.5f)) * 2.2f); // near an open side: lean out
@@ -261,12 +265,22 @@ namespace BAM.Art
                             int row = Hash(hx, hy, 37) < 0.35f ? 1 : 0;
                             Leaf(v, n, uv, t, at, dir, len, wd, row, Hash(hx, hy, 38) < 0.5f ? 1 : 2);
                         }
+                    if (v.Count == 0) continue;
+                    var mesh = new Mesh { name = "Bush tile" };
+                    mesh.SetVertices(v); mesh.SetNormals(n); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
+                    mesh.RecalculateBounds();
+                    mesh.UploadMeshData(true);
+                    if (holder == null) { holder = new GameObject("Bushes"); holder.transform.SetParent(root.transform, false); }
+                    EnsureLeafMats();
+                    var go = Add(holder, "Bush", mesh, leafMat, true, false); // receive shadows, cast none (thousands of leaves in the shadow pass)
+                    go.isStatic = false; // it leans
+                    go.transform.localPosition = mid0;
                 }
-            if (v.Count == 0) return;
-            var mesh = new Mesh { name = "Arena bushes", indexFormat = v.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
-            mesh.SetVertices(v); mesh.SetNormals(n); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
-            mesh.RecalculateBounds();
-            mesh.UploadMeshData(true);
+            if (holder != null) holder.AddComponent<BushField>().Init(holder.transform, leafMat, leafFaded);
+        }
+
+        static void EnsureLeafMats()
+        {
             if (leafMat == null)
             {
                 leafRamp = new Texture2D(4, 2, TextureFormat.RGBA32, false, false)
@@ -284,11 +298,26 @@ namespace BAM.Art
                 leafMat.SetTexture(ArtMaterials.BaseMap, leafRamp);
                 leafMat.mainTexture = leafRamp;
                 if (leafMat.HasProperty(CullId)) leafMat.SetFloat(CullId, 0f); // both sides, as the old game
+                Matte(leafMat); // the old bush was URP Lit with smoothness 0: no sheen, or the leaves read mint instead of green
+                // the old game's see-through bush round the player: the same leaves at 40% (View3D.Faded)
+                leafFaded = ArtMaterials.Instance(ArtMaterials.LitFade);
+                leafFaded.name = "BAM leaves (faded)";
+                leafFaded.SetTexture(ArtMaterials.BaseMap, leafRamp);
+                leafFaded.mainTexture = leafRamp;
+                leafFaded.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, 0.4f));
+                Matte(leafFaded);
+                if (leafFaded.HasProperty(CullId)) leafFaded.SetFloat(CullId, 0f);
             }
-            Add(root, "Bushes", mesh, leafMat, true, false); // receive shadows, cast none (thousands of leaves in the shadow pass)
         }
 
         static readonly int CullId = Shader.PropertyToID("_Cull");
+        static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness"), SpecColorId = Shader.PropertyToID("_SpecColor");
+
+        static void Matte(Material m)
+        {
+            if (m.HasProperty(SmoothnessId)) m.SetFloat(SmoothnessId, 0f);
+            if (m.HasProperty(SpecColorId)) m.SetColor(SpecColorId, Color.black);
+        }
 
         // a pointed leaf from its root p, rising and bending out along dir: five rings of two points, widest a third of the way up
         static void Leaf(System.Collections.Generic.List<Vector3> v, System.Collections.Generic.List<Vector3> n, System.Collections.Generic.List<Vector2> uv,

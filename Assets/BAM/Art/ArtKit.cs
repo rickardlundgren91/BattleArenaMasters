@@ -174,15 +174,16 @@ namespace BAM.Art
             sun = lg.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.96f, 0.88f);
-            sun.intensity = 1.3f;
+            sun.intensity = 1f;     // as the old game's scene light; 1.3 washed the arena out (Rickard 2026-10-26: "det skiljer mycket")
             sun.shadowStrength = 0.55f;
             sun.shadowBias = 0.04f;
             sun.shadowNormalBias = 0.3f;
             RenderSettings.sun = sun;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.8f, 0.85f, 0.95f);
-            RenderSettings.ambientEquatorColor = new Color(0.7f, 0.68f, 0.64f);
-            RenderSettings.ambientGroundColor = new Color(0.42f, 0.36f, 0.3f);
+            // the old game's ambient exactly (Speltest View3DMapStyle.cs, "a little darker, 2026-10-16"): warm grey, not blue
+            RenderSettings.ambientSkyColor = new Color(0.86f, 0.84f, 0.81f);
+            RenderSettings.ambientEquatorColor = new Color(0.72f, 0.68f, 0.65f);
+            RenderSettings.ambientGroundColor = new Color(0.53f, 0.47f, 0.44f);
             RenderSettings.fog = false;
         }
 
@@ -243,7 +244,10 @@ namespace BAM.Art
                 v.Build(def, team);
             }
             v.InPool = false;
+            v.IsHero = !preview && kindKey < 10;
+            v.HeroIndex = kindKey < 10 ? kindKey : kindKey >= 50 && kindKey < 60 ? kindKey - 50 : -1;
             v.gameObject.SetActive(true);
+            if (v.IsHero && !BodyView.Heroes.Contains(v)) BodyView.Heroes.Add(v); // a new view was enabled before IsHero was set
             return v;
         }
 

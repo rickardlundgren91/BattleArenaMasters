@@ -39,7 +39,7 @@ namespace BAM.Art.Editor
                 ti.sRGBTexture = true;
                 ti.alphaIsTransparency = true;
                 ti.mipmapEnabled = true;
-                ti.wrapMode = TextureWrapMode.Clamp;
+                ti.wrapMode = assetPath.EndsWith("T_BAM_HexShield.png") ? TextureWrapMode.Repeat : TextureWrapMode.Clamp; // the honeycomb tiles round the shield
                 ti.maxTextureSize = 1024;
                 ti.textureCompression = TextureImporterCompression.Compressed;
                 return;

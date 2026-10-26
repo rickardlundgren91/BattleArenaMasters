@@ -20,6 +20,17 @@ namespace BAM.Art
         internal int Team;
         /// <summary>Menu showcase: no ground ring, bar or status markers.</summary>
         internal bool Preview;
+        /// <summary>A hero in a match (not a minion, tower, wolf or menu preview); set by ArtKit.Body.</summary>
+        internal bool IsHero;
+        /// <summary>HeroId of a hero view (also menu previews), else -1; set by ArtKit.Body.</summary>
+        internal int HeroIndex = -1;
+        /// <summary>Heroes in the match now, for the bushes (BushField). Kept by OnEnable/OnDisable, so pooled views drop out.</summary>
+        internal static readonly List<BodyView> Heroes = new List<BodyView>(8);
+        internal bool IsDead => dead;
+        internal bool IsPlayer => marker == UnitMarker.Player;
+
+        void OnEnable() { if (IsHero && !Heroes.Contains(this)) Heroes.Add(this); }
+        void OnDisable() { Heroes.Remove(this); }
 
         RigDef def;
         Transform model;
@@ -54,6 +65,7 @@ namespace BAM.Art
         float speed01, moveW, phase, idleT, seed;
         float atkT = -1f, windup = 0.3f, castT = -1f, hitT = -1f, hitLen = 0.15f, recoil;
         float propBack = -1f;
+        float hp = -1f, towerFxT, dustT;   // last health fraction (-1 = never set), the tower's smoke timer
         bool dead;
         float deathT = -1f, spawnT = -1f, vis = 1f, ghostPulse;
         int lastQuality = -1;
@@ -280,7 +292,7 @@ namespace BAM.Art
         /// <summary>Fresh state for a new life out of the pool.</summary>
         public void ResetState()
         {
-            moving = false; speed01 = 0f; moveW = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f;
+            moving = false; speed01 = 0f; moveW = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
@@ -321,6 +333,7 @@ namespace BAM.Art
         public override void PlayCast()
         {
             castT = 0f;
+            if (IsHero && !dead) Fx.HeroCast(HeroIndex, transform.position);
             if (clips != null) { clips[CCast].SetTime(0.0); clips[CCast].SetTime(0.0); clips[CCast].SetSpeed(1.2f); }
             if (gear != null) gear.Throw(castLen * 0.35f);
         }
@@ -329,10 +342,11 @@ namespace BAM.Art
         {
             hitT = 0f;
             hitA = 0f;
+            status.Ripple();
             if (clips != null) { clips[CHit].SetTime(0.0); clips[CHit].SetTime(0.0); }
             hitLen = big ? 0.25f : 0.14f;
             recoil = big ? 1f : 0.6f;
-            flashColor = big ? new Color(1f, 0.55f, 0.35f) : Color.white;
+            flashColor = big ? new Color(1f, 0.55f, 0.35f) : new Color(1f, 0.45f, 0.4f); // a short red blink on every hit (MLBB analysis 7)
         }
 
         public override void SetDead(bool d)
@@ -367,7 +381,7 @@ namespace BAM.Art
             ApplyLook();
         }
 
-        public override void SetHealth(float hp01, float shield01) => bar.Set(hp01, shield01);
+        public override void SetHealth(float hp01, float shield01) { hp = hp01; bar.Set(hp01, shield01); }
         public override void SetLevel(int level) => bar.SetLevel(level);
         public override void SetStatus(StatusFlags flags) => status.Set(flags);
 
@@ -488,6 +502,17 @@ namespace BAM.Art
                     float s = spawnT >= 0.3f ? 1f : Back(spawnT / 0.3f);
                     model.localScale = new Vector3(s, s, s);
                     if (spawnT >= 0.3f) spawnT = -1f;
+                }
+            }
+
+            // the old game's dust puffs behind running heroes (View3DWorld.SyncAmbience); none while see-through or hidden, so it never gives a hider away
+            if (IsHero && moving && !dead && renderersOn && vis >= 0.99f)
+            {
+                dustT -= dt;
+                if (dustT <= 0f)
+                {
+                    dustT = ArtKit.High ? 0.13f : 0.26f;
+                    Fx.Dust(transform.position - transform.forward * 0.25f + new Vector3(0f, 0.08f, 0f), 1, new Color32(196, 178, 140, 170), 0.32f, 0.35f, 0.55f, 0.25f, 0.12f);
                 }
             }
 
@@ -748,6 +773,15 @@ namespace BAM.Art
             float s = 1f + pulse;
             bones[Models.TowerCrystal].localScale = new Vector3(s, s, s);
             model.localPosition = new Vector3(Mathf.Sin(idleT * 60f) * 0.03f * recoil, 0f, 0f);
+            // the old game's tower (View3DWorld.SyncTower): it rocks when hit, smokes under half health and also sparks under a quarter
+            model.localRotation = Quaternion.Euler(Mathf.Sin(idleT * 18f) * 3f * recoil, 0f, Mathf.Cos(idleT * 14f) * 2f * recoil);
+            if (def.Kind != RigKind.Tower || hp < 0f || hp >= 0.5f || !renderersOn) return;
+            towerFxT -= dt;
+            if (towerFxT > 0f) return;
+            towerFxT = ArtKit.High ? 0.16f : 0.32f;
+            var top = transform.position + new Vector3(0f, def.Height * 0.75f, 0f);
+            Fx.Smoke(top, 1, new Color32(58, 54, 54, 150), 0.55f, 0.3f, 1.5f, 0.9f, 0.35f);
+            if (hp < 0.25f) Fx.Sparks(top, 2, new Color32(255, 180, 80, 255), 0.08f, 2.5f, 0.35f, 1.2f, 0.3f);
         }
     }
 }
