@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Builds every BAM icon and store image from Rickard's logo (Docs/play/branding/bam-logo.png, 2026-10-25).
+"""Builds every BAM icon and store image from Rickard's logo (Docs/play/branding/bam-logo.png; new logo 2026-10-26,
+the first one is kept as bam-logo-old-2026-10-25.png).
 Replaces the code-drawn look of make_branding.py; same output files and sizes:
 
     python3 Docs/play/branding/make_branding_logo.py
 
-The logo is a rounded gold badge on black. The black corners are cut away (flood fill from the corners), and the badge
+The logo is a rounded gold badge on a plain black or white backdrop. The backdrop corners are cut away (flood fill from
+the corners), and the badge
 is placed on a dark navy background so no launcher or Play mask shows black or clips the frame.
 """
 import math
@@ -20,11 +22,15 @@ NAVY_DARK, NAVY, GLOW = (6, 12, 26), (16, 34, 66), (40, 170, 230)
 
 
 def badge():
-    """The logo with its black outer corners made transparent."""
+    """The logo with its plain outer corners (black or white) made transparent."""
     img = Image.open(LOGO).convert("RGB")
     w, h = img.size
-    dark = img.convert("L").point(lambda v: 255 if v < 40 else 0)
-    # Flood from the four corners through near-black pixels only: that is the outside of the badge.
+    grey = img.convert("L")
+    if grey.getpixel((0, 0)) > 128:
+        dark = grey.point(lambda v: 255 if v > 232 else 0)  # white backdrop (2026-10-26 logo)
+    else:
+        dark = grey.point(lambda v: 255 if v < 40 else 0)
+    # Flood from the four corners through backdrop-coloured pixels only: that is the outside of the badge.
     outside = Image.new("L", (w, h), 0)
     seed = dark.copy()
     for xy in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)):
