@@ -11,7 +11,8 @@ namespace BAM.Sim
     /// </summary>
     public static class SpellDefs
     {
-        public const float BlinkCd = 25f, BlinkDist = 3.5f, RecallCd = 15f, RecallChannel = 2f, RecallCancelCd = 4f,
+        public const float BlinkCd = 25f, BlinkDist = 3.5f, RecallCd = 0.1f, RecallChannel = 2f, RecallCancelCd = 0.1f,
+            // Recall is spammable: 0.1 s cooldown (Rickard 2026-10-26, "0.1 sec snarare"; old 15 s), the 2 s channel and its cancel rules stay
             ShieldCd = 30f, ShieldDur = 3f, ShieldPct = 0.2f, HasteCd = 30f, HasteDur = 5f, HastePct = 0.4f,
             SprintCd = 25f, SprintDur = 4f, SprintPct = 0.5f;
         /// <summary>The four spells in the picker's order.</summary>
@@ -20,7 +21,7 @@ namespace BAM.Sim
         public static string Name(SpellId s) => s == SpellId.None ? "" : s.ToString();
         public static string Desc(SpellId s) =>
             s == SpellId.Blink ? "Dash 3.5 tiles the way you move. " + (int)BlinkCd + " s"
-            : s == SpellId.Recall ? "Channel " + (int)RecallChannel + " s to teleport to your base. Moving or damage cancels it. " + (int)RecallCd + " s"
+            : s == SpellId.Recall ? "Channel " + (int)RecallChannel + " s to teleport to your base. Moving or damage cancels it. No cooldown."
             : s == SpellId.Shield ? "A shield of " + (int)(ShieldPct * 100) + "% max health for " + (int)ShieldDur + " s. " + (int)ShieldCd + " s"
             : s == SpellId.Haste ? "+" + (int)(HastePct * 100) + "% attack speed for " + (int)HasteDur + " s. " + (int)HasteCd + " s"
             : s == SpellId.Sprint ? "+" + (int)(SprintPct * 100) + "% movement speed for " + (int)SprintDur + " s. " + (int)SprintCd + " s" : "";
