@@ -66,7 +66,7 @@ namespace BAM.Art
         float atkT = -1f, windup = 0.3f, castT = -1f, hitT = -1f, hitLen = 0.15f, recoil;
         float propBack = -1f;
         float hp = -1f, towerFxT, dustT;
-        float channel = -1f, channelT, sprintT; // the battle spells' looks (SpellFx): recall channel progress, sprint trail
+        float channel = -1f, channelT, swirlT, sprintT; // the battle spells' looks (SpellFx): recall channel progress, sprint trail
         bool sprint;   // last health fraction (-1 = never set), the tower's smoke timer
         bool dead;
         float deathT = -1f, spawnT = -1f, vis = 1f, ghostPulse;
@@ -425,6 +425,14 @@ namespace BAM.Art
                     float a = Random.value * Mathf.PI * 2f, r = 0.5f + Random.value * 0.4f;
                     Fx.Glow(transform.position + new Vector3(Mathf.Cos(a) * r, 0.1f, Mathf.Sin(a) * r), 1, c32, 0.16f, 0.1f, 0.6f, 1.2f + channel * 1.5f);
                     if ((int)(channel * 8f) != (int)((channel - 0.0001f) * 8f) || Random.value < 0.12f) Fx.Ring(transform.position, 1.1f, 0.3f, new Color(c.r, c.g, c.b, 0.7f), 0.45f);
+                    // MLBB's recall: a tall beam of light over the hero (Rickard's light pillar), widening and brightening as it fills,
+                    // white at its heart, and a slow swirl on the ground
+                    float k = Mathf.Clamp01(channel);
+                    Fx.Pillar(transform.position, 0.7f + k * 0.9f, 5.5f, new Color(c.r, c.g, c.b, 0.55f + k * 0.4f), 0.3f);
+                    Fx.Pillar(transform.position, 0.25f + k * 0.35f, 5.5f, new Color(1f, 1f, 1f, 0.5f + k * 0.4f), 0.25f);
+                    Fx.Glow(transform.position + new Vector3(0f, 0.6f + Random.value * 2.5f, 0f), 1, c32, 0.2f, 0.1f, 0.5f, 2.5f, 0.35f);
+                    swirlT -= channelT;
+                    if (swirlT <= 0f) { swirlT = 0.45f; Fx.Swirl(transform.position, 1.3f, new Color(c.r, c.g, c.b, 0.8f), 0.6f); }
                 }
             }
             if (sprint && moving)

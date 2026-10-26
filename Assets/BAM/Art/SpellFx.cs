@@ -42,7 +42,10 @@ namespace BAM.Art
                     }
                     break;
                 case SpellId.Recall:
-                    Fx.Ring(at, 0.3f, 1.0f, c, 0.4f);
+                    // the beam switches on: a quick white-cored pillar and a swirl (the channel keeps it going, BodyView.SpellLooks)
+                    Fx.Pillar(at, 1.0f, 5.5f, c, 0.3f);
+                    Fx.Swirl(at, 1.3f, c, 0.6f);
+                    Fx.Ring(at, 0.3f, 1.2f, c, 0.4f);
                     Fx.Glow(at + Vector3.up * 0.1f, 6, c32, 0.2f, 0.8f, 0.5f, 1.2f, 0.4f);
                     break;
                 case SpellId.Shield:
@@ -75,12 +78,19 @@ namespace BAM.Art
         {
             Color c = Of(SpellId.Recall);
             Color32 c32 = C32(c);
-            Fx.Ring(from, 0.4f, 1.2f, c, 0.4f);
+            // MLBB: the beam flares and takes the hero up, and a beam brings him down at home with a white flash
+            Fx.Pillar(from, 2.0f, 7f, c, 0.35f);
+            Fx.Pillar(from, 0.8f, 7f, Color.white, 0.25f);
+            Fx.Flash(from + Vector3.up * 0.8f, 0.4f, 1.4f, new Color(1f, 1f, 1f, 0.9f), 0.1f);
+            Fx.Ring(from, 0.4f, 1.4f, c, 0.4f);
             Fx.Wisps(from + Vector3.up * 0.5f, 4, c32, 0.5f, 0.6f, 0.6f, 1.2f, 0.3f);
-            Fx.Ring(to, 0.3f, 1.2f, c, 0.5f);
-            Fx.Pillar(to, 1.0f, 2.6f, c, 0.6f);
-            Fx.Flash(to + Vector3.up * 0.6f, 0.3f, 1.1f, new Color(1f, 1f, 1f, 0.85f), 0.1f);
-            Fx.Glow(to + Vector3.up * 0.2f, 10, c32, 0.22f, 1.4f, 0.6f, 1.6f, 0.3f);
+            Fx.Glow(from + Vector3.up * 0.5f, 10, c32, 0.2f, 0.6f, 0.6f, 4f, 0.4f);
+            Fx.Pillar(to, 2.0f, 7f, c, 0.6f);
+            Fx.Pillar(to, 0.8f, 7f, Color.white, 0.4f);
+            Fx.Flash(to + Vector3.up * 0.8f, 0.4f, 1.6f, new Color(1f, 1f, 1f, 0.95f), 0.12f);
+            Fx.Ring(to, 0.3f, 1.6f, c, 0.5f);
+            Fx.Nova(to, c, 1.4f, 0.45f);
+            Fx.Glow(to + Vector3.up * 0.2f, 14, c32, 0.22f, 1.4f, 0.6f, 1.6f, 0.3f);
         }
     }
 }

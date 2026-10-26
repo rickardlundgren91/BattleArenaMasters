@@ -130,19 +130,20 @@ namespace BAM.Art.Editor
         // Height: a hero's sole-to-crown height in tiles as old Speltest draws it in a match (HeroScale.cs: its measured visible
         // height x 1.8 tiles x GlobalMul 0.9; Fenn 1.35, Tikta 1.20, Blast 1.16, Knut 1.14, StdVis 1.10 for Tyra, Moa 1.07, Bram 0.98).
         // Rickard 2026-10-26: the heroes looked smaller than in Speltest (they were 1.25-1.55)
+        // Moa and Blast have their own Mixamo clips from Speltest (Resources/Mixamo/Anim/<hero>, HeroMixamoOwn.cs), since 2026-10-26
         static readonly Spec[] specs =
         {
             new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 1.59f, Release = 0.45f },
             new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Height = 2.19f, Release = 0.45f },
             new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Tyra/Anim/IdleBow", Run = "Tyra/Anim/RunBow", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Height = 1.78f, Release = 0.55f },
-            new Spec { Hero = "Moa", Model = "Moa/Moa", Attack = "Knut/Anim/Throw", Height = 1.73f, Release = 0.4f },
+            new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Moa/Anim/Idle", Run = "Moa/Anim/Run", Attack = "Moa/Anim/Attack1", Cast = "Moa/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Height = 1.73f, Release = 0.4f },
             new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Height = 1.85f, Release = 0.45f },
             new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Height = 1.94f, Release = 0.4f },
             // the lane minions: the old game's Mixamo goblin creeps (one figure, three paint jobs), moving with the heroes' clips
             new Spec { Out = "Minions", Hero = "Melee", Model = "Creeps/Melee", Attack = "Tikta/Anim/Attack1", Height = 0.8f, Release = 0.4f },
             new Spec { Out = "Minions", Hero = "Ranged", Model = "Creeps/Ranged", Attack = "Knut/Anim/Throw", Height = 0.78f, Release = 0.4f },
             new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.9f, Release = 0.45f },
-            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Knut/Anim/Throw", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 1.88f, Release = 0.4f },
+            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Blast/Anim/Idle", Run = "Blast/Anim/Run", Attack = "Blast/Anim/Attack1", Cast = "Blast/Anim/Cast", Hit = "Blast/Anim/Hit", Death = "Blast/Anim/Dying", Height = 1.88f, Release = 0.4f },
         };
 
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
