@@ -128,15 +128,11 @@ namespace BAM.UI
             return true;
         }
 
-        // From the feet to the top of the model's meshes; 1.8 if that looks wrong.
+        // From the feet to the crown, as the art fitted the model (a freshly made skinned model's bounds are not yet right,
+        // and hidden parts must not count); 1.8 if that looks wrong.
         static float MeasureHeight(UnitView v, float feet)
         {
-            float top = 0;
-            foreach (var r in v.GetComponentsInChildren<Renderer>())
-            {
-                if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
-                top = Mathf.Max(top, r.bounds.max.y - feet);
-            }
+            float top = ArtKit.HeightOf(v);
             return top > 0.6f && top < 4f ? top : 1.8f;
         }
 

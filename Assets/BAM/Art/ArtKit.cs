@@ -342,6 +342,9 @@ namespace BAM.Art
         }
 
         /// <summary>Hands a view back to its pool (minions, projectiles and zones come and go all match long).</summary>
+        /// <summary>A shown hero's height in world units, feet to crown, as the art fitted it (for the menu stages' framing).</summary>
+        public static float HeightOf(UnitView view) => view is BodyView b ? b.ShownHeight : 1.8f;
+
         public static void Release(Component view)
         {
             if (view == null) return;
