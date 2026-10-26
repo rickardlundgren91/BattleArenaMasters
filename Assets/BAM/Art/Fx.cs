@@ -825,8 +825,12 @@ namespace BAM.Art
                     Sparks(p, 8, new Color32(180, 240, 255, 255), 0.12f, 4f, 0.3f, 0.8f);
                     break;
                 case ProjKind.MoaBolt:
-                    Drops(p, 6, C(Pal.Honey), 0.14f, 2.2f, 0.5f, 1.4f, 0.1f);
-                    Glow(p, 2, C(Pal.Honey), 0.4f, 0.4f, 0.25f);
+                    // a soft honey splat: warm-white pop, drops flung out, a small honey ring (support colours, no streaks)
+                    Flash(p, 0.08f, 0.35f, new Color(1f, 0.97f, 0.85f, 0.85f), 0.06f);
+                    Drops(p, 7, heroMain[(int)HeroId.Moa], 0.13f, 2.2f, 0.5f, 1.4f, 0.1f);
+                    Glow(p, 2, heroAccent[(int)HeroId.Moa], 0.4f, 0.4f, 0.25f);
+                    Bubbles(p, 2, heroAccent[(int)HeroId.Moa], 0.1f, 0.6f, 0.5f, 0.6f, 0.1f);
+                    Ring(new Vector3(p.x, 0f, p.z), 0.1f, 0.45f, (Color)heroMain[(int)HeroId.Moa], 0.25f);
                     break;
                 case ProjKind.TiktaNeedle:
                     Bubbles(p, 3, C(Pal.Poison), 0.14f, 0.6f, 0.6f, 0.8f, 0.1f);
@@ -884,7 +888,7 @@ namespace BAM.Art
         {
             switch (k)
             {
-                case ProjKind.MoaBolt: Drops(p, 1, C(Pal.Honey), 0.1f, 0.3f, 0.45f, 0.2f, 0.05f); break;
+                case ProjKind.MoaBolt: Glow(p, 1, heroAccent[(int)HeroId.Moa], 0.32f, 0.05f, 0.12f); Drops(p, 1, heroMain[(int)HeroId.Moa], 0.09f, 0.3f, 0.45f, 0.2f, 0.05f); if (Random.value < 0.3f) Bubbles(p, 1, heroAccent[(int)HeroId.Moa], 0.07f, 0.2f, 0.4f, 0.3f, 0.05f); break; // warm core, honey drips, a bubble now and then
                 case ProjKind.TiktaNeedle: Bubbles(p, 1, C(Pal.Poison, 200), 0.08f, 0.1f, 0.35f, 0.3f); break;
                 case ProjKind.TiktaNeedleSpecial: Bubbles(p, 1, C(Pal.Poison), 0.12f, 0.2f, 0.45f, 0.4f, 0.05f); break;
                 case ProjKind.BlastFire: Smoke(p, 1, C(Pal.Ink, 90), 0.18f, 0.1f, 0.35f, 0.3f, 0.03f); break; // fuse smoke behind the thrown bomb

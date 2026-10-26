@@ -21,7 +21,7 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched, mirror, struck, arc, hit;
+        bool melee, launched, mirror, struck, arc, hit, honey;
         Color arcColor;
         static Texture2D arcTex;
         static bool arcLoaded;
@@ -66,7 +66,9 @@ namespace BAM.Art
                 br.sharedMaterial = bm;
                 br.shadowCastingMode = ShadowCastingMode.Off;
             }
-            visF.sharedMesh = arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            // Moa's honey shot: Rickard's drop picture (atlas cell 7) facing the camera, its tail trailing, a warm glow inside (no ball)
+            honey = k == ProjKind.MoaBolt && FxAtlas.Texture != null;
+            visF.sharedMesh = honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot;
@@ -79,6 +81,12 @@ namespace BAM.Art
                     : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : (Color)Pal.Get(Pal.TeamLight(t)) * 0.6f; // minions' arcs dimmer
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, c);
                 arcColor = c;
+            }
+            else if (honey)
+            {
+                visR.sharedMaterial = FxAtlas.Material(ArtMaterials.UnlitFade);
+                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, new Color(1f, 0.78f, 0.22f, 1f));
+                visR.sharedMaterial.renderQueue = 3020;
             }
             else visR.sharedMaterial = glowy ? ArtMaterials.Unlit : ArtMaterials.Lit;
             visR.shadowCastingMode = ShadowCastingMode.Off;
@@ -187,6 +195,16 @@ namespace BAM.Art
                 case ProjKind.SiegeShell:
                     vis.rotation = look * Quaternion.Euler(spin * 0.5f, 0f, 0f);
                     break;
+                case ProjKind.MoaBolt when honey:
+                {
+                    // face the camera, the drop's point (picture top) trailing behind the flight on screen
+                    Quaternion cam = ArtDriver.CamRot;
+                    Vector3 r = cam * Vector3.right, u = cam * Vector3.up;
+                    float roll = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg + 90f;
+                    vis.rotation = cam * Quaternion.Euler(0f, 0f, roll) * Quaternion.Euler(-90f, 0f, 0f);
+                    vis.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+                    break;
+                }
                 default:
                     if (lob > 0f) vis.rotation = look * Quaternion.Euler(Mathf.Lerp(-35f, 35f, t), 0f, 0f);
                     else vis.rotation = look;
