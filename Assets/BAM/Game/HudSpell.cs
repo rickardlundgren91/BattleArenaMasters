@@ -196,8 +196,10 @@ namespace BAM.Game
                 spellGlyph.sprite = SpellGlyphSprite(p.Spell);
             }
 
-            bool chan = Match.SpellChanneling(p), ready = p.Alive && m.SpellReady(p);
+            bool chan = Match.SpellChanneling(p);
             float left = m.SpellLeft(p), cd = SpellDefs.Cooldown(p.Spell);
+            // a cooldown under a second (Recall's 0.1 s) is not worth a countdown: the button simply stays lit
+            bool ready = p.Alive && (m.SpellReady(p) || cd < 1f);
             float frac = chan ? Mathf.Clamp01((m.Time - p.SpellChanStart) / SpellDefs.RecallChannel) : ready ? 1f : Mathf.Clamp01(1f - left / Mathf.Max(0.01f, cd));
             Color col = SpellColor(p.Spell);
             spellArc.fillAmount = frac;
@@ -254,9 +256,9 @@ namespace BAM.Game
         {
             var u = e.A;
             if (u == null || !u.Alive || (u.Team != m.Player.Team && !m.IsVisibleTo(u, m.Player.Team))) return;
-            if (e.Type == EventType.SpellCancel) { FloatWord(u, "Cancelled", SpellCancelled); return; }
-            var s = (SpellId)e.Kind;
-            if (s == SpellId.Recall || s == SpellId.Haste || s == SpellId.Sprint) FloatWord(u, SpellDefs.Name(s), SpellColor(s));
+            // only a cancel gets a word; casting a spell shows no "Haste"/"Sprint"/"Recall" text, its look on the hero is enough
+            // (Rickard 2026-10-26: "ska inte stå typ haste bara när man får den")
+            if (e.Type == EventType.SpellCancel) FloatWord(u, "Cancelled", SpellCancelled);
         }
 
         // ---------------------------------------------------------------- pictures
