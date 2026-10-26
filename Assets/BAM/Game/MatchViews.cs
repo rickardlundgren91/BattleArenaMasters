@@ -439,6 +439,7 @@ namespace BAM.Game
                     Vector3 at = Coords.World(e.X, e.Y);
                     V(b)?.PlayHit(e.Big);
                     if (e.A != null) hitKeys.Add(HitKey(e.A.Serial, kind));
+                    if (kind == ProjKind.BonkSlam && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f); // the slam stuns
                     // Bram's bounces get their own gold line; Tyra's bolt and Tikta's needles carry the special's look in their own
                     // impact, so they add only the small hit (fx review 2026-10-26, P1-2/P1-3)
                     FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash
@@ -549,9 +550,9 @@ namespace BAM.Game
                     float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? e.A.Team : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
-                        : bonk ? SfxId.BonkSlam // AttackBonk has no clip yet (KALLOR.txt): his normal swing borrows the slam, softer
+                        : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
                         : pk == ProjKind.BramHammer ? SfxId.BramHammerBounce : SfxId.None;
-                    if (boom != SfxId.None) BamAudio.PlayAt(boom, at, pk == ProjKind.BonkClub && !e.Big ? 0.65f : 1f);
+                    if (boom != SfxId.None) BamAudio.PlayAt(boom, at);
                     break;
                 }
                 // Tikta 2.0: her needle takes the Deathmark (its own Hit follows in the same tick)

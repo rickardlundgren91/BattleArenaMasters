@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.BonkKnock + 1;
+        public const int Count = (int)SfxId.BonkStun + 1;
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)
@@ -89,6 +89,7 @@ namespace BAM.Audio
                 case SfxId.BonkSlam: return new SfxInfo(1f, 2, 0.12f, 3, 0.04f);
                 case SfxId.BonkBoulderThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);
                 case SfxId.BonkKnock: return new SfxInfo(0.8f, 2, 0.1f, 3, 0.05f);
+                case SfxId.BonkStun: return new SfxInfo(0.75f, 1, 0.5f, 3, 0f); // one at a time, however many he stuns
                 default: return new SfxInfo(0.6f, 1, 0.05f, 1, 0f);
             }
         }

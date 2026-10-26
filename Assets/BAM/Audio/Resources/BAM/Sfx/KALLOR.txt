@@ -6,5 +6,5 @@ MoaShield/MoaField <- sp_moa | KnutAnchorThrow <- sp_knut | KnutAnchorHook <- cl
 BlastBombThrow/BlastFireLane <- sp_blast | BlastExplosion/BlastChainBoom <- boom
 HitLight/HitHeavy <- hit (only when a hero hits you) | CloneAppear <- blink | TowerShot <- tower (only when aimed at you)
 TowerDestroyed <- towerdown | HeroDeath/AllyDeath <- herodeath | Respawn <- respawn | LevelUp <- levelUp | LowHealth <- heartbeat
-Bonk (new hero, no Speltest sounds of his own): BonkSlamWindup <- warrior_swing | BonkSlam <- rockcrack | BonkBoulderThrow <- sp_oaken | BonkKnock <- wallcrash
-Silent (no file, synth muted): TyraDraw, ShieldBlock, Stunned, WolfBite, CloneVanish, MinionMelee, MinionRanged, SiegeShot, MinionDeath, WaveSpawn, GrassEnter, SpecialReady, AttackBonk
+Bonk: Rickard's own AI clips made for him 2026-10-26 (AttackBonk, BonkSlamWindup, BonkSlam, BonkBoulderThrow, BonkKnock, BonkStun); before that he borrowed warrior_swing, rockcrack, sp_oaken, wallcrash
+Silent (no file, synth muted): TyraDraw, ShieldBlock, Stunned, WolfBite, CloneVanish, MinionMelee, MinionRanged, SiegeShot, MinionDeath, WaveSpawn, GrassEnter, SpecialReady

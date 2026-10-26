@@ -22,5 +22,6 @@ namespace BAM.Audio
         BlastChainBoom,
         // Bonk, hero 8 (2026-10-26): his club swing, Ground Slam's wind-up and landing, Boulder Toss and its knockback
         AttackBonk, BonkSlamWindup, BonkSlam, BonkBoulderThrow, BonkKnock,
+        BonkStun, // Ground Slam stuns a hero (Rickard's clip 2026-10-26)
     }
 }
