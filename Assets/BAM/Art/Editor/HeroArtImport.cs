@@ -195,6 +195,8 @@ namespace BAM.Art.Editor
             };
         }
 
+        internal static void ReimportStaleForBuild() => ReimportStale();
+
         static bool ReimportStale()
         {
             var paths = new System.Collections.Generic.HashSet<string>();
