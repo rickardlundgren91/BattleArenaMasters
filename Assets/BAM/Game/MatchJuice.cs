@@ -42,13 +42,13 @@ namespace BAM.Game
             switch (h)
             {
                 case HeroId.Bram: return 0.12f;
-                case HeroId.Knut: case HeroId.Blast: return 0.10f;
+                case HeroId.Knut: case HeroId.Blast: case HeroId.Bonk: return 0.10f;
                 case HeroId.Tyra: return 0.09f;
                 default: return 0.08f;
             }
         }
 
-        static bool Heavy(HeroId h) => h == HeroId.Knut || h == HeroId.Blast;
+        static bool Heavy(HeroId h) => h == HeroId.Knut || h == HeroId.Blast || h == HeroId.Bonk;
 
         static float Dist(Unit a, Unit b) => Mathf.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
 
@@ -79,6 +79,17 @@ namespace BAM.Game
                         }
                         else if (b.IsRealHero && p.Alive && Dist(b, p) < 6f && f >= 0.06f) AddTrauma(f * 1.4f);
                         else if (b.Kind == UnitKind.Tower && p.Alive && Dist(b, p) < 6f && f >= 0.04f) AddTrauma(f * 2f);
+                        break;
+                    }
+                    case EventType.Explosion:
+                    {
+                        // Bonk's club into the ground shakes the screen a little when it is near (Rickard 2026-10-26)
+                        var k = (ProjKind)e.Kind;
+                        if ((k == ProjKind.BonkSlam || k == ProjKind.BonkClub) && p.Alive)
+                        {
+                            float dx = e.X - p.X, dy = e.Y - p.Y;
+                            if (dx * dx + dy * dy < 36f) AddTrauma(k == ProjKind.BonkSlam ? 0.35f : e.Big ? 0.22f : 0.12f);
+                        }
                         break;
                     }
                     case EventType.Death:

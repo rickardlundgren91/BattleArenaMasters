@@ -106,6 +106,7 @@ namespace BAM.Art
         Hit = 0, HitBig = 1, Death = 2, Respawn = 3, LevelUp = 4, Explosion = 5, TowerDestroyed = 6, ShieldPop = 7,
         Cast = 8, Bounce = 9, WolfSummon = 10, CloneSpawn = 11, CloneEnd = 12, MinionSpawn = 13, TowerShotFlash = 14, AnchorHit = 15,
         AnvilStrike = 16, WolfLand = 17, DeathmarkTaken = 18, ChainBoom = 19,
+        GroundSmash = 20, // Bonk's club into the ground (his slow overhead auto attack and Ground Slam): size = the hit radius
     }
 
     public static class ArtKit

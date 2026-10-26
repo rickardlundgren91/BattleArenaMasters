@@ -20,5 +20,7 @@ namespace BAM.Audio
         HeroDeath, AllyDeath, MinionDeath, Respawn, LevelUp, WaveSpawn, GrassEnter, SpecialReady, LowHealth,
         // Blast 2.0's Chain Reaction (XYZ #603 "chainboom"), added 2026-10-26
         BlastChainBoom,
+        // Bonk, hero 8 (2026-10-26): his club swing, Ground Slam's wind-up and landing, Boulder Toss and its knockback
+        AttackBonk, BonkSlamWindup, BonkSlam, BonkBoulderThrow, BonkKnock,
     }
 }

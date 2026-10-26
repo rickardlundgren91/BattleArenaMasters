@@ -312,7 +312,8 @@ namespace BAM.Game
         static void Init(ShotRec s, Proj p, int serial, ProjKind kind, int team, int src)
         {
             s.P = p; s.Serial = serial; s.Kind = kind; s.Team = team; s.SrcSerial = src; s.V = null; s.Ghost = false;
-            s.Melee = kind == ProjKind.FennSlash || kind == ProjKind.KnutHit || kind == ProjKind.WolfBite || kind == ProjKind.MeleeMinionHit;
+            s.Melee = kind == ProjKind.FennSlash || kind == ProjKind.KnutHit || kind == ProjKind.WolfBite || kind == ProjKind.MeleeMinionHit
+                || kind == ProjKind.BonkClub;
             s.Age = 0f; s.Flight = 0f; s.Linger = 0f; s.LastT = -1f; s.Hit = false;
         }
 
@@ -424,6 +425,8 @@ namespace BAM.Game
                 {
                     var a = e.A;
                     V(a)?.PlayAttack(e.V);
+                    // Bonk's club has no shot: it lands e.V s later as an Explosion of ProjKind.BonkClub (cracks and dust)
+                    if ((ProjKind)e.Kind == ProjKind.BonkClub) { Sound(SfxId.BonkSlamWindup, a, e.Big ? 0.8f : 0.55f); break; }
                     pending.Add(new Pending { A = a.Serial, Src = a, Tgt = e.B, Kind = (ProjKind)e.Kind });
                     Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
                     break;
@@ -537,9 +540,14 @@ namespace BAM.Game
                     float size = Mathf.Max(0.5f, e.V);
                     var pk = (ProjKind)e.Kind;
                     // Bram's passive (every 4th hammer) is the heavy anvil blow, Blast's Chain Reaction its own crack, not a bomb
-                    FxKind ek = pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.BlastChain ? FxKind.ChainBoom : FxKind.Explosion;
-                    ArtKit.PlayFx(ek, at, pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : size, e.A != null ? e.A.Team : 0);
-                    BamAudio.PlayAt(pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom : SfxId.HitHeavy, at);
+                    bool bonk = pk == ProjKind.BonkSlam || pk == ProjKind.BonkClub;
+                    FxKind ek = pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : FxKind.Explosion;
+                    // Bonk: his auto slam (a power swing a size bigger) and Ground Slam, both the club into the ground
+                    float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
+                    ArtKit.PlayFx(ek, at, esize, e.A != null ? e.A.Team : 0, HeroOf(e.A));
+                    SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
+                        : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk : SfxId.HitHeavy;
+                    BamAudio.PlayAt(boom, at);
                     break;
                 }
                 // Tikta 2.0: her needle takes the Deathmark (its own Hit follows in the same tick)
@@ -550,6 +558,14 @@ namespace BAM.Game
                 // The warning shows to everyone, so enemies there can see it coming.
                 case EventType.ChainSet:
                     ArtKit.PlayChainWarn(Coords.World(e.X, e.Y), Mathf.Max(0.1f, e.V), BlastChainS.Delay);
+                    break;
+                // Bonk's boulder knocks a hero back: the rules slide it (drawn between ticks as any move), a thud and dust where it was hit
+                case EventType.Knock:
+                    if (e.B != null && m.IsVisibleTo(e.B, Teams.Player))
+                    {
+                        BamAudio.PlayAt(SfxId.BonkKnock, Coords.Of(e.B));
+                        ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(e.B), 0.45f, e.B.Team);
+                    }
                     break;
                 case EventType.Pull:
                     if (e.B != null) BamAudio.PlayAt(SfxId.KnutAnchorHook, Coords.Of(e.B));
@@ -587,7 +603,7 @@ namespace BAM.Game
         {
             switch (a.Kind)
             {
-                case UnitKind.Hero: return SfxId.AttackBram + (int)a.Hero;
+                case UnitKind.Hero: return a.Hero == HeroId.Bonk ? SfxId.AttackBonk : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven
                 case UnitKind.Tower: return SfxId.TowerShot;
                 case UnitKind.Wolf: return SfxId.WolfBite;
                 default: return SfxId.None; // minions are silent (Rickard 2026-10-26)
@@ -605,6 +621,7 @@ namespace BAM.Game
                 case HeroId.Knut: return SfxId.KnutAnchorThrow;
                 case HeroId.Tikta: return SfxId.TiktaNeedles;
                 case HeroId.Blast: return dragged ? SfxId.BlastFireLane : SfxId.BlastBombThrow;
+                case HeroId.Bonk: return dragged ? SfxId.BonkBoulderThrow : SfxId.BonkSlamWindup; // the slam's landing sounds on its Explosion
                 default: return SfxId.None;
             }
         }

@@ -706,6 +706,20 @@ namespace BAM.Art
                     Sparks(p + Vector3.up * 0.7f, 4, new Color32(97, 255, 224, 255), 0.1f, 3.5f, 0.22f, 0.6f);
                     break;
                 }
+                case FxKind.GroundSmash:
+                {
+                    // Bonk (Rickard 2026-10-26: "slå sin enorma klubba kraftigt slag som gör aoe i marken och sprickor och damm"): a pale
+                    // impact flash, a dust ring rolling out to the true radius, the ground cracked (tx_fx_ground_crack, fading over ~2 s),
+                    // dust kicked up and stone chips thrown. Earth colours, no fire. size = the hit radius
+                    Color32 dustC = C(Pal.Ground, 220);
+                    Flash(p + Vector3.up * 0.25f, 0.2f * size, 0.7f * size, new Color(1f, 0.95f, 0.85f, 0.85f), 0.08f);
+                    Ring(p, 0.25f * size, size, new Color(0.92f, 0.82f, 0.62f, 0.9f), 0.32f, 1.1f);
+                    Crack(p, 0.85f * size, 2f, new Color(0.35f, 0.27f, 0.2f, 0.85f));
+                    Dust(p + Vector3.up * 0.15f, 10, dustC, 0.55f * size, 2.2f * size, 0.9f, 0.6f, 0.5f * size);
+                    Smoke(p + Vector3.up * 0.2f, 4, C(Pal.Ground, 150), 0.7f * size, 0.8f, 1.1f, 0.5f, 0.4f * size);
+                    Chunks(p + Vector3.up * 0.2f, 7, C(Pal.Rock), 0.13f, 4f, 0.7f, 3.5f, 0.4f * size);
+                    break;
+                }
                 case FxKind.ChainBoom:
                 {
                     // Blast's chain goes off: a hot gold-violet flash, a violet shock ring ending on the true radius, gold sparks thrown up

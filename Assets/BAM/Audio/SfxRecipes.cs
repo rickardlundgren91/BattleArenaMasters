@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.BlastChainBoom + 1;
+        public const int Count = (int)SfxId.BonkKnock + 1;
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)
@@ -84,6 +84,11 @@ namespace BAM.Audio
                 case SfxId.SpecialReady: return new SfxInfo(0.7f, 1, 0.5f, 4, 0f);
                 case SfxId.LowHealth: return new SfxInfo(0.85f, 1, 1.5f, 4, 0f);
                 case SfxId.BlastChainBoom: return new SfxInfo(0.95f, 2, 0.12f, 3, 0.04f); // wins a voice like Supernova's boom
+                case SfxId.AttackBonk: return new SfxInfo(0.7f, 3, 0.07f, 2, 0.05f);
+                case SfxId.BonkSlamWindup: return new SfxInfo(0.8f, 2, 0.2f, 3, 0.03f);
+                case SfxId.BonkSlam: return new SfxInfo(1f, 2, 0.12f, 3, 0.04f);
+                case SfxId.BonkBoulderThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);
+                case SfxId.BonkKnock: return new SfxInfo(0.8f, 2, 0.1f, 3, 0.05f);
                 default: return new SfxInfo(0.6f, 1, 0.05f, 1, 0f);
             }
         }
@@ -387,6 +392,33 @@ namespace BAM.Audio
                     s.Tone(Wave.Square, 260, 120, 0.2f, 0.18f, 0, 0.003f);
                     s.Tone(Wave.Tri, 1320, 1180, 0.32f, 0.12f, 0.03f, 0.005f);
                     s.Tone(Wave.Sine, 1980, 1760, 0.26f, 0.07f, 0.05f, 0.005f);
+                    break;
+                case SfxId.AttackBonk: // a heavy stone club: a short low whoosh, then a dull wooden thud
+                    s.Noise(Filt.Band, 300, 900, 1.2f, 0.12f, 0.55f, 0, 0.03f);
+                    s.Tone(Wave.Sine, 150, 60, 0.14f, 0.55f, 0.06f, 0.002f);
+                    s.Noise(Filt.Low, 1400, 250, 1f, 0.08f, 0.6f, 0.06f, 0.001f);
+                    s.Tone(Wave.Tri, 260, 120, 0.08f, 0.25f, 0.06f, 0.002f);
+                    break;
+                case SfxId.BonkSlamWindup: // the club hauled up over his head: a rising heave of air
+                    s.Noise(Filt.Band, 250, 1100, 1.1f, 0.35f, 0.5f, 0, 0.2f);
+                    s.Tone(Wave.Tri, 90, 160, 0.35f, 0.2f, 0, 0.2f);
+                    break;
+                case SfxId.BonkSlam: // the club into the ground: a deep thump, a crack of stone and pebbles falling
+                    s.Tone(Wave.Sine, 120, 38, 0.5f, 0.75f, 0, 0.002f);
+                    s.Noise(Filt.Low, 2000, 90, 0.8f, 0.55f, 0.85f, 0, 0.002f);
+                    s.Tone(Wave.Tri, 240, 70, 0.25f, 0.35f, 0, 0.002f);
+                    s.Noise(Filt.Band, 2600, 900, 1.4f, 0.08f, 0.4f, 0.01f, 0.0005f);
+                    s.Crackle(0.45f, 40, 900, 2800, 0.3f, 0.08f);
+                    break;
+                case SfxId.BonkBoulderThrow: // a grunt of effort and a heavy rolling rumble
+                    s.Tone(Wave.Saw, 130, 95, 0.12f, 0.18f, 0, 0.01f);
+                    s.Noise(Filt.Low, 260, 480, 1f, 0.45f, 0.55f, 0.08f, 0.05f, 0, 14f, 0.35f);
+                    s.Tone(Wave.Sine, 70, 60, 0.4f, 0.3f, 0.08f, 0.05f, 0, 0, 0, 12f, 0.3f);
+                    break;
+                case SfxId.BonkKnock: // the boulder slams into a hero: a hard thud and a short scrape as they slide
+                    s.Tone(Wave.Sine, 160, 55, 0.22f, 0.6f, 0, 0.001f);
+                    s.Noise(Filt.Low, 1800, 200, 0.9f, 0.12f, 0.7f, 0, 0.001f);
+                    s.Noise(Filt.Band, 1500, 600, 1.5f, 0.2f, 0.3f, 0.06f, 0.02f);
                     break;
                 case SfxId.LowHealth: // two heartbeat thumps, pitched up so a phone speaker can play them
                     s.Tone(Wave.Tri, 300, 130, 0.12f, 0.55f, 0, 0.004f);
