@@ -17,7 +17,8 @@ namespace BAM.Art
         StatusFlags flags;
         bool visible = true;
         float emitTimer;
-        int burnN;
+        int burnN, hasteN;
+        Vector3 lastP;
         float shieldT = -1f, ripple; // time since the shield came (for its pop-in), and a hit's wobble
 
         // Moa's honey shield (old View3DShields.cs): a slowly turning globe of honeycomb cells, additive honey over the hero
@@ -69,7 +70,7 @@ namespace BAM.Art
             Show(Burn, false); // burning is drawn with particles (Tick), not the old flat flame shape
             Show(Poison, Has(flags, StatusFlags.Poisoned));
             Show(Shield, Has(flags, StatusFlags.Shielded));
-            Show(Haste, Has(flags, StatusFlags.Hasted));
+            Show(Haste, false); // haste is drawn with particles (SpellFx.SpeedTrail in Tick), not the old code streaks
             Show(Illusion, Has(flags, StatusFlags.Illusion));
             Show(StunRing, Has(flags, StatusFlags.Stunned));
             Show(PoisonRing, Has(flags, StatusFlags.Poisoned));
@@ -213,7 +214,12 @@ namespace BAM.Art
                 if (burnN % 4 == 0) Fx.Smoke(p + new Vector3(0f, height * 0.8f, 0f), 1, new Color32(40, 32, 30, 110), 0.35f, 0.2f, 0.8f, 0.7f, radius * 0.4f);
             }
             if (Has(flags, StatusFlags.Poisoned)) Fx.Bubbles(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.14f, 0.2f, 0.6f, 0.6f, radius * 0.5f);
-            if (Has(flags, StatusFlags.Hasted)) Fx.Glow(p + new Vector3(0f, 0.2f, 0f), 1, Pal.Get(Pal.White), 0.16f, 0.1f, 0.35f, 0.2f, radius * 0.6f);
+            if (Has(flags, StatusFlags.Hasted))
+            {
+                Vector3 mv = p - lastP; mv.y = 0f;
+                if (mv.sqrMagnitude > 1e-4f) SpellFx.SpeedTrail(p, mv, SpellFx.Of(SpellId.Haste), height, ++hasteN);
+            }
+            lastP = p;
             if (Has(flags, StatusFlags.Slowed)) Fx.Glow(p + new Vector3(0f, 0.3f, 0f), 1, Pal.Get(Pal.Slow), 0.12f, 0.2f, 0.5f, -0.2f, radius * 0.8f);
         }
     }

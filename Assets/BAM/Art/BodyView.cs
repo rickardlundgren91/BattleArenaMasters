@@ -66,7 +66,8 @@ namespace BAM.Art
         float atkT = -1f, windup = 0.3f, castT = -1f, hitT = -1f, hitLen = 0.15f, recoil;
         float propBack = -1f;
         float hp = -1f, towerFxT, dustT;
-        float channel = -1f, channelT, swirlT, sprintT; // the battle spells' looks (SpellFx): recall channel progress, sprint trail
+        float channel = -1f, channelT, swirlT, sprintT;
+        int sprintN; // the battle spells' looks (SpellFx): recall channel progress, sprint trail
         bool sprint;   // last health fraction (-1 = never set), the tower's smoke timer
         bool dead;
         float deathT = -1f, spawnT = -1f, vis = 1f, ghostPulse;
@@ -440,11 +441,8 @@ namespace BAM.Art
                 sprintT -= dt;
                 if (sprintT <= 0f)
                 {
-                    sprintT = ArtKit.High ? 0.06f : 0.12f;
-                    Color c = SpellFx.Of(SpellId.Sprint);
-                    var c32 = new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), 220);
-                    Fx.SparksAlong(transform.position + new Vector3(0f, 0.35f, 0f) - transform.forward * 0.2f, -transform.forward, 1, c32, 0.08f, 2.5f, 0.2f, 15f);
-                    Fx.Wisps(transform.position + new Vector3(0f, 0.3f, 0f) - transform.forward * 0.3f, 1, c32, 0.3f, 0.2f, 0.3f, 0.1f, 0.15f);
+                    sprintT = ArtKit.High ? 0.05f : 0.1f;
+                    SpellFx.SpeedTrail(transform.position, transform.forward, SpellFx.Of(SpellId.Sprint), def.Height, ++sprintN);
                 }
             }
         }

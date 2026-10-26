@@ -54,16 +54,38 @@ namespace BAM.Art
                     Fx.Stars(at + up, 4, c32, 0.3f, 1.2f, 0.45f, 0.8f, 0.3f);
                     break;
                 case SpellId.Haste:
-                    Fx.Ring(at, 0.2f, 0.7f, c, 0.4f);
-                    Fx.Sparks(at + up, 10, c32, 0.1f, 3.5f, 0.35f, 1.4f, 0.2f);
-                    Fx.Flames(at + Vector3.up * 0.3f, 3, c32, 0.3f, 0.6f, 0.4f, 1.2f, 0.2f);
-                    break;
                 case SpellId.Sprint:
-                    Fx.Ring(at, 0.2f, 0.8f, c, 0.35f);
-                    Fx.Dust(at + Vector3.up * 0.1f, 6, new Color32(200, 190, 150, 200), 0.5f, 1.4f, 0.5f, 0.3f, 0.2f);
-                    Fx.Wisps(at + up, 3, c32, 0.4f, 0.8f, 0.35f, 0.4f, 0.2f);
+                    // the burst as the speed kicks in: a white pop, a wind ring blown out flat, streaks flung round and a dust ring
+                    Fx.Flash(at + up, 0.2f, 0.8f, new Color(1f, 1f, 1f, 0.85f), 0.08f);
+                    Fx.Ring(at, 0.2f, 1.2f, c, 0.3f);
+                    Fx.Swirl(at, 1.0f, c, 0.35f);
+                    Fx.Sparks(at + up, 14, c32, 0.12f, 6f, 0.25f, 0.6f, 0.2f);
+                    Fx.Wisps(at + up, 4, c32, 0.5f, 1.6f, 0.35f, 0.4f, 0.2f);
+                    Fx.Dust(at + Vector3.up * 0.1f, 8, new Color32(200, 190, 150, 200), 0.5f, 2f, 0.5f, 0.3f, 0.3f);
                     break;
             }
+        }
+
+        /// <summary>
+        /// MLBB-style speed while a unit runs fast (Sprint, Haste): wind ribbons streaming back from both sides of the body, a
+        /// soft afterglow of the body's colour left behind, and a dust kick at the feet every few steps. Call every 0.05 s on the move.
+        /// </summary>
+        public static void SpeedTrail(Vector3 pos, Vector3 fwd, Color c, float height, int n)
+        {
+            fwd.y = 0f;
+            if (fwd.sqrMagnitude < 1e-6f) return;
+            fwd.Normalize();
+            Vector3 side = new Vector3(fwd.z, 0f, -fwd.x), back = -fwd;
+            var c32 = C32(c);
+            var white = new Color32(255, 255, 255, 220);
+            float h = Mathf.Max(0.8f, height);
+            // two ribbons of wind, at hip and chest, left and right in turn
+            float s = (n & 1) == 0 ? 0.35f : -0.35f;
+            Fx.SparksAlong(pos + side * s + Vector3.up * (h * 0.35f) + back * 0.15f, back, 1, c32, 0.14f, 5f, 0.22f, 6f);
+            Fx.SparksAlong(pos - side * s * 0.6f + Vector3.up * (h * 0.65f) + back * 0.1f, back, 1, white, 0.1f, 5.5f, 0.18f, 6f);
+            // the afterglow where the body just was (reads as a motion blur)
+            Fx.Wisps(pos + Vector3.up * (h * 0.5f) + back * 0.35f, 1, new Color32(c32.r, c32.g, c32.b, 150), h * 0.45f, 0.1f, 0.25f, 0f, 0.05f);
+            if (n % 4 == 0) Fx.Dust(pos + back * 0.25f + Vector3.up * 0.06f, 2, new Color32(200, 188, 150, 190), 0.4f, 0.9f, 0.45f, 0.35f, 0.12f);
         }
 
         /// <summary>A recall cut short: the ring breaks into a grey puff.</summary>
