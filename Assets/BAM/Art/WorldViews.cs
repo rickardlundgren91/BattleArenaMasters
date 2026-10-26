@@ -26,6 +26,8 @@ namespace BAM.Art
         static Texture2D arcTex;
         static bool arcLoaded;
         MeshFilter visF;
+        Transform bombT;
+        float bombTop = 0.27f;
         // every other swing comes from the other side (MLBB: the combo alternates left and right), counted per kind so minions
         // round Fenn do not break his rhythm
         static readonly int[] swings = new int[32];
@@ -44,8 +46,29 @@ namespace BAM.Art
             arc = melee && arcTex != null; // Rickard's own slash arc (2026-10-26), white on black: drawn additive
             bool painted = melee && !arc && FxAtlas.Texture != null; // else the painted sword arc from the effect atlas
             visF = go.AddComponent<MeshFilter>();
+            // Blast throws his own skull bomb from the old game (Props/blast_bomb), not a fireball: the bomb sits on a child,
+            // centred on the look so it spins round its middle
+            Mesh bombMesh = k == ProjKind.BlastFire || k == ProjKind.BlastBomb ? Props.Mesh("blast_bomb") : null;
+            if (bombMesh != null)
+            {
+                var bg = new GameObject("Bomb");
+                bombT = bg.transform;
+                bombT.SetParent(vis, false);
+                float bs = (k == ProjKind.BlastBomb ? 0.62f : 0.42f) / Mathf.Max(0.01f, bombMesh.bounds.size.y); // tall in tiles
+                bombT.localScale = new Vector3(bs, bs, bs);
+                bombT.localPosition = new Vector3(0f, -bombMesh.bounds.center.y * bs, 0f);
+                bombTop = bombMesh.bounds.extents.y * bs;
+                bg.AddComponent<MeshFilter>().sharedMesh = bombMesh;
+                var br = bg.AddComponent<MeshRenderer>();
+                var bm = ArtMaterials.Instance(ArtMaterials.Lit);
+                Texture2D btex = Props.Texture("blast_bomb");
+                if (btex != null) { bm.SetTexture(ArtMaterials.BaseMap, btex); bm.mainTexture = btex; }
+                br.sharedMaterial = bm;
+                br.shadowCastingMode = ShadowCastingMode.Off;
+            }
             visF.sharedMesh = arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
+            if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot;
             if (melee)
             {
@@ -98,7 +121,7 @@ namespace BAM.Art
             {
                 case ProjKind.TyraBolt: c = new Color(0.7f, 0.95f, 1f, 0.9f); return true;
                 case ProjKind.MoaBolt: c = new Color(1f, 0.8f, 0.25f, 0.8f); return true;
-                case ProjKind.BlastFire: c = new Color(1f, 0.5f, 0.1f, 0.9f); return true;
+                case ProjKind.BlastFire: c = new Color(1f, 0.55f, 0.2f, 0.45f); return true; // a faint fuse-smoke streak behind the bomb
                 case ProjKind.TiktaNeedleSpecial: c = new Color(0.2f, 1f, 0.85f, 0.8f); return true;
                 case ProjKind.BramHammerSpecial: c = Fx.HeroMain(HeroId.Bram); c.a = 0.8f; return true; // his forge orange, not the team's
                 case ProjKind.TowerShot: c = Pal.Get(Pal.TeamLight(team)); c.a = 0.9f; return true;
@@ -117,7 +140,8 @@ namespace BAM.Art
             Vector3 d = b - a; d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : transform.forward;
             float dist = d.magnitude;
-            lob = kind == ProjKind.BlastBomb || kind == ProjKind.SiegeShell ? Mathf.Clamp(dist * 0.3f, 0.6f, 2.2f) : 0f;
+            lob = kind == ProjKind.BlastBomb || kind == ProjKind.SiegeShell ? Mathf.Clamp(dist * 0.3f, 0.6f, 2.2f)
+                : kind == ProjKind.BlastFire && bombT != null ? Mathf.Clamp(dist * 0.15f, 0.25f, 0.9f) : 0f; // a thrown bomb arcs a little
             lastPos = transform.position;
             vis.localScale = Vector3.one;
             Place(0f);
@@ -159,6 +183,7 @@ namespace BAM.Art
                     vis.rotation = look * Quaternion.Euler(spin, 0f, 0f);
                     break;
                 case ProjKind.BlastBomb:
+                case ProjKind.BlastFire when bombT != null:
                 case ProjKind.SiegeShell:
                     vis.rotation = look * Quaternion.Euler(spin * 0.5f, 0f, 0f);
                     break;
@@ -208,7 +233,7 @@ namespace BAM.Art
                 if (sparkT <= 0f)
                 {
                     sparkT = ArtKit.High ? 0.05f : 0.1f;
-                    Fx.Sparks(vis.position + (kind == ProjKind.BlastBomb ? vis.up * 0.27f : Vector3.zero), 1, Pal.Get(Pal.FireCore), 0.1f, 1f, 0.25f, 0.5f);
+                    Fx.Sparks(vis.position + (kind == ProjKind.BlastBomb || bombT != null ? vis.up * bombTop : Vector3.zero), 1, Pal.Get(Pal.FireCore), 0.1f, 1f, 0.25f, 0.5f); // the lit fuse
                 }
             }
             if (!melee)
@@ -285,7 +310,7 @@ namespace BAM.Art
             warn = k == ZoneKind.WarnLine || k == ZoneKind.WarnCircle;
             // warnings: the enemy's in strong red (that is what players dodge), our own team's in a quiet white
             baseColor = k == ZoneKind.HoneyField ? new Color(1f, 0.78f, 0.2f, 1f)
-                : k == ZoneKind.FireLane ? new Color(1f, 0.45f, 0.08f, 1f)
+                : k == ZoneKind.FireLane ? new Color(1f, 0.45f, 0.08f, 0.35f) // a faint heat floor: the cracks and flames carry the look
                 : warn ? (t == Teams.Player ? new Color(1f, 1f, 1f, 0.6f) : new Color(1f, 0.12f, 0.1f, 1f))
                 : (t == Teams.Player ? new Color(1f, 0.6f, 0.15f, 1f) : new Color(1f, 0.15f, 0.12f, 1f));
             if (warn) mat.renderQueue = 2995; // over honey and fire, under unit rings
@@ -407,12 +432,14 @@ namespace BAM.Art
 
             emitT -= dt;
             if (emitT > 0f || dt <= 0f) return;
-            emitT = ArtKit.High ? 0.07f : 0.15f;
+            emitT = ArtKit.High ? (kind == ZoneKind.FireLane ? 0.045f : 0.07f) : 0.15f;
             Vector3 p = RandomPoint();
             if (kind == ZoneKind.FireLane)
             {
                 Fx.Flames(p, 1, Pal.Get(Pal.Fire), 0.55f, 0.2f, 0.5f, 1.4f);
                 Fx.Glow(p, 1, Pal.Get(Pal.FireCore), 0.25f, 0.2f, 0.3f, 1.2f);
+                Fx.Sparks(p, 1, Fx.HeroAccent(HeroId.Blast), 0.05f, 0.5f, 0.6f, 1.6f, 0.1f); // embers
+                if (Random.value < 0.15f) Fx.Smoke(p + Vector3.up * 0.6f, 1, new Color32(40, 32, 30, 90), 0.4f, 0.2f, 0.9f, 0.6f);
                 if (length > 0f)
                 {
                     // the old Inferno Lane's two burning edges

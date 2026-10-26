@@ -17,6 +17,7 @@ namespace BAM.Art
         StatusFlags flags;
         bool visible = true;
         float emitTimer;
+        int burnN;
         float shieldT = -1f, ripple; // time since the shield came (for its pop-in), and a hit's wobble
 
         // Moa's honey shield (old View3DShields.cs): a slowly turning globe of honeycomb cells, additive honey over the hero
@@ -65,7 +66,7 @@ namespace BAM.Art
             Show(Stun, Has(flags, StatusFlags.Stunned));
             Show(Slow, Has(flags, StatusFlags.Slowed));
             Show(Root, Has(flags, StatusFlags.Rooted));
-            Show(Burn, Has(flags, StatusFlags.Burning));
+            Show(Burn, false); // burning is drawn with particles (Tick), not the old flat flame shape
             Show(Poison, Has(flags, StatusFlags.Poisoned));
             Show(Shield, Has(flags, StatusFlags.Shielded));
             Show(Haste, Has(flags, StatusFlags.Hasted));
@@ -200,9 +201,17 @@ namespace BAM.Art
             // a few world particles for the statuses that should feel alive
             emitTimer -= dt;
             if (emitTimer > 0f) return;
-            emitTimer = Fx.Amount >= 1f ? 0.12f : 0.25f;
+            emitTimer = Fx.Amount >= 1f ? 0.08f : 0.16f;
             Vector3 p = parent.position;
-            if (Has(flags, StatusFlags.Burning)) Fx.Flames(p + new Vector3(0f, height * 0.4f, 0f), 2, Pal.Get(Pal.Fire), 0.3f, 0.3f, 0.5f, 1.2f, radius * 0.6f);
+            if (Has(flags, StatusFlags.Burning))
+            {
+                // Rickard's flame picture licking up the body, embers rising, a warm glow and now and then a wisp of smoke
+                burnN++;
+                Fx.Flames(p + new Vector3(0f, height * 0.25f, 0f), 2, Fx.HeroMain(HeroId.Blast), 0.42f, 0.25f, 0.45f, 1.5f, radius * 0.7f);
+                Fx.Sparks(p + new Vector3(0f, height * 0.4f, 0f), 1, Fx.HeroAccent(HeroId.Blast), 0.06f, 0.6f, 0.6f, 1.8f, radius * 0.6f);
+                if ((burnN & 1) == 0) Fx.Glow(p + new Vector3(0f, height * 0.45f, 0f), 1, new Color32(255, 120, 40, 150), 0.9f, 0f, 0.25f);
+                if (burnN % 4 == 0) Fx.Smoke(p + new Vector3(0f, height * 0.8f, 0f), 1, new Color32(40, 32, 30, 110), 0.35f, 0.2f, 0.8f, 0.7f, radius * 0.4f);
+            }
             if (Has(flags, StatusFlags.Poisoned)) Fx.Bubbles(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.14f, 0.2f, 0.6f, 0.6f, radius * 0.5f);
             if (Has(flags, StatusFlags.Hasted)) Fx.Glow(p + new Vector3(0f, 0.2f, 0f), 1, Pal.Get(Pal.White), 0.16f, 0.1f, 0.35f, 0.2f, radius * 0.6f);
             if (Has(flags, StatusFlags.Slowed)) Fx.Glow(p + new Vector3(0f, 0.3f, 0f), 1, Pal.Get(Pal.Slow), 0.12f, 0.2f, 0.5f, -0.2f, radius * 0.8f);

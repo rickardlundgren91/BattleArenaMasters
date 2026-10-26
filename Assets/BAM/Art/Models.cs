@@ -150,10 +150,10 @@ namespace BAM.Art
             d = BuildWolf(team, wolfProp != null);
             if (wolfProp != null)
             {
-                // the Meshy wolf faces -z; about 1.1 units nose to tail, the same ghost look as the code one
+                // the Meshy wolf faces -z; scaled 1.05 as old Speltest (View3D.cs): about 2 tiles nose to tail, 1.6 high
                 d.PropMesh = wolfProp; d.PropTex = Props.Texture("fenn_wolf"); d.PropBone = WolfBody;
-                d.PropEuler = new Vector3(0f, 180f, 0f); d.PropScale = 0.58f;
-                d.Height = 0.9f; d.Radius = 0.4f;
+                d.PropEuler = new Vector3(0f, 180f, 0f); d.PropScale = 1.05f;
+                d.Height = 1.6f; d.Radius = 0.55f;
             }
             d.Mesh = b.ToSkinnedMesh("Wolf t" + team, d.Pivots);
             d.BarWidth = 0.6f;
@@ -716,7 +716,7 @@ namespace BAM.Art
             {
                 // Rickard's wolf mesh is the body; the code adds only a ghostly glow on the ground under it
                 b.Bone = WolfBody;
-                b.Color(Pal.Ghost).Disc(new Vector3(0f, 0.03f, 0f), 0.45f, 16);
+                b.Color(Pal.Ghost).Disc(new Vector3(0f, 0.03f, 0f), 0.75f, 16);
                 return new RigDef
                 {
                     Pivots = piv, Parents = new[] { -1, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody }, Kind = RigKind.Wolf,
