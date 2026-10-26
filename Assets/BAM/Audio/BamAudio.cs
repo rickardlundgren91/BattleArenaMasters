@@ -35,6 +35,7 @@ namespace BAM.Audio
         static readonly float[] lastStart = new float[SfxRecipes.Count], lastVol = new float[SfxRecipes.Count];
         // 1 for synth clips; for a recorded file, the gain that brings it to the synth clips' loudness
         static readonly float[] clipGain = new float[SfxRecipes.Count];
+        static readonly bool[] isFile = new bool[SfxRecipes.Count];
         static SfxSynth synth;
         static int nextBuild = 1;
         static double buildMs;
@@ -63,6 +64,7 @@ namespace BAM.Audio
             ready = true;
             for (int i = 0; i < SfxRecipes.Count; i++) { info[i] = SfxRecipes.Info((SfxId)i); lastStart[i] = -100f; lastVol[i] = 0f; }
             Array.Clear(clips, 0, clips.Length);
+            Array.Clear(isFile, 0, isFile.Length);
             Array.Clear(voiceEnd, 0, Voices);
             nextBuild = 1; buildMs = 0;
             synth = new SfxSynth();
@@ -158,6 +160,13 @@ namespace BAM.Audio
         {
             int k = (int)id;
             if (!Ready || k <= 0 || k >= SfxRecipes.Count) return;
+            // Rickard 2026-10-26: the synth whistles and beeps are embarrassing, so every code sound is silent (SfxMute.cs).
+            // A recorded clip in Resources/BAM/Sfx still plays.
+            if (SfxMute.IsMuted(id))
+            {
+                if (clips[k] == null) Build(k);
+                if (!isFile[k]) return;
+            }
             float v = volume;
             if (v * master <= 0.005f) return;
             ref SfxInfo inf = ref info[k];
@@ -220,11 +229,13 @@ namespace BAM.Audio
             if (file != null)
             {
                 clips[k] = file;
+                isFile[k] = true;
                 clipGain[k] = FileGain(file, info[k].Level);
                 buildMs += sw.Elapsed.TotalMilliseconds;
                 return file;
             }
             clipGain[k] = 1f;
+            isFile[k] = false;
             var data = SfxRecipes.Render(synth, (SfxId)k);
             var clip = AudioClip.Create("bam_" + (SfxId)k, data.Length, 1, SfxSynth.Rate, false);
             clip.SetData(data, 0);
