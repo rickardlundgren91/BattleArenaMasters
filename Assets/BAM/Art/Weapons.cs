@@ -47,6 +47,9 @@ namespace BAM.Art
         public ShieldDef Shield;
         /// <summary>Degrees both upper arms are turned out from the sides after the clips, so a broad body's arms do not cut through it (old MX_ARM_SPREAD).</summary>
         public float ArmSpread;
+        /// <summary>At rest the right arm bends so the fist sits in front of the shoulder and the weapon lies back over it (Bonk);
+        /// attack and cast clips play untouched.</summary>
+        public bool Shoulder;
     }
 
     /// <summary>
@@ -106,10 +109,14 @@ namespace BAM.Art
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
             // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
-            // (Rickard 2026-10-26: "klubban ska vara för stor för honom"); at rest it stands up and out to his right, a little back,
-            // a clear silhouette beside him: up in front it covered his face, leaned far back (172) it went behind him when the menu
-            // stage turned him, and hanging forward-down (-35) it melted into his pelt at the knees ("vridas framåt", "syns tydligt")
-            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 55f, HoldOut = 115f } } };
+            // (Rickard 2026-10-26: "klubban ska vara för stor för honom"), carried on his right shoulder at rest: the arm bends, the
+            // fist in front of the shoulder, the club leaning back over it (Rickard 2026-10-26: "ha vapen naturligt på axeln", as in
+            // the "Bonk has arrived" picture); only turning the club, it stood in front of his face, behind his back or in his pelt
+            g[(int)HeroId.Bonk] = new GearDef
+            {
+                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f } },
+                Shoulder = true,
+            };
             return g;
         }
 
@@ -155,6 +162,9 @@ namespace BAM.Art
         // arms turned out after the clips
         float spread;
         Transform armR, armL;
+        // the right arm bent to carry the weapon on the shoulder
+        Transform carryUp, carryLo, carryHand;
+        float figH;
         // thrown
         float hideIn = -1f, backIn = -1f;
         const float AwayFor = 0.45f, PopIn = 0.15f;
@@ -162,7 +172,7 @@ namespace BAM.Art
         public static HeldGear Build(GearDef g, Animator an, float figH)
         {
             if (g == null || an == null || an.avatar == null || !an.isHuman) return null;
-            var h = new HeldGear { root = an.transform };
+            var h = new HeldGear { root = an.transform, figH = figH };
             var rends = new List<Renderer>();
             var op = new List<Material>();
             var fd = new List<Material>();
@@ -175,6 +185,12 @@ namespace BAM.Art
                 h.spread = g.ArmSpread;
                 h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
                 h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            }
+            if (g.Shoulder)
+            {
+                h.carryUp = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                h.carryLo = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
+                h.carryHand = an.GetBoneTransform(HumanBodyBones.RightHand);
             }
             for (int i = 0; i < nw; i++) h.AddWeapon(i, g.Weapons[i], an, figH, rends, op, fd);
             if (g.Shield != null) h.AddShield(g.Shield, an, figH, rends, op, fd);
@@ -287,6 +303,7 @@ namespace BAM.Art
                 if (backIn < 0f) { backIn = -1f; show = 1f; }
             }
             if (spread > 0f) ArmSpread();
+            if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
             for (int i = 0; i < wT.Length; i++)
             {
                 Transform t = wT[i];
@@ -304,6 +321,32 @@ namespace BAM.Art
             Vector3 fwd = root.forward;
             if (armR != null) armR.rotation = Quaternion.AngleAxis(spread, fwd) * armR.rotation;
             if (armL != null) armL.rotation = Quaternion.AngleAxis(-spread, fwd) * armL.rotation;
+        }
+
+        // The right arm bent by a two-bone IK after the clips (and the menu's breath): the wrist goes a little in front of and
+        // below the shoulder, the elbow down and out in front. w: 1 at rest, 0 while a swing or cast plays, so those play as made.
+        void CarryOnShoulder(float w)
+        {
+            if (w <= 0.001f) return;
+            Vector3 fwd = root.forward, upW = root.up, rt = root.right;
+            Vector3 a = carryUp.position, b = carryLo.position, c = carryHand.position;
+            float H = figH;
+            Vector3 goal = a + fwd * (0.13f * H) - upW * (0.12f * H) - rt * (0.02f * H);
+            Vector3 hint = a - upW * (0.2f * H) + fwd * (0.12f * H) + rt * (0.12f * H);
+            goal = Vector3.Lerp(c, goal, w);
+            hint = Vector3.Lerp(b, hint, w);
+            float la = (b - a).magnitude, lb = (c - b).magnitude;
+            if (la < 1e-5f || lb < 1e-5f) return;
+            Vector3 at = goal - a;
+            float d = Mathf.Clamp(at.magnitude, Mathf.Abs(la - lb) + 1e-4f, la + lb - 1e-4f);
+            Vector3 dir = at.sqrMagnitude > 1e-10f ? at.normalized : fwd;
+            float x = (la * la - lb * lb + d * d) / (2f * d), hg = Mathf.Sqrt(Mathf.Max(0f, la * la - x * x));
+            Vector3 pole = Vector3.ProjectOnPlane(hint - a, dir);
+            pole = pole.sqrMagnitude > 1e-10f ? pole.normalized : Vector3.ProjectOnPlane(-upW, dir).normalized;
+            Vector3 elbow = a + dir * x + pole * hg;
+            carryUp.rotation = Quaternion.FromToRotation(b - a, elbow - a) * carryUp.rotation;
+            Vector3 lo = carryLo.position;
+            carryLo.rotation = Quaternion.FromToRotation(carryHand.position - lo, a + dir * d - lo) * carryLo.rotation;
         }
 
         // MxHoldAngle: the grip is set in the T-pose, so with the arm hanging a hammer would point straight ahead, flat; turned
