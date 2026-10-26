@@ -37,7 +37,7 @@ before going beyond it.
   Sounds synthesized in code. Music: Rickard's "Byte Strike" loop plays in matches (2026-10-25) and, "for all music for
   now" (2026-10-26), in the menus until a menu track exists. On 2026-10-26 Rickard
   decided to keep it in the build although its rights are unclear (made on Google Flow Music, free tier, see LICENSES);
-  re-check before the production release. No vibration for now.
+  re-check before the production release. Vibration (2026-10-26, Rickard "ja vibration men inte överanvändt"): short buzzes only on big hits on the player (15 %+), its death, kills, its special, a hook catch and button presses; off in Settings.
 - Portrait, camera angled from above. 60 fps target with Low/High graphics.
 - Camera zoom exactly as the old game (Rickard 2026-10-25: "rätt zoom på kamera är det viktigaste", "inte mer av
   kamer på map"): 11.5 tiles across the old game's standing frame, the focus 52% down it. The HUD and menus lay out in
