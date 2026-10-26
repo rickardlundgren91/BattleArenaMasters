@@ -10,8 +10,9 @@ namespace BAM.Game
     /// zoom punch. Shake when the player is hit, when a hero or a tower near it is hit hard, when a hero near it dies, when a
     /// tower falls, on the player's big hits (15 % of the target's health or more) and kills, and when it casts its special.
     /// Hit-stop only for the player's own death and its killing blows (Rickard 2026-10-18: longer ones felt like a freeze).
-    /// Short buzzes with it (Haptics.cs, via BamHaptics, off when Settings has Vibration off): hit for 5 % or more, death, kill,
-    /// cast; one pulse per tick, the strongest, since BamHaptics drops anything within 0.08 s of the last.
+    /// Short buzzes with it (Haptics.cs, via BamHaptics, off when Settings has Vibration off): a big hit on the player (15 % or
+    /// more), its death, a kill, its special and a hook catching a hero; none for its own hits (Rickard 2026-10-26: vibration,
+    /// but not overused). One pulse per tick, the strongest, since BamHaptics drops anything within 0.08 s of the last.
     /// Picture only: the hit-stop feeds ticks slower, the rules never see a shorter tick.
     /// </summary>
     sealed class MatchJuice
@@ -69,13 +70,12 @@ namespace BAM.Game
                         if (b == null || e.V < 1f || b.MaxHp <= 0f) break;
                         float f = Mathf.Min(1f, e.V / b.MaxHp);
                         bool mine = e.A != null && (e.A == p || e.A.Owner == p);
-                        if (b == p) { if (f >= 0.03f) AddTrauma(Mathf.Min(0.6f, 0.15f + f * 1.8f)); if (f >= 0.05f) buzz = Mathf.Max(buzz, 0.3f); }
+                        if (b == p) { if (f >= 0.03f) AddTrauma(Mathf.Min(0.6f, 0.15f + f * 1.8f)); if (f >= 0.15f) buzz = Mathf.Max(buzz, 0.3f); } // only a big hit buzzes (Rickard 2026-10-26: vibration, but not overused)
                         else if (mine && b.IsRealHero && b.Team != p.Team)
                         {
                             // HeroJuice hit confirm: every melee hit bites a little, a big hit shakes more
                             if (f >= 0.15f) AddTrauma((Heavy(p.Hero) ? 0.22f : 0.14f) + f * 0.6f);
                             else if (p.Range <= 2.4f) AddTrauma(0.05f);
-                            if (f >= 0.05f) buzz = Mathf.Max(buzz, (Heavy(p.Hero) ? 0.2f : 0.12f) + Mathf.Min(0.3f, f * 1.5f)); // buzz only for >= 5 % of max HP
                         }
                         else if (b.IsRealHero && p.Alive && Dist(b, p) < 6f && f >= 0.06f) AddTrauma(f * 1.4f);
                         else if (b.Kind == UnitKind.Tower && p.Alive && Dist(b, p) < 6f && f >= 0.04f) AddTrauma(f * 2f);
