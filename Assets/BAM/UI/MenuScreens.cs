@@ -605,6 +605,7 @@ namespace BAM.UI
         const float DegPerUnit = 0.45f; // a finger across the whole screen turns him about one and a half times
         float yaw = StartYaw, spin;   // spin: degrees per second left after a flick, slowing down
         bool dragging;
+        float lastDragAt;
         static readonly Vector3 Spot = new Vector3(500, 0, 500);
         const int Size = 768;
 
@@ -665,9 +666,14 @@ namespace BAM.UI
             Turn(d);
             float dt = Mathf.Max(Time.unscaledDeltaTime, 0.001f);
             spin = Mathf.Lerp(spin, d / dt, 0.5f);
+            lastDragAt = Time.unscaledTime;
         }
 
-        public void OnEndDrag(PointerEventData e) => dragging = false;
+        public void OnEndDrag(PointerEventData e)
+        {
+            dragging = false;
+            if (Time.unscaledTime - lastDragAt > 0.1f) spin = 0; // the finger stood still before lifting: no flick
+        }
 
         void Update()
         {
