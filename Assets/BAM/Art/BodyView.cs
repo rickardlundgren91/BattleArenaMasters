@@ -508,6 +508,14 @@ namespace BAM.Art
             mixer.SetInputWeight(CHit, wHit);
             mixer.SetInputWeight(CDeath, wDeath);
             clips[CRun].SetSpeed(0.8f + 0.4f * speed01);
+            // idle and run always loop here, even when a clip was imported without Loop Time (it would play once and freeze)
+            Wrap(CIdle); Wrap(CRun);
+        }
+
+        void Wrap(int c)
+        {
+            double t = clips[c].GetTime(), len = clipLen[c];
+            if (t >= len) clips[c].SetTime(t % len);
         }
 
         static float Back(float t) { t -= 1f; return 1f + t * t * (2.7f * t + 1.7f); }

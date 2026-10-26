@@ -137,12 +137,47 @@ namespace BAM.Art.Editor
         {
             EditorApplication.delayCall += () =>
             {
+                // a model or clip imported before these import rules compiled (first open of a fresh copy) keeps Unity's defaults:
+                // not humanoid, clips not looping, so the heroes stand frozen. Import those files again with the rules.
+                if (ReimportStale()) { BuildAll(); return; }
                 foreach (Spec s in specs)
                 {
                     var art = AssetDatabase.LoadAssetAtPath<HeroArt>(OutOf(s) + "/" + s.Hero + ".asset");
-                    if (art == null || art.Model == null || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)) { BuildAll(); return; }
+                    if (art == null || art.Model == null || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
+                        || art.Idle == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null) { BuildAll(); return; }
                 }
             };
+        }
+
+        static bool ReimportStale()
+        {
+            var paths = new System.Collections.Generic.HashSet<string>();
+            foreach (Spec s in specs)
+                foreach (string p in new[] { s.Model, s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death })
+                    if (p != null) paths.Add(ModelsDir + p + ".fbx");
+            foreach (string p in pool) paths.Add(ModelsDir + p + ".fbx");
+            bool any = false;
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (string path in paths)
+                {
+                    if (!(AssetImporter.GetAtPath(path) is ModelImporter mi)) continue;
+                    bool stale = mi.animationType != ModelImporterAnimationType.Human;
+                    string name = Path.GetFileNameWithoutExtension(path);
+                    if (!stale && path.Contains("/Anim/") && (name.StartsWith("Idle") || name.StartsWith("Run")))
+                    {
+                        ModelImporterClipAnimation[] c = mi.clipAnimations;
+                        stale = c == null || c.Length == 0 || !c[0].loopTime;
+                    }
+                    if (!stale) continue;
+                    Debug.Log("[BAM.Art] Importing " + path + " again with the hero rules (humanoid, looping idle and run)");
+                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                    any = true;
+                }
+            }
+            finally { AssetDatabase.StopAssetEditing(); }
+            return any;
         }
 
         [MenuItem("BAM/Art/Rebuild Hero Models")]
