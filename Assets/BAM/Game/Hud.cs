@@ -17,7 +17,7 @@ namespace BAM.Game
     /// the guided match's hint. Built once with UiKit; texts change only when their value does (no per-frame garbage).
     /// Editor and keyboard: WASD or the arrows move, Space taps the special.
     /// </summary>
-    sealed class Hud
+    sealed partial class Hud
     {
         const int HudOrder = 10; // under the hint bubble (60) and the menus (100)
         const float DeniedTime = 1.2f, ShakeTime = 0.35f, GoTime = 0.8f;
@@ -29,11 +29,10 @@ namespace BAM.Game
 
         readonly GameFlow flow;
         Canvas canvas;
-        RectTransform safe, scorePanel, starsRow;
-        Text timeText, blueKills, redKills, centerText, respawnText, deniedText, specialName;
-        readonly Image[] stars = new Image[6];
+        RectTransform safe;
+        Text centerText, respawnTitle, respawnText, defeatedText, bannerText, deniedText, specialName;
         RectTransform specialRoot, joyArea;
-        Image specialFill, specialFace, specialGlow;
+        Image specialFill, specialFace, specialGlow, specialIcon, gainRing;
         SpecialButton special;
         JoystickZone joy;
         AimView aim, marks;
@@ -47,8 +46,11 @@ namespace BAM.Game
         MatchViews views;
         MatchCamera cam;
         bool built, leftHanded, tutorial, island;
-        int shownSeconds, shownK0, shownK1, shownS0, shownS1, shownRespawn, shownCount, lastTutStep;
-        float lastDenied, deniedUntil, shakeUntil, goUntil;
+        int shownRespawn, shownCount, lastTutStep;
+        float lastDenied, deniedUntil, shakeUntil, goUntil, bannerUntil, gainAt, lastCharge;
+        // who killed the player last ("Defeated by" under the respawn countdown)
+        Unit killedBy;
+        const float BannerTime = 2.6f, GainTime = 0.45f;
         MatchState lastState;
         bool hintShown;
         // the special waits here until the next tick reads it
@@ -71,16 +73,23 @@ namespace BAM.Game
             canvas.gameObject.SetActive(true);
             canvas.enabled = true;
             aim = ArtKit.CreateAim();
-            shownSeconds = shownK0 = shownK1 = shownS0 = shownS1 = shownRespawn = shownCount = lastTutStep = -1;
-            lastDenied = m.SpecialDeniedAt; deniedUntil = shakeUntil = goUntil = 0f;
+            shownRespawn = shownCount = lastTutStep = -1;
+            lastDenied = m.SpecialDeniedAt; deniedUntil = shakeUntil = goUntil = bannerUntil = 0f;
+            gainAt = -99f; lastCharge = 0f; killedBy = null;
             lastState = m.State;
             specialQueued = false; hintShown = false;
-            scorePanel.gameObject.SetActive(!tutorial);
-            starsRow.gameObject.SetActive(!tutorial);
-            specialName.text = HeroCatalog.Get(m.Player.Hero).SpecialName;
-            specialFace.color = UiKit.HeroColor(m.Player.Hero);
+            BeginTop();
+            // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
+            var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
+            if (specialIcon.sprite != null) Object.Destroy(specialIcon.sprite); // the last match's sprite (the texture stays)
+            specialIcon.sprite = icon != null ? Sprite.Create(icon, new Rect(0, 0, icon.width, icon.height), new Vector2(0.5f, 0.5f), 100f) : null;
+            specialIcon.enabled = icon != null;
+            specialName.text = icon != null ? "" : HeroCatalog.Get(m.Player.Hero).SpecialName;
             centerText.text = "";
+            bannerText.gameObject.SetActive(false);
             respawnText.gameObject.SetActive(false);
+            respawnTitle.gameObject.SetActive(false);
+            defeatedText.gameObject.SetActive(false);
             deniedText.gameObject.SetActive(false);
             leftHanded = !BamSettings.LeftHanded; // forces the first layout
             ApplyLayout();
@@ -170,9 +179,11 @@ namespace BAM.Game
             if (lastState == MatchState.Countdown && m.State == MatchState.Play && !tutorial)
             {
                 goUntil = Time.unscaledTime + GoTime;
+                bannerUntil = Time.unscaledTime + BannerTime;
                 BamAudio.Play(SfxId.CountdownGo);
             }
             lastState = m.State;
+            ReadEvents();
             if (m.Tut != null && m.Tut.Step != lastTutStep)
             {
                 // one numbering over both halves: the island's steps 0-5, then the arena's as 6-9
@@ -192,7 +203,7 @@ namespace BAM.Game
             var kb = Keyboard.current;
             if (!hidden && kb != null && kb.spaceKey.wasPressedThisFrame) OnTap();
 
-            Top();
+            Top(dt);
             Center();
             Special();
             Aim(hidden);
@@ -222,24 +233,6 @@ namespace BAM.Game
             fpsTime = 0f; fpsFrames = 0;
         }
 
-        void Top()
-        {
-            if (tutorial) return;
-            int secs = Mathf.Max(0, Mathf.FloorToInt(m.Time));
-            if (secs != shownSeconds) { shownSeconds = secs; timeText.text = (secs / 60) + ":" + (secs % 60).ToString("00"); }
-            if (m.Kills[0] != shownK0) { shownK0 = m.Kills[0]; blueKills.text = Num(shownK0); }
-            if (m.Kills[1] != shownK1) { shownK1 = m.Kills[1]; redKills.text = Num(shownK1); }
-            if (m.Stars[0] != shownS0 || m.Stars[1] != shownS1)
-            {
-                shownS0 = m.Stars[0]; shownS1 = m.Stars[1];
-                for (int i = 0; i < 3; i++)
-                {
-                    stars[i].color = i < shownS0 ? UiKit.Gold : new Color(1f, 1f, 1f, 0.18f);
-                    stars[3 + i].color = i < shownS1 ? UiKit.Gold : new Color(1f, 1f, 1f, 0.18f);
-                }
-            }
-        }
-
         static string Num(int n) => n >= 0 && n < Numbers.Length ? Numbers[n] : n.ToString();
 
         void Center()
@@ -248,20 +241,42 @@ namespace BAM.Game
             int count = -1;
             if (m.State == MatchState.Countdown) count = Mathf.CeilToInt(-m.Time);
             else if (Time.unscaledTime < goUntil) count = 0;
+            else if (m.State == MatchState.Over && !tutorial) count = -10; // the old over banner, until the result comes up
             if (count != shownCount)
             {
                 shownCount = count;
-                centerText.text = count < 0 ? "" : count == 0 ? "GO!" : count > 3 ? "Ready?" : Numbers[count];
+                bool won = m.Winner == m.Player.Team;
+                centerText.text = count == -10 ? (won ? "VICTORY!" : "DEFEAT") : count < 0 ? "" : count == 0 ? "GO!" : count > 3 ? "Ready?" : Numbers[count];
+                centerText.color = count == -10 && !won ? DmgToPlayer : UiKit.Gold;
                 if (count >= 1 && count <= 3) BamAudio.Play(SfxId.Countdown);
+            }
+            // the old start banner: DESTROY THE ENEMY TOWER!
+            bool banner = Time.unscaledTime < bannerUntil;
+            if (bannerText.gameObject.activeSelf != banner) bannerText.gameObject.SetActive(banner);
+            if (banner)
+            {
+                float age = BannerTime - (bannerUntil - Time.unscaledTime);
+                float pop = age < 0.18f ? 0.7f + 0.3f * age / 0.18f : 1f;
+                bannerText.rectTransform.localScale = Vector3.one * pop;
+                var bc = bannerText.color;
+                bc.a = bannerUntil - Time.unscaledTime < 0.4f ? (bannerUntil - Time.unscaledTime) / 0.4f : 1f;
+                bannerText.color = bc;
             }
 
             var p = m.Player;
             bool waiting = !p.Alive && m.State == MatchState.Play;
-            if (respawnText.gameObject.activeSelf != waiting) respawnText.gameObject.SetActive(waiting);
+            if (respawnText.gameObject.activeSelf != waiting)
+            {
+                respawnText.gameObject.SetActive(waiting);
+                respawnTitle.gameObject.SetActive(waiting);
+                bool by = waiting && killedBy != null && (killedBy.IsHero || killedBy.Kind == UnitKind.Wolf || killedBy.Kind == UnitKind.Tower);
+                defeatedText.gameObject.SetActive(by);
+                if (by) defeatedText.text = "Defeated by " + Colored(killedBy.Kind == UnitKind.Wolf && killedBy.Owner != null ? killedBy.Owner : killedBy);
+            }
             if (waiting)
             {
                 int s = Mathf.Max(1, Mathf.CeilToInt(p.RespawnT));
-                if (s != shownRespawn) { shownRespawn = s; respawnText.text = "Back in " + s; }
+                if (s != shownRespawn) { shownRespawn = s; respawnText.text = Num(s); }
             }
 
             bool denied = Time.unscaledTime < deniedUntil;
@@ -277,9 +292,20 @@ namespace BAM.Game
             float pulse = 0.55f + 0.45f * Mathf.Sin(Time.unscaledTime * 6f);
             specialGlow.color = ready ? new Color(1f, 0.85f, 0.3f, 0.35f + 0.35f * pulse) : Color.clear;
             specialGlow.rectTransform.localScale = Vector3.one * (ready ? 1f + 0.05f * pulse : 1f);
-            Color face = UiKit.HeroColor(p.Hero);
-            face.a = p.Alive ? (ready ? 1f : 0.75f) : 0.35f;
-            specialFace.color = face;
+            // the old button: a blue disc (brighter when ready), the icon over it, greyed while charging or dead
+            specialFace.color = ready ? new Color32(0x1d, 0x4f, 0xb8, 0xff) : new Color32(0x1d, 0x2a, 0x55, 0xff);
+            specialIcon.color = !p.Alive ? new Color(0.45f, 0.45f, 0.5f, 0.6f) : ready ? Color.white : new Color(0.7f, 0.72f, 0.8f, 0.85f);
+            // a charge just came in: a short gold ring swells out of the button
+            if (p.Alive && p.Charge > lastCharge + 0.001f) gainAt = Time.unscaledTime;
+            lastCharge = p.Charge;
+            float g = 1f - (Time.unscaledTime - gainAt) / GainTime;
+            if (g > 0f)
+            {
+                gainRing.enabled = true;
+                gainRing.color = new Color(1f, 0.86f, 0.45f, 0.85f * g);
+                gainRing.rectTransform.localScale = Vector3.one * (1.18f - 0.18f * g);
+            }
+            else if (gainRing.enabled) gainRing.enabled = false;
             float shake = Time.unscaledTime < shakeUntil ? Mathf.Sin(Time.unscaledTime * 70f) * 14f * (shakeUntil - Time.unscaledTime) / ShakeTime : 0f;
             specialFace.rectTransform.anchoredPosition = new Vector2(shake, 0f);
             if (special.Pressed && !p.Alive) special.Cancel();
@@ -468,7 +494,16 @@ namespace BAM.Game
             specialFill.fillMethod = Image.FillMethod.Radial360;
             specialFill.fillOrigin = (int)Image.Origin360.Top;
             specialFill.fillClockwise = true;
-            specialFace = Circle(specialRoot, "Face", 214f, UiKit.Primary).GetComponent<Image>();
+            specialFace = Circle(specialRoot, "Face", 236f, UiKit.Primary).GetComponent<Image>();
+            specialFace.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+            var iconRt = UiKit.NewRect("Icon", specialFace.transform);
+            UiKit.Stretch(iconRt);
+            specialIcon = iconRt.gameObject.AddComponent<Image>();
+            specialIcon.preserveAspect = false;
+            specialIcon.raycastTarget = false;
+            gainRing = Circle(specialRoot, "Gain", 290f, Color.clear).GetComponent<Image>();
+            gainRing.sprite = UiKit.CircleRing;
+            gainRing.enabled = false;
             specialName = UiKit.Label(specialFace.transform, "", 40, TextAnchor.MiddleCenter, Color.white);
             UiKit.Stretch(specialName.rectTransform, 20, 20, 20, 20);
             specialName.resizeTextForBestFit = true;
@@ -479,45 +514,34 @@ namespace BAM.Game
             deniedText = UiKit.Label(safe, "", 44, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.8f));
             UiKit.AddOutline(deniedText, 3);
 
-            // top: blue kills, time, red kills; the team stars under them
-            scorePanel = UiKit.Panel(safe, new Color(UiKit.PanelColor.r, UiKit.PanelColor.g, UiKit.PanelColor.b, 0.75f)).rectTransform;
-            scorePanel.GetComponent<Image>().raycastTarget = false;
-            UiKit.Place(scorePanel, 0.5f, 1f, 0f, -24f, 520f, 116f);
-            blueKills = UiKit.Label(scorePanel, "0", 72, TextAnchor.MiddleCenter, UiKit.Ally);
-            UiKit.Place(blueKills, 0f, 0.5f, 20f, 0f, 120f, 110f);
-            UiKit.AddOutline(blueKills, 3);
-            timeText = UiKit.Label(scorePanel, "0:00", 56, TextAnchor.MiddleCenter, Color.white);
-            UiKit.Place(timeText, 0.5f, 0.5f, 0f, 0f, 220f, 110f);
-            UiKit.AddOutline(timeText, 3);
-            redKills = UiKit.Label(scorePanel, "0", 72, TextAnchor.MiddleCenter, UiKit.Enemy);
-            UiKit.Place(redKills, 1f, 0.5f, -20f, 0f, 120f, 110f);
-            UiKit.AddOutline(redKills, 3);
-            starsRow = UiKit.NewRect("Stars", safe);
-            UiKit.Place(starsRow, 0.5f, 1f, 0f, -146f, 520f, 40f);
-            for (int i = 0; i < 6; i++)
-            {
-                bool red = i >= 3;
-                int k = red ? i - 3 : i;
-                var s = Circle(starsRow, "Star", 32f, new Color(1f, 1f, 1f, 0.18f));
-                UiKit.Place(s, red ? 1f : 0f, 0.5f, red ? -(30f + k * 42f) : 30f + k * 42f, 0f, 32f, 32f);
-                stars[i] = s.GetComponent<Image>();
-            }
+            BuildTop();
 
             var pause = UiKit.Button(safe, "II", () => flow.Pause(), UiKit.Muted, SfxId.UiTap, 56);
-            UiKit.Place(pause, 1f, 1f, -24f, -24f, 120f, 120f);
+            UiKit.Place(pause, 1f, 1f, -18f, -(TopM + PortraitS + BarH + 22f), 96f, 96f);
 
             centerText = UiKit.Label(safe, "", 200, TextAnchor.MiddleCenter, UiKit.Gold);
             UiKit.Place(centerText, 0.5f, 0.5f, 0f, 200f, 900f, 260f);
             UiKit.AddOutline(centerText, 6);
-            respawnText = UiKit.Label(safe, "", 72, TextAnchor.MiddleCenter, Color.white);
-            UiKit.Place(respawnText, 0.5f, 0.5f, 0f, 380f, 900f, 110f);
-            UiKit.AddOutline(respawnText, 4);
+            // the old respawn block: RESPAWN IN, the seconds, who did it
+            respawnTitle = UiKit.Label(safe, "RESPAWN IN", 44, TextAnchor.MiddleCenter, UiKit.TextDim);
+            UiKit.Place(respawnTitle, 0.5f, 0.5f, 0f, 470f, 900f, 60f);
+            UiKit.AddOutline(respawnTitle, 3);
+            respawnText = UiKit.Label(safe, "", 130, TextAnchor.MiddleCenter, Color.white);
+            UiKit.Place(respawnText, 0.5f, 0.5f, 0f, 370f, 900f, 150f);
+            UiKit.AddOutline(respawnText, 5);
+            defeatedText = UiKit.Label(safe, "", 40, TextAnchor.MiddleCenter, Color.white);
+            UiKit.Place(defeatedText, 0.5f, 0.5f, 0f, 275f, 900f, 56f);
+            UiKit.AddOutline(defeatedText, 3);
+            bannerText = UiKit.Label(safe, "<size=64>DESTROY THE</size>\n<color=#ff5a4a>ENEMY</color> TOWER!", 92, TextAnchor.MiddleCenter, Color.white);
+            UiKit.Place(bannerText, 0.5f, 0.5f, 0f, 470f, 1000f, 220f);
+            UiKit.AddOutline(bannerText, 6);
+            bannerText.supportRichText = true;
 
             // development builds only (BAM > Build test APK, the editor): never in the release AAB
             if (Debug.isDebugBuild)
             {
                 fpsText = UiKit.Label(safe, "", 36, TextAnchor.UpperLeft, Color.white);
-                UiKit.Place(fpsText, 0f, 1f, 24f, -24f, 220f, 50f);
+                UiKit.Place(fpsText, 0f, 1f, 18f, -(TopM + PortraitS + BarH + 40f), 220f, 50f);
                 UiKit.AddOutline(fpsText, 2);
                 fpsStrings = new string[241];
                 for (int i = 0; i < fpsStrings.Length; i++) fpsStrings[i] = i + " fps";
@@ -525,6 +549,7 @@ namespace BAM.Game
 
             // the guided match: chevrons over what to look at, and the black for the jump to the arena (on top of everything)
             canvasRect = (RectTransform)canvas.transform;
+            BuildFloats();
             pointChevron = MakeChevron(canvasRect);
             ringChevron = MakeChevron(canvasRect);
             fade = UiKit.Fill(canvasRect, Color.clear);
