@@ -77,4 +77,4 @@ Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources
 
 | Files | What | Origin | Made by | Rights / proof | Credit |
 |---|---|---|---|---|---|
-| `ui_ingameView_joystick.png`, `ui_ingameView_joystick_base.png`, `ui_ingameView_specialButton_{base,fill,fillBG,glow,disable}.png` (7) | The joystick and the SPECIAL button in a match | Old game `ui_ingameView_*.png` | Rickard / the old project | Rickard's own (he confirmed on a decision card 2026-10-26 13:05: "Ja, jag äger dem") | None |
+| `ui_ingameView_joystick.png`, `ui_ingameView_joystick_base.png`, `ui_ingameView_specialButton_fill.png` (3) | The joystick and the SPECIAL button's charge ring in a match | Old game `ui_ingameView_*.png` | Rickard / the old project | Rickard's own (he confirmed on a decision card 2026-10-26 13:05: "Ja, jag äger dem") | None |
