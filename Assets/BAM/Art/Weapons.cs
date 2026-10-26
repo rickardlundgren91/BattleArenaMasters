@@ -17,6 +17,10 @@ namespace BAM.Art
         public bool Along;
         /// <summary>Degrees above level the weapon is turned to about its grip while the hero is not swinging (Bram; old MX_HOLD_UP).</summary>
         public float HoldUp;
+        /// <summary>Degrees the held weapon also leans out to its own hand's side, so a hammer held up stands beside the face, not in front of it (Bram).</summary>
+        public float HoldOut;
+        /// <summary>Held up through the fist with its face to the front instead of its head along the swing (Moa's staff).</summary>
+        public bool Upright;
         /// <summary>Leaves the hand when an attack or cast releases and comes back a moment later (Blast's bomb).</summary>
         public bool Thrown;
         /// <summary>Reverse grip: the weapon leaves the fist on the little-finger side instead of the thumb side.</summary>
@@ -31,14 +35,18 @@ namespace BAM.Art
         public string Model;
         /// <summary>Diameter as a share of the figure's height.</summary>
         public float Dia;
-        /// <summary>Always carried at the side, face out (Moa); otherwise held up in front while standing and at the side on the move.</summary>
+        /// <summary>Always carried at the side on the hand (Moa); otherwise held up in front while standing and at the side on the move.</summary>
         public bool AlwaysSide;
+        /// <summary>AlwaysSide: degrees its face is turned from straight out towards the front, and how far its back sits off the hand (share of its height).</summary>
+        public float Turn, Off;
     }
 
     sealed class GearDef
     {
         public WeaponDef[] Weapons;
         public ShieldDef Shield;
+        /// <summary>Degrees both upper arms are turned out from the sides after the clips, so a broad body's arms do not cut through it (old MX_ARM_SPREAD).</summary>
+        public float ArmSpread;
     }
 
     /// <summary>
@@ -60,28 +68,37 @@ namespace BAM.Art
                 Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f } },
                 Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f },
             };
-            g[(int)HeroId.Bram] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 50f } } };
+            // arms out as in the old game (MX_ARM_SPREAD 22) and the hammer leaning out to his right, so it stands beside his face,
+            // not in front of it (Rickard 2026-10-26: "bram täcker sig själv" on the hero page)
+            g[(int)HeroId.Bram] = new GearDef
+            {
+                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 50f, HoldOut = 30f } },
+                ArmSpread = 22f,
+            };
             // held by the shank just under the ring, so it hangs from the fist with the flukes down (Rickard 2026-10-16/19)
             g[(int)HeroId.Knut] = new GearDef { Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f } } };
+            // with her own clips the staff along the forearm hung beside the fist and the crest, face out at the side, read as a
+            // torch from the front (Rickard 2026-10-26: "moa håller inte i sina vapen"): the staff now stands up through her right
+            // fist, face to the front, and the crest sits on her left hand turned half to the front
             g[(int)HeroId.Moa] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true } },
-                Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true },
+                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true } },
+                Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true, Turn = 45f, Off = 0.12f },
             };
             // her ornate bow (Rickard's Tripo model 2026-10-24, old fig_ornateBow; Rickard 2026-10-26: "ja", put it in her hand),
             // gripped at the middle in the left fist like any weapon: the limbs leave the fist on the thumb side, so in her bow
             // clips (arm out, thumb up) it stands upright with the belly away from her. Along the forearm (as Moa's staff) it lay
             // flat along her outstretched arm (Rickard 2026-10-26: "håller konstigt i vapen"; checked in a Blender render of IdleBow)
             g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true } } };
-            // the Needle Wing in each fist (Rickard's Tripo model 2026-10-24), in a reverse grip with the fan along the knuckles,
-            // so the needles flare back past her forearms like claws; out of the thumb side (the old game) the flat fans sat in
-            // front of her face in her guard stance (Rickard 2026-10-26: "tikta höll i vapen konstigt")
+            // her old needle daggers, one in each fist out of the thumb side (old View3DOwnHeroFx.cs MxNeedles before the Needle
+            // Wing: NeedleMesh/NeedleTex as Props tikta_needle, NEEDLE_LEN 0.36, NEEDLE_GRIP 0.14; Rickard 2026-10-26: "tikta ska
+            // ha sina gamla vapen, typ två daggers")
             g[(int)HeroId.Tikta] = new GearDef
             {
                 Weapons = new[]
                 {
-                    new WeaponDef { Model = "tikta_wing", Len = 0.42f, Grip = 0.12f, Left = true, Reverse = true, Twist = 90f },
-                    new WeaponDef { Model = "tikta_wing", Len = 0.42f, Grip = 0.12f, Reverse = true, Twist = 90f },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f },
                 },
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
@@ -129,7 +146,10 @@ namespace BAM.Art
         // shield
         ShieldDef sDef;
         Transform sAnchor, sModel, sHand;
-        float sMeshH;
+        float sMeshH, sMeshD;
+        // arms turned out after the clips
+        float spread;
+        Transform armR, armL;
         // thrown
         float hideIn = -1f, backIn = -1f;
         const float AwayFor = 0.45f, PopIn = 0.15f;
@@ -145,6 +165,12 @@ namespace BAM.Art
             h.defs = new WeaponDef[nw];
             h.wT = new Transform[nw]; h.hand = new Transform[nw]; h.index = new Transform[nw];
             h.bindP = new Vector3[nw]; h.gripL = new Vector3[nw]; h.bindR = new Quaternion[nw]; h.bindS = new Vector3[nw];
+            if (g.ArmSpread > 0f)
+            {
+                h.spread = g.ArmSpread;
+                h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            }
             for (int i = 0; i < nw; i++) h.AddWeapon(i, g.Weapons[i], an, figH, rends, op, fd);
             if (g.Shield != null) h.AddShield(g.Shield, an, figH, rends, op, fd);
             if (rends.Count == 0) return null;
@@ -219,6 +245,7 @@ namespace BAM.Art
             sModel = go.transform;
             sModel.SetParent(sAnchor, false);
             sMeshH = Mathf.Max(1e-4f, mesh.bounds.size.y);
+            sMeshD = mesh.bounds.size.z;
             float k = S.Dia * H / sMeshH / Mathf.Max(1e-6f, sAnchor.lossyScale.y);
             sModel.localScale = new Vector3(k, k, k);
             sModel.localPosition = -mesh.bounds.center * k; // the model's bottom is at y = 0: centre it on the anchor
@@ -254,6 +281,7 @@ namespace BAM.Art
                 show = backIn > PopIn ? 0f : 1f - Mathf.Max(0f, backIn) / PopIn;
                 if (backIn < 0f) { backIn = -1f; show = 1f; }
             }
+            if (spread > 0f) ArmSpread();
             for (int i = 0; i < wT.Length; i++)
             {
                 Transform t = wT[i];
@@ -263,6 +291,14 @@ namespace BAM.Art
                 if (W.HoldUp > 0f) HoldAngle(i, W, dead ? 0f : 1f - Mathf.Clamp01(actW));
             }
             if (sAnchor != null) ShieldFace(moveW);
+        }
+
+        // MxArmSpread: about the hero's forward axis, so a hanging arm swings out from the side (before the weapons read the hands)
+        void ArmSpread()
+        {
+            Vector3 fwd = root.forward;
+            if (armR != null) armR.rotation = Quaternion.AngleAxis(spread, fwd) * armR.rotation;
+            if (armL != null) armL.rotation = Quaternion.AngleAxis(-spread, fwd) * armL.rotation;
         }
 
         // MxHoldAngle: the grip is set in the T-pose, so with the arm hanging a hammer would point straight ahead, flat; turned
@@ -277,11 +313,24 @@ namespace BAM.Art
             Transform hd = hand[i], ix = index[i];
             Vector3 palm = hd.position + (ix != null ? (ix.position - hd.position) * 0.6f : Vector3.zero);
             Vector3 g0 = t.TransformPoint(gl);
-            float a = W.HoldUp * Mathf.Deg2Rad;
-            Vector3 want = fwd * Mathf.Cos(a) + upW * Mathf.Sin(a);
+            float a = W.HoldUp * Mathf.Deg2Rad, o = W.HoldOut * Mathf.Deg2Rad;
+            Vector3 flat = fwd * Mathf.Cos(o) + (W.Left ? -root.right : root.right) * Mathf.Sin(o);
+            Vector3 want = flat * Mathf.Cos(a) + upW * Mathf.Sin(a);
             Quaternion q = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(t.up, want), w);
             t.SetPositionAndRotation(g0 + q * (t.position - g0), q * t.rotation);
-            Vector3 sh = t.up.normalized, lax = Vector3.Cross(root.right, sh);
+            Vector3 sh = t.up.normalized, lax = W.Upright ? Vector3.zero : Vector3.Cross(root.right, sh);
+            if (W.Upright)
+            {
+                // turned about its shaft so its face (the model's +z) looks the way the hero faces
+                Vector3 tgt = Vector3.ProjectOnPlane(fwd, sh), fz = Vector3.ProjectOnPlane(t.forward, sh);
+                if (tgt.sqrMagnitude > 1e-6f && fz.sqrMagnitude > 1e-6f)
+                {
+                    float ang = Vector3.SignedAngle(fz, tgt, sh) * w;
+                    Vector3 gg = t.TransformPoint(gl);
+                    Quaternion tw = Quaternion.AngleAxis(ang, sh);
+                    t.SetPositionAndRotation(gg + tw * (t.position - gg), tw * t.rotation);
+                }
+            }
             if (lax.sqrMagnitude > 1e-6f)
             {
                 lax.Normalize();
@@ -297,13 +346,23 @@ namespace BAM.Art
         }
 
         // MxShieldFace: standing, held up in front close to the arm; on the move, carried at the left side, face turned outwards
+        // (an AlwaysSide shield sits on the hand instead)
         void ShieldFace(float moveW)
         {
             Transform fw = root;
             float D = sModel.lossyScale.y * sMeshH;
             Vector3 side = Vector3.ProjectOnPlane(sHand.position - fw.position, fw.up);
             side = side.sqrMagnitude > 1e-8f ? side.normalized : -fw.right;
-            float w = sDef.AlwaysSide ? 1f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(moveW));
+            if (sDef.AlwaysSide)
+            {
+                // on the hand, its back against the fist, face turned part way from straight out to the front
+                float a = sDef.Turn * Mathf.Deg2Rad;
+                Vector3 dir = (side * Mathf.Cos(a) + fw.forward * Mathf.Sin(a)).normalized;
+                float th = sModel.lossyScale.z * sMeshD;
+                sAnchor.SetPositionAndRotation(sHand.position + dir * (th * 0.5f + D * sDef.Off), Quaternion.LookRotation(dir, fw.up));
+                return;
+            }
+            float w = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(moveW));
             Quaternion stand = Quaternion.AngleAxis(-20f, fw.up) * Quaternion.LookRotation(fw.forward, fw.up);
             Quaternion walk = Quaternion.LookRotation(side, fw.up);
             Vector3 pStand = sHand.position + fw.forward * (D * 0.15f) + side * (D * 0.05f);
