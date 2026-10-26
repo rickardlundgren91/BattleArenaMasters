@@ -132,7 +132,7 @@ namespace BAM.Art
                     var d = new Vector3(Mathf.Cos(e) * Mathf.Cos(a), Mathf.Sin(e), Mathf.Cos(e) * Mathf.Sin(a));
                     int k = j * (Lon + 1) + i;
                     v[k] = d; n[k] = d;
-                    uv[k] = new Vector2(i * 6f / Lon, j * 3.4f / Lat); // about square cells round the middle
+                    uv[k] = new Vector2(i * 4f / Lon, j * 2.3f / Lat); // Rickard's picture holds ~6 cells across; about square round the middle
                 }
             var tri = new int[Lon * Lat * 6];
             int q = 0;
