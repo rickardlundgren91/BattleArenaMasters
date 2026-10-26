@@ -41,11 +41,11 @@ namespace BAM.Sim
                 Health = 3, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tikta, Name = "Tikta", Title = "The Needle Wing", Role = "Assassin", Ranged = false,
                 SpecialName = "Needle Storm", SpecialDesc = "Fires four poison needles at random nearby enemies, minions too. Drag to fire them all in one straight line.",
-                PassiveName = "Final Sting", PassiveDesc = "Attacks hit harder against low-health targets.",
+                PassiveName = "Deathmark", PassiveDesc = "A normal attack that hurts an enemy hero marks it for 3 s (one mark at a time). The first Needle Storm needle that hits the marked hero deals 50% of her attack damage more.",
                 Health = 1, Damage = 3, Speed = 3, Difficulty = 3 },
             new HeroInfo { Id = HeroId.Blast, Name = "Blast", Title = "The Pyromaniac", Role = "Mage", Ranged = true,
                 SpecialName = "Supernova", SpecialDesc = "Tap: throws a bomb at a random enemy that explodes after 0.5 s. Drag: a strip of fire that burns enemies standing in it for 2 s.",
-                PassiveName = "Ignite", PassiveDesc = "All his damage sets the target on fire.",
+                PassiveName = "Ignite", PassiveDesc = "Hits set the target on fire: 15% more over 2 s. Chain Reaction (9 s cooldown): Supernova on a hero already burning from Blast blasts again where that hero stood 0.25 s later, hitting only the other enemies within 1 tile for 50% of his attack.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
         };
     }

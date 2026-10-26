@@ -14,6 +14,7 @@ namespace BAM.Sim
         HoneyField,  // Moa drag: a shield circle for 2 s
         WarnLine,    // a red warning line before a shot (bots dodge it)
         WarnCircle,  // a red warning circle
+        ChainBlast,  // Blast 2.0 Chain Reaction: waits -T s at a frozen spot (Radius), then blasts the other enemies there
     }
 
     /// <summary>
@@ -40,6 +41,7 @@ namespace BAM.Sim
         public float Dur;
         public bool Big, OnHit, Launched, Out, Done, Tied;
         public int Ticks;
+        internal int TiktaCast; // Tikta 2.0: the cast a needle belongs to (at most one Deathmark bonus per cast)
         internal Unit[] Hit = new Unit[16];
         internal int HitCount;
 
@@ -70,7 +72,7 @@ namespace BAM.Sim
         {
             Mode = ProjMode.Auto; Kind = ProjKind.TowerShot; Team = 0; Src = Tgt = Caught = null;
             X = Y = PX = PY = OX = OY = Ang = D = Travel = Speed = T = Dmg = Radius = Dur = 0;
-            Big = OnHit = Launched = Out = Done = Tied = false; Ticks = 0;
+            Big = OnHit = Launched = Out = Done = Tied = false; Ticks = 0; TiktaCast = 0;
             for (int i = 0; i < HitCount; i++) Hit[i] = null;
             HitCount = 0;
         }

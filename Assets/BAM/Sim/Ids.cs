@@ -39,6 +39,7 @@ namespace BAM.Sim
         KnutAnchor = 14,        // Anchor Throw, a hook on a chain (tethered to Knut)
         TiktaNeedleSpecial = 15,
         BlastBomb = 16,         // Supernova bomb, lobbed, explodes after a delay
+        BlastChain = 17,        // Chain Reaction: Supernova's second blast where the burning hero stood
     }
 
     /// <summary>Ground areas that last a while.</summary>
@@ -65,6 +66,7 @@ namespace BAM.Sim
         InGrass = 1 << 7,
         Revealed = 1 << 8,
         Illusion = 1 << 9,     // Fenn's clone (only his own team is told)
+        Marked = 1 << 10,      // Tikta's Deathmark is on this hero
     }
 
     public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2 }

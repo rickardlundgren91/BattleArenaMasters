@@ -73,7 +73,6 @@ namespace BAM.Sim
         public const float Reach = 2.9f, Interval = 0.2f, DamageCoeff = 1.2f, Speed = 16, LineReach = 5, LineHitbox = 0.2f;
         public const int Count = 4;
         public const float PoisonPerSecond = 0.1f, PoisonDuration = 2;
-        public const float HpBelow = 0.4f, LowBonus = 0.2f;
     }
 
     /// <summary>Blast, Supernova. Tap: a bomb thrown (over walls) at a random enemy in reach that explodes 0.5 s later. Drag:
@@ -493,11 +492,10 @@ namespace BAM.Sim
             else if (p.D >= p.Travel) p.Done = true;
         }
 
-        /// <summary>Tyra standing still for 1 s and Tikta on a target under 40 % health hit harder (big = the hit is drawn bigger).</summary>
+        /// <summary>Tyra standing still for 1 s hits harder (big = the hit is drawn bigger). Tikta's Final Sting is gone: Deathmark (Hero2.cs).</summary>
         float HeroAttackCoeff(Unit u, Unit tgt, ref bool big)
         {
             if (u.Hero == HeroId.Tyra && Time - u.MovedAt >= TyraS.StillTime) { big = true; return 1 + TyraS.StillBonus; }
-            if (u.Hero == HeroId.Tikta && tgt.Hp < tgt.MaxHp * TiktaS.HpBelow) { big = true; return 1 + TiktaS.LowBonus; }
             return 1;
         }
 
@@ -662,10 +660,11 @@ namespace BAM.Sim
             if (Aimed(h, out float aa, out _))
             {   // all four needles along one line, each stops in the first enemy (or wall) it meets
                 h.Facing = aa; h.AimT = Time + 0.8f;
+                int cast = ++h.TiktaCastId; // the four share one cast: at most one Deathmark bonus (Hero2.cs)
                 for (int i = 0; i < TiktaS.Count; i++)
                 {
                     var p = NewProj(ProjMode.NeedleLine, h, h.X, h.Y);
-                    p.Kind = ProjKind.TiktaNeedleSpecial; p.T = -i * TiktaS.Interval; p.Ang = aa; p.Speed = TiktaS.Speed; p.Dmg = dmg; p.Radius = TiktaS.LineHitbox;
+                    p.Kind = ProjKind.TiktaNeedleSpecial; p.T = -i * TiktaS.Interval; p.Ang = aa; p.Speed = TiktaS.Speed; p.Dmg = dmg; p.Radius = TiktaS.LineHitbox; p.TiktaCast = cast;
                 }
                 WarnLine(h, aa, TiktaS.LineReach, 0.25f, (TiktaS.Count - 1) * TiktaS.Interval + TiktaS.LineReach / TiktaS.Speed);
                 Channel(h, (TiktaS.Count - 1) * TiktaS.Interval);
@@ -674,6 +673,7 @@ namespace BAM.Sim
             }
             if (EnemiesInRange(h, TiktaS.Reach, Pick.Heroes, true, spBuf).Count == 0) return false;
             h.Needles = TiktaS.Count; h.NeedleT = 0; h.NeedleEnd = Time + TiktaS.Count * TiktaS.Interval + 0.1f;
+            ++h.TiktaCastId; // the storm's four needles share one cast id
             Channel(h, (TiktaS.Count - 1) * TiktaS.Interval + 0.05f);
             UpdateSpecial(h, 0); // the first needle flies at once
             return true;
@@ -693,7 +693,7 @@ namespace BAM.Sim
             var t = PickRandom(l);
             h.Facing = SimMath.Atan2(t.Y - h.Y, t.X - h.X); h.AimT = Time + 0.15f;
             var p = NewProj(ProjMode.Needle, h, h.X, h.Y);
-            p.Kind = ProjKind.TiktaNeedleSpecial; p.Tgt = t; p.Ang = h.Facing; p.Speed = TiktaS.Speed; p.Dmg = h.StatDmg() * TiktaS.DamageCoeff; p.Radius = TiktaS.LineHitbox;
+            p.Kind = ProjKind.TiktaNeedleSpecial; p.Tgt = t; p.Ang = h.Facing; p.Speed = TiktaS.Speed; p.Dmg = h.StatDmg() * TiktaS.DamageCoeff; p.Radius = TiktaS.LineHitbox; p.TiktaCast = h.TiktaCastId;
             Emit(EventType.AttackStart, h, t, 0, (byte)ProjKind.TiktaNeedleSpecial, true); // each needle shows a throw
         }
 
@@ -703,37 +703,35 @@ namespace BAM.Sim
             if (t == null || !t.Alive || t.Has(St.Untargetable)) { p.Done = true; return; }
             float d = SimMath.Hypot(t.X - p.X, t.Y - p.Y), step = p.Speed * dt;
             if (!Map.LosClear(p.X, p.Y, t.X, t.Y)) { p.Done = true; Blocked(p, p.X, p.Y); return; } // the target ducked behind a wall
-            if (d <= step + t.R * 0.5f) { p.Done = true; SpecialHit(p.Src, t, p.Dmg, p.Kind, true); NeedlePoison(p.Src, t); return; }
+            if (d <= step + t.R * 0.5f) { p.Done = true; SpecialHit(p.Src, t, p.Dmg + TiktaMarkBonus(p.Src, t, p), p.Kind, true); NeedlePoison(p.Src, t); return; } // + Deathmark in the same hit
             p.Ang = SimMath.Atan2(t.Y - p.Y, t.X - p.X);
             p.X += (t.X - p.X) / d * step; p.Y += (t.Y - p.Y) / d * step;
         }
 
+        /// <summary>A dragged needle, swept (Tikta 2.0): the whole path flown this tick, up to the reach, is tested, so a big tick
+        /// never carries it past an enemy; the first enemy along it is hit if no wall stands between, else it stops at the wall.</summary>
         void NeedleLineUpdate(Proj p, float dt)
         {
-            float ox = p.X, oy = p.Y, step = p.Speed * dt;
+            float ox = p.X, oy = p.Y, step = p.Speed * dt, len = Math.Max(0, Math.Min(step, TiktaS.LineReach - p.D));
+            var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, len, TiktaS.LineHitbox, out float at);
+            if (u != null)
+            {
+                float hx = ox + SimMath.Cos(p.Ang) * at, hy = oy + SimMath.Sin(p.Ang) * at;
+                if (!Map.ShotBlocked(ox, oy, hx, hy))
+                {
+                    p.X = hx; p.Y = hy; p.D += at; p.Done = true;
+                    SpecialHit(p.Src, u, p.Dmg + TiktaMarkBonus(p.Src, u, p), p.Kind, true);
+                    NeedlePoison(p.Src, u);
+                    return;
+                }
+            }
             p.X += SimMath.Cos(p.Ang) * step; p.Y += SimMath.Sin(p.Ang) * step; p.D += step;
             if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
-            if (p.D > TiktaS.LineReach) { p.Done = true; return; }
-            for (int i = 0; i < Units.Count; i++)
-            {
-                var u = Units[i];
-                if (!Hurtable(p.Src, u) || u.Team == p.Team || SimMath.Dist(u, p.X, p.Y) > u.R + TiktaS.LineHitbox) continue;
-                p.Done = true;
-                SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
-                NeedlePoison(p.Src, u);
-                return;
-            }
+            if (p.D >= TiktaS.LineReach) p.Done = true;
         }
 
-        /// <summary>A needle poisons an enemy hero: 10 % of Tikta's damage per second for 2 s; a new needle refreshes her poison.</summary>
-        void NeedlePoison(Unit src, Unit u)
-        {
-            if (!u.Alive || u.Kind != UnitKind.Hero) return;
-            float per = src.StatDmg() * TiktaS.PoisonPerSecond;
-            int i = u.FindBy(St.Poison, src);
-            if (i >= 0) { u.Sts[i].T = TiktaS.PoisonDuration; u.Sts[i].V = per; return; }
-            AddStatus(u, St.Poison, TiktaS.PoisonDuration, per, 0, src);
-        }
+        /// <summary>A needle poisons an enemy hero: 10 % of Tikta's damage per second for 2 s, Strongest Wins (Hero2.cs).</summary>
+        void NeedlePoison(Unit src, Unit u) => TiktaPoison(src, u, src.StatDmg() * TiktaS.PoisonPerSecond, TiktaS.PoisonDuration);
 
         /// <summary>Poison ticks: each poison gathers V per second and deals it every half second (and what is left at its end).</summary>
         void DotTick(Unit u, float dt)
@@ -780,6 +778,7 @@ namespace BAM.Sim
         {
             var h = p.Src;
             var dk = h.Alive ? DmgKind.Special : DmgKind.Passive;
+            ChainOnImpact(h, p, BlastS.Radius); // Blast 2.0, before the bomb's own damage lights anything (Hero2.cs)
             areaBuf.Clear();
             for (int i = 0; i < Units.Count; i++)
             {

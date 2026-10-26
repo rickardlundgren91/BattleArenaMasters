@@ -12,6 +12,7 @@ namespace BAM.Sim
         Burn,     // Blast's passive: Amount still to burn, V counts time to the next tick
         Poison,   // Tikta's needles: V per second, Amount gathered for the next tick
         AtkHaste, // V more attacks per second, as a share (0.4 = 40 % faster): the Haste battle spell
+        TiktaMark, // Tikta 2.0 Deathmark: By = the Tikta whose next Needle Storm needle on this hero hits harder
     }
 
     public struct Status
@@ -86,6 +87,8 @@ namespace BAM.Sim
         public BotBrain Bot;
         // passives and specials
         internal int Needles; internal float NeedleT, NeedleEnd;   // Tikta's Needle Storm
+        internal int TiktaCastId, TiktaBonusCast;                   // Tikta 2.0: her casts counted, the cast that already had its Deathmark bonus
+        public float BlastChainReadyAt;                             // Blast 2.0: Chain Reaction is ready again at this time
         internal int PassHits;                                      // Bram: hits towards the next splash
         public float CloneReadyAt;                                  // Fenn: his passive is ready again at this time
         internal bool ClonePending;
@@ -159,6 +162,7 @@ namespace BAM.Sim
                         case St.Shield: if (Sts[i].Amount > 0) f |= StatusFlags.Shielded; break;
                         case St.Burn: if (Sts[i].Amount > 0) f |= StatusFlags.Burning; break;
                         case St.Poison: f |= StatusFlags.Poisoned; break;
+                        case St.TiktaMark: f |= StatusFlags.Marked; break;
                     }
                 }
                 if (RevealT > 0) f |= StatusFlags.Revealed;

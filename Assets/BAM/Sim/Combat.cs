@@ -10,6 +10,7 @@ namespace BAM.Sim
         Burning = 1,   // a burn tick: its amount was finished when the burn was lit, so it skips the multipliers
         DotTick = 2,   // a poison tick
         NotDirect = 4, // from a hero but not a direct hit (Inferno Lane's ticks): no Queen's Instinct (Fenn's clone still comes, as the old Phantom Step)
+        NoIgnite = 8,  // Blast's Chain Reaction hits: they light no burn
     }
 
     // Damage, death, auto attacks and shots (the old game's Sim.dealDamage, kill and SimCombat).
@@ -110,7 +111,7 @@ namespace BAM.Sim
             float taken = Math.Min(amount, tgt.Hp);
             tgt.Hp -= amount;
             Emit(EventType.Damage, att, tgt, taken, 0, false, 0, 0, kind);
-            if (src != null && src.Kind == UnitKind.Hero && !src.IsClone && src.Hero == HeroId.Blast && !burning) Ignite(src, tgt, amount);
+            if (src != null && src.Kind == UnitKind.Hero && !src.IsClone && src.Hero == HeroId.Blast && !burning && (flags & DmgFlags.NoIgnite) == 0) Ignite(src, tgt, amount);
             if (tgt.Hp <= 0) Kill(tgt, src);
             else CloneOnHurt(tgt, src, kind, flags);
             return taken;
@@ -141,6 +142,7 @@ namespace BAM.Sim
             // a hero
             u.Deaths++; u.RespawnT = RespawnTime(u); u.DiedAt = Time;
             u.ClearStatuses(); u.Needles = 0; u.ClonePending = false;
+            TiktaOnDeath(u); // the Deathmark she put on someone goes with her
             int kt = Teams.Other(u.Team);
             Kills[kt]++;
             u.Streak = 0;
@@ -324,6 +326,7 @@ namespace BAM.Sim
                     case ProjMode.FireLane: FireLaneUpdate(p); break;
                     case ProjMode.HoneyField: HoneyFieldUpdate(p); break;
                     case ProjMode.WarnLine: case ProjMode.WarnCircle: WarnUpdate(p); break;
+                    case ProjMode.ChainBlast: p.Done = true; ChainBlast(p); break;
                 }
             }
             int w = 0;
@@ -390,11 +393,12 @@ namespace BAM.Sim
             float dealt = DealDamage(s, t, p.Dmg, DmgKind.Auto);
             Emit(EventType.Hit, s, t, dealt, (byte)p.Kind, p.Big, t.X, t.Y, DmgKind.Auto); // always: every attack shows where it landed
             if (!p.OnHit || (!s.Alive && !s.IsClone)) return;
-            if (s.Kind == UnitKind.Hero && !s.IsClone) OnHeroHit(s, t, p);
+            if (s.Kind == UnitKind.Hero && !s.IsClone) OnHeroHit(s, t, p, dealt);
         }
 
-        void OnHeroHit(Unit h, Unit t, Proj p)
+        void OnHeroHit(Unit h, Unit t, Proj p, float dealt)
         {
+            if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
             h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1);
             if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddStatus(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, 0, h);
             if (h.Hero == HeroId.Bram) BramPassive(h, t, p);

@@ -30,6 +30,9 @@ namespace BAM.Sim
         SpellCast,     // A used its battle spell; Kind = SpellId; X/Y = where A stood (a blink starts there, A is now at its end)
         SpellCancel,   // A's recall was cut (moved, hit, stunned); its spell is ready again within 4 s
         Recall,        // A's recall finished: A is back at its spawn; X/Y = where it left from
+        TiktaMark,     // Tikta A put her Deathmark on hero B
+        TiktaMarkPop,  // Tikta A's needle took her Deathmark off B: the hit (its own Hit event) dealt V extra
+        ChainSet,      // Blast A's Supernova set off Chain Reaction on burning hero B: X/Y = the frozen spot, V = its radius (it blasts 0.25 s later)
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>
