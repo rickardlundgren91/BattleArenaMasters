@@ -12,19 +12,14 @@ namespace BAM.Sim
 
     public static class HeroCatalog
     {
-        /// <summary>The heroes in the game now (All). Bonk (HeroId 7) is in the rules and bots but waits for his model and views:
-        /// he is in Coming, and goes into All (Count 8) when they are in.</summary>
-        public const int Count = 7;
+        /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in.</summary>
+        public const int Count = 8;
 
         public static HeroInfo Get(HeroId id) => (int)id < All.Length ? All[(int)id] : Coming[(int)id - All.Length];
 
-        /// <summary>Heroes in the rules that are not in the game yet, in HeroId order after All.</summary>
+        /// <summary>Heroes in the rules that are not in the game yet, in HeroId order after All (a new hero waits here for its art).</summary>
         public static readonly HeroInfo[] Coming =
         {
-            new HeroInfo { Id = HeroId.Bonk, Name = "Bonk", Title = "The Caveman", Role = "Fighter", Ranged = false,
-                SpecialName = "Ground Slam", SpecialDesc = "Slams his club into the ground: enemies around him take damage and are stunned for a moment. Drag to roll a boulder along a line instead: it hits the first enemy and knocks it back. Walls stop it.",
-                PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
-                Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
         };
 
         // Texts follow the old game's shipped heroes plus Rickard's 2026-10-25 changes (Fenn's thrown wolf and decoy clone).
@@ -58,6 +53,10 @@ namespace BAM.Sim
                 SpecialName = "Supernova", SpecialDesc = "Tap: throws a bomb at a random enemy that explodes after 0.5 s. Drag: a strip of fire that burns enemies standing in it for 2 s.",
                 PassiveName = "Ignite", PassiveDesc = "Hits set the target on fire: 15% more over 2 s. Chain Reaction (9 s cooldown): Supernova on a hero already burning from Blast blasts again where that hero stood 0.25 s later, hitting only the other enemies within 1 tile for 50% of his attack.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
+            new HeroInfo { Id = HeroId.Bonk, Name = "Bonk", Title = "The Caveman", Role = "Fighter", Ranged = false,
+                SpecialName = "Ground Slam", SpecialDesc = "Slams his club into the ground: enemies around him take damage and are stunned for a moment. Drag to roll a boulder along a line instead: it hits the first enemy and knocks it back. Walls stop it.",
+                PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
+                Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
         };
     }
 }

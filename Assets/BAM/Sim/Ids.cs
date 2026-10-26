@@ -5,7 +5,7 @@ namespace BAM.Sim
     // The shared vocabulary of the game. Other assemblies (Art, Audio, UI, Game) key their visuals, sounds and screens on
     // these values, so entries are only ever added at the end; changing or removing one is a contract change (Docs/CONTRACTS.md).
 
-    /// <summary>The heroes, in hero-select order. Bonk (2026-10-26) is in the rules but not yet in the game: see HeroCatalog.Count.</summary>
+    /// <summary>The heroes, in hero-select order (Bonk joined 2026-10-26).</summary>
     public enum HeroId : byte { Bram = 0, Fenn = 1, Tyra = 2, Moa = 3, Knut = 4, Tikta = 5, Blast = 6, Bonk = 7 }
 
     /// <summary>Team 0 is the player's team at the bottom of the map (blue), team 1 the enemy at the top (red).</summary>
