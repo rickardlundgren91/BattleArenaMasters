@@ -50,6 +50,7 @@ namespace BAM.Game
             public ProjectileView V;
             public bool Melee;
             public float LastT, LastX, LastY;
+            public int LaunchFrame = -1;   // Time.frameCount when its view was made
             // a ghost is drawn without the rules: a shot that ended before it was seen, a melee slash finishing its swing, a lob
             public bool Ghost;
             public Vector3 From, To;
@@ -254,6 +255,9 @@ namespace BAM.Game
                     else { shots.RemoveAt(i); FreeShot(s); } // cancelled in the hand (stun, death): nothing flew
                 }
                 else if (s.Melee) StartGhost(s, s.V.transform.position, s.V.transform.position, 0f, SlashLinger);
+                // launched and dropped inside the same frame (60 Hz ticks at 30 fps, point blank): it was never drawn, so fly it
+                // the last bit as a 0.06 s ghost instead of releasing it unseen (every attack must be seen)
+                else if (s.LaunchFrame == Time.frameCount) StartGhost(s, s.V.transform.position, Coords.World(s.LastX, s.LastY), 0.06f, 0f);
                 else { ArtKit.Release(s.V); shots.RemoveAt(i); FreeShot(s); }
             }
 
@@ -310,6 +314,7 @@ namespace BAM.Game
         {
             var v = ArtKit.CreateProjectile(p.Kind, p.Team);
             s.V = v;
+            s.LaunchFrame = Time.frameCount;
             Vector3 from = Coords.World(p.PX, p.PY), to;
             float flight;
             if (p.Mode == ProjMode.Auto && p.Tgt != null)
@@ -379,7 +384,12 @@ namespace BAM.Game
                     var kind = (ProjKind)e.Kind;
                     Vector3 at = Coords.World(e.X, e.Y);
                     V(b)?.PlayHit(e.Big);
-                    FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash : e.Big ? FxKind.HitBig : FxKind.Hit;
+                    // Bram's bounces get their own gold line; Tyra's bolt and Tikta's needles carry the special's look in their own
+                    // impact, so they add only the small hit (fx review 2026-10-26, P1-2/P1-3)
+                    FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash
+                        : kind == ProjKind.BramHammerSpecial ? FxKind.Bounce
+                        : kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial ? FxKind.Hit
+                        : e.Big ? FxKind.HitBig : FxKind.Hit;
                     ArtKit.PlayFx(fx, at, b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f, b != null ? b.Team : 0);
                     if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? b.Team : 0);
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
@@ -427,6 +437,8 @@ namespace BAM.Game
                 case EventType.Cast:
                 {
                     var a = e.A;
+                    // a hidden enemy casting in a bush stays hidden: casting does not reveal in the rules (fx review P2-1)
+                    if (a == null || !m.IsVisibleTo(a, Teams.Player)) break;
                     V(a)?.PlayCast();
                     ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, a.Team);
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
@@ -456,16 +468,12 @@ namespace BAM.Game
                     if (e.A != null) { ArtKit.PlayFx(FxKind.CloneEnd, Coords.Of(e.A), 1f, e.A.Team); BamAudio.PlayAt(SfxId.CloneVanish, Coords.Of(e.A)); }
                     break;
                 case EventType.WolfSummon:
-                    if (e.A != null) ArtKit.PlayFx(FxKind.WolfSummon, Coords.Of(e.A), 1f, e.A.Team);
+                    if (e.A != null && m.IsVisibleTo(e.A, Teams.Player)) ArtKit.PlayFx(FxKind.WolfSummon, Coords.Of(e.A), 1f, e.A.Team);
                     break;
                 case EventType.WolfPounce:
-                    if (e.A != null)
-                    {
-                        Vector3 at = e.B != null ? Coords.Of(e.B) : Coords.Of(e.A);
-                        ArtKit.PlayFx(FxKind.HitBig, at, 1f, e.A.Team);
-                        BamAudio.PlayAt(SfxId.WolfBite, at);
-                        if (e.B != null) V(e.B)?.PlayHit(true);
-                    }
+                    // the bite sounds on prey only; its hit look comes from the rules' own Hit event (fx review P2-3). A landing on
+                    // nothing shows no bite (FxKind.WolfLand comes with the art's next change).
+                    if (e.A != null && e.B != null) BamAudio.PlayAt(SfxId.WolfBite, Coords.Of(e.B));
                     break;
                 case EventType.Shield:
                     if (e.Big && e.B != null) BamAudio.PlayAt(SfxId.MoaShield, Coords.Of(e.B));
