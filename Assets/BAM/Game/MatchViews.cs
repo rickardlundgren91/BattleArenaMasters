@@ -549,9 +549,9 @@ namespace BAM.Game
                     float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? e.A.Team : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
-                        : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
+                        : bonk ? SfxId.BonkSlam // AttackBonk has no clip yet (KALLOR.txt): his normal swing borrows the slam, softer
                         : pk == ProjKind.BramHammer ? SfxId.BramHammerBounce : SfxId.None;
-                    BamAudio.PlayAt(boom, at);
+                    if (boom != SfxId.None) BamAudio.PlayAt(boom, at, pk == ProjKind.BonkClub && !e.Big ? 0.65f : 1f);
                     break;
                 }
                 // Tikta 2.0: her needle takes the Deathmark (its own Hit follows in the same tick)

@@ -717,7 +717,10 @@ namespace BAM.Art
                     Crack(p, 0.85f * size, 2f, new Color(0.35f, 0.27f, 0.2f, 0.85f));
                     Dust(p + Vector3.up * 0.15f, 10, dustC, 0.55f * size, 2.2f * size, 0.9f, 0.6f, 0.5f * size);
                     Smoke(p + Vector3.up * 0.2f, 4, C(Pal.Ground, 150), 0.7f * size, 0.8f, 1.1f, 0.5f, 0.4f * size);
-                    Chunks(p + Vector3.up * 0.2f, 7, C(Pal.Rock), 0.13f, 4f, 0.7f, 3.5f, 0.4f * size);
+                    Chunks(p + Vector3.up * 0.2f, 7 + Mathf.RoundToInt(3f * size), C(Pal.Rock), 0.13f + 0.03f * size, 4f + size, 0.7f, 3.5f, 0.4f * size);
+                    // weight (MLBB bar, Rickard "känns inte mäktig"): a fast white shockwave past the edge and a slower dust wave behind it
+                    Ring(p, 0.3f * size, 1.25f * size, new Color(1f, 1f, 1f, 0.75f), 0.18f, 0.6f);
+                    Ring(p, 0.5f * size, 1.45f * size, new Color(0.8f, 0.68f, 0.5f, 0.55f), 0.5f, 1.4f);
                     break;
                 }
                 case FxKind.ChainBoom:

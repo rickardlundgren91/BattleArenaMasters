@@ -88,8 +88,19 @@ namespace BAM.Game
                         if ((k == ProjKind.BonkSlam || k == ProjKind.BonkClub) && p.Alive)
                         {
                             float dx = e.X - p.X, dy = e.Y - p.Y;
-                            if (dx * dx + dy * dy < 36f) AddTrauma(k == ProjKind.BonkSlam ? 0.35f : e.Big ? 0.22f : 0.12f);
+                            if (dx * dx + dy * dy < 36f)
+                            {
+                                // MLBB-weight (Rickard 2026-10-26 "känns inte mäktig"): a real shake and a short hit-stop on the slam
+                                AddTrauma(k == ProjKind.BonkSlam ? 0.55f : e.Big ? 0.4f : 0.22f);
+                                if (k == ProjKind.BonkSlam || e.Big) Stop(k == ProjKind.BonkSlam ? 0.08f : 0.06f);
+                            }
                         }
+                        break;
+                    }
+                    case EventType.Knock:
+                    {
+                        // Bonk's boulder lands on someone near you: a thump and a tiny freeze
+                        if (e.B != null && p.Alive && Dist(e.B, p) < 7f) { AddTrauma(e.B == p ? 0.5f : 0.3f); Stop(0.05f); }
                         break;
                     }
                     case EventType.Death:
