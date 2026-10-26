@@ -17,7 +17,7 @@ namespace BAM.Art
         public bool Along;
         /// <summary>Degrees above level the weapon is turned to about its grip while the hero is not swinging (Bram; old MX_HOLD_UP).</summary>
         public float HoldUp;
-        /// <summary>Degrees the held weapon also leans out to its own hand's side, so a hammer held up stands beside the face, not in front of it (Bram).</summary>
+        /// <summary>Degrees the held weapon also turns from straight ahead towards its own hand's side (Bram 30: beside the face; past 90 it leans back, Bonk 160: over the shoulder).</summary>
         public float HoldOut;
         /// <summary>Held up through the fist with its face to the front instead of its head along the swing (Moa's staff).</summary>
         public bool Upright;
@@ -103,8 +103,10 @@ namespace BAM.Art
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
-            // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle like Bram's hammer
-            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.62f, Grip = 0.12f, HoldUp = 40f } } };
+            // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
+            // (Rickard 2026-10-26: "klubban ska vara för stor för honom"); at rest it leans back over his right shoulder instead of
+            // standing up in front of his face
+            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 45f, HoldOut = 160f } } };
             return g;
         }
 
