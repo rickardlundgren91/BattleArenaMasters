@@ -429,7 +429,9 @@ namespace BAM.UI
             if (rt == null || rt.width != w || rt.height != h)
             {
                 if (rt != null) { cam.targetTexture = null; rt.Release(); Destroy(rt); }
-                rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { name = "BAM.UI.HeroStage", antiAliasing = 4 };
+                // the multisampled buffers stay on the chip (Vulkan, Metal), so the big picture costs little memory
+                rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32)
+                { name = "BAM.UI.HeroStage", antiAliasing = 4, memorylessMode = RenderTextureMemoryless.MSAA };
                 cam.targetTexture = rt;
                 Picture.texture = rt;
             }
