@@ -44,7 +44,7 @@ namespace BAM.UI
 
         static Sprite IconSprite(string name)
         {
-            var tex = Picture(name);
+            var tex = Picture(name, true); // a new hero's ability icons can come later
             if (tex == null) return null;
             if (!iconSprites.TryGetValue(name, out var sp))
             {

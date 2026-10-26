@@ -308,6 +308,7 @@ namespace BAM.UI
                 case HeroId.Knut: return new Color(0.2f, 0.35f, 0.75f);
                 case HeroId.Tikta: return new Color(0.6f, 0.3f, 0.85f);
                 case HeroId.Blast: return new Color(0.9f, 0.25f, 0.2f);
+                case HeroId.Bonk: return new Color(0.55f, 0.36f, 0.2f);   // his wooden club
                 default: return Primary;
             }
         }

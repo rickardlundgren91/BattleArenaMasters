@@ -50,6 +50,7 @@ namespace BAM.UI
             homeHero.gameObject.SetActive(!shown);
             if (!shown) SetBadge(homeHero, id);
             homePortraitImg.texture = Portrait(id);
+            homePortraitImg.enabled = homePortraitImg.texture != null;
             homeName.text = info.Name;
             homeTitle.text = info.Title;
             playSub.text = PlaySubFor(homeMode, true);
@@ -156,17 +157,18 @@ namespace BAM.UI
             r.sizeDelta = new Vector2(w, h);
         }
 
-        static Texture2D Picture(string name)
+        static Texture2D Picture(string name, bool optional = false)
         {
             if (pictures.TryGetValue(name, out var t)) return t;
             t = Resources.Load<Texture2D>("BAM/Menu/" + name);
-            if (t == null) Debug.LogError("[BAM.UI] picture missing: Resources/BAM/Menu/" + name);
+            if (t == null && !optional) Debug.LogError("[BAM.UI] picture missing: Resources/BAM/Menu/" + name);
             pictures[name] = t;
             return t;
         }
 
         static string Lower(HeroId id) => HeroCatalog.Get(id).Name.ToLowerInvariant();
-        static Texture2D Portrait(HeroId id) => Picture("portrait_" + Lower(id));
+        // A new hero (Bonk) can come before his portrait: then the dark picture box stays empty, like Speltest's Custom card.
+        static Texture2D Portrait(HeroId id) => Picture("portrait_" + Lower(id), true);
 
         /// <summary>
         /// Builds Home's pieces, lays them out when the frame changes and runs the old per-frame motion: the breathing

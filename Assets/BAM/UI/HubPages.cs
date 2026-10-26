@@ -256,6 +256,7 @@ namespace BAM.UI
             var pic = UiKit.NewRect("Portrait", area);
             var raw = pic.gameObject.AddComponent<RawImage>();
             raw.texture = Portrait(info.Id);
+            raw.enabled = raw.texture != null;
             raw.raycastTarget = false;
             c.Pic = pic;
             c.Aspect = 400f / 308f; // the portraits' own shape (an imported texture may report its power-of-two size)

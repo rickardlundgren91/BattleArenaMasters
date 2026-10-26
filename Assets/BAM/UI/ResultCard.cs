@@ -314,6 +314,7 @@ namespace BAM.UI
             {
                 var info = HeroCatalog.Get(r.Hero);
                 resBigPic.texture = Portrait(r.Hero);
+                resBigPic.enabled = resBigPic.texture != null;
                 resBigRing.color = edge;
                 resBigName.text = info.Name;
                 int assists = m != null && m.Player != null ? m.Player.Assists : 0;
@@ -345,6 +346,7 @@ namespace BAM.UI
                     rr.Root.gameObject.SetActive(true);
                     rr.Mine.enabled = me;
                     rr.Pic.texture = Portrait(x.U.Hero);
+                    rr.Pic.enabled = rr.Pic.texture != null;
                     rr.Ring.color = team == Teams.Player ? ResBlueRing : ResRedRing;
                     rr.Name.text = HeroCatalog.Get(x.U.Hero).Name;
                     rr.Name.color = me ? ResMe : Color.white;
