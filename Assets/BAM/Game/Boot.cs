@@ -24,7 +24,7 @@ namespace BAM.Game
                 Debug.Log("[BAM.Game] Not started in this scene. Open Assets/BAM/Scenes/Main.unity and press Play to play the game.");
                 return;
             }
-            Application.targetFrameRate = 60;
+            Application.targetFrameRate = BamSettings.Fps;
 
             var host = new GameObject("BAM.Game");
             Object.DontDestroyOnLoad(host);
@@ -47,6 +47,7 @@ namespace BAM.Game
         // Quality index 0 is Low and 1 is High (BAM > Setup Project makes exactly these two).
         static void ApplyQuality()
         {
+            Application.targetFrameRate = BamSettings.Fps; // 60, or 30 if the player picked it in Settings
             int q = (int)BamSettings.Graphics;
             if (q == appliedQuality) return;
             appliedQuality = q;

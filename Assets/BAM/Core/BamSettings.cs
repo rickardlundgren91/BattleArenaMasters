@@ -9,7 +9,8 @@ namespace BAM.Core
 
     /// <summary>
     /// The player's settings, saved with PlayerPrefs. Every module reads them here and listens to <see cref="Changed"/>:
-    /// Audio (SfxVolume), the quality code (Graphics), the HUD (LeftHanded), Analytics (AnalyticsConsent).
+    /// Audio (SfxVolume, MusicOn), the quality code (Graphics, Fps), BamHaptics (Vibration), the HUD (LeftHanded),
+    /// Analytics (AnalyticsConsent).
     /// The Settings screen (BAM.UI) is the only place that writes them, apart from the flags the game sets itself.
     /// </summary>
     public static class BamSettings
@@ -18,7 +19,8 @@ namespace BAM.Core
         static bool loaded;
         static float sfxVolume;
         static GraphicsQuality graphics;
-        static bool leftHanded, tutorialDone;
+        static bool leftHanded, tutorialDone, musicOn, vibration;
+        static int fps;
         static Consent consent;
         static int lastHero, lastDifficulty;
 
@@ -29,6 +31,27 @@ namespace BAM.Core
         {
             get { Load(); return sfxVolume; }
             set { Load(); value = Mathf.Clamp01(value); if (Mathf.Approximately(sfxVolume, value)) return; sfxVolume = value; PlayerPrefs.SetFloat(Key + "sfx", value); Commit(); }
+        }
+
+        /// <summary>The music on or off (the old Settings' Music row); the effects follow SfxVolume.</summary>
+        public static bool MusicOn
+        {
+            get { Load(); return musicOn; }
+            set { Load(); if (musicOn == value) return; musicOn = value; PlayerPrefs.SetInt(Key + "music", value ? 1 : 0); Commit(); }
+        }
+
+        /// <summary>Short buzzes on button presses and in a match (BamHaptics; the old Settings' Vibration row).</summary>
+        public static bool Vibration
+        {
+            get { Load(); return vibration; }
+            set { Load(); if (vibration == value) return; vibration = value; PlayerPrefs.SetInt(Key + "vib", value ? 1 : 0); Commit(); }
+        }
+
+        /// <summary>The frame rate the game asks for: 30 or 60 (60 unless the player picks 30 to save battery).</summary>
+        public static int Fps
+        {
+            get { Load(); return fps; }
+            set { Load(); value = value <= 30 ? 30 : 60; if (fps == value) return; fps = value; PlayerPrefs.SetInt(Key + "fps", value); Commit(); }
         }
 
         public static GraphicsQuality Graphics
@@ -77,6 +100,9 @@ namespace BAM.Core
             sfxVolume = PlayerPrefs.GetFloat(Key + "sfx", 0.8f);
             graphics = (GraphicsQuality)PlayerPrefs.GetInt(Key + "gfx", (int)DefaultGraphics());
             leftHanded = PlayerPrefs.GetInt(Key + "left", 0) == 1;
+            musicOn = PlayerPrefs.GetInt(Key + "music", 1) == 1;
+            vibration = PlayerPrefs.GetInt(Key + "vib", 1) == 1;
+            fps = PlayerPrefs.GetInt(Key + "fps", 60) <= 30 ? 30 : 60;
             consent = (Consent)PlayerPrefs.GetInt(Key + "consent", 0);
             tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;
             lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", 0), 0, BAM.Sim.HeroCatalog.Count - 1);

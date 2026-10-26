@@ -40,11 +40,12 @@ namespace BAM.Audio
         static double buildMs;
 
         static Vector3 listener;
-        static float master = 1f;
+        static float master = 1f, musicMaster = MusicVolume;
         static uint rng = 0x2545F491u;
 
-        // music sits under the effects: SfxVolume * MusicLevel, faded in and out so starts and stops never click
-        const float MusicLevel = 0.45f, MusicFadeIn = 1.2f, MusicFadeOut = 0.5f;
+        // music sits under the effects (MusicLevel at the effects' default volume, 0.8) and has its own switch (Settings' Music
+        // row, BamSettings.MusicOn); faded in and out so starts and stops never click, and paused while switched off
+        const float MusicLevel = 0.45f, MusicVolume = 0.8f, MusicFadeIn = 1.2f, MusicFadeOut = 0.5f;
         static AudioSource music;
         static MusicId musicWant, musicLoaded;
         static float musicGain; // 0..1 fade position
@@ -82,6 +83,7 @@ namespace BAM.Audio
             if (Object.FindAnyObjectByType<AudioListener>() == null) host.AddComponent<AudioListener>();
 
             master = BamSettings.SfxVolume;
+            musicMaster = BamSettings.MusicOn ? MusicVolume : 0f;
             BamSettings.Changed -= OnSettingsChanged;
             BamSettings.Changed += OnSettingsChanged;
 
@@ -198,6 +200,7 @@ namespace BAM.Audio
         static void OnSettingsChanged()
         {
             master = BamSettings.SfxVolume;
+            musicMaster = BamSettings.MusicOn ? MusicVolume : 0f;
             float now = Time.unscaledTime;
             for (int i = 0; i < Voices; i++)
                 if (voiceEnd[i] > now && src[i] != null) src[i].volume = Mathf.Min(1f, voiceVol[i] * master);
@@ -264,10 +267,10 @@ namespace BAM.Audio
             void Update()
             {
                 if (music == null || music.clip == null) return;
-                bool on = musicWant != MusicId.None && musicWant == musicLoaded;
+                bool on = musicWant != MusicId.None && musicWant == musicLoaded && musicMaster > 0f;
                 float dt = Time.unscaledDeltaTime;
                 musicGain = on ? Mathf.Min(1f, musicGain + dt / MusicFadeIn) : Mathf.Max(0f, musicGain - dt / MusicFadeOut);
-                music.volume = musicGain * musicGain * MusicLevel * master; // squared: the fade sounds even to the ear
+                music.volume = musicGain * musicGain * MusicLevel * musicMaster; // squared: the fade sounds even to the ear
                 if (on) Resume();
                 else if (musicGain <= 0f && music.isPlaying) { music.Pause(); musicPaused = true; }
             }
