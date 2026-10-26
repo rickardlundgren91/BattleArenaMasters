@@ -55,6 +55,22 @@ namespace BAM.Art
             return quads[cell];
         }
 
+        static Mesh full;
+
+        /// <summary>A flat unit quad on the ground showing a whole picture (uv 0..1).</summary>
+        public static Mesh FullQuad()
+        {
+            if (full != null) return full;
+            full = new Mesh { name = "Fx full quad" };
+            full.vertices = new[] { new Vector3(-0.5f, 0f, -0.5f), new Vector3(-0.5f, 0f, 0.5f), new Vector3(0.5f, 0f, 0.5f), new Vector3(0.5f, 0f, -0.5f) };
+            full.uv = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+            full.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            full.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            full.RecalculateBounds();
+            full.UploadMeshData(true);
+            return full;
+        }
+
         /// <summary>The sword arc: the crescent cell sized so its blade runs at radius 0.5 in front of the origin, as Shapes.Slash.</summary>
         public static Mesh SlashQuad()
         {

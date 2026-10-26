@@ -215,7 +215,10 @@ namespace BAM.Art
         Transform shape, inner;
         MeshFilter shapeF;
         MeshRenderer shapeR, innerR;
-        Material mat, innerMat;
+        Material mat, innerMat, rimMat;
+        Transform rim; // Rickard's telegraph ring round a circle warning or bomb fuse (tx_fx_telegraph_ring), when the picture exists
+        static Texture2D rimTex;
+        static bool rimLoaded;
         Vector3 center, dir;
         float length, radius, duration, age, emitT;
         Color baseColor;
@@ -256,6 +259,22 @@ namespace BAM.Art
                 innerR.sharedMaterial = innerMat;
                 innerR.shadowCastingMode = ShadowCastingMode.Off;
                 innerR.receiveShadows = false;
+                if (!rimLoaded) { rimLoaded = true; rimTex = RickardFx.Load("tx_fx_telegraph_ring"); }
+                if (k != ZoneKind.WarnLine && rimTex != null)
+                {
+                    var rg = new GameObject("Rim");
+                    rim = rg.transform;
+                    rim.SetParent(transform, false);
+                    rim.localPosition = new Vector3(0f, 0.006f, 0f);
+                    rg.AddComponent<MeshFilter>().sharedMesh = FxAtlas.FullQuad();
+                    var rr = rg.AddComponent<MeshRenderer>();
+                    rimMat = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                    rimMat.SetTexture(ArtMaterials.BaseMap, rimTex);
+                    rimMat.mainTexture = rimTex;
+                    rr.sharedMaterial = rimMat;
+                    rr.shadowCastingMode = ShadowCastingMode.Off;
+                    rr.receiveShadows = false;
+                }
             }
         }
 
@@ -276,6 +295,7 @@ namespace BAM.Art
             {
                 shapeF.sharedMesh = Shapes.ZoneCircle();
                 shape.localScale = new Vector3(radius, 1f, radius);
+                if (rim != null) rim.localScale = new Vector3(radius * 2.255f, 1f, radius * 2.255f); // his ring peaks at 0.887 of the picture: edge exactly on the radius
             }
             Tick(0f);
         }
@@ -320,6 +340,13 @@ namespace BAM.Art
             }
             Color c = baseColor; c.a = baseColor.a * a;
             mat.SetColor(ArtMaterials.BaseColor, c);
+            if (rimMat != null)
+            {
+                bool on = length <= 0f;
+                rim.gameObject.SetActive(on);
+                // additive: the colour's brightness is its strength
+                if (on) rimMat.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r * a, baseColor.g * a, baseColor.b * a, 1f));
+            }
             if (warn) return;
 
             emitT -= dt;
