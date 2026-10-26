@@ -74,7 +74,7 @@ Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources
 | Files | What | Origin | Made by | Rights / proof | Credit |
 |---|---|---|---|---|---|
 | `home_bg.jpg` (was `home_bg_soft.jpg`) | Home background painting | Old game Home | Rickard ("bilden är min egen", 2026-10-25) | Rickard's own | None |
-| `portrait_<hero>.png` (8) | Hero portraits on the Heroes cards and the Home top bar | Old game `profile_<hero>.png`; Fenn, Tyra and Bonk rendered by us in Blender from the models the game uses (2026-10-26) | Renders of Rickard's own hero models | Rickard's own (he confirmed 2026-10-25 15:07) | None |
+| `portrait_<hero>.png` (8) | Hero portraits on the Heroes cards and the Home top bar | Old game `profile_<hero>.png`; Tyra and Bonk rendered by us in Blender from the models the game uses (2026-10-26) | Renders of Rickard's own hero models | Rickard's own (he confirmed 2026-10-25 15:07) | None |
 | `menu_btn_orange.png` | The orange PLAY button face on Home | Old game `AbcUI/menu_btn_orange.png` (PlayButton) | Rickard's own UI art from the old project | Rickard's own | None |
 | `special_<hero>.png`, `passive_<hero>.png` (14) | Ability icons on the Heroes page | Old game `ui_abilities_<hero>_*.png` | Rickard / the old project | Rickard's own (he confirmed 2026-10-25 15:14) | None |
 

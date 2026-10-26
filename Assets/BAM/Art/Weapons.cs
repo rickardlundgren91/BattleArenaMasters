@@ -65,9 +65,8 @@ namespace BAM.Art
             var g = new GearDef[8];
             g[(int)HeroId.Fenn] = new GearDef
             {
-                // a bit smaller than the old game's 1.0 and 0.5 on his new Original body (Rickard 2026-10-26: sword huge, "lite för stor sköld")
-                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 0.85f, Grip = 0.2f } },
-                Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.42f },
+                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f } },
+                Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f },
             };
             // arms out as in the old game (MX_ARM_SPREAD 22) and the hammer leaning up and back over his right shoulder, so it never
             // covers his face (Rickard 2026-10-26: "bram täcker sig själv"); leaning out only 30 it still stood in front of his face
