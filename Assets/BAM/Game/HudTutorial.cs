@@ -11,7 +11,7 @@ namespace BAM.Game
     /// - Skip, small and quiet in the top right corner in both halves: the tutorial counts as done, then Home.
     /// - The arena half: DESTROY THE / ENEMY TOWER while the camera rests on the tower, then one short line in a navy pill at the
     ///   top, a soft trail of gold lights up the lane to the next landmark (the ring, the target, Knut, the tower), a gold arrow
-    ///   over the joystick in moment 1 and over SPECIAL when it is ready (with a pulsing ring), "+ CHARGE" flying from Tyra into
+    ///   over the joystick in moment 1 and over SPECIAL when it is ready (with a pulsing ring), "+ CHARGE" flying from Fenn into
     ///   the button on every confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED!
     ///   Great job! You're ready for BAM! with Tap to continue (no VICTORY, no result card).
     /// - The very first start: a picture of Home zooms in and fades into the island (Dissolve).
@@ -36,7 +36,8 @@ namespace BAM.Game
         Button tutEndButton;
         RawImage dissolve;
         float dissolveAt = -1f;
-        string pillShown;
+        string pillShown, islandSrc;
+        Text islandLine, islandWho;
 
         // ---------------------------------------------------------------- the first start
 
@@ -84,8 +85,8 @@ namespace BAM.Game
             var p = m.Player;
             bool play = arena && m.State == MatchState.Play && !tu.Done;
 
-            // the skip button: W*0.8, H*0.055, W*0.15 x H*0.04 from the top left
-            if (skip) { Top(tutSkip, W * 0.875f, H * 0.075f, W * 0.15f, H * 0.04f, W, H); tutSkipText.fontSize = Mathf.RoundToInt(W * 0.034f); Corners(tutSkipPlate, H * 0.02f); }
+            // the skip button at the old W*0.8..0.95, but a little higher (H*0.03..0.07) so it clears the pause button under it
+            if (skip) { Top(tutSkip, W * 0.875f, H * 0.05f, W * 0.15f, H * 0.04f, W, H); tutSkipText.fontSize = Mathf.RoundToInt(W * 0.034f); Corners(tutSkipPlate, H * 0.02f); }
 
             // the opening title, fading in over 0.3 s and out over the last 0.4 s of the opening
             bool opening = play && tu.Opening;
@@ -126,13 +127,46 @@ namespace BAM.Game
                 specialPulse.rectTransform.sizeDelta = Vector2.one * 2f * SpecialButton.Radius * (1.12f + 0.1f * k);
             }
 
+            IslandLine(on && island, tu, W, H);
             ChargeFly(play, p, W, H);
             Trail(play && !opening, tu, p);
             TutTowerBar(arena && m.State != MatchState.Over, tu);
             TutorialEnd(arena && over >= 0f && tu.Done, over, W, H);
         }
 
-        // "+ CHARGE" rises from Tyra and flies along an arc into the SPECIAL button, which takes it in with a gold ring
+        // The island's line as the old drawIslandHUD drew it (Rickard 2026-10-26: the bubble covered the action): no box, white
+        // words with a dark navy edge in the sky above the island at 0.3 H, the marked ones red (teal for a tip), FENN SAYS in teal
+        // over them, wrapped inside 0.92 W
+        void IslandLine(bool on, Tutorial tu, float W, float H)
+        {
+            string src = on ? tu.LineMarked ?? tu.Line : null;
+            bool show = src != null;
+            if (islandLine.gameObject.activeSelf != show) { islandLine.gameObject.SetActive(show); islandWho.gameObject.SetActive(show && !string.IsNullOrEmpty(tu.Speaker)); }
+            if (!show) { islandSrc = null; return; }
+            float fs = Mathf.Round(W * 0.05f);
+            if (!ReferenceEquals(src, islandSrc))
+            {
+                islandSrc = src;
+                sb.Length = 0;
+                bool open = false;
+                for (int i = 0; i < src.Length; i++)
+                {
+                    char c = src[i];
+                    if (c != '|') { sb.Append(c); continue; }
+                    sb.Append(open ? "</color>" : tu.LineTip ? "<color=#7fe8d8>" : "<color=#ff3b4e>");
+                    open = !open;
+                }
+                if (open) sb.Append("</color>");
+                islandLine.text = sb.ToString();
+                islandWho.text = tu.Speaker ?? "";
+            }
+            islandLine.fontSize = Mathf.RoundToInt(fs);
+            islandLine.rectTransform.sizeDelta = new Vector2(W * 0.92f, fs * 4f);
+            islandLine.rectTransform.anchoredPosition = new Vector2(0f, H / 2f - H * 0.3f + fs * 0.9f); // its top line's baseline at 0.3 H
+            Title(islandWho, fs * 0.7f, H * 0.3f - fs * 1.5f, W, H);
+        }
+
+        // "+ CHARGE" rises from Fenn and flies along an arc into the SPECIAL button, which takes it in with a gold ring
         void ChargeFly(bool play, Unit p, float W, float H)
         {
             var tu = m.Tut;
@@ -164,7 +198,7 @@ namespace BAM.Game
             }
         }
 
-        // a soft trail of gold lights from Tyra up the lane to the next landmark, each swelling as a wave runs along it; none once
+        // a soft trail of gold lights from Fenn up the lane to the next landmark, each swelling as a wave runs along it; none once
         // the landmark is in her reach
         void Trail(bool play, Tutorial tu, Unit p)
         {
@@ -390,6 +424,17 @@ namespace BAM.Game
                 chargeTexts[i] = c;
             }
 
+            // the island's line: no box, so it never hides what Fenn is doing
+            islandWho = Centred(safe, "", Hex(0x7fe8d8), 3);
+            islandWho.gameObject.SetActive(false);
+            islandLine = Centred(safe, "", Color.white, 3);
+            islandLine.alignment = TextAnchor.UpperCenter;
+            islandLine.rectTransform.pivot = new Vector2(0.5f, 1f);
+            islandLine.horizontalOverflow = HorizontalWrapMode.Wrap;
+            islandLine.verticalOverflow = VerticalWrapMode.Overflow;
+            islandLine.supportRichText = true;
+            islandLine.gameObject.SetActive(false);
+
             // Skip: small and quiet, always there, never the thing to look at
             tutSkip = CentredRect("Skip", safe);
             var plate = tutSkipPlate = tutSkip.gameObject.AddComponent<Image>();
@@ -432,7 +477,8 @@ namespace BAM.Game
 
         void BeginTutorial()
         {
-            pillShown = null;
+            pillShown = null; islandSrc = null;
+            islandLine.gameObject.SetActive(false); islandWho.gameObject.SetActive(false);
             tutSkip.gameObject.SetActive(false);
             tutPill.gameObject.SetActive(false);
             tutBar.gameObject.SetActive(false);

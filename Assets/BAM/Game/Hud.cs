@@ -362,8 +362,9 @@ namespace BAM.Game
 
         void Hint(bool hidden)
         {
-            // the island's lines in the bubble; the arena half has the old pill at the top instead (HudTutorial.cs)
-            string line = island && !hidden ? m.Tut.Line : null;
+            // no bubble any more (Rickard 2026-10-26: it covered the action): the island's line is drawn in the sky above it and the
+            // arena half's in the old pill at the top (HudTutorial.cs)
+            string line = null;
             if (line == null)
             {
                 if (hintShown) { Screens.HideHint(); hintShown = false; }
