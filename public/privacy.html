@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy · Battle Arena Masters</title>
+<meta name="description" content="What the Battle Arena Masters playtest and this website collect, and how to change it.">
+<meta name="theme-color" content="#10161a">
+<link rel="icon" href="assets/icon.png">
+<style>
+:root{
+  --night:#10161a; --stone:#171f24; --stone-2:#1f292f; --line:#2f3d45;
+  --text:#f1ece0; --muted:#aab3b0; --gold:#e9bc5c; --gold-hi:#ffdc8f; --teal:#4fe0cf;
+  --display:"Cinzel",Georgia,"Times New Roman",serif;
+  --body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --gut-l:max(16px,env(safe-area-inset-left,0px)); --gut-r:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--night);color:var(--text);font-family:var(--body);font-size:17px;line-height:1.65}
+a{color:var(--gold-hi)}
+a:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:3px}
+.inner{max-width:760px;margin:0 auto;padding-left:var(--gut-l);padding-right:var(--gut-r)}
+header{border-bottom:1px solid var(--line);background:var(--stone)}
+header .inner{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:900;letter-spacing:.06em;text-decoration:none;color:var(--text);font-size:15px}
+.brand img{width:32px;height:32px;border-radius:8px}
+.back{font-weight:800;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+main{padding-block:40px 56px}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,44px);line-height:1.15;margin:0 0 8px}
+h2{font-family:var(--display);font-weight:900;font-size:22px;margin:36px 0 10px;color:var(--gold-hi)}
+p,ul{margin:0 0 14px}
+ul{padding-left:22px}
+li{margin-bottom:6px}
+.meta{color:var(--muted);font-size:15px}
+.note{background:var(--stone-2);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;padding:14px 18px;margin:20px 0}
+code{font-size:.92em;background:var(--stone-2);padding:1px 6px;border-radius:5px;overflow-wrap:anywhere}
+footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);font-size:14.5px}
+footer a{font-weight:800;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <a class="brand" href="./"><img src="assets/icon.png" alt="">BATTLE ARENA MASTERS</a>
+    <a class="back" href="./">← Back to the start</a>
+  </div>
+</header>
+
+<main class="inner">
+  <h1>Privacy</h1>
+  <p class="meta">Last updated: 26 October 2026 · Applies to the Android playtest and battlearenamasters.com</p>
+
+  <div class="note">Battle Arena Masters is in a closed playtest. This page explains in plain words what the test version of the game and this website send, and what you can switch off. It will be updated before the game is released.</div>
+
+  <h2>Who we are</h2>
+  <p>Battle Arena Masters is made by a small indie team in Sweden. Questions or requests about your data: <a href="mailto:support@battlearenamasters.com">support@battlearenamasters.com</a>.</p>
+
+  <h2>This website</h2>
+  <ul>
+    <li>The site sets no cookies and has no login, forms or ads.</li>
+    <li>It is hosted by Cloudflare. Like any web host, Cloudflare handles your IP address and browser details to deliver the page and protect it from attacks.</li>
+    <li>If we turn on Cloudflare Web Analytics, it counts visits without cookies and without tracking you across other sites.</li>
+    <li>Links to Discord and Google Play take you to those services, where their own privacy rules apply.</li>
+  </ul>
+
+  <h2>The game: what is sent and when</h2>
+
+  <p><b>Your account.</b> The game signs you in to Unity Gaming Services (run by Unity Technologies) with an anonymous player ID. This is how your profile, progress and items are saved in the cloud. You don't need to give an email address to play.</p>
+
+  <p><b>Match data.</b> To balance the heroes, finished matches are uploaded to our cloud storage at Unity. This is <b>on by default</b> and is separate from the usage data question below. You choose how much under <b>Settings → Match data → Auto upload</b>:</p>
+  <ul>
+    <li><b>Full match</b> (default): the recording of the match, such as hero, map, result, kills, items, positions and events, the player names in that match, the build number, your phone model, frame rate and any game errors.</li>
+    <li><b>Results only</b>: hero, map, result, kills, deaths, items and match length (about 1 KB), with no positions, names or error details.</li>
+    <li><b>Off</b>: matches stay on your phone.</li>
+  </ul>
+  <p>You can also set a daily limit and upload only on Wi-Fi. Matches are deleted from your phone once they are sent.</p>
+
+  <p><b>Usage data (only if you say yes).</b> The first time you reach the home screen, the game asks <i>"Share usage data?"</i>. Nothing is sent until you tap <b>Allow</b>. If you do, Unity Analytics receives a few anonymous events: game starts and returning days, tutorial steps, and when a match starts, ends or is left early (mode, hero, map, win or loss, length). No names are sent. Change it any time in <b>Settings → Share usage data</b>.</p>
+
+  <p><b>Playing online and with friends.</b> When you use these features, Unity services handle what they need to work: your player name and profile, rating and leaderboard place (visible to other players), friends and invites, and the connection data for online matches (Unity Lobby and Relay).</p>
+
+  <p><b>Voice chat.</b> If voice chat is in your build, it uses Unity Vivox. Android asks for microphone permission first, and your microphone starts muted.</p>
+
+  <p><b>Notifications.</b> If you allow notifications, the game may store a push token so it can tell you about invites and updates.</p>
+
+  <p><b>Reports and settings.</b> If you report a player, the report (player ID, reason and time) is stored so we can look at it. The game may also download settings from Unity Remote Config, and test builds installed outside Google Play check a small version file on Google Drive for updates.</p>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>We don't sell your data.</li>
+    <li>The playtest has no ads and no ad tracking.</li>
+    <li>We don't ask for your real name, address or payment details.</li>
+  </ul>
+
+  <h2>Who sees it</h2>
+  <p>The development team uses match data and usage data to find bugs and balance the game. It is stored with Unity Gaming Services. Your player name, rating and leaderboard place can be seen by other players.</p>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li>Turn usage data and match upload off in the game's Settings.</li>
+    <li>Leave the playtest from the Google Play test link.</li>
+    <li>Email <a href="mailto:support@battlearenamasters.com">support@battlearenamasters.com</a> to ask what we have about you or to have it deleted. Tell us your player name so we can find it.</li>
+  </ul>
+
+  <h2>Changes</h2>
+  <p>When the game changes, this page changes too. The date at the top shows the latest version.</p>
+</main>
+
+<footer>
+  <div class="inner">
+    <a href="./">← Battle Arena Masters</a>
+  </div>
+</footer>
+</body>
+</html>

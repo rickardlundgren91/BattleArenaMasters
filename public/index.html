@@ -153,6 +153,10 @@ footer .inner{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;justi
 footer nav{display:flex;flex-wrap:wrap;gap:18px}
 footer a{text-decoration:none;font-weight:800}
 footer a:hover{color:var(--gold-hi)}
+/* text PR: honest buttons while the test link waits */
+[hidden]{display:none !important}
+.soon{margin:12px 0 0;color:#e3e6e1;font-size:14.5px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.85)}
+.pt-wait{display:block;text-align:center;padding:12px 18px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-weight:800}
 </style>
 </head>
 <body>
@@ -170,12 +174,17 @@ footer a:hover{color:var(--gold-hi)}
     <div class="inner">
       <img class="logo" src="assets/logo-bam.webp" alt="BAM, Battle Arena Masters" width="900" height="380">
       <h1>Grab two friends. Take down their tower.</h1>
-      <p class="lead">Battle Arena Masters is a fast 3v3 arena game for your phone. A match takes about four minutes.</p>
-      <div class="ctas">
-        <a class="btn btn-gold big" href="#playtest" data-link="play"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><path fill="#00a0ff" d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4L13.4 12 3.6 1.8z"/><path fill="#ffd400" d="m16.7 15.3-3.3-3.3 3.3-3.3 3.8 2.2c1.1.6 1.1 1.6 0 2.2l-3.8 2.2z"/><path fill="#ff3a44" d="M16.7 15.3 13.4 12 3.6 21.8c.4.4 1 .4 1.7.1l11.4-6.6"/><path fill="#00f076" d="M16.7 8.7 5.3 2.1c-.7-.4-1.3-.3-1.7.1L13.4 12l3.3-3.3z"/></svg>Join the test on Google Play</a>
-        <a class="btn btn-ghost" href="#" data-link="discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Join our Discord</a>
+      <p class="lead">Battle Arena Masters is a 3v3 mobile MOBA built on positioning. Ten heroes, four-minute matches, one tower to take down.</p>
+      <div class="ctas" data-when="no-play">
+        <a class="btn btn-gold big" href="https://discord.gg/bz9UC2tKb" data-link="discord"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Get the test link on Discord</a>
+        <a class="btn btn-ghost" href="#playtest">How the playtest works</a>
       </div>
-      <ul class="badges"><li>Closed Android playtest</li><li>Free</li><li class="hot">Limited spots</li></ul>
+      <p class="soon" data-when="no-play">The Android playtest opens soon. We'll post the link in Discord first.</p>
+      <div class="ctas" data-when="play" hidden>
+        <a class="btn btn-gold big" href="#playtest" data-link="play"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><path fill="#00a0ff" d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4L13.4 12 3.6 1.8z"/><path fill="#ffd400" d="m16.7 15.3-3.3-3.3 3.3-3.3 3.8 2.2c1.1.6 1.1 1.6 0 2.2l-3.8 2.2z"/><path fill="#ff3a44" d="M16.7 15.3 13.4 12 3.6 21.8c.4.4 1 .4 1.7.1l11.4-6.6"/><path fill="#00f076" d="M16.7 8.7 5.3 2.1c-.7-.4-1.3-.3-1.7.1L13.4 12l3.3-3.3z"/></svg>Join the Android playtest</a>
+        <a class="btn btn-ghost" href="https://discord.gg/bz9UC2tKb" data-link="discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Join our Discord</a>
+      </div>
+      <ul class="badges"><li>Closed Android playtest</li><li>Free</li><li class="hot">About 20 spots</li></ul>
       <a class="peek" href="#play">See BAM in action <span aria-hidden="true">↓</span></a>
     </div>
   </section>
@@ -195,19 +204,19 @@ footer a:hover{color:var(--gold-hi)}
       <h2>Easy to learn. Hard to master.</h2>
       <p class="intro">You won't spend the match tapping on targets. Your hero attacks on its own. Your job is the part that matters: where you stand, which fights you take, and when you fire your special.</p>
       <div class="steps">
-        <div class="step"><div class="n">1</div><h3>Pick your hero</h3><p>Ten heroes, each with a clear job. Hook enemies, raise walls, shield friends or line up the perfect shot.</p><span class="tag">Tank · Fighter · Marksman · Mage · Support</span></div>
+        <div class="step"><div class="n">1</div><h3>Pick your hero</h3><p>Ten heroes, each with a clear job. Hook enemies, shake the ground, shield friends or line up the perfect shot.</p><span class="tag">Tank · Fighter · Marksman · Assassin · Mage · Siege · Support</span></div>
         <div class="step"><div class="n">2</div><h3>Move and position</h3><p>Your hero attacks a random enemy in range. Stand close to the one you want to hit, and stay away from the ones you don't.</p><span class="tag">One thumb on the joystick</span></div>
-        <div class="step"><div class="n">3</div><h3>Time your special</h3><p>Tap to fire it at a nearby target, or drag to aim it yourself. The right special at the right moment wins the fight.</p><span class="tag">Tap to auto-target · Drag to aim</span></div>
-      </div>
-      <div class="shots">
-        <figure><img src="assets/shot1.webp" alt="A 3v3 team fight in the arena" loading="lazy" width="827" height="458"><figcaption>Team fights are fast and close</figcaption></figure>
-        <figure><img src="assets/shot2.webp" alt="Pushing down the lane with the special button ready" loading="lazy" width="395" height="533"><figcaption>One thumb to move, one to fire</figcaption></figure>
-        <figure><img src="assets/shot3.webp" alt="A hero next to their team's tower" loading="lazy" width="758" height="397"><figcaption>Protect your tower, take theirs</figcaption></figure>
+        <div class="step"><div class="n">3</div><h3>Time your special</h3><p>Tap and it picks a target for you, or drag to aim it yourself. The right special at the right moment wins the fight.</p><span class="tag">Tap to auto-target · Drag to aim</span></div>
       </div>
       <div class="focus">
         <div class="txt"><p class="eyebrow">Learn it in the tutorial</p><h3>Focus</h3><p>Focus is how many enemies are in your range. Your hero attacks one of them at random, so fewer targets means more hits where you want them.</p><p>Step close to the enemy you want to hit and away from the rest. Make one enemy the only target in your range, and every attack goes to them.</p></div>
         <figure><img src="assets/focus1.webp" alt="Tutorial: Focus shows how many enemies are in your range" loading="lazy" width="399" height="715"><figcaption>Focus counts the enemies in your range</figcaption></figure>
         <figure><img src="assets/focus2.webp" alt="Tutorial: narrow your Focus to one target" loading="lazy" width="402" height="710"><figcaption>Narrow it to one target</figcaption></figure>
+      </div>
+      <div class="shots">
+        <figure><img src="assets/shot1.webp" alt="A 3v3 team fight in the arena" loading="lazy" width="827" height="458"><figcaption>Team fights are fast and close</figcaption></figure>
+        <figure><img src="assets/shot2.webp" alt="Pushing down the lane with the special button ready" loading="lazy" width="395" height="533"><figcaption>One thumb to move, one to fire</figcaption></figure>
+        <figure><img src="assets/shot3.webp" alt="A hero next to their team's tower" loading="lazy" width="758" height="397"><figcaption>Protect your tower, take theirs</figcaption></figure>
       </div>
     </div>
   </section>
@@ -219,13 +228,13 @@ footer a:hover{color:var(--gold-hi)}
       <p class="intro">Every hero has a special and a passive that make them play in their own way. Learn one in a match. Master all ten and how they work together.</p>
       <div class="roster">
         <article class="card"><img src="assets/knut.webp" alt="Knut" loading="lazy"><div class="b"><span class="role">Tank</span><h3>Knut</h3><p>A walrus harbour guard whose anchor drags fleeing enemies right back to his team.</p><span class="sp">Anchor Throw</span></div></article>
-        <article class="card"><img src="assets/oaken.webp" alt="Oaken" loading="lazy"><div class="b"><span class="role">Tank</span><h3>Oaken</h3><p>A living fortress who raises stone walls to block shots and close off paths.</p><span class="sp">Guardian Wall · Fortress Wall</span></div></article>
+        <article class="card"><img src="assets/oaken.webp" alt="Oaken" loading="lazy"><div class="b"><span class="role">Tank</span><h3>Oaken</h3><p>A living fortress who shakes the ground. Slam around him, or send a quake down a line and knock enemies back.</p><span class="sp">Worldbreaker</span></div></article>
         <article class="card"><img src="assets/fenn.webp" alt="Fenn" loading="lazy"><div class="b"><span class="role">Fighter</span><h3>Fenn</h3><p>A frontier hunter who never fights alone. His spirit wolf runs down anyone who flees.</p><span class="sp">Call of the Pack</span></div></article>
-        <article class="card"><img src="assets/tyra.webp" alt="Tyra" loading="lazy"><div class="b"><span class="role">Marksman</span><h3>Tyra</h3><p>A calm woodland archer. Hold your ground, wait for the opening, land one heavy bolt.</p><span class="sp">Pinpoint Bolt</span></div></article>
-        <article class="card"><img src="assets/tikta.webp" alt="Tikta" loading="lazy"><div class="b"><span class="role">Assassin</span><h3>Tikta</h3><p>Quick and venomous. Four poisoned needles finish off anyone already hurt.</p><span class="sp">Needle Storm</span></div></article>
-        <article class="card"><img src="assets/bram.webp" alt="Bram" loading="lazy"><div class="b"><span class="role">Marksman</span><h3>Bram</h3><p>A boar blacksmith whose thrown hammer bounces from enemy to enemy.</p><span class="sp">Hammer Throw</span></div></article>
+        <article class="card"><img src="assets/tyra.webp" alt="Tyra" loading="lazy"><div class="b"><span class="role">Marksman</span><h3>Tyra</h3><p>A calm woodland archer. Hold your ground, wait for the opening, land one heavy bolt.</p><span class="sp">Arrow Volley · Pinpoint Bolt</span></div></article>
+        <article class="card"><img src="assets/tikta.webp" alt="Tikta" loading="lazy"><div class="b"><span class="role">Assassin</span><h3>Tikta</h3><p>Quick and venomous. Four poisoned needles finish off anyone already hurt.</p><span class="sp">Needle Storm · Venom Spike</span></div></article>
+        <article class="card"><img src="assets/bram.webp" alt="Bram" loading="lazy"><div class="b"><span class="role">Marksman</span><h3>Bram</h3><p>A boar blacksmith whose thrown hammer bounces from enemy to enemy.</p><span class="sp">Hammer Throw · Anvil Drop</span></div></article>
         <article class="card"><img src="assets/blast.webp" alt="Blast" loading="lazy"><div class="b"><span class="role">Mage</span><h3>Blast</h3><p>A grinning goblin with too many bombs, turning the arena into fire and smoke.</p><span class="sp">Supernova · Inferno Lane</span></div></article>
-        <article class="card"><img src="assets/kelva.webp" alt="Kelva" loading="lazy"><div class="b"><span class="role">Mage</span><h3>Kelva</h3><p>A quiet mage under a giant bell. Her ringing wave slows enemies and protects friends.</p><span class="sp">Resonance Wave</span></div></article>
+        <article class="card"><img src="assets/kelva.webp" alt="Kelva" loading="lazy"><div class="b"><span class="role">Mage</span><h3>Kelva</h3><p>A quiet mage under a giant bell. Her ringing wave slows enemies and protects friends.</p><span class="sp">Resonance Wave · Sanctuary Chime</span></div></article>
         <article class="card"><img src="assets/hilde.webp" alt="Hilde" loading="lazy"><div class="b"><span class="role">Siege</span><h3>Hilde</h3><p>A crafty engineer whose powder kegs crack towers and blast enemies into walls.</p><span class="sp">Powder Keg</span></div></article>
         <article class="card"><img src="assets/moa.webp" alt="Moa" loading="lazy"><div class="b"><span class="role">Support</span><h3>Moa</h3><p>A jungle priestess who saves friends at the last second with golden honey shields.</p><span class="sp">Honey Guard · Honey Field</span></div></article>
       </div>
@@ -239,20 +248,23 @@ footer a:hover{color:var(--gold-hi)}
         <h2>Be one of the first in the arena</h2>
         <p class="intro" style="margin-bottom:24px">We're looking for about 20 players for our first test on Android. Play early, tell us what you think, and help decide what Battle Arena Masters becomes.</p>
         <ul class="perks">
-          <li>Play every new hero and build before anyone else</li>
+          <li>Play new heroes and updates before anyone else</li>
           <li>Talk directly with the developers on Discord</li>
-          <li>Keep the <b>Founding Tester</b> role forever</li>
-          <li>15 to 30 minutes is enough for a test session</li>
+          <li>Get the <b>Founding Tester</b> role in our Discord, for good</li>
+          <li>Stay in the test for at least 14 days and play a few matches a week. Tell us what felt great and what felt wrong on Discord.</li>
         </ul>
       </div>
       <div class="pt-card">
         <ol>
+          <li data-when="group" hidden><span>Join the <a href="#playtest" data-link="group">tester group</a> with the Google account on your phone</span></li>
           <li>Open the test link on your Android phone</li>
           <li>Tap "Become a tester"</li>
           <li>Install Battle Arena Masters from Google Play</li>
         </ol>
-        <a class="btn btn-gold" href="#playtest" data-link="play">Join the test on Google Play</a>
-        <small>Use the same Google account as on your phone. You can leave the test at any time from the same link.</small>
+        <a class="btn btn-gold" href="#playtest" data-link="play" data-when="play" hidden>Join the test on Google Play</a>
+        <span class="pt-wait" data-when="no-play">Test link coming soon</span>
+        <a class="btn btn-ghost" href="https://discord.gg/bz9UC2tKb" data-link="discord" data-when="no-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Get the link on Discord</a>
+        <small>Use the same Google account as on your phone. Please stay in the test for at least two weeks. You can leave any time after that.</small>
       </div>
     </div>
   </section>
@@ -263,11 +275,13 @@ footer a:hover{color:var(--gold-hi)}
       <h2>Questions</h2>
       <div class="faq">
         <details open><summary>What is Battle Arena Masters?</summary><p>A fast 3v3 arena game for mobile. Two teams of three heroes fight to destroy each other's tower.</p></details>
-        <details><summary>How long is a match?</summary><p>About 4 minutes on average, usually between 2 and 6. A match ends when one team destroys the other team's tower.</p></details>
+        <details><summary>How long is a match?</summary><p>About 4 minutes on average, usually between 2 and 5. A match ends when one team destroys the other team's tower.</p></details>
         <details><summary>How long does it take to learn?</summary><p>You'll know the basics after a match or two: move, tap your special, or drag it to aim. Mastering all ten heroes takes a lot longer.</p></details>
         <details><summary>Do I have to aim every attack?</summary><p>No. Your hero attacks a random enemy in range on its own. You decide where to stand and when to use your special.</p></details>
-        <details><summary>When can I play?</summary><p>The closed Android playtest starts soon. Join through our Google Play test link to get a spot.</p></details>
+        <details><summary>When can I play?</summary><p>The Android playtest opens soon. The test link will be posted here and in our Discord first.</p></details>
+        <details><summary>Is it on iPhone?</summary><p>Not yet. We're starting with Android. Join the Discord to hear when that changes.</p></details>
         <details><summary>Which phones does it run on?</summary><p>Android first. We'll share more about other platforms later.</p></details>
+        <details><summary>What do testers need to do?</summary><p>Stay in the test for at least two weeks, play when you want, and tell us what you think on Discord.</p></details>
         <details><summary>Is it free?</summary><p>Yes, the playtest is free.</p></details>
         <details><summary>Can I play with friends?</summary><p>That's the idea! Team up with two friends, or practise against bots.</p></details>
         <details><summary>Do you collect data?</summary><p>Only if you say yes. The game asks once whether you want to share anonymous match data to help us balance the heroes. You can change your answer in the settings.</p></details>
@@ -280,20 +294,23 @@ footer a:hover{color:var(--gold-hi)}
 <footer>
   <div class="inner">
     <span>© 2026 Battle Arena Masters. Made by a small indie team in Sweden.</span>
-    <nav><a href="#" data-link="discord">Discord</a><a href="#playtest">Playtest</a></nav>
+    <nav aria-label="Footer"><a href="https://discord.gg/bz9UC2tKb" data-link="discord">Discord</a><a href="#playtest">Playtest</a><a href="privacy.html">Privacy</a></nav>
   </div>
 </footer>
 <script>
-// Fill in these two links. Empty = the button waits ("coming soon") or is hidden.
+// Fill in these links. Empty play = the page points to Discord for the test link. Empty group = no tester-group step.
 var LINKS = {
   play: "",     // Google Play test link, e.g. https://play.google.com/apps/testing/...
+  group: "",    // Google Group for testers, e.g. https://groups.google.com/g/...
   discord: "https://discord.gg/bz9UC2tKb"   // Discord invite, e.g. https://discord.gg/...
 };
+document.querySelectorAll("[data-when]").forEach(function (el) {
+  var w = el.dataset.when, on = w === "no-play" ? !LINKS.play : !!LINKS[w];
+  el.hidden = !on;
+});
 document.querySelectorAll("[data-link]").forEach(function (a) {
   var url = LINKS[a.dataset.link];
-  if (url) { a.href = url; a.target = "_blank"; a.rel = "noopener"; return; }
-  if (a.dataset.link === "discord") { a.hidden = true; return; }
-  if (a.closest(".pt-card")) { a.removeAttribute("href"); a.textContent = "Test link coming soon"; a.style.opacity = ".75"; a.style.pointerEvents = "none"; }
+  if (url) { a.href = url; a.target = "_blank"; a.rel = "noopener"; }
 });
 </script>
 </body>
