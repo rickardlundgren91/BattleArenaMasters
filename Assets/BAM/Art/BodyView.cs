@@ -180,10 +180,11 @@ namespace BAM.Art
             Transform it = inst.transform;
             it.localPosition = Vector3.zero;
             it.localRotation = Quaternion.identity;
-            rends = inst.GetComponentsInChildren<Renderer>(false); // only what the model shows: a hidden extra mesh must not size it
-            // measured from the real skinned vertices: a model's imported bounds can be stale or miss parts (Blast's head)
+            rends = inst.GetComponentsInChildren<Renderer>(true); // true: the view may be built under the hidden pool root, where (false) finds nothing
+            // the renderers' bounds, as before 2026-10-26 (a baked-vertex measure blew Knut up to many times his size in a phone test);
+            // the menu stages frame with HeightOf, not these bounds
             Bounds bb = new Bounds();
-            for (int i = 0; i < rends.Length; i++) { Bounds rb = TrueBounds(rends[i]); if (i == 0) bb = rb; else bb.Encapsulate(rb); }
+            for (int i = 0; i < rends.Length; i++) { if (i == 0) bb = rends[i].bounds; else bb.Encapsulate(rends[i].bounds); }
             float h = bb.size.y > 0.01f ? bb.size.y : 1f;
             float k = art.Height / h;
             it.localScale = it.localScale * k;
@@ -249,20 +250,6 @@ namespace BAM.Art
 
         /// <summary>The model's height in world units as it was fitted (the hero's height in tiles), for the menu stages.</summary>
         internal float ShownHeight => def != null ? def.Height * transform.lossyScale.y : 1.8f;
-
-        static Bounds TrueBounds(Renderer r)
-        {
-            if (!(r is SkinnedMeshRenderer sk) || sk.sharedMesh == null) return r.bounds;
-            var baked = new Mesh();
-            sk.BakeMesh(baked, true); // in the renderer's space with its scale, not yet its rotation and position
-            Vector3[] v = baked.vertices;
-            Destroy(baked);
-            if (v.Length == 0) return r.bounds;
-            Transform t = sk.transform;
-            var b = new Bounds(t.position + t.rotation * v[0], Vector3.zero);
-            for (int i = 1; i < v.Length; i++) b.Encapsulate(t.position + t.rotation * v[i]);
-            return b;
-        }
 
         // the weapons go on in the bind pose, before the clips play (HeldGear), and join the body's renderers and materials
         void AddGear(HeroArt art)
