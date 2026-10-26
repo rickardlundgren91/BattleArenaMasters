@@ -106,9 +106,9 @@ namespace BAM.Art
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
             // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
-            // (Rickard 2026-10-26: "klubban ska vara för stor för honom"); at rest it leans back over his right shoulder instead of
-            // standing up in front of his face, low enough that its top stays inside the menu stage's picture
-            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 38f, HoldOut = 172f } } };
+            // (Rickard 2026-10-26: "klubban ska vara för stor för honom"); at rest it neither stands up in front of his face (as at
+            // first) nor leans back behind him on the menu stage, but hangs heavy from his fist, forward and out to his right, its head just off the ground (Rickard 2026-10-26: "bonks vapen behöver vridas framåt")
+            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = -35f, HoldOut = 45f } } };
             return g;
         }
 
