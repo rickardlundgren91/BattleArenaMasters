@@ -553,6 +553,16 @@ namespace BAM.Art
             }
 
             if (!dead && renderersOn && vis >= 0.99f) SpellLooks(dt);
+            // Fenn's wolf leaves a ghostly trail of wisps as it runs (MLBB analysis 4, Fenn)
+            if (def.Kind == RigKind.Wolf && moving && !dead && renderersOn && vis >= 0.99f)
+            {
+                dustT -= dt;
+                if (dustT <= 0f)
+                {
+                    dustT = ArtKit.High ? 0.08f : 0.16f;
+                    Fx.Wisps(transform.position + new Vector3(0f, 0.35f, 0f) - transform.forward * 0.3f, 1, Fx.HeroMain(HeroId.Fenn), 0.35f, 0.15f, 0.45f, 0.3f, 0.12f);
+                }
+            }
 
             if (renderersOn)
             {

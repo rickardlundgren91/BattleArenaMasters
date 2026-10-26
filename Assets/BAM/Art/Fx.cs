@@ -641,6 +641,14 @@ namespace BAM.Art
                     Stars(p + Vector3.up * 0.5f, 3, teamL, 0.3f * size, 1f, 0.45f, 1.2f, 0.3f);
                     break;
                 case FxKind.Bounce:
+                    // Bram's hammer bounces from target to target: a thin gold line of glints flashes between them (MLBB analysis 4, Bram)
+                    if (Time.time - lastBounceT < 0.7f)
+                    {
+                        Vector3 a0 = lastBounce, d0 = mid - a0;
+                        int steps = Mathf.Clamp(Mathf.RoundToInt(d0.magnitude * 3f), 2, 12);
+                        for (int i = 1; i < steps; i++) Glow(a0 + d0 * (i / (float)steps), 1, heroAccent[(int)HeroId.Bram], 0.16f, 0.05f, 0.15f);
+                    }
+                    lastBounce = mid; lastBounceT = Time.time;
                     Pow(mid, 1, C(Pal.Steel), 0.6f * size, 0.14f);
                     Sparks(mid, 8, C(Pal.Steel), 0.12f, 3.5f, 0.3f, 1.2f);
                     Ring(p, 0.2f * size, 0.8f * size, new Color(0.9f, 0.95f, 1f, 0.8f), 0.22f);
@@ -685,6 +693,9 @@ namespace BAM.Art
 
         // Each hero's two special colours (main, accent) from the MLBB clip analysis (bam-work/art/mlbb-miya/skill-fx-analys.md),
         // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast. Tyra keeps the cyan her bolt already has.
+        static Vector3 lastBounce;
+        static float lastBounceT = -10f;
+
         internal static Color32 HeroMain(HeroId h) => heroMain[(int)h];
         internal static Color32 HeroAccent(HeroId h) => heroAccent[(int)h];
 

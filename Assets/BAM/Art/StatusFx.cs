@@ -7,7 +7,8 @@ namespace BAM.Art
     /// <summary>Status markers on one unit. Each marker is a child renderer made the first time it is needed and then only toggled.</summary>
     sealed class StatusFx
     {
-        const int Stun = 0, Slow = 1, Root = 2, Burn = 3, Poison = 4, Shield = 5, Haste = 6, Illusion = 7, Count = 8;
+        const int Stun = 0, Slow = 1, Root = 2, Burn = 3, Poison = 4, Shield = 5, Haste = 6, Illusion = 7, StunRing = 8, PoisonRing = 9, BurnRing = 10, Count = 11;
+        // MLBB analysis rule 6: a ring in the status colour under every unit hit by a stun, poison or burn, as long as it lasts
 
         readonly Transform parent;
         readonly float radius, height;
@@ -68,6 +69,9 @@ namespace BAM.Art
             else if (!hasShield && hadShield && visible) Fx.Play(FxKind.ShieldPop, parent.position, 1f, 0);
             Show(Haste, Has(flags, StatusFlags.Hasted));
             Show(Illusion, Has(flags, StatusFlags.Illusion));
+            Show(StunRing, Has(flags, StatusFlags.Stunned));
+            Show(PoisonRing, Has(flags, StatusFlags.Poisoned));
+            Show(BurnRing, Has(flags, StatusFlags.Burning) && !Has(flags, StatusFlags.Poisoned));
         }
 
         void Show(int i, bool on)
@@ -94,6 +98,9 @@ namespace BAM.Art
                 case Poison: mesh = Shapes.PoisonBubbles(); mat = ArtMaterials.Unlit; pos = new Vector3(0.18f, height + 0.05f, 0f); s = 1f; break;
                 case Shield: mesh = HexSphere(); mat = HexMat(); pos = new Vector3(0f, height * 0.5f, 0f); s = Mathf.Max(radius * 1.6f, height * 0.62f); break;
                 case Haste: mesh = Shapes.HasteLines(); mat = ArtMaterials.UnlitAdd; pos = Vector3.zero; s = Mathf.Max(1f, radius * 2.2f); break;
+                case StunRing: mesh = Shapes.RingMesh(0.82f, Pal.Stun); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.05f; break;
+                case PoisonRing: mesh = Shapes.RingMesh(0.82f, Pal.Poison); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.05f; break;
+                case BurnRing: mesh = Shapes.RingMesh(0.82f, Pal.Burn); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.05f; break;
                 default: mesh = Shapes.RingMesh(0.85f, Pal.Violet); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.04f, 0f); s = rr * 1.15f; break;
             }
             var go = new GameObject("Status" + i);
@@ -183,6 +190,9 @@ namespace BAM.Art
                 t[Shield].localScale = new Vector3(b, b, b);
                 t[Shield].localRotation = Quaternion.Euler(0f, time * 20f, 0f);
             }
+            float ringK = Mathf.Max(radius, 0.25f) * 1.3f * 1.05f * (1f + Mathf.Sin(time * 6f) * 0.06f);
+            for (int i = StunRing; i <= BurnRing; i++)
+                if (r[i] != null && r[i].enabled) t[i].localScale = new Vector3(ringK, 1f, ringK);
             if (r[Illusion] != null && r[Illusion].enabled) t[Illusion].localRotation = Quaternion.Euler(0f, time * 60f, 0f);
             if (r[Root] != null && r[Root].enabled) t[Root].localRotation = Quaternion.Euler(0f, Mathf.Sin(time * 3f) * 6f, 0f);
 
