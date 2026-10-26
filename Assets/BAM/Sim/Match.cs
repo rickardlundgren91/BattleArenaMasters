@@ -23,6 +23,9 @@ namespace BAM.Sim
         public bool SlotOrder;
         /// <summary>The player's battle spell (Spells.cs); bots draw theirs with the seed.</summary>
         public SpellId PlayerSpell = SpellId.Blink;
+        /// <summary>HERO TEST (HeroTest.cs): the player's hero against dummies, at HeroTestLevel, never ending.</summary>
+        public bool HeroTest;
+        public int HeroTestLevel = 1;
     }
 
     /// <summary>The player's controls for one tick, in map space (x right, y down the map).</summary>
@@ -93,6 +96,7 @@ namespace BAM.Sim
             for (int t = 0; t < 2; t++) Towers[t] = NewTower(t, Map.TowerX[t], Map.TowerY[t]);
             Map.TowerTile0 = TileOf(Towers[0]); Map.TowerTile1 = TileOf(Towers[1]);
             if (cfg.Tutorial) { if (cfg.Island) StartIsland(); else StartTutorial(); return; }
+            if (cfg.HeroTest) { StartHeroTest(); return; }
 
             // the line-up: the player's hero and five others, drawn with the seed (bots never copy the player's hero)
             var pool = new List<HeroId>(7);
@@ -190,15 +194,16 @@ namespace BAM.Sim
                 NewMinion(s.Kind, s.Team, x, y);
             }
             if (Tut != null) UpdateTutorial(dt);
+            if (Config.HeroTest) HeroTestTick(dt);
 
-            int lvl = Tut != null ? 1 : Math.Min(Rules.MaxLevel, 1 + (int)Math.Floor(Time / Rules.SecondsPerLevel));
+            int lvl = Tut != null ? 1 : Config.HeroTest ? Level : Math.Min(Rules.MaxLevel, 1 + (int)Math.Floor(Time / Rules.SecondsPerLevel));
             if (lvl != Level)
             {
                 Level = lvl;
                 for (int i = 0; i < Units.Count; i++) if (Units[i].Kind == UnitKind.Hero) Units[i].SetLevel(lvl);
                 Emit(EventType.LevelUp, null, null, lvl);
             }
-            if (Tut == null) WaveT -= dt;
+            if (Tut == null && !Config.HeroTest) WaveT -= dt;
             if (WaveT <= 0) { WaveT += Rules.WavePeriod * PacingWaveMult(); SpawnWave(); }
 
             unitBuf.Clear(); unitBuf.AddRange(Units);

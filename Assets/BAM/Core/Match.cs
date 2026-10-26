@@ -9,6 +9,8 @@ namespace BAM.Core
         public Difficulty Difficulty;
         public bool Tutorial;   // the short guided match
         public int Seed;        // 0 = pick one at random
+        public bool HeroTest;   // HERO TEST: Hero against dummies, never ends (Reset/Exit on its bar)
+        public int Level;       // HERO TEST: the fixed level (1 if 0)
     }
 
     /// <summary>What the result screen and analytics get when a match ends.</summary>

@@ -148,6 +148,8 @@ namespace BAM.Game
                 Tutorial = setup.Tutorial,
                 Island = island,
                 PlayerSpell = BamSettings.Spell, // the battle spell picked on the hero page (off in the guided match)
+                HeroTest = setup.HeroTest && !setup.Tutorial,
+                HeroTestLevel = setup.Level > 0 ? setup.Level : 1,
             };
             match = Match.Create(cfg);
             Screens.HideAll();
@@ -164,8 +166,8 @@ namespace BAM.Game
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
             BamAudio.PlayMusic(MusicId.Match);
-            if (!setup.Tutorial || island) BamAnalytics.MatchStarted(setup);
-            Debug.Log("[BAM.Game] match started: " + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + ", seed " + seed);
+            if ((!setup.Tutorial || island) && !setup.HeroTest) BamAnalytics.MatchStarted(setup); // HERO TEST is practice, not a match (old: no stats)
+            Debug.Log("[BAM.Game] match started: " + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + ", seed " + seed);
         }
 
         void Teardown()
@@ -274,6 +276,7 @@ namespace BAM.Game
         {
             if (match == null || endSent) return;
             endSent = true;
+            if (setup.HeroTest) return;
             BamAnalytics.MatchEnded(setup, Result(quit && !over));
         }
 

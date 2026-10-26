@@ -40,6 +40,16 @@ calls mean, when they happen and what the caller expects. All calls happen on Un
 - Events: `SpellCast` (A, Kind = SpellId, X/Y = where A stood: a blink's start), `SpellCancel` (A's recall cut),
   `Recall` (A arrived at its spawn; X/Y = where it left).
 
+## HERO TEST (2026-10-26: the old herotest.js, Rickard's training area)
+
+- Start: `Flow.Game.StartMatch(new MatchSetup { Hero = h, HeroTest = true, Level = n })` (Level 1..12, 1 if 0).
+  `RestartMatch()` = the bar's Reset (same hero and level); a new hero or level = StartMatch again; Exit =
+  `Flow.Game.QuitToMenu()`. No analytics, no result: it never ends.
+- `Match.HeroTest` (true in it), `Match.Config.HeroTestLevel`, `Match.HeroTestFastCd` (bool the bar toggles: the special is
+  ready again 1 s after use), `Match.HtFoe` (the enemy dummy hero, Bram), `Match.HtAlly` (the friendly dummy, kept at
+  40 % health). Practice minions are normal enemy minions. Spells are on. No intro banner, no top portraits, no clock
+  (the old Hud hides them in hero test).
+
 ## Art (BAM.Art) - called by BAM.Game
 
 | Call | When | Expectation |

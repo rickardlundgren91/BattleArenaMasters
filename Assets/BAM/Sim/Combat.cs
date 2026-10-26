@@ -178,7 +178,7 @@ namespace BAM.Sim
         void Revive(Unit u)
         {
             u.Alive = true; u.Hp = u.MaxHp; u.X = u.PX = u.SpawnX; u.Y = u.PY = u.SpawnY;
-            AddStatus(u, St.Invulnerable, Rules.RespawnInvulnerable);
+            if (!Config.HeroTest) AddStatus(u, St.Invulnerable, Rules.RespawnInvulnerable); // HERO TEST: hittable at once (old herotestTick)
             u.AtkTimer = 0; u.RespawnT = 0; u.MoInit = false; u.SpellChanEnd = -1;
             Emit(EventType.Respawn, u, null);
         }
