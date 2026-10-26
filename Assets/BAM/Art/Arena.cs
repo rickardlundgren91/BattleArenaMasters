@@ -364,7 +364,7 @@ namespace BAM.Art
         }
 
         // The middle boulders: Rickard's painted mossy boulder standing upright at its foot line, as in the old game (RuinBill): a
-        // hero behind it is hidden, one in front is drawn over it. Sized like the old v1.2 boulder (about 3 tiles wide).
+        // hero behind it is hidden, one in front is drawn over it. About 2.4 tiles wide, the rules' boulder plus a hero's radius.
         static void RockPictures(GameObject root, ArenaInfo info, Texture2D tex)
         {
             const float CY = 0.5724f; // cos of the camera's elevation: a vertical edge shows this much shorter on screen
@@ -375,7 +375,9 @@ namespace BAM.Art
             for (int i = 0; i < info.Rocks.Length; i++)
             {
                 Vector3 r = info.Rocks[i];
-                float rad = Mathf.Max(0.3f, r.z), sh = rad * 2.6f, sw = sh * ar;
+                // sized so the painted rock ends where the rules stop a hero (Rickard 2026-10-26: at 2.6 a hero walking into its side went in
+                // and vanished behind it): the picture's rock fills ~95% of its width, the rules' edge is RockR + the hero's radius
+                float rad = Mathf.Max(0.3f, r.z), sh = rad * 2.05f, sw = sh * ar;
                 var foot = new Vector3(r.x, 0.02f, r.y - rad * 1.35f);
                 Vector3 up = new Vector3(0f, sh / CY, 0f), half = new Vector3(sw * 0.5f, 0f, 0f);
                 int b = v.Count;
