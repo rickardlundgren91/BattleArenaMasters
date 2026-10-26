@@ -63,6 +63,10 @@ namespace BAM.Art
         public abstract void SetVisibility(float alpha);
         /// <summary>Ring under the unit: the player's hero, allies, enemies.</summary>
         public abstract void SetMarker(UnitMarker marker);
+        /// <summary>Recall channel: 0..1 while Match.SpellChanneling(unit), below 0 when it stops. Mint motes rise round the feet.</summary>
+        public virtual void SetChannel(float progress01) { }
+        /// <summary>The Sprint spell is on: a lime speed trail while the unit moves.</summary>
+        public virtual void SetSprint(bool on) { }
     }
 
     public abstract class ProjectileView : MonoBehaviour
@@ -311,6 +315,27 @@ namespace BAM.Art
         {
             if (!ready) return;
             Fx.Play(kind, position, size <= 0f ? 1f : size, team == 1 ? 1 : 0);
+        }
+
+        /// <summary>A battle spell went off (event SpellCast): from = where the caster stood (a blink's start), at = where it is now.</summary>
+        public static void PlaySpell(SpellId spell, Vector3 from, Vector3 at)
+        {
+            if (!ready) return;
+            SpellFx.Cast(spell, from, at);
+        }
+
+        /// <summary>A recall channel was cut (event SpellCancel).</summary>
+        public static void PlaySpellCancel(Vector3 at)
+        {
+            if (!ready) return;
+            SpellFx.Cancel(at);
+        }
+
+        /// <summary>A recall arrived (event Recall): from = where the hero left, to = its spawn.</summary>
+        public static void PlayRecall(Vector3 from, Vector3 to)
+        {
+            if (!ready) return;
+            SpellFx.Recall(from, to);
         }
 
         /// <summary>Hands a view back to its pool (minions, projectiles and zones come and go all match long).</summary>

@@ -65,7 +65,9 @@ namespace BAM.Art
         float speed01, moveW, phase, idleT, seed;
         float atkT = -1f, windup = 0.3f, castT = -1f, hitT = -1f, hitLen = 0.15f, recoil;
         float propBack = -1f;
-        float hp = -1f, towerFxT, dustT;   // last health fraction (-1 = never set), the tower's smoke timer
+        float hp = -1f, towerFxT, dustT;
+        float channel = -1f, channelT, sprintT; // the battle spells' looks (SpellFx): recall channel progress, sprint trail
+        bool sprint;   // last health fraction (-1 = never set), the tower's smoke timer
         bool dead;
         float deathT = -1f, spawnT = -1f, vis = 1f, ghostPulse;
         int lastQuality = -1;
@@ -292,7 +294,7 @@ namespace BAM.Art
         /// <summary>Fresh state for a new life out of the pool.</summary>
         public void ResetState()
         {
-            moving = false; speed01 = 0f; moveW = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f;
+            moving = false; speed01 = 0f; moveW = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
@@ -393,12 +395,45 @@ namespace BAM.Art
             ApplyLook();
         }
 
+        public override void SetChannel(float progress01) => channel = progress01;
+        public override void SetSprint(bool on) => sprint = on;
+
         public override void SetMarker(UnitMarker m)
         {
             marker = m;
             decalF.sharedMesh = Shapes.Decal(m);
             byte fill = m == UnitMarker.Player ? Pal.BarPlayer : m == UnitMarker.Enemy ? Pal.BarEnemy : m == UnitMarker.Ally ? Pal.BarAlly : (Team == Teams.Player ? Pal.BarAlly : Pal.BarEnemy);
             bar.SetColors(fill, Pal.TeamDark(Team));
+        }
+
+        void SpellLooks(float dt)
+        {
+            if (channel >= 0f)
+            {
+                // recall: mint motes rise round the feet faster as it fills, and a ring closes in every half second
+                channelT -= dt;
+                if (channelT <= 0f)
+                {
+                    channelT = ArtKit.High ? 0.12f : 0.24f;
+                    Color c = SpellFx.Of(SpellId.Recall);
+                    var c32 = new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), 230);
+                    float a = Random.value * Mathf.PI * 2f, r = 0.5f + Random.value * 0.4f;
+                    Fx.Glow(transform.position + new Vector3(Mathf.Cos(a) * r, 0.1f, Mathf.Sin(a) * r), 1, c32, 0.16f, 0.1f, 0.6f, 1.2f + channel * 1.5f);
+                    if ((int)(channel * 8f) != (int)((channel - 0.0001f) * 8f) || Random.value < 0.12f) Fx.Ring(transform.position, 1.1f, 0.3f, new Color(c.r, c.g, c.b, 0.7f), 0.45f);
+                }
+            }
+            if (sprint && moving)
+            {
+                sprintT -= dt;
+                if (sprintT <= 0f)
+                {
+                    sprintT = ArtKit.High ? 0.06f : 0.12f;
+                    Color c = SpellFx.Of(SpellId.Sprint);
+                    var c32 = new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), 220);
+                    Fx.SparksAlong(transform.position + new Vector3(0f, 0.35f, 0f) - transform.forward * 0.2f, -transform.forward, 1, c32, 0.08f, 2.5f, 0.2f, 15f);
+                    Fx.Wisps(transform.position + new Vector3(0f, 0.3f, 0f) - transform.forward * 0.3f, 1, c32, 0.3f, 0.2f, 0.3f, 0.1f, 0.15f);
+                }
+            }
         }
 
         // ---------------------------------------------------------------- look
@@ -515,6 +550,8 @@ namespace BAM.Art
                     Fx.Dust(transform.position - transform.forward * 0.25f + new Vector3(0f, 0.08f, 0f), 1, new Color32(196, 178, 140, 170), 0.32f, 0.35f, 0.55f, 0.25f, 0.12f);
                 }
             }
+
+            if (!dead && renderersOn && vis >= 0.99f) SpellLooks(dt);
 
             if (renderersOn)
             {

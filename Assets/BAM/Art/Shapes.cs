@@ -21,7 +21,9 @@ namespace BAM.Art
             b.Clear();
             b.Color(Pal.ShadowSoft).Disc(Vector3.zero, 0.85f, 20);
             b.Color(Pal.Shadow).Disc(new Vector3(0f, 0.002f, 0f), 0.6f, 20);
-            byte c = marker == UnitMarker.Player ? Pal.PlayerRing : marker == UnitMarker.Ally ? Pal.BlueLight : marker == UnitMarker.Enemy ? Pal.Red : (byte)255;
+            // only the player's own hero gets a ring (old View3DMeMark); allies, enemies and towers just the soft shadow, as the old
+            // SyncGround (its team rings were removed 2026-10-19)
+            byte c = marker == UnitMarker.Player ? Pal.PlayerRing : (byte)255;
             if (c != 255)
             {
                 float w = marker == UnitMarker.Player ? 0.2f : 0.13f;
