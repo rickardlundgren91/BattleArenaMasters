@@ -174,7 +174,7 @@ namespace BAM.UI
             else if (screen == heroSelect) RefreshHeroSelect();
             else if (screen == heroPage) RefreshHeroPage();
             else if (screen == settings) RefreshSettings();
-            else if (screen == modes) modeDifficulty.Set((int)BamSettings.LastDifficulty);
+            else if (screen == modes) RefreshModes();
         }
 
         // The game layer normally hides/shows our screens itself after these calls; the extra calls here only make sure

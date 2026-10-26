@@ -26,7 +26,7 @@ namespace BAM.UI
 
         // The tutorial is not offered here any more: the very first start goes into it by itself (GameFlow.StartFirstTutorial,
         // the old MenuNewPlayer), with a Skip button. Training in MODES plays it again.
-        static void OnPlay() => StartBotMatch();
+        static void OnPlay() => PlayMode();
 
         static void StartBotMatch()
         {
@@ -38,48 +38,7 @@ namespace BAM.UI
             StartMatch(new MatchSetup { Hero = (HeroId)BamSettings.LastHero, Difficulty = Difficulty.Easy, Tutorial = true });
         }
 
-        // ---- the Modes sheet ----
-
-        static Segmented modeDifficulty;
-
-        static void BuildModes()
-        {
-            var rt = UiKit.NewRect("Modes", root);
-            UiKit.Stretch(rt);
-            modes = rt.gameObject;
-            var veil = UiKit.Fill(rt, UiKit.Dim);
-            veil.raycastTarget = true;
-            var close = veil.gameObject.AddComponent<Button>();
-            close.transition = Selectable.Transition.None;
-            close.onClick.AddListener(() => { BamAudio.Play(SfxId.UiBack); Pop(); });
-            var safe = UiKit.SafeArea(rt);
-
-            var sheet = UiKit.Panel(safe, PageFill);
-            UiKit.Band(sheet, false, 24, 640, 20);
-            UiKit.Frame(sheet.rectTransform);
-            var title = UiKit.Label(sheet.transform, "Modes", 64, TextAnchor.MiddleLeft, UiKit.TextColor);
-            UiKit.Band(title, true, 20, 90, 36);
-
-            var bots = UiKit.Label(sheet.transform, "3v3 against bots", 40, TextAnchor.MiddleLeft, UiKit.Gold);
-            UiKit.Band(bots, true, 130, 60, 36);
-            var diffRow = UiKit.NewRect("Difficulty", sheet.transform);
-            UiKit.Band(diffRow, true, 200, 116, 36);
-            modeDifficulty = new Segmented(diffRow, DifficultyNames, i =>
-            {
-                BamSettings.LastDifficulty = (Difficulty)i;
-                RefreshHome();
-            });
-
-            var training = UiKit.Button(sheet.transform, "Training", () => StartTutorial(), UiKit.Muted, SfxId.UiConfirm, 52);
-            var trt = (RectTransform)training.transform;
-            UiKit.Band(trt, true, 350, 130, 36);
-            var hint = UiKit.Label(sheet.transform, "A short guided match that teaches the basics.", 30, TextAnchor.MiddleCenter, UiKit.TextDim);
-            hint.font = UiKit.BodyFont;
-            UiKit.Band(hint, true, 486, 50, 36);
-            var done = UiKit.Button(sheet.transform, "Done", () => Pop(), UiKit.Primary, SfxId.UiBack, 48);
-            UiKit.Place(done, 0.5f, 0, 0, 30, 360, 100);
-            modes.SetActive(false);
-        }
+        // ---- the Modes sheet: ModesSheet.cs ----
 
         // ---- Heroes (HubPages.cs) ----
 

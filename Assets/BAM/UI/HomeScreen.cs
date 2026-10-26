@@ -20,6 +20,9 @@ namespace BAM.UI
         static RectTransform homeHero; // the letter badge, only if the 3D model could not be made
         static RawImage homePortraitImg;
         static Text homeName, homeTitle, playSub;
+        static RectTransform homeModeIcon;
+        static float homeModeIconSize;
+        static int homeModeShown = -1;
         static GameObject homeTutCard;
 
         const float Cw = 10.8f;                 // cw(1) at the design width
@@ -49,7 +52,13 @@ namespace BAM.UI
             homePortraitImg.texture = Portrait(id);
             homeName.text = info.Name;
             homeTitle.text = info.Title;
-            playSub.text = "3V3 · VS BOTS · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant();
+            playSub.text = PlaySubFor(homeMode, true);
+            if (homeModeShown != (int)homeMode)
+            {
+                homeModeShown = (int)homeMode;
+                for (int i = homeModeIcon.childCount - 1; i >= 0; i--) Object.Destroy(homeModeIcon.GetChild(i).gameObject);
+                ModeIcon(homeModeIcon, homeMode, homeModeIconSize);
+            }
             homeTutCard.SetActive(BamSettings.TutorialCard);
             homeFx.Layout();
         }
@@ -312,7 +321,11 @@ namespace BAM.UI
                 UiKit.Stretch(modesFace);
                 Round(Img(modesFace, "Fill", UiKit.Rounded, new Color(HubGlass.r, HubGlass.g, HubGlass.b, 0.94f)), r);
                 RuneFrame(modesFace, mw, BrowH, r);
-                RobotIcon(modesFace, BrowH * 0.08f, Mathf.Min(mw, BrowH) * 0.5f);
+                // the chosen mode's sign (HubModeIcon(hubMode)); RefreshHome swaps it when the mode changes
+                homeModeIcon = UiKit.NewRect("ModeIcon", modesFace);
+                float s = Mathf.Min(mw, BrowH) * 0.5f;
+                Size(homeModeIcon, s, s).anchoredPosition = new Vector2(0, BrowH * 0.08f);
+                homeModeIconSize = s;
                 var label = Lil(modesFace, "MODES", 2.6f, HubSoft);
                 Size(label.rectTransform, mw, 5 * Cw).anchoredPosition = new Vector2(0, -0.32f * BrowH);
                 var hit = modesRt.gameObject.AddComponent<Image>();
@@ -416,7 +429,7 @@ namespace BAM.UI
             }
 
             // HubModeIcon "classic": a mint robot on a dark rounded square
-            static void RobotIcon(RectTransform face, float y, float s)
+            internal static void RobotIcon(RectTransform face, float y, float s)
             {
                 var back = new Color32(0x22, 0x2a, 0x62, 0xff);
                 var sq = Img(face, "Icon", UiKit.Rounded, back);

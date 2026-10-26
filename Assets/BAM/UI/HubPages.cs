@@ -384,6 +384,7 @@ namespace BAM.UI
             heroCount.alignment = TextAnchor.MiddleRight;
             Mid(heroCount.rectTransform, 1, 1, -4 * Cw, -6.2f * Cw, 20 * Cw, 5 * Cw);
             heroCount.rectTransform.pivot = new Vector2(1, 0.5f);
+            TryButton(heroStageRt);
 
             // the name and title on the left, the role on the right
             var nameRow = UiKit.NewRect("Name", content);
@@ -489,6 +490,38 @@ namespace BAM.UI
             });
             heroSelectRt.gameObject.AddComponent<ButtonFx>().PressScale = false;
             heroSelectRt.gameObject.AddComponent<HomePress>();
+        }
+
+        // TRY (BAM's own, Rickard: HERO TEST reachable from the hero pick): a dark glass pill with a mint edge at the stage's
+        // bottom right, the hero test's target sign and TRY; it starts HERO TEST with the hero on the page at level 1
+        static void TryButton(RectTransform stage)
+        {
+            float h = 8 * Cw, w = 21 * Cw;
+            var rt = UiKit.NewRect("Try", stage);
+            Mid(rt, 1, 0, -3 * Cw - w / 2, 3 * Cw + h / 2, w, h);
+            var back = Pic(rt, "Back", UiKit.Rounded, new Color(14 / 255f, 18 / 255f, 48 / 255f, 0.85f));
+            UiKit.Stretch(back.rectTransform);
+            Radius(back, h / 2);
+            back.raycastTarget = true;
+            var edge = Pic(rt, "Edge", HomeArt.RoundRing(0.35f * Cw / (h / 2)), UiKit.Primary);
+            UiKit.Stretch(edge.rectTransform);
+            RingRadius(edge, h / 2);
+            float k = 1.5f * Cw, lw = 0.22f * k;
+            for (int i = 0; i < 2; i++)
+            {
+                float r = i == 0 ? k : 0.55f * k, outer = r + lw / 2;
+                Mid(Pic(rt, "Ring", HomeArt.CircleRing(lw / outer), UiKit.Primary).rectTransform, 0, 0.5f, h / 2 + 0.5f * Cw, 0, 2 * outer, 2 * outer);
+            }
+            Mid(Pic(rt, "Dot", UiKit.Circle, UiKit.Primary).rectTransform, 0, 0.5f, h / 2 + 0.5f * Cw, 0, 0.4f * k, 0.4f * k);
+            var label = UiKit.Label(rt, "TRY", Mathf.RoundToInt(3.8f * Cw), TextAnchor.MiddleCenter, HubText);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Mid(label.rectTransform, 0.5f, 0.5f, 2.2f * Cw, 0, w - h, h);
+            var b = rt.gameObject.AddComponent<Button>();
+            b.targetGraphic = back;
+            b.transition = Selectable.Transition.None;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiConfirm); StartHeroTest(HeroCatalog.All[heroPeek].Id); });
+            rt.gameObject.AddComponent<ButtonFx>();
         }
 
         // Special or passive: the icon on a dark rounded square, KIND · note, the name, the text under it
@@ -711,15 +744,20 @@ namespace BAM.UI
             readonly Image[] fills, edges;
             readonly Text[] labels;
 
-            public HubChoice(RectTransform row, string[] names, System.Action<int> chosen)
+            // full: the segments fill the row (the mode sheet's BOT DIFFICULTY); else they sit on the right of a settings row
+            public HubChoice(RectTransform row, string[] names, System.Action<int> chosen, bool full = false)
             {
                 var box = Pic(row, "Choices", UiKit.Rounded, new Color(8 / 255f, 10 / 255f, 30 / 255f, 0.55f));
                 Radius(box, 2.6f * Cw);
-                box.rectTransform.anchorMin = new Vector2(0.58f, 0.5f);
-                box.rectTransform.anchorMax = new Vector2(1, 0.5f);
-                box.rectTransform.pivot = new Vector2(1, 0.5f);
-                box.rectTransform.offsetMin = new Vector2(0, -5.5f * Cw);
-                box.rectTransform.offsetMax = new Vector2(-2.5f * Cw, 5.5f * Cw);
+                if (full) UiKit.Stretch(box.rectTransform);
+                else
+                {
+                    box.rectTransform.anchorMin = new Vector2(0.58f, 0.5f);
+                    box.rectTransform.anchorMax = new Vector2(1, 0.5f);
+                    box.rectTransform.pivot = new Vector2(1, 0.5f);
+                    box.rectTransform.offsetMin = new Vector2(0, -5.5f * Cw);
+                    box.rectTransform.offsetMax = new Vector2(-2.5f * Cw, 5.5f * Cw);
+                }
                 int n = names.Length;
                 fills = new Image[n]; edges = new Image[n]; labels = new Text[n];
                 for (int i = 0; i < n; i++)
