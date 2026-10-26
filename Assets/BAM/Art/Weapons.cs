@@ -19,6 +19,10 @@ namespace BAM.Art
         public float HoldUp;
         /// <summary>Leaves the hand when an attack or cast releases and comes back a moment later (Blast's bomb).</summary>
         public bool Thrown;
+        /// <summary>Reverse grip: the weapon leaves the fist on the little-finger side instead of the thumb side.</summary>
+        public bool Reverse;
+        /// <summary>Degrees the weapon is turned about its own handle after it is placed (a flat fan turned to lie along the knuckles).</summary>
+        public float Twist;
     }
 
     /// <summary>An off-hand shield in front of the left hand (old MX_SHIELD).</summary>
@@ -65,15 +69,19 @@ namespace BAM.Art
                 Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true },
             };
             // her ornate bow (Rickard's Tripo model 2026-10-24, old fig_ornateBow; Rickard 2026-10-26: "ja", put it in her hand),
-            // held at the middle in the left fist, upright along the forearm like Moa's staff
-            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, Along = true } } };
-            // the Needle Wing in each fist (Rickard's Tripo model 2026-10-24)
+            // gripped at the middle in the left fist like any weapon: the limbs leave the fist on the thumb side, so in her bow
+            // clips (arm out, thumb up) it stands upright with the belly away from her. Along the forearm (as Moa's staff) it lay
+            // flat along her outstretched arm (Rickard 2026-10-26: "håller konstigt i vapen"; checked in a Blender render of IdleBow)
+            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true } } };
+            // the Needle Wing in each fist (Rickard's Tripo model 2026-10-24), in a reverse grip with the fan along the knuckles,
+            // so the needles flare back past her forearms like claws; out of the thumb side (the old game) the flat fans sat in
+            // front of her face in her guard stance (Rickard 2026-10-26: "tikta höll i vapen konstigt")
             g[(int)HeroId.Tikta] = new GearDef
             {
                 Weapons = new[]
                 {
-                    new WeaponDef { Model = "tikta_wing", Len = 0.42f, Grip = 0.12f, Left = true },
-                    new WeaponDef { Model = "tikta_wing", Len = 0.42f, Grip = 0.12f },
+                    new WeaponDef { Model = "tikta_wing", Len = 0.42f, Grip = 0.12f, Left = true, Reverse = true, Twist = 90f },
+                    new WeaponDef { Model = "tikta_wing", Len = 0.42f, Grip = 0.12f, Reverse = true, Twist = 90f },
                 },
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
@@ -176,12 +184,14 @@ namespace BAM.Art
             handle = handle.sqrMagnitude < 1e-10f ? root.up : handle.normalized;
             Vector3 palm = hd.position + fingers * 0.6f;
             if (W.Along) { handle = -fn; palm = hd.position + root.forward * (0.03f * H); fingers = root.forward; }
+            if (W.Reverse) handle = -handle;
             float L = W.Len * H, mh = Mathf.Max(1e-4f, mesh.bounds.size.y);
             var go = new GameObject("Weapon " + W.Model);
             MakeRenderer(go, mesh, W.Model, rends, op, fd);
             Transform t = go.transform;
             t.SetParent(hd, false);
             t.rotation = Quaternion.LookRotation(fingers.normalized, handle);
+            if (W.Twist != 0f) t.rotation *= Quaternion.AngleAxis(W.Twist, Vector3.up);
             t.position = palm - handle * (W.Grip * L);
             float hs = Mathf.Max(1e-6f, hd.lossyScale.y), k = L / mh / hs;
             t.localScale = new Vector3(k, k, k);
