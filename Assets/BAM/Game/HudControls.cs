@@ -102,6 +102,7 @@ namespace BAM.Game
 
         public RectTransform Rect;
         public bool Pressed, Dragging, OverCancel;
+        public float PressedAt;        // when the finger landed (hold to read, HudHold.cs)
         public Vector2 Offset;
         Vector2 start;
         /// <summary>A tap, or an aimed release with the final offset.</summary>
@@ -114,6 +115,7 @@ namespace BAM.Game
             if (pointer != None) return;
             pointer = e.pointerId;
             Pressed = true; Dragging = false; OverCancel = false; Offset = Vector2.zero;
+            PressedAt = Time.unscaledTime;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, e.position, null, out Vector2 local);
             start = local - Rect.rect.center;
         }

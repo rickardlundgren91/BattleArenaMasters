@@ -239,6 +239,7 @@ namespace BAM.Game
             ScoreFrame();
             EmoteFrame(hidden);
             SpellFrame(hidden);
+            HoldFrame(hidden);
             HeroTestFrame(hidden);
             Special();
             Aim(hidden);
@@ -586,6 +587,7 @@ namespace BAM.Game
             BuildPause();
             BuildScore();
             BuildSpell();
+            BuildHold();
             BuildHeroTest();
 
             BuildCenter();
