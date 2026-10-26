@@ -69,7 +69,7 @@ namespace BAM.Game
             public Unit Unit;
             public Vector3 At;
             public float Born = -99f, Value;
-            public bool ToPlayer, Big;
+            public bool ToPlayer, Big, Word;
             public float BaseA = 1f;
         }
         readonly FloatText[] floats = new FloatText[FloatCount];
@@ -117,6 +117,7 @@ namespace BAM.Game
                 var e = ev[i];
                 if (e.Type == EventType.Damage) OnDamage(e);
                 else if (e.Type == EventType.Death && e.B != null && e.B.IsRealHero) OnHeroDeath(e);
+                else if (e.Type == EventType.SpellCast || e.Type == EventType.SpellCancel) OnSpellEvent(e); // HudSpell.cs
             }
         }
 
@@ -135,7 +136,7 @@ namespace BAM.Game
             for (int i = 0; i < floats.Length; i++)
             {
                 var f = floats[i];
-                if (f.Unit == b && f.ToPlayer == toPlayer && now - f.Born < FloatMerge)
+                if (f.Unit == b && !f.Word && f.ToPlayer == toPlayer && now - f.Born < FloatMerge)
                 {
                     f.Value += e.V;
                     f.Label.text = Int(Mathf.RoundToInt(f.Value));
@@ -144,13 +145,28 @@ namespace BAM.Game
             }
             var t = floats[nextFloat];
             nextFloat = (nextFloat + 1) % floats.Length;
-            t.Unit = b; t.Born = now; t.Value = e.V; t.ToPlayer = toPlayer;
+            t.Unit = b; t.Born = now; t.Value = e.V; t.ToPlayer = toPlayer; t.Word = false;
             t.Big = !creep && e.V >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
             t.At = views.DrawnAt(b);
             t.Label.text = Int(Mathf.RoundToInt(e.V));
             t.Label.color = toPlayer ? DmgToPlayer : creep ? CreepHit : t.Big ? BigHit : Color.white;
             t.Label.fontSize = creep ? 34 : t.Big ? 66 : 50;
             t.BaseA = creep ? 0.7f : 1f;
+            t.Label.gameObject.SetActive(true);
+        }
+
+        /// <summary>A word rising over a unit in the damage numbers' style (the old floatText): "Recall", "Cancelled"...</summary>
+        void FloatWord(Unit u, string word, Color color)
+        {
+            if (u == null || !u.Alive) return;
+            var t = floats[nextFloat];
+            nextFloat = (nextFloat + 1) % floats.Length;
+            t.Unit = u; t.Born = Time.unscaledTime; t.Value = 0f; t.ToPlayer = false; t.Big = false; t.Word = true;
+            t.At = views.DrawnAt(u);
+            t.Label.text = word;
+            t.Label.color = color;
+            t.Label.fontSize = 40;
+            t.BaseA = 1f;
             t.Label.gameObject.SetActive(true);
         }
 
@@ -257,7 +273,7 @@ namespace BAM.Game
                     float k = age / 0.3f, amp = f.Big ? 0.7f : 0.4f;
                     pop = 1f + amp * Mathf.Cos(k * Mathf.PI * 2.5f) * (1f - k);
                 }
-                f.Label.rectTransform.anchoredPosition = local + new Vector2(f.ToPlayer ? -26f : 26f, 30f + 90f * t);
+                f.Label.rectTransform.anchoredPosition = local + new Vector2(f.Word ? 0f : f.ToPlayer ? -26f : 26f, 30f + 90f * t);
                 f.Label.rectTransform.localScale = Vector3.one * pop;
                 var c = f.Label.color;
                 c.a = f.BaseA * (t < 0.66f ? 1f : 1f - (t - 0.66f) / 0.34f);

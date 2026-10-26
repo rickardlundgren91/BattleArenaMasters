@@ -34,6 +34,11 @@ namespace BAM.Game
         // Brawl Stars ideas 2 and 3 (Rickard 2026-10-26): a red ring under each enemy the dragged special would hit, and an orange
         // ring at the hero's feet while its special is ready
         readonly Ring[] hits = new Ring[8], ready = new Ring[2];
+        // the battle spell's blink: where it lands while it is dragged (old SpellAimNow: a 0.45 ring on the ground)
+        readonly Ring[] blink = new Ring[2];
+        bool blinkOn;
+        Vector2 blinkAt;
+        Color blinkColor;
         static readonly Color ReadyOrange = new Color(1f, 0.54f, 0.12f), HitRed = new Color(1f, 0.2f, 0.25f);
         bool aimOn, aimLine;
         Vector2 aimA, aimB;
@@ -47,13 +52,14 @@ namespace BAM.Game
         {
             m = match; views = matchViews;
             autoTarget = null; autoAt = swingAt = -99f;
-            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready);
+            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink);
+            blinkOn = false;
             aimOn = false;
         }
 
         public void End()
         {
-            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready);
+            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink);
             m = null; views = null; autoTarget = null;
         }
 
@@ -91,6 +97,12 @@ namespace BAM.Game
         public void SetAim(bool on, bool line, Vector2 a, Vector2 b, float half)
         {
             aimOn = on; aimLine = line; aimA = a; aimB = b; aimHalf = half;
+        }
+
+        /// <summary>The blink being dragged: where it would land, in the rules' coordinates. Set every frame by the HUD.</summary>
+        public void SetBlink(bool on, Vector2 at, Color color)
+        {
+            blinkOn = on; blinkAt = at; blinkColor = color;
         }
 
         public void AfterStep()
@@ -184,6 +196,13 @@ namespace BAM.Game
                 }
             }
 
+            if (blinkOn)
+            {
+                Vector3 bp = Coords.World(blinkAt.x, blinkAt.y);
+                Show(blink[0], bp, 0.45f, new Color(blinkColor.r, blinkColor.g, blinkColor.b, 0.9f), 3f * px);
+                Show(blink[1], bp, 0.45f * (0.55f + 0.1f * Mathf.Sin(Time.time * 10f)), new Color(blinkColor.r, blinkColor.g, blinkColor.b, 0.5f), 2f * px);
+            }
+
             // an enemy tower near the player: its reach, red while it shoots at the player
             var tw = m.Towers[Teams.Other(p.Team)];
             if (tw != null && tw.Alive)
@@ -201,7 +220,7 @@ namespace BAM.Game
 
         void HideAll()
         {
-            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready);
+            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink);
         }
 
         static void Hide(Ring[] rings)

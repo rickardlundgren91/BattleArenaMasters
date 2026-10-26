@@ -88,6 +88,7 @@ namespace BAM.Game
             BeginOverhead();
             BeginScore();
             BeginEmote();
+            BeginSpell();
             rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
             var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
@@ -126,6 +127,7 @@ namespace BAM.Game
             if (joy != null) joy.Release();
             if (special != null) special.Cancel();
             specialQueued = false;
+            CancelSpellTouch();
         }
 
         // ---------------------------------------------------------------- input for one tick
@@ -151,6 +153,7 @@ namespace BAM.Game
                 input.AimAngle = queuedAngle;
                 input.AimK = queuedK;
             }
+            TakeSpell(ref input);
             return input;
         }
 
@@ -221,6 +224,7 @@ namespace BAM.Game
             Center();
             ScoreFrame();
             EmoteFrame(hidden);
+            SpellFrame(hidden);
             Special();
             Aim(hidden);
             Hint(hidden);
@@ -563,6 +567,7 @@ namespace BAM.Game
 
             BuildPause();
             BuildScore();
+            BuildSpell();
 
             BuildCenter();
 
