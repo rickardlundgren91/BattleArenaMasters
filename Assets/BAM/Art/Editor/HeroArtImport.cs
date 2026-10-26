@@ -32,6 +32,18 @@ namespace BAM.Art.Editor
                 ti.textureCompression = TextureImporterCompression.Compressed;
                 return;
             }
+            if (assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Fx/"))
+            {
+                // the effect sprites: white shapes in alpha, one 4x4 grid; clamp so cells never bleed across the edge
+                ti.textureType = TextureImporterType.Default;
+                ti.sRGBTexture = true;
+                ti.alphaIsTransparency = true;
+                ti.mipmapEnabled = true;
+                ti.wrapMode = TextureWrapMode.Clamp;
+                ti.maxTextureSize = 1024;
+                ti.textureCompression = TextureImporterCompression.Compressed;
+                return;
+            }
             if (!assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Arena/")) return;
             ti.textureType = TextureImporterType.Default;
             ti.wrapMode = assetPath.Contains("T_BAM_ArenaGround") ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;

@@ -119,8 +119,8 @@ namespace BAM.Art
             if (emitTimer > 0f) return;
             emitTimer = Fx.Amount >= 1f ? 0.12f : 0.25f;
             Vector3 p = parent.position;
-            if (Has(flags, StatusFlags.Burning)) Fx.Glow(p + new Vector3(0f, height * 0.4f, 0f), 2, Pal.Get(Pal.Fire), 0.22f, 0.3f, 0.5f, 1.2f, radius * 0.6f);
-            if (Has(flags, StatusFlags.Poisoned)) Fx.Glow(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.14f, 0.2f, 0.6f, 0.6f, radius * 0.5f);
+            if (Has(flags, StatusFlags.Burning)) Fx.Flames(p + new Vector3(0f, height * 0.4f, 0f), 2, Pal.Get(Pal.Fire), 0.3f, 0.3f, 0.5f, 1.2f, radius * 0.6f);
+            if (Has(flags, StatusFlags.Poisoned)) Fx.Bubbles(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.14f, 0.2f, 0.6f, 0.6f, radius * 0.5f);
             if (Has(flags, StatusFlags.Hasted)) Fx.Glow(p + new Vector3(0f, 0.2f, 0f), 1, Pal.Get(Pal.White), 0.16f, 0.1f, 0.35f, 0.2f, radius * 0.6f);
             if (Has(flags, StatusFlags.Slowed)) Fx.Glow(p + new Vector3(0f, 0.3f, 0f), 1, Pal.Get(Pal.Slow), 0.12f, 0.2f, 0.5f, -0.2f, radius * 0.8f);
         }

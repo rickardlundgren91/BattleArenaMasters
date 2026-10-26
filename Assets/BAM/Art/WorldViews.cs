@@ -20,8 +20,8 @@ namespace BAM.Art
         TrailRenderer trail;
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
-        float age, flight = 0.3f, spin, lob, sparkT;
-        bool melee;
+        float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
+        bool melee, launched;
 
         const float Height = 0.55f;
 
@@ -33,12 +33,13 @@ namespace BAM.Art
             var go = new GameObject("Look");
             vis = go.transform;
             vis.SetParent(transform, false);
-            go.AddComponent<MeshFilter>().sharedMesh = melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            bool painted = melee && FxAtlas.Texture != null; // the painted sword arc from the effect atlas
+            go.AddComponent<MeshFilter>().sharedMesh = painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot;
             if (melee)
             {
-                visR.sharedMaterial = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                visR.sharedMaterial = painted ? FxAtlas.Material(ArtMaterials.UnlitAdd) : ArtMaterials.Instance(ArtMaterials.UnlitAdd);
                 Color c = k == ProjKind.WolfBite ? new Color(0.6f, 0.9f, 1f, 1f) : k == ProjKind.KnutHit ? new Color(0.85f, 0.9f, 1f, 1f) : (Color)Pal.Get(Pal.TeamLight(t));
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, c);
             }
@@ -96,7 +97,8 @@ namespace BAM.Art
         {
             from = a; to = b;
             flight = Mathf.Max(0.05f, flightTime);
-            age = 0f; spin = 0f; sparkT = 0f;
+            age = 0f; spin = 0f; sparkT = 0f; trailFxT = 0f;
+            launched = true;
             Vector3 d = b - a; d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : transform.forward;
             float dist = d.magnitude;
@@ -169,6 +171,15 @@ namespace BAM.Art
                     Fx.Sparks(vis.position + (kind == ProjKind.BlastBomb ? vis.up * 0.27f : Vector3.zero), 1, Pal.Get(Pal.FireCore), 0.1f, 1f, 0.25f, 0.5f);
                 }
             }
+            if (!melee)
+            {
+                trailFxT -= dt;
+                if (trailFxT <= 0f)
+                {
+                    trailFxT = ArtKit.High ? 0.045f : 0.09f;
+                    Fx.InFlight(kind, vis.position, dir, team);
+                }
+            }
             if (chainT != null && tether != null)
             {
                 Vector3 a = tether.position + new Vector3(0f, Height, 0f), b = vis.position;
@@ -185,6 +196,9 @@ namespace BAM.Art
 
         public void OnRelease()
         {
+            // the shot's own splash where it ended (bombs and the anchor have their own effects from the game layer)
+            if (launched && !melee && age > 0.02f && kind != ProjKind.BlastBomb && kind != ProjKind.KnutAnchor) Fx.Impact(kind, vis.position, team);
+            launched = false;
             tether = null;
             if (chainR != null) chainR.enabled = false;
             if (trail != null) trail.Clear();
@@ -314,10 +328,14 @@ namespace BAM.Art
             Vector3 p = RandomPoint();
             if (kind == ZoneKind.FireLane)
             {
-                Fx.Glow(p, 1, Pal.Get(Pal.Fire), 0.45f, 0.2f, 0.45f, 1.6f);
+                Fx.Flames(p, 1, Pal.Get(Pal.Fire), 0.55f, 0.2f, 0.5f, 1.4f);
                 Fx.Glow(p, 1, Pal.Get(Pal.FireCore), 0.25f, 0.2f, 0.3f, 1.2f);
             }
-            else if (kind == ZoneKind.HoneyField) Fx.Glow(p, 1, Pal.Get(Pal.Honey), 0.18f, 0.1f, 0.9f, 0.5f);
+            else if (kind == ZoneKind.HoneyField)
+            {
+                Fx.Glow(p, 1, Pal.Get(Pal.Honey), 0.18f, 0.1f, 0.9f, 0.5f);
+                if (Random.value < 0.35f) Fx.Bubbles(p, 1, Pal.Get(Pal.Honey), 0.12f, 0.05f, 0.7f, 0.25f);
+            }
             else Fx.Sparks(center + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.08f, 1.5f, 0.2f, 1f);
         }
 
