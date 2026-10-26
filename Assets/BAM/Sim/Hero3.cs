@@ -3,7 +3,9 @@ using System;
 namespace BAM.Sim
 {
     /// <summary>Bonk, the caveman (BAM's own hero #8, Rickard 2026-10-26; never call him by the trademarked name he was asked for
-    /// as). Melee bruiser with a stone club. Auto attack: a club swing (D1: a random target in range, as every hero). Tap, Ground
+    /// as). Melee bruiser with a huge stone club. Auto attack (Rickard 2026-10-26 "extremt långsamt, böja sig bakåt"): the target is
+    /// a random enemy in range (D1, as every hero); he leans back for a long wind-up, then smashes the club into the ground in front
+    /// of him, toward that target: every enemy in the circle there takes the hit, the target only if it is still inside. Tap, Ground
     /// Slam: a short wind-up where he stands, then every enemy hero and minion round him (clear line, not towers) takes a hit and a
     /// short stun. Drag, Boulder Toss: after a short wind-up a boulder rolls along the aimed line, stops in the first enemy hero or
     /// minion (or a wall), hits it and knocks it back along the line (walls stop the slide) with a short stun. Passive, Heavy Club:
@@ -13,6 +15,9 @@ namespace BAM.Sim
         public const float SlamRadius = 2.0f, SlamWindup = 0.3f, SlamCoeff = 1.4f, SlamStun = 0.6f;
         public const float BoulderReach = 5.5f, BoulderWindup = 0.25f, BoulderSpeed = 11, BoulderHitbox = 0.55f, BoulderCoeff = 1.3f;
         public const float KnockDist = 1.5f, KnockTime = 0.2f, KnockStun = 0.4f;
+        /// <summary>The slam auto attack: the wind-up (the HeroDef's SpawnDelay), the circle's centre this far in front of him
+        /// toward the target, and its radius. Towers are hit only as the picked target.</summary>
+        public const float SmashAhead = 1.2f, SmashRadius = 1.3f;
         public const int PowerEvery = 4;
         public const float PowerBonus = 0.6f;
     }
@@ -39,6 +44,44 @@ namespace BAM.Sim
             WarnCircle(h, h.X, h.Y, BonkS.SlamRadius, BonkS.SlamWindup);
             AddStatus(h, St.Casting, BonkS.SlamWindup); Channel(h, BonkS.SlamWindup);
             return true;
+        }
+
+        /// <summary>Bonk's auto attack starts: the circle is fixed now, in front of him toward tgt (closer when tgt is closer),
+        /// and lands after the wind-up.</summary>
+        void BonkSwing(Unit u, Unit tgt, float dmg, bool big)
+        {
+            float d = SimMath.Dist(u, tgt), ahead = Math.Min(BonkS.SmashAhead, d), ca = SimMath.Cos(u.Facing), sa = SimMath.Sin(u.Facing);
+            var p = NewProj(ProjMode.Smash, u, u.X + ca * ahead, u.Y + sa * ahead);
+            p.Kind = ProjKind.BonkClub; p.Tgt = tgt; p.Dmg = dmg; p.T = -u.HDef.SpawnDelay; p.Dur = u.HDef.SpawnDelay; p.Radius = BonkS.SmashRadius;
+            p.Big = big; p.OnHit = true; p.Ang = u.Facing;
+            Emit(EventType.AttackStart, u, tgt, u.HDef.SpawnDelay, (byte)ProjKind.BonkClub, big);
+        }
+
+        /// <summary>The club lands: every enemy hero and minion in the circle with a clear line (and the target tower), one auto
+        /// attack hit each; the special charges once per slam. A dead Bonk's slam never lands.</summary>
+        void BonkSmash(Proj p)
+        {
+            var h = p.Src;
+            if (h == null || !h.Alive) return;
+            areaBuf.Clear();
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (!u.Alive || u.Team == p.Team || u.Has(St.Untargetable) || (u.Kind == UnitKind.Tower && u != p.Tgt)) continue;
+                if (SimMath.Dist(u, p.X, p.Y) > p.Radius + u.R || !Map.LosClear(p.X, p.Y, u.X, u.Y)) continue;
+                areaBuf.Add(u);
+            }
+            Unit first = null; float firstDealt = 0;
+            for (int i = 0; i < areaBuf.Count; i++)
+            {
+                var u = areaBuf[i];
+                if (!u.Alive) continue;
+                float dealt = DealDamage(h, u, p.Dmg, DmgKind.Auto);
+                Emit(EventType.Hit, h, u, dealt, (byte)ProjKind.BonkClub, p.Big, u.X, u.Y, DmgKind.Auto);
+                if (first == null || u == p.Tgt) { first = u; firstDealt = dealt; }
+            }
+            Emit(EventType.Explosion, h, p.Tgt, p.Radius, (byte)ProjKind.BonkClub, p.Big, p.X, p.Y, DmgKind.Auto); // cracks and dust
+            if (first != null && h.Alive) OnHeroHit(h, first, p, firstDealt);
         }
 
         /// <summary>The slam lands where Bonk stood (he cannot walk during the wind-up): every enemy hero and minion within its

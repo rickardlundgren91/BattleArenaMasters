@@ -17,6 +17,16 @@ namespace BAM.Sim
             for (int i = 0; i < 8; i++) { bool big = false; float k = m.HeroAttackCoeff(b, a, ref big); bigs[i] = big && Near(k, 1 + BonkS.PowerBonus); }
             Check(!bigs[0] && !bigs[1] && !bigs[2] && bigs[3] && !bigs[4] && bigs[7], "every 4th swing is a power hit");
 
+            // the slow slam auto attack: a wind-up, then a circle in front toward the target, hitting everyone in it
+            Place(a, x + 1.6f, y); Place(c, x + 1.6f, y + 0.9f); Place(far, x - 4, y);
+            b.Facing = 0; m.BonkSwing(b, a, 50, false);
+            Proj sm = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Smash && !p.Done) sm = p;
+            Check(sm != null && Near(sm.X, x + BonkS.SmashAhead) && Near(sm.Y, y) && Near(-sm.T, b.HDef.SpawnDelay), "the slam waits its wind-up in front of him");
+            Check(a.Hp == a.MaxHp, "nothing lands during the wind-up");
+            for (int k = 0; k * Rules.Tick < b.HDef.SpawnDelay + 0.05f; k++) m.UpdateProjectiles(Rules.Tick);
+            Check(Near(a.MaxHp - a.Hp, 50 * a.TakenMult) && Near(c.MaxHp - c.Hp, 50 * c.TakenMult) && far.Hp == far.MaxHp, "the slam hits the target and the enemy beside it, not one behind Bonk");
+            Place(a, x + 1.6f, y); Place(c, x, y + 1.5f); Place(far, x - 4, y);
+
             // Ground Slam: a wind-up, then everyone round him takes the hit and a stun; nobody in reach: no cast
             b.Charge = b.HDef.MaxCharge;
             Check(m.TryCastSpecial(b, float.NaN, 0), "the slam casts with enemies in reach");

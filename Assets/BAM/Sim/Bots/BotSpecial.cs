@@ -236,7 +236,7 @@ namespace BAM.Sim
             {
                 var p = ps[i];
                 if (p.Done || p.Src == null || p.Team == h.Team) continue;
-                bool warn = p.IsWarning, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb;
+                bool warn = p.IsWarning || p.Mode == ProjMode.Smash, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb;
                 if (!warn && !line && !bomb) continue;
                 if (!DodgeRoll(p, chance, out var dg) || Now < dg.At || Now > dg.At + dg.Len) continue;
                 if (warn) { TelegraphDodge(p, ref vx, ref vy); continue; }
@@ -264,7 +264,7 @@ namespace BAM.Sim
         void TelegraphDodge(Proj p, ref float vx, ref float vy)
         {
             var h = H; float pad = h.R + 0.3f;
-            if (p.Mode == ProjMode.WarnCircle)
+            if (p.Mode == ProjMode.WarnCircle || p.Mode == ProjMode.Smash)
             {
                 float d = Hyp(h.X - p.X, h.Y - p.Y);
                 if (d >= p.Radius + pad) return;

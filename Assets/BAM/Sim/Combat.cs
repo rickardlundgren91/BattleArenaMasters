@@ -291,6 +291,7 @@ namespace BAM.Sim
             u.Facing = SimMath.Atan2(tgt.Y - u.Y, tgt.X - u.X); u.AimT = Time + spawnDelay + 0.1f;
             float travel = projTime != 0 ? projTime : 0.1f;
             if (hero && u.Hero == HeroId.Tyra) travel = SimMath.Clamp(SimMath.Dist(u, tgt) / 15f, 0.08f, projTime); // her arrow flies at a steady 15 tiles/s
+            if (hero && u.Hero == HeroId.Bonk) { BonkSwing(u, tgt, dmg * coeff, big); return; } // a slow slam on the ground in front (Hero3.cs)
             var p = NewProj(ProjMode.Auto, u, u.X, u.Y);
             p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero;
             Emit(EventType.AttackStart, u, tgt, spawnDelay, (byte)kind, big);
@@ -329,6 +330,7 @@ namespace BAM.Sim
                     case ProjMode.ChainBlast: p.Done = true; ChainBlast(p); break;
                     case ProjMode.Slam: p.Done = true; BonkSlam(p); break;
                     case ProjMode.Boulder: BoulderUpdate(p, dt); break;
+                    case ProjMode.Smash: p.Done = true; BonkSmash(p); break;
                 }
             }
             int w = 0;

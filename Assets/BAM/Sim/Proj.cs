@@ -17,6 +17,7 @@ namespace BAM.Sim
         ChainBlast,  // Blast 2.0 Chain Reaction: waits -T s at a frozen spot (Radius), then blasts the other enemies there
         Slam,        // Bonk tap: winds up -T s where he stands, then hits everyone round him (Radius)
         Boulder,     // Bonk drag: straight after a short wind-up, stops in the first enemy and knocks it back
+        Smash,       // Bonk's auto attack: a slow overhead club slam, -T s of wind-up, then a ground circle (Radius) in front of him
     }
 
     /// <summary>
