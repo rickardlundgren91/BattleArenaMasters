@@ -6,7 +6,9 @@ Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
 
 ## Hard rules (Rickard, 2026-10-25)
 
-1. **Nothing goes to GitHub** (no push, no repo, no PR, no gist) until Rickard says so. The game lives on his PC and here.
+1. **GitHub: only the private `rickardlundgren91/Battle-Arena-Masters`** (Rickard's go 2026-10-26 14:20), never the public
+   website repo `rickardlundgren91/BattleArenaMasters`. Only the main thread pushes, after a compile-checked commit. No keystore,
+   password or other secret in any commit.
 2. **Ask Rickard** for anything you need from him (a decision, an account, a click in Unity) instead of doing it halfway.
    Write to him in Swedish, short and simple. He is not a programmer; give exact clicks.
 3. **Safe for Google Play:** only assets with clear rights (made in code by us, or OFL/CC0 with the license recorded in
