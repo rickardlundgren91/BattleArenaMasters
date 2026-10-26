@@ -24,7 +24,9 @@ namespace BAM.Art
         bool melee, launched, mirror, struck, arc, hit, honey, boulder;
         float roll; // Bonk's boulder: degrees rolled so far, on screen
         Color arcColor;
-        static Texture2D arcTex, boulderTex;
+        static Texture2D arcTex, boulderTex, dustTrailTex;
+        Transform dustT; // Bonk's boulder: Rickard's dust trail picture (tx_fx_bonk_trail) streaming out behind it
+        Material dustMat;
         static bool arcLoaded, boulderLoaded;
         MeshFilter visF;
         Transform bombT;
@@ -70,7 +72,7 @@ namespace BAM.Art
             // Moa's honey shot: Rickard's drop picture (atlas cell 7) facing the camera, its tail trailing, a warm glow inside (no ball)
             honey = k == ProjKind.MoaBolt && FxAtlas.Texture != null;
             // Bonk's boulder: Rickard's own picture (tx_fx_bonk_boulder) facing the camera and rolling, big and heavy
-            if (k == ProjKind.BonkBoulder && !boulderLoaded) { boulderLoaded = true; boulderTex = RickardFx.Load("tx_fx_bonk_boulder"); }
+            if (k == ProjKind.BonkBoulder && !boulderLoaded) { boulderLoaded = true; boulderTex = RickardFx.Load("tx_fx_bonk_boulder"); dustTrailTex = RickardFx.Load("tx_fx_bonk_trail"); }
             boulder = k == ProjKind.BonkBoulder && boulderTex != null;
             visF.sharedMesh = boulder ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
@@ -98,6 +100,21 @@ namespace BAM.Art
                 visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, boulderTex);
                 visR.sharedMaterial.mainTexture = boulderTex;
                 visR.sharedMaterial.renderQueue = 3020;
+                if (dustTrailTex != null)
+                {
+                    var dg = new GameObject("Dust trail");
+                    dustT = dg.transform;
+                    dustT.SetParent(transform, false);
+                    dg.AddComponent<MeshFilter>().sharedMesh = FxAtlas.FullQuad();
+                    var dr = dg.AddComponent<MeshRenderer>();
+                    dustMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                    dustMat.SetTexture(ArtMaterials.BaseMap, dustTrailTex);
+                    dustMat.mainTexture = dustTrailTex;
+                    dustMat.renderQueue = 3010; // behind the boulder
+                    dr.sharedMaterial = dustMat;
+                    dr.shadowCastingMode = ShadowCastingMode.Off;
+                    dr.receiveShadows = false;
+                }
             }
             else visR.sharedMaterial = glowy ? ArtMaterials.Unlit : ArtMaterials.Lit;
             visR.shadowCastingMode = ShadowCastingMode.Off;
@@ -223,6 +240,18 @@ namespace BAM.Art
                     Quaternion cam = ArtDriver.CamRot;
                     vis.rotation = cam * Quaternion.Euler(0f, 0f, roll) * Quaternion.Euler(-90f, 0f, 0f);
                     vis.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+                    if (dustT != null)
+                    {
+                        // the cloud's head (right of the picture) at the boulder, its tail streaming back the way it came on
+                        // screen; it swells in over the first moments of the roll
+                        Vector3 r = cam * Vector3.right, u = cam * Vector3.up;
+                        float ang = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg;
+                        float grow = Mathf.Clamp01(age / 0.25f), len = 2.8f * (0.5f + 0.5f * grow);
+                        dustT.rotation = cam * Quaternion.Euler(0f, 0f, ang) * Quaternion.Euler(-90f, 0f, 0f);
+                        dustT.localScale = new Vector3(len, len, len);
+                        dustT.position = transform.position + new Vector3(0f, 0.35f, 0f) - dustT.right * (len * 0.35f);
+                        dustMat.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, 0.9f * grow));
+                    }
                     break;
                 }
                 default:
