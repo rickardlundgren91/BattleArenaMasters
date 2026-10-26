@@ -70,6 +70,8 @@ namespace BAM.Sim
             H(HeroId.Knut, 0.4f, 2.5f, 7, true, 315, 54, 26, 4.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.075f, ProjKind.KnutHit, KnutS.TapReach, AimShape.Line, KnutS.HookDistance, KnutS.HookRadius),
             H(HeroId.Tikta, 0.225f, 2.66f, 10, false, 195, 33, 25, 4.5f, 1.3f, -0.036f, 2.35f, 0.15f, 0, 0.1f, ProjKind.TiktaNeedle, TiktaS.Reach, AimShape.Line, TiktaS.LineReach, 0.2f),
             H(HeroId.Blast, 0.25f, 2.25f, 10, false, 190, 26, 16, 3.5f, 1.4f, -0.036f, 3.8f, 0.2f, 7, 0, ProjKind.BlastFire, BlastS.Reach, AimShape.Line, BlastS.LaneLength, BlastS.LaneHalfWidth),
+            // Bonk (BAM's own, 2026-10-26): a melee bruiser between Fenn and Knut; balanced with bot matches (Hero3.cs)
+            H(HeroId.Bonk, 0.4f, 2.5f, 6, false, 300, 50, 28, 4.5f, 1.45f, -0.018f, 2.4f, 0.2f, 0, 0.075f, ProjKind.BonkClub, BonkS.SlamRadius, AimShape.Line, BonkS.BoulderReach, BonkS.BoulderHitbox),
         };
 
         public static HeroDef Hero(HeroId id) => Heroes[(int)id];

@@ -226,6 +226,7 @@ namespace BAM.Sim
                     if (!(u.Sts[k].T > 0) || (u.Sts[k].Type == St.Shield && u.Sts[k].Amount <= 0)) u.RemoveAt(k);
                 }
                 if (!u.Alive) continue; // a burn or poison tick killed it
+                if (u.KnockT > 0) KnockStep(u, dt);
                 if (u.IsClone)
                 {
                     u.LifeT -= dt;

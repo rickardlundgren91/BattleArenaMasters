@@ -57,7 +57,7 @@ namespace BAM.Sim
             {
                 var p = Projs[i];
                 if (p.Src != u || p.Done) continue;
-                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine)) { p.Done = true; any = true; } // still in the hand
+                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam)) { p.Done = true; any = true; } // still in the hand
                 else if (p.Mode == ProjMode.Hook && p.Out && p.Caught == null) { p.Out = false; any = true; }          // the anchor comes back
                 else if (p.IsWarning) p.Done = true;                                                                    // its red warning goes with it
             }
@@ -141,7 +141,7 @@ namespace BAM.Sim
 
             // a hero
             u.Deaths++; u.RespawnT = RespawnTime(u); u.DiedAt = Time;
-            u.ClearStatuses(); u.Needles = 0; u.ClonePending = false;
+            u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0;
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
             int kt = Teams.Other(u.Team);
             Kills[kt]++;
@@ -327,6 +327,8 @@ namespace BAM.Sim
                     case ProjMode.HoneyField: HoneyFieldUpdate(p); break;
                     case ProjMode.WarnLine: case ProjMode.WarnCircle: WarnUpdate(p); break;
                     case ProjMode.ChainBlast: p.Done = true; ChainBlast(p); break;
+                    case ProjMode.Slam: p.Done = true; BonkSlam(p); break;
+                    case ProjMode.Boulder: BoulderUpdate(p, dt); break;
                 }
             }
             int w = 0;

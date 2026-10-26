@@ -152,6 +152,7 @@ namespace BAM.Sim
                 case HeroId.Knut: return KnutS.HookDistance;
                 case HeroId.Tikta: return TiktaS.Reach;
                 case HeroId.Blast: return BlastS.Reach;
+                case HeroId.Bonk: return BonkS.BoulderReach;
                 default: return e.Range;
             }
         }

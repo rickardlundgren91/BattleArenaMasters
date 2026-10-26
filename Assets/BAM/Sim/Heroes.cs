@@ -111,6 +111,7 @@ namespace BAM.Sim
                 case HeroId.Knut: used = CastKnut(h, dmg); break;
                 case HeroId.Tikta: used = CastTikta(h); break;
                 case HeroId.Blast: used = CastBlast(h, dmg); break;
+                case HeroId.Bonk: used = CastBonk(h, dmg); break;
                 default: used = false; break;
             }
             h.AimAng = float.NaN;
@@ -492,10 +493,12 @@ namespace BAM.Sim
             else if (p.D >= p.Travel) p.Done = true;
         }
 
-        /// <summary>Tyra standing still for 1 s hits harder (big = the hit is drawn bigger). Tikta's Final Sting is gone: Deathmark (Hero2.cs).</summary>
+        /// <summary>Tyra standing still for 1 s hits harder, and Bonk's every 4th swing is a power hit (big = the hit is drawn bigger).
+        /// Tikta's Final Sting is gone: Deathmark (Hero2.cs).</summary>
         float HeroAttackCoeff(Unit u, Unit tgt, ref bool big)
         {
             if (u.Hero == HeroId.Tyra && Time - u.MovedAt >= TyraS.StillTime) { big = true; return 1 + TyraS.StillBonus; }
+            if (u.Hero == HeroId.Bonk && !u.IsClone && ++u.PassHits >= BonkS.PowerEvery) { u.PassHits = 0; big = true; return 1 + BonkS.PowerBonus; }
             return 1;
         }
 

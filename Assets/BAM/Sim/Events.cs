@@ -33,6 +33,7 @@ namespace BAM.Sim
         TiktaMark,     // Tikta A put her Deathmark on hero B
         TiktaMarkPop,  // Tikta A's needle took her Deathmark off B: the hit (its own Hit event) dealt V extra
         ChainSet,      // Blast A's Supernova set off Chain Reaction on burning hero B: X/Y = the frozen spot, V = its radius (it blasts 0.25 s later)
+        Knock,         // A's boulder knocked B back: X/Y = where B lands, V = the slide time
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>

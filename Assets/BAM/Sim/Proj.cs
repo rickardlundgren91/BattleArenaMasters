@@ -15,6 +15,8 @@ namespace BAM.Sim
         WarnLine,    // a red warning line before a shot (bots dodge it)
         WarnCircle,  // a red warning circle
         ChainBlast,  // Blast 2.0 Chain Reaction: waits -T s at a frozen spot (Radius), then blasts the other enemies there
+        Slam,        // Bonk tap: winds up -T s where he stands, then hits everyone round him (Radius)
+        Boulder,     // Bonk drag: straight after a short wind-up, stops in the first enemy and knocks it back
     }
 
     /// <summary>
@@ -45,7 +47,7 @@ namespace BAM.Sim
         internal Unit[] Hit = new Unit[16];
         internal int HitCount;
 
-        public bool IsShot => Mode <= ProjMode.NeedleLine;
+        public bool IsShot => Mode <= ProjMode.NeedleLine || Mode == ProjMode.Boulder;
         /// <summary>A shot that has left the shooter's hand and should be drawn.</summary>
         public bool Flying => !Done && IsShot && T >= 0;
         public bool IsZone => Mode == ProjMode.Bomb || Mode == ProjMode.FireLane || Mode == ProjMode.HoneyField;

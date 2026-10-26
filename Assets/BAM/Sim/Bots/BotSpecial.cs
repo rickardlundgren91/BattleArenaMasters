@@ -24,7 +24,7 @@ namespace BAM.Sim
         }
 
         /// <summary>Bram, Knut, Tikta and Tyra's specials fly or strike: bots want them only for a hero they have a clear line to.</summary>
-        static bool SpecialIsShot(HeroId id) => id == HeroId.Bram || id == HeroId.Knut || id == HeroId.Tikta || id == HeroId.Tyra;
+        static bool SpecialIsShot(HeroId id) => id == HeroId.Bram || id == HeroId.Knut || id == HeroId.Tikta || id == HeroId.Tyra || id == HeroId.Bonk;
 
         /// <summary>Skillshots fire at once in every tier (the old V2 wait for a still target is off: knob 20 is 0 or less).</summary>
         bool SureShot(List<Unit> hs, bool dz)
@@ -51,6 +51,8 @@ namespace BAM.Sim
                 case HeroId.Knut: return SureShot(FoeList(KnutS.TapReach, true, los), dz);
                 case HeroId.Tikta: return Foes(TiktaS.Reach, true, los, l) > 0;
                 case HeroId.Blast: return Foes(BlastS.Reach, true, los, l) > 0 || Foes(BlastS.Reach, false, false, l) >= 4;
+                case HeroId.Bonk: // the slam when an enemy hero stands well inside it (it has a short wind-up), or a minion pack
+                    return Foes(BonkS.SlamRadius - 0.4f, true, los, l) > 0 || Foes(BonkS.SlamRadius - 0.3f, false, true, l) >= 3;
                 case HeroId.Fenn:
                     {
                         if (Foes(4, true, los, l) > 0) return true;
@@ -171,6 +173,15 @@ namespace BAM.Sim
                         M.LeadAim(h, t, Match.Flight.Linear, 0, TiktaS.Speed, out float ax, out float ay);
                         ang = AngTo(ax, ay); return true;
                     }
+                case HeroId.Bonk:
+                    {   // the boulder at the lowest enemy hero out of slam reach with nothing in front (it stops in the first enemy)
+                        if (FoeHeroes(h, BonkS.SlamRadius - 0.4f).Count > 0) return false;
+                        var hs = FoeHeroes(h, BonkS.BoulderReach - 0.3f); Unit t = null;
+                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (LineFree(e, BonkS.BoulderHitbox) && (t == null || e.Hp < t.Hp)) t = e; }
+                        if (t == null) return false;
+                        M.LeadAim(h, t, Match.Flight.Linear, BonkS.BoulderWindup, BonkS.BoulderSpeed, out float ax, out float ay);
+                        ang = AngTo(ax, ay); return true;
+                    }
                 case HeroId.Blast:
                     {   // Inferno Lane through an enemy hero when the strip also covers two more enemies
                         float len = BlastS.LaneLength, hw = BlastS.LaneHalfWidth; int best = 2; var hs = FoeHeroes(h, len - 0.3f);
@@ -225,7 +236,7 @@ namespace BAM.Sim
             {
                 var p = ps[i];
                 if (p.Done || p.Src == null || p.Team == h.Team) continue;
-                bool warn = p.IsWarning, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine, bomb = p.Mode == ProjMode.Bomb;
+                bool warn = p.IsWarning, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb;
                 if (!warn && !line && !bomb) continue;
                 if (!DodgeRoll(p, chance, out var dg) || Now < dg.At || Now > dg.At + dg.Len) continue;
                 if (warn) { TelegraphDodge(p, ref vx, ref vy); continue; }
