@@ -63,6 +63,9 @@ namespace BAM.UI
             Init();
             ClearStack();
             Push(mainMenu);
+            // Rickard: Byte Strike for all music for now (BamAudio plays it for Menu until a menu track exists); after a
+            // match the same loop goes on where it was
+            BamAudio.PlayMusic(MusicId.Menu);
         }
 
         public static void ShowPause()

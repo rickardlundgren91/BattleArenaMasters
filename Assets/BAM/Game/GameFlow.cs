@@ -21,13 +21,15 @@ namespace BAM.Game
         const int MaxTicksPerFrame = 4;
         // the last moment stays on screen this long before the result
         const float ResultDelay = 2f;
+        // the result's jingle plays alone this long, then the menu music comes back on the result screen
+        const float ResultMusicDelay = 2.5f;
 
         MatchSetup setup;
         Match match;
         MatchViews views;
         MatchCamera cam;
         Hud hud;
-        bool inMatch, paused, over, resultShown, endSent;
+        bool inMatch, paused, over, resultShown, resultMusic, endSent;
         float acc, overAt;
         // the guided match is two matches: Fenn's training island, then Tyra's first battle in the arena
         float islandSeconds;
@@ -94,7 +96,7 @@ namespace BAM.Game
             cam.Begin(match);
             if (hud == null) hud = new Hud(this);
             hud.Begin(match, views, cam);
-            inMatch = true; paused = false; over = false; resultShown = false; endSent = false;
+            inMatch = true; paused = false; over = false; resultShown = false; resultMusic = false; endSent = false;
             acc = 0f;
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
@@ -149,6 +151,11 @@ namespace BAM.Game
             hud.Frame(dt, paused || resultShown);
 
             if (over && !resultShown && Time.unscaledTime - overAt >= ResultDelay) ShowResult();
+            else if (resultShown && !resultMusic && Time.unscaledTime - overAt >= ResultDelay + ResultMusicDelay)
+            {
+                resultMusic = true;
+                BamAudio.PlayMusic(MusicId.Menu);
+            }
         }
 
         bool IslandDone() => match.Tut != null && match.Tut.Island && match.Tut.Done;
@@ -189,7 +196,7 @@ namespace BAM.Game
             if (r.Tutorial && r.Won) BamSettings.TutorialDone = true;
             SendEnd(false);
             hud.CancelTouches();
-            BamAudio.StopMusic();
+            BamAudio.StopMusic(); // the victory or defeat jingle first; Update brings the music back after it
             Screens.ShowResult(r);
         }
 
