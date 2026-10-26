@@ -437,6 +437,7 @@ namespace BAM.UI
                 heroValues[i] = val;
             }
 
+            BuildSpellCard(content); // battle spell (MenuSpell.cs), between the stats and the abilities as in the old page
             for (int k = 0; k < 2; k++) heroAbilities[k] = BuildAbilityCard(content, k == 0);
 
             // SELECT: fixed at the bottom of the sheet over a dark fade (StickySelect)
@@ -563,6 +564,7 @@ namespace BAM.UI
             RoleIcon(heroRoleIcon, info.Role, 1.5f * Cw, UiKit.Primary);
 
             string lower = Lower(info.Id);
+            RefreshSpellCard();
             FillAbility(heroAbilities[0], "SPECIAL · " + def.MaxCharge + " hits to charge", info.SpecialName, info.SpecialDesc, "special_" + lower);
             FillAbility(heroAbilities[1], "PASSIVE", info.PassiveName, info.PassiveDesc, "passive_" + lower);
 

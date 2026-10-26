@@ -27,15 +27,15 @@ namespace BAM.UI
     public static partial class Screens
     {
         static GameObject settings, licenses;
-        static HubSwitch soundSwitch, leftSwitch, shareSwitch;
-        static HubChoice quality;
+        static HubSwitch soundSwitch, musicSwitch, vibrationSwitch, leftSwitch, shareSwitch;
+        static HubChoice quality, frameRate;
         static Text activeValue;
         static bool licensesLoaded;
         static RectTransform licensesContent;
 
         // The old Settings page (MenuHome.PageHubSet with the v3 rows of MenuV3.cs): green section heads, glass rows with a
-        // switch, a choice or a value pill. Rows the game has no feature for yet (Music, Vibration, Frame rate, Player name)
-        // come when those settings exist. Left-handed controls and the privacy rows are BAM's own.
+        // switch, a choice or a value pill: Sound, Music, Vibration; Quality, Frame rate, Active. Player name comes when the game
+        // has one. Left-handed controls and the privacy rows are BAM's own.
         static void BuildSettings()
         {
             var content = NewPage("Settings", out settings, out var panel);
@@ -48,11 +48,22 @@ namespace BAM.UI
                 BamSettings.SfxVolume = on ? 0.8f : 0f;
                 if (on) BamAudio.Play(SfxId.UiTap);
             });
+            musicSwitch = SwitchRow(content, "Music", on => BamSettings.MusicOn = on);
+            vibrationSwitch = SwitchRow(content, "Vibration", on =>
+            {
+                BamSettings.Vibration = on;
+                if (on) BamHaptics.Pulse(0.3f);
+            });
 
             SetHead(content, "GRAPHICS");
             quality = ChoiceRow(content, "Quality", new[] { "High", "Low" }, i =>
             {
                 BamSettings.Graphics = i == 0 ? GraphicsQuality.High : GraphicsQuality.Low;
+                RefreshActive();
+            });
+            frameRate = ChoiceRow(content, "Frame rate", new[] { "30", "60" }, i =>
+            {
+                BamSettings.Fps = i == 0 ? 30 : 60;
                 RefreshActive();
             });
             activeValue = PlainRow(content, "Active", "");
@@ -150,12 +161,15 @@ namespace BAM.UI
         }
 
         static void RefreshActive() =>
-            activeValue.text = (BamSettings.Graphics == GraphicsQuality.High ? "High" : "Low") + " · " + Application.targetFrameRate + " fps";
+            activeValue.text = (BamSettings.Graphics == GraphicsQuality.High ? "High" : "Low") + " · " + BamSettings.Fps + " fps";
 
         static void RefreshSettings()
         {
             soundSwitch.Set(BamSettings.SfxVolume > 0.001f, true);
+            musicSwitch.Set(BamSettings.MusicOn, true);
+            vibrationSwitch.Set(BamSettings.Vibration, true);
             quality.Set(BamSettings.Graphics == GraphicsQuality.High ? 0 : 1);
+            frameRate.Set(BamSettings.Fps <= 30 ? 0 : 1);
             leftSwitch.Set(BamSettings.LeftHanded, true);
             shareSwitch.Set(BamSettings.AnalyticsConsent == Consent.Granted, true);
             RefreshActive();

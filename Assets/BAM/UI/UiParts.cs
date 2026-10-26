@@ -28,6 +28,7 @@ namespace BAM.UI
         {
             down = selectable == null || selectable.IsInteractable();
             if (down && PressScale) transform.localScale = Pressed;
+            if (down) BamHaptics.Pulse(0.12f); // MenuButtonFx.FxPressed
         }
 
         public void OnPointerUp(PointerEventData e)
