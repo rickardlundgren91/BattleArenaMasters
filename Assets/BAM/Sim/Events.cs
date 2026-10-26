@@ -27,6 +27,9 @@ namespace BAM.Sim
         SpecialDenied, // the player pressed the special but it could not fire (no target in reach)
         Ignite,        // A set B on fire
         Pull,          // A's anchor caught B
+        SpellCast,     // A used its battle spell; Kind = SpellId; X/Y = where A stood (a blink starts there, A is now at its end)
+        SpellCancel,   // A's recall was cut (moved, hit, stunned); its spell is ready again within 4 s
+        Recall,        // A's recall finished: A is back at its spawn; X/Y = where it left from
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>

@@ -22,6 +22,24 @@ calls mean, when they happen and what the caller expects. All calls happen on Un
   old Haptics.cs scale: 0.12 a button press, 0.3 a hit on the player, 0.6 its death, 0.8 a kill; 12-45 ms, at most one per
   0.08 s), `BamSettings.Fps` 30 or 60 (Boot applies `Application.targetFrameRate` on every change).
 
+## Battle spells (BAM.Sim, 2026-10-26: old SimSpells.cs, plus Sprint)
+
+- `SpellId` (Ids.cs): None, Blink, Recall, Shield, Haste, Sprint. `SpellDefs.All` (picker order), `SpellDefs.Name/Desc/
+  Cooldown(id)`, `SpellDefs.Color(id)` (0xRRGGBB: Blink 8fd8ff, Recall 9fffd0, Shield ffe08a, Haste ff9a6a, Sprint c8ff6a),
+  constants `SpellDefs.BlinkDist` 3.5 etc. Blink 25 s, Recall 2 s channel / 15 s (4 s after a cancel), Shield 20 % max HP
+  for 3 s / 30 s, Haste +40 % attack speed 5 s / 30 s, Sprint +50 % move speed 4 s / 25 s.
+- The pick: `BamSettings.Spell` (Core, PlayerPrefs `bam.spell`, Blink by default, one pick for every hero, the old hero
+  page's BATTLE SPELL card). GameFlow passes it as `MatchConfig.PlayerSpell`; bots draw theirs with the seed and use them
+  by the old rules. Off in the guided match (`Match.SpellsOn`).
+- Cast: `PlayerInput.Spell = true` for one tick, `SpellAngle` (NaN = the way the hero faces; blink only) and `SpellK` 0..1
+  (blink distance share, at least 1 tile). Blinks pass walls and water to the farthest free spot; `Match.BlinkPoint(unit,
+  ang, k, out x, out y)` gives the landing spot for the aim preview.
+- Reading: `unit.Spell`, `Match.SpellReady(unit)`, `Match.SpellLeft(unit)` (seconds), `SpellDefs.Cooldown(unit.Spell)`,
+  `Match.SpellChanneling(unit)` + `unit.SpellChanStart/SpellChanEnd` (recall ring). Haste shows as `StatusFlags.Hasted`,
+  the spell shield as a normal shield.
+- Events: `SpellCast` (A, Kind = SpellId, X/Y = where A stood: a blink's start), `SpellCancel` (A's recall cut),
+  `Recall` (A arrived at its spawn; X/Y = where it left).
+
 ## Art (BAM.Art) - called by BAM.Game
 
 | Call | When | Expectation |

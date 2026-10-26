@@ -68,4 +68,7 @@ namespace BAM.Sim
     }
 
     public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2 }
+
+    /// <summary>The battle spell a hero takes into the match (old SimSpells.cs): one extra button beside the SPECIAL.</summary>
+    public enum SpellId : byte { None = 0, Blink = 1, Recall = 2, Shield = 3, Haste = 4, Sprint = 5 }
 }

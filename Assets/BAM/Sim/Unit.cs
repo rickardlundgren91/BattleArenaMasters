@@ -11,6 +11,7 @@ namespace BAM.Sim
         Shield,   // Amount absorbs damage first
         Burn,     // Blast's passive: Amount still to burn, V counts time to the next tick
         Poison,   // Tikta's needles: V per second, Amount gathered for the next tick
+        AtkHaste, // V more attacks per second, as a share (0.4 = 40 % faster): the Haste battle spell
     }
 
     public struct Status
@@ -90,6 +91,8 @@ namespace BAM.Sim
         internal bool ClonePending;
         public float QueenReadyAt;                                  // Moa: Queen's Instinct is ready again at this time
         internal float AimAng = float.NaN, AimK;                    // the aim of the cast being made (NaN = a tap)
+        // the battle spell (Spells.cs): which, when it is ready again, the recall channel (end -1 = none) and where it started
+        public SpellId Spell; public float SpellAt, SpellChanEnd = -1, SpellChanStart; internal float SpellChanX, SpellChanY;
         // what the bots know: the smoothed motion (lead aim), where each team last saw it, when it last cast where they saw it
         public float MoVx, MoVy; internal float MoX, MoY; internal bool MoInit;
         public readonly float[] LastSeenX = new float[2], LastSeenY = new float[2], LastSeenT = { -99, -99 };
@@ -152,6 +155,7 @@ namespace BAM.Sim
                         case St.SlowFlat: if (Sts[i].V < 0) f |= StatusFlags.Slowed; break;
                         case St.SlowPct: if (Sts[i].V < 0) f |= StatusFlags.Slowed; break;
                         case St.SpeedFlat: case St.SpeedPct: if (Sts[i].V > 0) f |= StatusFlags.Hasted; break;
+                        case St.AtkHaste: f |= StatusFlags.Hasted; break;
                         case St.Shield: if (Sts[i].Amount > 0) f |= StatusFlags.Shielded; break;
                         case St.Burn: if (Sts[i].Amount > 0) f |= StatusFlags.Burning; break;
                         case St.Poison: f |= StatusFlags.Poisoned; break;
@@ -169,7 +173,9 @@ namespace BAM.Sim
         public float StatHp() { int s = StarsFor(NoStars); return (HDef.Hp + HDef.HpGrowth * (Level - 1)) * (1 + Defs.StarHp[s]); }
         public float StatDmg() { int s = StarsFor(NoStars); return (HDef.Dmg + HDef.DmgGrowth * (Level - 1)) * (1 + Defs.StarDmg[s]) * DmgMult; }
         public float StatCd() { int s = StarsFor(NoStars); return Math.Max(0.35f, HDef.Cd + HDef.CdGrowth * (Level - 1)) * (1 + Defs.StarCdr[s]); }
-        public float AttackCd => HDef != null ? StatCd() : UDef.Cd;
+        public float AttackCd => HDef != null ? StatCd() / AtkHaste() : UDef.Cd;
+        /// <summary>1 plus every attack-speed boost on the unit (old SimHeroes6.atkHaste).</summary>
+        public float AtkHaste() { float a = 1; for (int i = 0; i < StCount; i++) if (Sts[i].Type == St.AtkHaste) a += Sts[i].V; return a; }
 
         /// <summary>A new level: a clone only takes the number, a hero gains the extra health.</summary>
         internal void SetLevel(int l)

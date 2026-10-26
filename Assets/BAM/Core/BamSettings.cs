@@ -22,7 +22,7 @@ namespace BAM.Core
         static bool leftHanded, tutorialDone, tutorialCard, musicOn, vibration;
         static int fps;
         static Consent consent;
-        static int lastHero, lastDifficulty;
+        static int lastHero, lastDifficulty, spell;
 
         /// <summary>Raised after any setting changed (on the main thread).</summary>
         public static event Action Changed;
@@ -98,6 +98,14 @@ namespace BAM.Core
             set { Load(); if (lastHero == value) return; lastHero = value; PlayerPrefs.SetInt(Key + "hero", value); Commit(); }
         }
 
+        /// <summary>The battle spell the player takes into every match (the old hero page's BATTLE SPELL card, "abc2-spell"):
+        /// it counts for every hero. Blink until the player picks another.</summary>
+        public static BAM.Sim.SpellId Spell
+        {
+            get { Load(); return (BAM.Sim.SpellId)spell; }
+            set { Load(); int v = value == BAM.Sim.SpellId.None ? (int)BAM.Sim.SpellId.Blink : (int)value; if (spell == v) return; spell = v; PlayerPrefs.SetInt(Key + "spell", v); Commit(); }
+        }
+
         public static BAM.Sim.Difficulty LastDifficulty
         {
             get { Load(); return (BAM.Sim.Difficulty)lastDifficulty; }
@@ -119,6 +127,7 @@ namespace BAM.Core
             tutorialCard = PlayerPrefs.GetInt(Key + "tutcard", 0) == 1;
             lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", 0), 0, BAM.Sim.HeroCatalog.Count - 1);
             lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, 2);
+            spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
         }
 
         // First start: Low on weak phones (little memory or few cores), else High. The player can change it in Settings.

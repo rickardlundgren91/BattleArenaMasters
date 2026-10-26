@@ -147,6 +147,7 @@ namespace BAM.Game
                 Seed = seed,
                 Tutorial = setup.Tutorial,
                 Island = island,
+                PlayerSpell = BamSettings.Spell, // the battle spell picked on the hero page (off in the guided match)
             };
             match = Match.Create(cfg);
             Screens.HideAll();

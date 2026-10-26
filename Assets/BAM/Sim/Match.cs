@@ -21,6 +21,8 @@ namespace BAM.Sim
         public HeroId[] Allies, Enemies;
         /// <summary>Test matches: every hero at slot i of its team's spawn (left to right) instead of the player in the middle.</summary>
         public bool SlotOrder;
+        /// <summary>The player's battle spell (Spells.cs); bots draw theirs with the seed.</summary>
+        public SpellId PlayerSpell = SpellId.Blink;
     }
 
     /// <summary>The player's controls for one tick, in map space (x right, y down the map).</summary>
@@ -31,7 +33,10 @@ namespace BAM.Sim
         public bool Special;
         /// <summary>The drag's direction (NaN = a tap) and length 0..1.</summary>
         public float AimAngle, AimK;
-        public static PlayerInput None => new PlayerInput { AimAngle = float.NaN };
+        /// <summary>The battle spell button was tapped, or its drag released, this tick; SpellAngle NaN = the way the hero faces.</summary>
+        public bool Spell;
+        public float SpellAngle, SpellK;
+        public static PlayerInput None => new PlayerInput { AimAngle = float.NaN, SpellAngle = float.NaN, SpellK = 1 };
     }
 
     public enum MatchState : byte { Countdown, Play, Over }
@@ -111,6 +116,7 @@ namespace BAM.Sim
                 var h = NewHero(enemies[i], Teams.Enemy, Map.SpawnX[1][i], Map.SpawnY[1][i]);
                 h.Bot = new BotBrain(h, enemyTier, this);
             }
+            AssignSpells();
         }
 
         int TileOf(Unit u) => (int)Math.Floor(u.Y) * Map.W + (int)Math.Floor(u.X);
@@ -171,6 +177,7 @@ namespace BAM.Sim
             Time += dt; Ticks++;
             inMoveX = input.MoveX; inMoveY = input.MoveY;
             if (input.Special) { specialBuf = Rules.SpecialBuffer; bufAng = input.AimAngle; bufK = input.AimK; }
+            if (input.Spell && Player != null) CastSpell(Player, input.SpellAngle, input.SpellK); // the battle spell (Spells.cs)
 
             // minions of a wave come out one by one
             for (int i = spawns.Count - 1; i >= 0; i--)
@@ -226,7 +233,7 @@ namespace BAM.Sim
                 }
                 if (u.Kind == UnitKind.Hero)
                 {
-                    if (!u.IsClone) UpdateSpecial(u, dt);
+                    if (!u.IsClone) { UpdateSpecial(u, dt); SpellTick(u); }
                     if (!u.InCombat(Time) && !u.IsClone)
                     {
                         u.RegenT += dt;
@@ -235,7 +242,7 @@ namespace BAM.Sim
                     else u.RegenT = 0;
                     if (CanAct(u) && !u.Has(St.Casting))
                     {
-                        if (u.Bot != null) u.Bot.Think(dt);
+                        if (u.Bot != null) { if (u.SpellChanEnd < 0) u.Bot.Think(dt); } // a bot stands still while it recalls
                         else if (u == Player) PlayerAct(u, dt);
                         else if (u.IsClone) AiClone(u, dt);
                     }
