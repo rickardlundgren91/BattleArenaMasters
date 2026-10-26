@@ -37,6 +37,8 @@ namespace BAM.Game
             public StatusFlags Flags;
             public float Channel = -1f;    // the recall channel shown, -1 none
             public bool Sprint;
+            public bool Marked, Spark;     // Tikta's Deathmark and Blast's chain spark shown (Tikta 2.0 / Blast 2.0)
+            public float ChainCd = -1f;    // the player's Blast: the chain cooldown arc shown, -1 none
             public Quaternion Rot;
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
@@ -502,11 +504,22 @@ namespace BAM.Game
                 {
                     Vector3 at = Coords.World(e.X, e.Y);
                     float size = Mathf.Max(0.5f, e.V);
-                    // Bram's passive (every 4th hammer) is the heavy anvil blow, not a bomb
-                    ArtKit.PlayFx((ProjKind)e.Kind == ProjKind.BramHammer ? FxKind.AnvilStrike : FxKind.Explosion, at, size, e.A != null ? e.A.Team : 0);
-                    BamAudio.PlayAt((ProjKind)e.Kind == ProjKind.BlastBomb ? SfxId.BlastExplosion : SfxId.HitHeavy, at);
+                    var pk = (ProjKind)e.Kind;
+                    // Bram's passive (every 4th hammer) is the heavy anvil blow, Blast's Chain Reaction its own crack, not a bomb
+                    FxKind ek = pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.BlastChain ? FxKind.ChainBoom : FxKind.Explosion;
+                    ArtKit.PlayFx(ek, at, pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : size, e.A != null ? e.A.Team : 0);
+                    BamAudio.PlayAt(pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom : SfxId.HitHeavy, at);
                     break;
                 }
+                // Tikta 2.0: her needle takes the Deathmark (its own Hit follows in the same tick)
+                case EventType.TiktaMarkPop:
+                    if (e.B != null && m.IsVisibleTo(e.B, Teams.Player)) ArtKit.PlayFx(FxKind.DeathmarkTaken, Coords.Of(e.B), 1f, e.B.Team, (int)HeroId.Tikta);
+                    break;
+                // Blast 2.0: Chain Reaction is set off; its blast follows BlastChainS.Delay later as an Explosion of ProjKind.BlastChain.
+                // The warning shows to everyone, so enemies there can see it coming.
+                case EventType.ChainSet:
+                    ArtKit.PlayChainWarn(Coords.World(e.X, e.Y), Mathf.Max(0.1f, e.V), BlastChainS.Delay);
+                    break;
                 case EventType.Pull:
                     if (e.B != null) BamAudio.PlayAt(SfxId.KnutAnchorHook, Coords.Of(e.B));
                     break;
@@ -627,7 +640,7 @@ namespace BAM.Game
             t.SetPositionAndRotation(pos, r.Rot);
 
             if (u.Alive == r.Dead) { r.Dead = !u.Alive; v.SetDead(r.Dead); if (!r.Dead) { r.Hp01 = -1f; r.Vis = -1f; } }
-            if (r.Dead) return;
+            if (r.Dead) { HeroMarksOff(r); return; }
 
             bool moving = m.Time - u.MovedAt < 0.1f;
             float speed01 = 0f;
@@ -651,11 +664,49 @@ namespace BAM.Game
                 if (ch != r.Channel) { r.Channel = ch; v.SetChannel(ch); }
                 bool sprint = u.Spell == SpellId.Sprint && Sprinting(u);
                 if (sprint != r.Sprint) { r.Sprint = sprint; v.SetSprint(sprint); }
+                HeroMarks(r, u, v);
             }
 
             float vis = !m.IsVisibleTo(u, Teams.Player) ? 0f : u.Team == Teams.Player && u.Kind == UnitKind.Hero && m.HiddenFromFoes(u) ? 0.5f : 1f;
             if (Hidden != null && Hidden(u)) vis = 0f; // the match intro: not yet beamed in
             if (vis != r.Vis) { r.Vis = vis; v.SetVisibility(vis); }
+        }
+
+        // Tikta 2.0's Deathmark over a marked hero (every frame while seen: it blinks at the end), and the player's Blast 2.0
+        // Chain Reaction: a spark crown over each enemy burning from her while the chain is ready, a cooldown arc at her feet
+        void HeroMarks(UnitRec r, Unit u, UnitView v)
+        {
+            bool seen = m.IsVisibleTo(u, Teams.Player);
+            float mark = seen ? MarkLeft(u) : -1f;
+            if (mark > 0f) { v.SetDeathmark(mark); r.Marked = true; }
+            else if (r.Marked) { v.SetDeathmark(-1f); r.Marked = false; }
+
+            var me = m.Player;
+            bool blast = me != null && me.Alive && me.Hero == HeroId.Blast && !me.IsClone;
+            bool spark = blast && seen && u.Team != me.Team && m.ChainLeft(me) <= 0f && m.BurnsFrom(u, me);
+            if (spark != r.Spark) { r.Spark = spark; v.SetChainSpark(spark); }
+
+            float cd = -1f;
+            if (u == me && blast) { float left = m.ChainLeft(me); if (left > 0f) cd = 1f - left / BlastChainS.Cooldown; }
+            if (cd >= 0f || r.ChainCd >= 0f) { r.ChainCd = cd; v.SetChainCooldown(cd); }
+        }
+
+        static void HeroMarksOff(UnitRec r)
+        {
+            if (r.Marked) { r.V.SetDeathmark(-1f); r.Marked = false; }
+            if (r.Spark) { r.V.SetChainSpark(false); r.Spark = false; }
+            if (r.ChainCd >= 0f) { r.V.SetChainCooldown(-1f); r.ChainCd = -1f; }
+        }
+
+        static float MarkLeft(Unit u)
+        {
+            if ((u.Flags & StatusFlags.Marked) == 0) return -1f;
+            for (int i = 0; i < u.StatusCount; i++)
+            {
+                var st = u.GetStatus(i);
+                if (st.Type == St.TiktaMark && st.T > 0f) return st.T;
+            }
+            return -1f;
         }
 
         // the Sprint spell's speed status: the hero's own SpeedPct at SprintPct (Spells.cs CastSpell)
@@ -672,7 +723,7 @@ namespace BAM.Game
         /// <summary>Hands every view back (match end).</summary>
         public void Dispose()
         {
-            for (int i = 0; i < units.Count; i++) ArtKit.Release(units[i].V);
+            for (int i = 0; i < units.Count; i++) { HeroMarksOff(units[i]); ArtKit.Release(units[i].V); } // pooled views go back plain
             for (int i = 0; i < dying.Count; i++) ArtKit.Release(dying[i].V);
             for (int i = 0; i < shots.Count; i++) if (shots[i].V != null) ArtKit.Release(shots[i].V);
             for (int i = 0; i < zones.Count; i++) ArtKit.Release(zones[i].V);
