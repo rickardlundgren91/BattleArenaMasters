@@ -11,7 +11,7 @@ namespace BAM.Game
     /// på kamera"). On a phone the frame is the whole safe area and the picture runs on under the status and navigation bars;
     /// a wider window (the editor's landscape Game view, a tablet) shows only the frame's width, with black edges beside it.
     /// Follows the player's hero a little ahead (towards the enemy); while it is dead it follows a living teammate and comes
-    /// back at the respawn. The guided match frames Fenn and the enemy tower together (the old game's tutCamY).
+    /// back at the respawn. The guided match frames Tyra and the enemy tower together (the old game's tutCamY).
     /// </summary>
     sealed class MatchCamera
     {
@@ -21,7 +21,7 @@ namespace BAM.Game
         static readonly float Pitch = Mathf.Asin(0.82f) * Mathf.Rad2Deg;
         const float Lead = 1.2f;        // the focus sits this far ahead of the hero, so more of the way forward is seen
         const float Over = 3f;          // the focus may pass the map edge by this much (the hero is not stuck under the buttons)
-        // the guided match: the enemy tower's foot this high on screen (share from the top), Fenn at most this low
+        // the guided match: the enemy tower's foot this high on screen (share from the top), Tyra at most this low
         const float TutTowerAt = 0.27f, TutHeroAt = 0.75f;
 
         static readonly Color IslandSky = new Color32(0x79, 0xb9, 0xee, 0xff);
@@ -137,7 +137,7 @@ namespace BAM.Game
             }
             if (m.Tut != null && m.Tut.Island)
             {
-                // the training island: framed whole until the bridge opens, then on Fenn (also through the pad's flight)
+                // the training island: framed whole until the bridge opens, then on the hero (also through the pad's flight)
                 speed = 4f;
                 return m.Tut.CamHold ? Coords.World(m.Tut.CamX, m.Tut.CamY) : Coords.Of(p);
             }
@@ -169,7 +169,7 @@ namespace BAM.Game
             float towerZ = m.Map.H - tw.Y, viewH = FrameLength;
             bool opening = tut.Step == Tutorial.StepMove && m.Time < Tutorial.OpeningTime;
             speed = opening ? 2.5f : 4f;
-            // the opening: rest on the tower a little above the middle, then glide down the lane to Fenn
+            // the opening: rest on the tower a little above the middle, then glide down the lane to Tyra
             if (tut.Step == Tutorial.StepMove && m.Time < Tutorial.OpenHold) return new Vector3(m.Map.W * 0.5f, 0f, towerZ - 0.1f * viewH);
             float onTower = towerZ - (0.5f - TutTowerAt) * viewH;
             float lead = hero.z + (TutHeroAt - 0.5f) * viewH;

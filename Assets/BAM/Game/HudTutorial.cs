@@ -11,7 +11,7 @@ namespace BAM.Game
     /// - Skip, small and quiet in the top right corner in both halves: the tutorial counts as done, then Home.
     /// - The arena half: DESTROY THE / ENEMY TOWER while the camera rests on the tower, then one short line in a navy pill at the
     ///   top, a soft trail of gold lights up the lane to the next landmark (the ring, the target, Knut, the tower), a gold arrow
-    ///   over the joystick in moment 1, over SPECIAL when it is ready for the tap and the drag (with a pulsing ring) and over BLINK, "+ CHARGE" flying from Fenn into
+    ///   over the joystick in moment 1, over SPECIAL when it is ready for the tap and the drag (with a pulsing ring) and over BLINK, "+ CHARGE" flying from Tyra into
     ///   the button on every confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED!
     ///   Great job! You're ready for BAM! with Tap to continue (no VICTORY, no result card).
     /// - The very first start: a picture of Home zooms in and fades into the island (Dissolve).
@@ -42,7 +42,7 @@ namespace BAM.Game
         CanvasGroup islandGroup;
         Image islandPlate, islandEdge, islandShadow, islandSheen, islandTabPlate, tutPillShadow, tutPillSheen;
         float islandShownAt, pillShownAt;
-        // healing: green "+N" over Fenn on every regen tick, and a soft green glow round him while the heal moment lasts
+        // healing: green "+N" over Tyra on every regen tick, and a soft green glow round him while the heal moment lasts
         float lastTutHp = -1f;
         Image healGlow, healRing;
         static readonly Color HealGreen = Hex(0x5dff8a), TabTeal = Hex(0x13a89e);
@@ -191,7 +191,7 @@ namespace BAM.Game
             islandShadow.rectTransform.anchoredPosition = new Vector2(0f, -fs * 0.18f);
             islandSheen.rectTransform.sizeDelta = new Vector2(-pad * 0.6f, -h * 0.55f);
             islandSheen.rectTransform.anchoredPosition = new Vector2(0f, h * 0.2f);
-            // the speaker tab: Fenn's name on teal, half over the card's top edge
+            // the speaker tab: the speaker's name on teal, half over the card's top edge
             islandWho.fontSize = Mathf.RoundToInt(fs * 0.62f);
             float tw = islandWho.preferredWidth + fs * 1.1f, tab = fs * 1.15f;
             islandTab.sizeDelta = new Vector2(tw, tab);
@@ -209,8 +209,8 @@ namespace BAM.Game
             g.alpha = Mathf.Clamp01((Time.unscaledTime - at) / 0.2f);
         }
 
-        // Healing shows (Rickard 2026-10-26: "ingen reg syntes"): every rise of Fenn's health in the arena half floats a green
-        // "+N" over him, and in the heal moment a soft green glow breathes round his feet while he is below full.
+        // Healing shows (Rickard 2026-10-26: "ingen reg syntes"): every rise of Tyra's health in the arena half floats a green
+        // "+N" over her, and in the heal moment a soft green glow breathes round her feet while she is below full.
         void HealFrame(bool play, Tutorial tu, Unit p)
         {
             if (play && p.Alive && lastTutHp >= 0f && p.Hp > lastTutHp + 0.5f) FloatWord(p, "+" + Mathf.RoundToInt(p.Hp - lastTutHp), HealGreen);
@@ -228,7 +228,7 @@ namespace BAM.Game
             healRing.color = new Color(HealGreen.r, HealGreen.g, HealGreen.b, 0.8f * (1f - ring));
         }
 
-        // "+ CHARGE" rises from Fenn and flies along an arc into the SPECIAL button, which takes it in with a gold ring
+        // "+ CHARGE" rises from Tyra and flies along an arc into the SPECIAL button, which takes it in with a gold ring
         void ChargeFly(bool play, Unit p, float W, float H)
         {
             var tu = m.Tut;
@@ -260,7 +260,7 @@ namespace BAM.Game
             }
         }
 
-        // a soft trail of gold lights from Fenn up the lane to the next landmark, each swelling as a wave runs along it; none once
+        // a soft trail of gold lights from Tyra up the lane to the next landmark, each swelling as a wave runs along it; none once
         // the landmark is in her reach
         void Trail(bool play, Tutorial tu, Unit p)
         {
@@ -514,7 +514,7 @@ namespace BAM.Game
                 chargeTexts[i] = c;
             }
 
-            // the island's line: no box, so it never hides what Fenn is doing
+            // the island's line: no box, so it never hides what the hero is doing
             islandPanel = CentredRect("IslandLine", safe);
             islandGroup = islandPanel.gameObject.AddComponent<CanvasGroup>();
             islandGroup.blocksRaycasts = false;
@@ -542,7 +542,7 @@ namespace BAM.Game
             TextDepth(islandWho);
             islandPanel.gameObject.SetActive(false);
 
-            // the heal glow round Fenn's feet, under the controls
+            // the heal glow round Tyra's feet, under the controls
             healGlow = Plain(world, "HealGlow", Color.clear);
             healGlow.sprite = UiKit.Circle;
             healRing = Plain(world, "HealRing", Color.clear);

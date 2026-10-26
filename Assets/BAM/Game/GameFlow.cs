@@ -34,7 +34,7 @@ namespace BAM.Game
         readonly MatchIntro intro = new MatchIntro();
         bool inMatch, paused, over, resultShown, resultMusic, endSent;
         float acc, overAt;
-        // the guided match is two matches with Fenn: the training island, then the first battle in the arena (Rickard 2026-10-26: one hero all through)
+        // the guided match is two matches with one hero: the training island, then the first battle in the arena (Rickard 2026-10-26: one hero all through, Tyra)
         float islandSeconds;
         // the first start shows Home this long before the guided match takes over (its picture zooms in and fades, Hud.Dissolve)
         const float FirstTutorialDelay = 0.6f;
@@ -58,7 +58,7 @@ namespace BAM.Game
             if (inMatch || BamSettings.TutorialDone) yield break; // the player was quicker
             yield return new WaitForEndOfFrame();
             var home = ScreenCapture.CaptureScreenshotAsTexture();
-            StartMatch(new MatchSetup { Hero = HeroId.Fenn, Difficulty = Difficulty.Easy, Tutorial = true });
+            StartMatch(new MatchSetup { Hero = HeroId.Tyra, Difficulty = Difficulty.Easy, Tutorial = true });
             hud.Dissolve(home);
         }
 
@@ -82,7 +82,7 @@ namespace BAM.Game
             Screens.ShowMainMenu();
         }
 
-        // The first time only (the old NewPlayer.FinishTutorial and FirstPicks): the card on Home, and the first match is Fenn
+        // The first time only (the old NewPlayer.FinishTutorial and FirstPicks): the card on Home, and the first match is Tyra
         // against Easy bots unless the player has already picked something.
         static void TutorialFinished()
         {
@@ -90,7 +90,7 @@ namespace BAM.Game
             BamSettings.TutorialDone = true;
             if (!BamSettings.PickedBefore)
             {
-                BamSettings.LastHero = (int)HeroId.Fenn;
+                BamSettings.LastHero = (int)HeroId.Tyra;
                 BamSettings.LastDifficulty = Difficulty.Easy;
             }
             BamSettings.TutorialCard = true;
@@ -142,7 +142,7 @@ namespace BAM.Game
             int seed = setup.Seed != 0 ? setup.Seed : Random.Range(1, int.MaxValue);
             var cfg = new MatchConfig
             {
-                PlayerHero = setup.Tutorial ? HeroId.Fenn : setup.Hero,
+                PlayerHero = setup.Tutorial ? HeroId.Tyra : setup.Hero,
                 Difficulty = setup.Difficulty,
                 Seed = seed,
                 Tutorial = setup.Tutorial,
@@ -231,7 +231,7 @@ namespace BAM.Game
 
         bool IslandDone() => match.Tut != null && match.Tut.Island && match.Tut.Done;
 
-        // the island's pad threw Fenn and the screen is black: the arena half starts behind it and fades in
+        // the island's pad threw the hero and the screen is black: the arena half starts behind it and fades in
         void SecondHalf()
         {
             islandSeconds = match.Time;

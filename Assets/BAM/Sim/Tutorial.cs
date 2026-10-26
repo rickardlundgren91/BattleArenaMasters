@@ -3,22 +3,22 @@ using System;
 namespace BAM.Sim
 {
     /// <summary>
-    /// The guided first match's arena half (the old game's "first battle", SimLoop.cs, played there with Tyra), with Fenn as on
-    /// the island (Rickard 2026-10-26: the tutorial goes on after the island, no switch of hero, and it must teach every control).
+    /// The guided first match's arena half (the old game's "first battle", SimLoop.cs), with Tyra as on the island (Rickard
+    /// 2026-10-26: no switch of hero, it must teach every control, and Tyra is the tutorial's hero).
     /// One walk up the lane of the real arena, one short line at a time: 1 move, 2 auto attack a harmless practice target (its hits
-    /// charge the real special), 3 TAP the special: the wolf comes and bites the target, which bursts, 4 DRAG the special: throw the
-    /// wolf onto a second target further up (the charge is full again for it), 5 the battle spell: tap BLINK, 6 Knut, who walked
-    /// to and fro in front of the tower until then, comes down the lane and fights back for real (Fenn cannot drop below 40 %), 7 out
-    /// of the fight Fenn heals back up (the real regen), 8 break the enemy tower, which falls to exactly TowerHits of Fenn's auto
+    /// charge the real special), 3 TAP the special: an auto-aimed bolt bursts the target, 4 DRAG the special: aim a bolt at a
+    /// second target further up (the charge is full again for it), 5 the battle spell: tap BLINK, 6 Knut, who walked
+    /// to and fro in front of the tower until then, comes down the lane and fights back for real (Tyra cannot drop below 40 %), 7 out
+    /// of the fight Tyra heals back up (the real regen), 8 break the enemy tower, which falls to exactly TowerHits of Tyra's auto
     /// attacks. No waves, no failure. The match screen reads this.
     /// </summary>
     public sealed class Tutorial
     {
         public const int StepMove = 0, StepAuto = 1, StepSpecial = 2, StepThrow = 3, StepBlink = 4, StepFight = 5, StepHeal = 6, StepTower = 7;
-        /// <summary>The opening: the camera rests on the enemy tower for OpenHold s, then glides down the lane to Fenn by OpeningTime.</summary>
+        /// <summary>The opening: the camera rests on the enemy tower for OpenHold s, then glides down the lane to Tyra by OpeningTime.</summary>
         public const float OpenHold = 1.3f, OpeningTime = 2.4f;
         public const int TowerHits = 6;
-        /// <summary>Moment 1's ring on the lane (Fenn walks to it, or any 2.5 tiles).</summary>
+        /// <summary>Moment 1's ring on the lane (Tyra walks to it, or any 2.5 tiles).</summary>
         public const float MarkX = 7.5f, MarkY = 16.2f;
         /// <summary>The practice target bursts this long after the special hit it (the special's own effect shows first).</summary>
         public const float BurstDelay = 0.15f;
@@ -38,31 +38,31 @@ namespace BAM.Sim
         public bool Done;
         /// <summary>When the tower fell (Match.Time), for the end screen.</summary>
         public float DoneAt = -99;
-        /// <summary>Fenn's confirmed hits (a rise of the real charge) at these match times, newest last: "+ CHARGE" flies from him to the button.</summary>
+        /// <summary>Tyra's confirmed hits (a rise of the real charge) at these match times, newest last: "+ CHARGE" flies from her to the button.</summary>
         public readonly float[] ChargeTimes = new float[8];
         public int ChargeCount;
         /// <summary>Confirmed hits on the tower so far (its bar is TowerHits blocks) and when the last one landed.</summary>
         public int TowerHitsTaken => TowerHitCount;
         public float LastTowerHit => TowerHitAt;
 
-        internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1, BlinkAt = -1;
+        internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1, BlinkAt = -1, PressAt = -99;
         internal int Gained, TowerHitCount;
-        internal bool Burst;
+        internal bool Burst, PressAimed;
         /// <summary>The special hit the practice target (it bursts a moment later).</summary>
         public bool BurstDone => Burst;
         /// <summary>How long the current line has been up (the screen fades it in over its first 0.3 s).</summary>
         public float LineShown => Shown;
 
-        // ---------- the training island (the first half, Fenn; TutorialIsland.cs). Unused in the arena half. ----------
+        // ---------- the training island (the first half, Tyra; TutorialIsland.cs). Unused in the arena half. ----------
         public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandTarget = 3, IslandPad = 4;
-        /// <summary>This is the island half: Step is one of the Island* steps, Done means the boost pad threw Fenn and the
+        /// <summary>This is the island half: Step is one of the Island* steps, Done means the boost pad threw Tyra and the
         /// picture has faded to black, so the game starts the arena half (a new Match with Tutorial and without Island).</summary>
         public bool Island;
         /// <summary>The line with the words to highlight between '|' marks (Line is the same text without them); '\n' breaks
         /// lines. Tip: highlight in the calm colour (teal) instead of red. Speaker: who says it ("FENN SAYS"), null = nobody.</summary>
         public string LineMarked, Speaker;
         public bool LineTip;
-        /// <summary>The camera frames the whole island at (CamX, CamY) until the bridge opens; then it follows Fenn.</summary>
+        /// <summary>The camera frames the whole island at (CamX, CamY) until the bridge opens; then it follows Tyra.</summary>
         public bool CamHold;
         public float CamX, CamY;
         /// <summary>A pulsing ring on the ground at (RingX, RingY), with a bouncing arrow over it when ArrowOnRing.</summary>
@@ -75,7 +75,7 @@ namespace BAM.Sim
         /// <summary>The boost pad, shown at its tile centre once the bridge opens.</summary>
         public bool PadOn;
         public float PadX, PadY;
-        /// <summary>The pad threw Fenn: he flies (St.Casting) and the picture fades to black, Fade 0..1.</summary>
+        /// <summary>The pad threw Tyra: she flies (St.Casting) and the picture fades to black, Fade 0..1.</summary>
         public bool Jumping;
         public float Fade;
         /// <summary>The leader of the three (taking it down takes down the other two).</summary>
@@ -89,22 +89,23 @@ namespace BAM.Sim
     {
         // positions: the old ones mirrored onto our map (y -> 35 - y); the enemy tower is at (7.5, 5.5)
         const float TutStartX = 7.5f, TutStartY = 19f, TutMarkX = Tutorial.MarkX, TutMarkY = Tutorial.MarkY, TutDummyX = 7.5f, TutDummyY = 12f;
-        // Knut walks calmly side to side 2 tiles in front of the tower, right of the lane, so he never stands in Fenn's way to it
+        // Knut walks calmly side to side 2 tiles in front of the tower, right of the lane, so he never stands in Tyra's way to it
         const float TutGuardY = 7.5f, TutGuardX0 = 9.0f, TutGuardX1 = 10.3f, TutGuardPace = 0.5f;
         const float TutMoveDist = 2.5f;   // tiles walked (any way) that end moment 1
         const float TutLineMin = 1.3f;    // the least time a line stays up
         const float TutRefill = 0.35f;    // the practice target refills below this share of its health, so it lasts until the special
         const float TutAfterBurst = 0.7f; // then the next moment
-        // moment 4's target: further up the lane, so the wolf is thrown at it
+        // moment 4's target: further up the lane, so the bolt is aimed at it
         const float TutThrowX = 7.5f, TutThrowY = 8.8f;
         const float TutAfterBlink = 0.8f;
-        // moment 6: Knut comes down the lane and fights back for real (long enough that Fenn feels it and has something to heal); Fenn never drops below 40 %
+        const float TutRefillAfter = 1.2f; // moment 4: the charge refills this long after the last press
+        // moment 6: Knut comes down the lane and fights back for real (long enough that Tyra feels it and has something to heal); Tyra never drops below 40 %
         const float TutKnutHp = 340f, TutKnutDmg = 1.8f, TutKnutPace = 0.8f, TutAfterFight = 0.8f, TutPlayerFloor = 0.4f;
-        // moment 7 ends when Fenn has healed back to this share (from 40 % about 8 s of the real regen)
+        // moment 7 ends when Tyra has healed back to this share (from 40 % about 8 s of the real regen)
         const float TutHealed = 0.95f;
 
-        const string LineMove = "Move with the joystick!", LineAuto = "Get close. Fenn attacks automatically!",
-            LineSpecial = "SPECIAL READY! TAP it to call your wolf!", LineThrow = "Now DRAG SPECIAL to throw the wolf at the target!",
+        const string LineMove = "Move with the joystick!", LineAuto = "Get close. Tyra attacks automatically!",
+            LineSpecial = "SPECIAL READY! TAP it to fire a bolt!", LineThrow = "Now DRAG SPECIAL to aim the bolt at the target!",
             LineBlink = "Tap BLINK to dash forward!", LineFight = "An enemy hero! Take Knut down!",
             LineHeal = "Stay out of fights to heal up!", LineTower = "Towers shoot! Destroy this one!";
 
@@ -116,8 +117,8 @@ namespace BAM.Sim
             // the towers never shoot in the guided match (their health and damage are untouched)
             for (int t = 0; t < 2; t++) AddStatus(Towers[t], St.Disarm, 1e9f);
 
-            // Fenn, made stronger as the old onboarding match did (FirstOnboardingMatch)
-            var p = NewHero(HeroId.Fenn, Teams.Player, TutStartX, TutStartY);
+            // Tyra, made stronger as the old onboarding match did (FirstOnboardingMatch)
+            var p = NewHero(HeroId.Tyra, Teams.Player, TutStartX, TutStartY);
             p.IsPlayer = true; p.DmgMult = 2; p.TakenMult = 0.5f; p.Charge = 0; Player = p;
             tu.Lx = p.X; tu.Ly = p.Y;
 
@@ -179,6 +180,8 @@ namespace BAM.Sim
             var tu = Tut; var p = Player;
             tu.T += dt;
             RefreshTutorial();
+            // the special pressed this tick (PlayerAct casts it later in this tick): a drag carries an angle, a tap does not
+            if (specialBuf > 0) { tu.PressAt = Time; tu.PressAimed = !float.IsNaN(bufAng); }
             // a confirmed hit is a rise of the real charge (no charge for misses, wall-blocked or dropped shots, or the special)
             if (p.Charge > tu.LastCharge)
             {
@@ -203,10 +206,10 @@ namespace BAM.Sim
             }
             else if (k != null && k.Alive)
             {
-                // the fight: Knut walks at Fenn until Fenn is in his reach, then stands and swings
+                // the fight: Knut walks at Tyra until Tyra is in his reach, then stands and swings
                 float dx = p.X - k.X, dy = p.Y - k.Y, dist = SimMath.Hypot(dx, dy);
                 if (p.Alive && dist > (k.Range + p.R) * 0.9f) MoveUnit(k, dx / dist * TutKnutPace, dy / dist * TutKnutPace, dt);
-                // Fenn cannot lose the guided match
+                // Tyra cannot lose the guided match
                 if (p.Alive && p.Hp < p.MaxHp * TutPlayerFloor) p.Hp = p.MaxHp * TutPlayerFloor;
             }
             else if (k != null) k.RespawnT = 1e9f; // Knut stays down
@@ -222,7 +225,7 @@ namespace BAM.Sim
                         if (d != null) d.RemoveAll(St.Untargetable);
                     }
                     break;
-                case Tutorial.StepAuto: if (tu.Gained > 0 && tu.Shown >= TutLineMin) TutNext(Tutorial.StepSpecial); break; // once Fenn has hit and the line could be read
+                case Tutorial.StepAuto: if (tu.Gained > 0 && tu.Shown >= TutLineMin) TutNext(Tutorial.StepSpecial); break; // once Tyra has hit and the line could be read
                 case Tutorial.StepSpecial:
                     if (tu.Burst && Time - tu.BurstAt >= TutAfterBurst)
                     {
@@ -231,9 +234,9 @@ namespace BAM.Sim
                     }
                     break;
                 case Tutorial.StepThrow:
-                    // the charge comes back full until a throw lands on the target (a tap only calls the wolf again, which does not
-                    // count here); never while a thrown wolf is in the air, so a second cast cannot replace it before it lands
-                    if (!tu.Burst) { if (!p.SpecialReady && !WolfFlying(p)) p.Charge = p.HDef.MaxCharge; }
+                    // the charge comes back full until an aimed bolt hits the target (a tap's auto-aimed bolt does not count here),
+                    // a moment after the last press, so the bolt in the air lands first
+                    if (!tu.Burst) { if (!p.SpecialReady && Time - tu.PressAt >= TutRefillAfter) p.Charge = p.HDef.MaxCharge; }
                     else if (Time - tu.BurstAt >= TutAfterBurst)
                     {
                         TutNext(Tutorial.StepBlink);
@@ -255,13 +258,7 @@ namespace BAM.Sim
             RefreshTutorial();
         }
 
-        bool WolfFlying(Unit owner)
-        {
-            for (int i = 0; i < Units.Count; i++) { var u = Units[i]; if (u.Alive && u.Kind == UnitKind.Wolf && u.Owner == owner && u.Wolf == WolfMode.Fly) return true; }
-            return false;
-        }
-
-        // moment 6: Knut becomes a real enemy: a target for Fenn, and his own swings hurt
+        // moment 6: Knut becomes a real enemy: a target for Tyra, and his own swings hurt
         void StartFight()
         {
             var k = Tut.Guard;
@@ -271,19 +268,18 @@ namespace BAM.Sim
             Tut.KnutDownAt = -1;
         }
 
-        /// <summary>DealDamage, for the guided match's enemy tower and practice target only. The tower: only Fenn's own auto attacks
+        /// <summary>DealDamage, for the guided match's enemy tower and practice target only. The tower: only Tyra's own auto attacks
         /// in moment 4 hurt it, each taking the same share of what is left, so the TowerHits-th hit always breaks it (regen between
-        /// hits changes nothing); everything else deals 0. The target: Fenn's special makes it burst (UpdateTutorial).</summary>
+        /// hits changes nothing); everything else deals 0. The target: Tyra's special makes it burst (UpdateTutorial).</summary>
         float TutDamage(Unit src, Unit tgt, float amount, DmgKind kind)
         {
             var tu = Tut; var p = Player;
             if (tu.Island) return amount;
             if (tgt == tu.Dummy)
             {
-                // Fenn's special is his wolf. Moment 3 (tap): its bites, or a thrown wolf's pounce, burst the target. Moment 4 (drag):
-                // only a thrown wolf's pounce (Fenn's own special hit) does.
-                bool pounce = src == p && kind == DmgKind.Special, bite = src != null && src.Kind == UnitKind.Wolf && src.Owner == p;
-                bool special = tu.Step == Tutorial.StepSpecial ? pounce || bite : tu.Step == Tutorial.StepThrow && pounce;
+                // Tyra's special is her bolt. Moment 3 (tap): any bolt bursts the target. Moment 4 (drag): only a bolt she aimed.
+                bool bolt = src == p && kind == DmgKind.Special;
+                bool special = bolt && (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow && tu.PressAimed);
                 if (special && !tu.Burst) { tu.Burst = true; tu.BurstAt = Time; }
                 return amount;
             }
