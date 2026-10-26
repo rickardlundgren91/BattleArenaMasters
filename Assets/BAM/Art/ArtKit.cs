@@ -75,6 +75,8 @@ namespace BAM.Art
         public abstract void Launch(Vector3 from, Vector3 to, float flightTime);
         /// <summary>Knut's anchor: draw a chain from the projectile back to this point every frame (null = no chain).</summary>
         public virtual void SetTether(Transform anchor) { }
+        /// <summary>The shot hit something: its splash plays when it ends. Shots never marked end in a small fizzle (a miss).</summary>
+        public virtual void MarkHit() { }
     }
 
     public abstract class ZoneView : MonoBehaviour
@@ -96,6 +98,7 @@ namespace BAM.Art
     {
         Hit = 0, HitBig = 1, Death = 2, Respawn = 3, LevelUp = 4, Explosion = 5, TowerDestroyed = 6, ShieldPop = 7,
         Cast = 8, Bounce = 9, WolfSummon = 10, CloneSpawn = 11, CloneEnd = 12, MinionSpawn = 13, TowerShotFlash = 14, AnchorHit = 15,
+        AnvilStrike = 16, WolfLand = 17,
     }
 
     public static class ArtKit
@@ -311,10 +314,10 @@ namespace BAM.Art
         }
 
         /// <summary>One-shot effect at a world position. size scales it (1 = default for that kind).</summary>
-        public static void PlayFx(FxKind kind, Vector3 position, float size = 1f, int team = 0)
+        public static void PlayFx(FxKind kind, Vector3 position, float size = 1f, int team = 0, int hero = -1)
         {
             if (!ready) return;
-            Fx.Play(kind, position, size <= 0f ? 1f : size, team == 1 ? 1 : 0);
+            Fx.Play(kind, position, size <= 0f ? 1f : size, team == 1 ? 1 : 0, hero);
         }
 
         /// <summary>A battle spell went off (event SpellCast): from = where the caster stood (a blink's start), at = where it is now.</summary>

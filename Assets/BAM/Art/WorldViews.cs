@@ -21,12 +21,14 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched, mirror, struck, arc;
+        bool melee, launched, mirror, struck, arc, hit;
         Color arcColor;
         static Texture2D arcTex;
         static bool arcLoaded;
         MeshFilter visF;
-        static int swings; // every other swing comes from the other side (MLBB: the combo alternates left and right)
+        // every other swing comes from the other side (MLBB: the combo alternates left and right), counted per kind so minions
+        // round Fenn do not break his rhythm
+        static readonly int[] swings = new int[32];
 
         const float Height = 0.55f;
 
@@ -50,8 +52,8 @@ namespace BAM.Art
                 visR.sharedMaterial = painted ? FxAtlas.Material(ArtMaterials.UnlitAdd) : ArtMaterials.Instance(ArtMaterials.UnlitAdd);
                 if (arc) { visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, arcTex); visR.sharedMaterial.mainTexture = arcTex; }
                 // the heroes' own swing colours (MLBB analysis 8): Fenn silver-cyan, Knut steel blue; the wolf ghost blue, minions the team's
-                Color c = k == ProjKind.WolfBite ? new Color(0.6f, 0.9f, 1f, 1f) : k == ProjKind.KnutHit ? (Color)Fx.HeroMain(HeroId.Knut)
-                    : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : (Color)Pal.Get(Pal.TeamLight(t));
+                Color c = k == ProjKind.WolfBite ? (Color)Fx.HeroMain(HeroId.Fenn) : k == ProjKind.KnutHit ? (Color)Fx.HeroMain(HeroId.Knut)
+                    : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : (Color)Pal.Get(Pal.TeamLight(t)) * 0.6f; // minions' arcs dimmer
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, c);
                 arcColor = c;
             }
@@ -98,7 +100,7 @@ namespace BAM.Art
                 case ProjKind.MoaBolt: c = new Color(1f, 0.8f, 0.25f, 0.8f); return true;
                 case ProjKind.BlastFire: c = new Color(1f, 0.5f, 0.1f, 0.9f); return true;
                 case ProjKind.TiktaNeedleSpecial: c = new Color(0.2f, 1f, 0.85f, 0.8f); return true;
-                case ProjKind.BramHammerSpecial: c = Pal.Get(Pal.TeamLight(team)); c.a = 0.8f; return true;
+                case ProjKind.BramHammerSpecial: c = Fx.HeroMain(HeroId.Bram); c.a = 0.8f; return true; // his forge orange, not the team's
                 case ProjKind.TowerShot: c = Pal.Get(Pal.TeamLight(team)); c.a = 0.9f; return true;
                 case ProjKind.TyraArrow: c = new Color(1f, 1f, 1f, 0.45f); return true;
                 default: c = Color.clear; return false;
@@ -111,6 +113,7 @@ namespace BAM.Art
             flight = Mathf.Max(0.05f, flightTime);
             age = 0f; spin = 0f; sparkT = 0f; trailFxT = 0f;
             launched = true;
+            hit = false;
             Vector3 d = b - a; d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : transform.forward;
             float dist = d.magnitude;
@@ -122,11 +125,19 @@ namespace BAM.Art
             if (melee)
             {
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, arc ? arcColor : WithAlpha(visR.sharedMaterial.GetColor(ArtMaterials.BaseColor), 1f));
-                mirror = (++swings & 1) == 0;
+                mirror = (++swings[(int)kind & 31] & 1) == 0;
                 struck = false;
                 if (!arc && FxAtlas.Texture != null) visF.sharedMesh = FxAtlas.SlashQuad(mirror);
             }
         }
+
+        // the heroes' blades get the big arc; the wolf a smaller one, minions small (recipe: they must not fill the lane)
+        static float ArcScale(ProjKind k) => k == ProjKind.FennSlash || k == ProjKind.KnutHit ? 1.6f : k == ProjKind.WolfBite ? 1.0f : 0.8f;
+
+        // skillshots can miss: their big splash only plays when the game says they hit
+        static bool CanMiss(ProjKind k) => k == ProjKind.TyraBolt || k == ProjKind.TiktaNeedleSpecial || k == ProjKind.BramHammerSpecial;
+
+        public override void MarkHit() => hit = true;
 
         public override void SetTether(Transform anchor)
         {
@@ -174,7 +185,7 @@ namespace BAM.Art
                 // the swing arc sweeps and fades over a short moment, however long the hit takes
                 float life = Mathf.Min(flight, 0.18f) + 0.12f;
                 float k = Mathf.Clamp01(age / life);
-                float s = (0.7f + k * 0.5f) * (arc ? 1.6f : 1f);
+                float s = (0.7f + k * 0.5f) * (arc ? ArcScale(kind) : 1f);
                 vis.localScale = new Vector3(s, 1f, s);
                 vis.rotation = Quaternion.LookRotation(dir) * Quaternion.Euler(0f, mirror ? Mathf.Lerp(40f, -40f, k) : Mathf.Lerp(-40f, 40f, k), 0f);
                 if (!struck && age >= Mathf.Min(flight, 0.18f))
@@ -182,7 +193,7 @@ namespace BAM.Art
                     // the hit sprays out behind the target in the swing's direction, with a small white core (MLBB analysis 7-8)
                     struck = true;
                     Vector3 at = to + new Vector3(0f, 0.5f, 0f);
-                    Color32 sc = kind == ProjKind.KnutHit ? Fx.HeroAccent(HeroId.Knut) : kind == ProjKind.FennSlash ? Fx.HeroMain(HeroId.Fenn) : new Color32(255, 220, 160, 255);
+                    Color32 sc = kind == ProjKind.KnutHit ? Fx.HeroAccent(HeroId.Knut) : kind == ProjKind.FennSlash || kind == ProjKind.WolfBite ? Fx.HeroMain(HeroId.Fenn) : new Color32(255, 220, 160, 255);
                     Fx.Flash(at, 0.1f, 0.4f, new Color(1f, 1f, 1f, 0.9f), 0.05f);
                     Fx.SparksAlong(at, to - from, kind == ProjKind.MeleeMinionHit ? 3 : 7, sc, 0.11f, 4.5f, 0.2f);
                     if (kind == ProjKind.KnutHit) Fx.Drops(at, 5, Fx.HeroAccent(HeroId.Knut), 0.12f, 2.2f, 0.4f, 1.2f, 0.1f);
@@ -226,7 +237,11 @@ namespace BAM.Art
         public void OnRelease()
         {
             // the shot's own splash where it ended (bombs and the anchor have their own effects from the game layer)
-            if (launched && !melee && age > 0.02f && kind != ProjKind.BlastBomb && kind != ProjKind.KnutAnchor) Fx.Impact(kind, vis.position, team);
+            if (launched && !melee && age > 0.02f && kind != ProjKind.BlastBomb && kind != ProjKind.KnutAnchor)
+            {
+                if (CanMiss(kind) && !hit) Fx.Fizzle(kind, vis.position, team);
+                else Fx.Impact(kind, vis.position, team);
+            }
             launched = false;
             tether = null;
             if (chainR != null) chainR.enabled = false;

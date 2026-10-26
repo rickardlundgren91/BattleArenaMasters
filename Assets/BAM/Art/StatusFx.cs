@@ -43,8 +43,19 @@ namespace BAM.Art
         public void Set(StatusFlags f)
         {
             if (f == flags) return;
+            // gain and loss come from the flags, not the renderer (off while hidden): stepping out of a bush is no new shield
+            bool had = Has(flags, StatusFlags.Shielded), has = Has(f, StatusFlags.Shielded);
             flags = f;
             Refresh();
+            if (!visible || had == has) return;
+            if (has)
+            {
+                shieldT = 0f;
+                Vector3 c = parent.position + new Vector3(0f, height * 0.5f, 0f);
+                Fx.Flash(c, 0.3f, 1.1f, new Color(1f, 0.85f, 0.35f, 0.8f), 0.12f);
+                Fx.Glow(c, 8, Pal.Get(Pal.Honey), 0.2f, 1.6f, 0.35f, 0.4f, 0.3f);
+            }
+            else Fx.Play(FxKind.ShieldPop, parent.position, 1f, 0);
         }
 
         static bool Has(StatusFlags f, StatusFlags bit) => (f & bit) != 0;
@@ -56,17 +67,7 @@ namespace BAM.Art
             Show(Root, Has(flags, StatusFlags.Rooted));
             Show(Burn, Has(flags, StatusFlags.Burning));
             Show(Poison, Has(flags, StatusFlags.Poisoned));
-            bool hadShield = r[Shield] != null && r[Shield].enabled;
             Show(Shield, Has(flags, StatusFlags.Shielded));
-            bool hasShield = r[Shield] != null && r[Shield].enabled;
-            if (hasShield && !hadShield)
-            {
-                shieldT = 0f;
-                Vector3 c = parent.position + new Vector3(0f, height * 0.5f, 0f);
-                Fx.Flash(c, 0.3f, 1.1f, new Color(1f, 0.85f, 0.35f, 0.8f), 0.12f);
-                Fx.Glow(c, 8, Pal.Get(Pal.Honey), 0.2f, 1.6f, 0.35f, 0.4f, 0.3f);
-            }
-            else if (!hasShield && hadShield && visible) Fx.Play(FxKind.ShieldPop, parent.position, 1f, 0);
             Show(Haste, Has(flags, StatusFlags.Hasted));
             Show(Illusion, Has(flags, StatusFlags.Illusion));
             Show(StunRing, Has(flags, StatusFlags.Stunned));

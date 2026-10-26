@@ -335,7 +335,7 @@ namespace BAM.Art
         public override void PlayCast()
         {
             castT = 0f;
-            if (IsHero && !dead) Fx.HeroCast(HeroIndex, transform.position);
+            if (IsHero && !dead && vis > 0.01f) Fx.HeroCast(HeroIndex, transform.position); // never gives a hider away
             if (clips != null) { clips[CCast].SetTime(0.0); clips[CCast].SetTime(0.0); clips[CCast].SetSpeed(1.2f); }
             if (gear != null) gear.Throw(castLen * 0.35f);
         }

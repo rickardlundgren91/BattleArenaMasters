@@ -214,9 +214,10 @@ namespace BAM.Art
                 r.velocityScale = 0.06f;
                 r.lengthScale = 2.2f;
             }
-            if ((t = RickardFx.Load("tx_fx_particles")) != null)
+            // his newer spark star sits in the atlas (cell 1); the old 2x2 sheet only stands in without the atlas
+            if (star == null && (t = RickardFx.Load("tx_fx_particles")) != null)
             {
-                if (star == null) star = MakeSystem("BAM Stars", ArtMaterials.ParticleAdd, 0f, 0.4f, 1f, 200);
+                star = MakeSystem("BAM Stars", ArtMaterials.ParticleAdd, 0f, 0.4f, 1f, 200);
                 Retexture(star, t, 2, 2, 1, false); // his 2x2 sheet: dot, star, diamond, spark; the star
             }
             if ((t = RickardFx.Load("tx_fx_flash_burst")) != null)
@@ -430,13 +431,14 @@ namespace BAM.Art
         /// <summary>An expanding ring on the ground (flat) or a swelling ball (flash). Radii in units.</summary>
         public static void Ring(Vector3 pos, float r0, float r1, Color c, float life, float thickness = 0.8f)
         {
-            if (shock != null)
+            if (shock != null && r1 >= r0)
             {
                 // his flipbook's last ring reaches about 0.9 of the frame: one particle sized so it ends at r1
                 Emit1(shock, new Vector3(pos.x, 0.06f, pos.z), c, r1 * 2.2f, life * 1.3f);
                 return;
             }
             // the painted shockwave (its rim sits at 0.82 of the cell's half width: sized so the rim lands on the radius)
+            // (a closing ring, Recall's or a cancel's, uses this path too: the flipbook only grows)
             if (FxAtlas.Texture != null) Spawn(FxAtlas.Quad(FxAtlas.Shockwave), pos, r0 * 2.44f, r1 * 2.44f, c, life, true, 1);
             else Spawn(Shapes.RingMesh(thickness, Pal.White), pos, r0, r1, c, life, true, 0);
         }
@@ -444,15 +446,18 @@ namespace BAM.Art
         public static void Flash(Vector3 pos, float r0, float r1, Color c, float life) => Spawn(Shapes.Ball(), pos, r0, r1, c, life, false, 0);
 
         /// <summary>Cracks in the ground that fade (heavy landings, explosions). Radius in units.</summary>
-        public static void Crack(Vector3 pos, float radius, float life, float alpha = 0.7f)
+        public static void Crack(Vector3 pos, float radius, float life, float alpha = 0.7f) => Crack(pos, radius, life, new Color(1f, 0.75f, 0.45f, alpha));
+
+        /// <summary>Cracks in a colour of their own (glowing lava orange by default; Knut's water anchor a dim blue-grey).</summary>
+        public static void Crack(Vector3 pos, float radius, float life, Color c)
         {
             if (crackPs != null)
             {
-                Emit1(crackPs, new Vector3(pos.x, 0.03f, pos.z), new Color(1f, 0.75f, 0.45f, alpha), radius * 2.2f, life, Random.value * 360f);
+                Emit1(crackPs, new Vector3(pos.x, 0.03f, pos.z), c, radius * 2.2f, life, Random.value * 360f);
                 return;
             }
             if (FxAtlas.Texture == null) return;
-            Spawn(FxAtlas.Quad(FxAtlas.Crack), pos, radius * 2f, radius * 2.1f, new Color(1f, 1f, 1f, alpha), life, true, 2);
+            Spawn(FxAtlas.Quad(FxAtlas.Crack), pos, radius * 2f, radius * 2.1f, new Color(1f, 1f, 1f, c.a), life, true, 2);
             live[live.Count - 1].T.rotation = Quaternion.Euler(0f, Random.value * 360f, 0f);
         }
 
@@ -561,12 +566,32 @@ namespace BAM.Art
         static Color32 C(byte pal) => Pal.Get(pal);
         static Color32 C(byte pal, byte a) { Color32 c = Pal.Get(pal); c.a = a; return c; }
 
-        public static void Play(FxKind kind, Vector3 p, float size, int team)
+        /// <summary>hero (a HeroId, or -1): whose attack or cast it is, so hits and casts wear that hero's two colours (MLBB rule:
+        /// two colours per skill); -1 (minions, towers) keeps the neutral look.</summary>
+        public static void Play(FxKind kind, Vector3 p, float size, int team, int hero = -1)
         {
             Color32 teamC = C(Pal.Team(team)), teamL = C(Pal.TeamLight(team));
             Vector3 mid = p + Vector3.up * 0.5f;
+            if (hero >= heroMain.Length) hero = -1;
+            bool heavy = hero == (int)HeroId.Bram || hero == (int)HeroId.Knut || hero == (int)HeroId.Blast;
             switch (kind)
             {
+                case FxKind.Hit when hero >= 0:
+                    Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
+                    Sparks(mid, 6, heroMain[hero], 0.12f * size, 3f, 0.25f, 1f);
+                    Stars(mid, 1, heroAccent[hero], 0.35f * size, 0.5f, 0.2f);
+                    break;
+                case FxKind.HitBig when hero >= 0:
+                    Pow(mid, 1, C(Pal.Cream), 0.9f * size, 0.18f);
+                    Rays(mid, (Color)heroMain[hero], 1.3f * size, 0.2f);
+                    Sparks(mid, 12, heroMain[hero], 0.16f * size, 4.5f, 0.35f, 1.5f);
+                    Stars(mid, 2, heroAccent[hero], 0.45f * size, 1.5f, 0.25f, 1f);
+                    if (heavy)
+                    {
+                        Chunks(p + Vector3.up * 0.2f, 3, C(Pal.Rock), 0.14f * size, 2.5f, 0.6f, 2f);
+                        Ring(p, 0.2f * size, 0.9f * size, (Color)heroMain[hero], 0.25f);
+                    }
+                    break;
                 case FxKind.Hit:
                     Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
                     Sparks(mid, 6, C(Pal.FireCore), 0.12f * size, 3f, 0.25f, 1f);
@@ -602,17 +627,35 @@ namespace BAM.Art
                     Ring(p, 0.2f * size, 0.8f * size, new Color(1f, 1f, 0.7f, 0.9f), 0.35f, 0.6f);
                     break;
                 case FxKind.Explosion:
-                    Flash(mid, 0.5f * size, 1.9f * size, new Color(1f, 1f, 1f, 0.95f), 0.08f); // the white core first
-                    Ring(p, 0.3f * size, 2.1f * size, (Color)heroAccent[(int)HeroId.Blast], 0.4f, 0.6f);
+                    Flash(mid, 0.4f * size, 1.2f * size, new Color(1f, 1f, 1f, 0.95f), 0.08f); // the white core first; rings end on the real radius
+                    Ring(p, 0.3f * size, 1.0f * size, (Color)heroAccent[(int)HeroId.Blast], 0.4f, 0.6f);
                     Pow(mid, 1, C(Pal.FireCore), 1.8f * size, 0.22f);
-                    Flash(mid, 0.4f * size, 1.4f * size, new Color(1f, 0.6f, 0.2f, 1f), 0.25f);
+                    Flash(mid, 0.4f * size, 1.0f * size, new Color(1f, 0.6f, 0.2f, 1f), 0.25f);
                     Flames(mid, 14, C(Pal.Fire), 0.8f * size, 2.5f * size, 0.5f, 1.2f, 0.3f * size);
                     Sparks(mid, 14, C(Pal.FireCore), 0.14f, 6f * size, 0.5f, 2f);
-                    Smoke(mid, 10, C(Pal.Ink, 170), 0.8f * size, 1.4f * size, 1.0f, 0.8f, 0.4f * size);
+                    Smoke(mid, 6, C(Pal.Ink, 170), 0.8f * size, 1.4f * size, 1.0f, 0.8f, 0.4f * size);
                     Chunks(mid, 8, C(Pal.Bomb), 0.16f * size, 5f, 0.7f, 3f);
                     Crack(p, 1.0f * size, 1.2f);
-                    Nova(p, new Color(1f, 0.6f, 0.25f, 1f), 1.6f * size, 0.45f);
-                    Ring(p, 0.3f * size, 1.8f * size, new Color(1f, 0.7f, 0.3f, 0.9f), 0.35f);
+                    Nova(p, new Color(1f, 0.6f, 0.25f, 1f), 1.0f * size, 0.45f);
+                    Ring(p, 0.3f * size, 0.8f * size, new Color(1f, 0.7f, 0.3f, 0.9f), 0.35f);
+                    break;
+                case FxKind.AnvilStrike:
+                {
+                    // Bram's passive (every 4th hammer): the recipe's heavy anvil blow in his forge colours, ring on the real radius
+                    Color32 m = heroMain[(int)HeroId.Bram], a = heroAccent[(int)HeroId.Bram];
+                    Flash(mid, 0.25f * size, 0.8f * size, new Color(1f, 1f, 1f, 0.9f), 0.07f);
+                    Ring(p, 0.2f * size, size, (Color)m, 0.3f);
+                    Sparks(mid, 10, a, 0.12f, 4f, 0.3f, 1.2f);
+                    Chunks(p + Vector3.up * 0.2f, 5, C(Pal.Rock), 0.13f, 3f, 0.6f, 2.2f);
+                    Dust(p + Vector3.up * 0.1f, 4, C(Pal.Ground, 200), 0.5f, 1.2f, 0.5f, 0.3f, 0.2f);
+                    Crack(p, 0.5f * size, 0.8f);
+                    break;
+                }
+                case FxKind.WolfLand:
+                    // Fenn's wolf lands on nothing: a soft ring and dust, no bite
+                    Ring(p, 0.2f * size, 1.2f * size, (Color)heroMain[(int)HeroId.Fenn], 0.35f);
+                    Dust(p + Vector3.up * 0.1f, 4, C(Pal.Ground, 200), 0.5f * size, 1.2f, 0.5f, 0.3f, 0.2f);
+                    Wisps(p + Vector3.up * 0.3f, 3, heroAccent[(int)HeroId.Fenn], 0.5f * size, 0.6f, 0.6f, 0.6f, 0.2f);
                     break;
                 case FxKind.TowerDestroyed:
                     Pow(p + Vector3.up * 1.5f, 1, C(Pal.Cream), 3f * size, 0.3f);
@@ -634,6 +677,11 @@ namespace BAM.Art
                     Shards(mid, 6, C(Pal.Honey), 0.09f * size, 3.5f, 0.5f, 1.5f, 0.3f);
                     Ring(p, 0.4f * size, 1.1f * size, new Color(1f, 0.85f, 0.3f, 0.8f), 0.3f);
                     break;
+                case FxKind.Cast when hero >= 0:
+                    // HeroCast already gives the glow and stars: only the ground swirl and ring, in the hero's two colours
+                    Swirl(p, 1.1f * size, (Color)heroMain[hero], 0.5f);
+                    Ring(p, 0.3f * size, 1.1f * size, (Color)heroAccent[hero], 0.35f);
+                    break;
                 case FxKind.Cast:
                     Swirl(p, 1.1f * size, (Color)teamL, 0.5f);
                     Ring(p, 0.3f * size, 1.1f * size, (Color)teamL, 0.35f);
@@ -649,19 +697,26 @@ namespace BAM.Art
                         for (int i = 1; i < steps; i++) Glow(a0 + d0 * (i / (float)steps), 1, heroAccent[(int)HeroId.Bram], 0.16f, 0.05f, 0.15f);
                     }
                     lastBounce = mid; lastBounceT = Time.time;
-                    Pow(mid, 1, C(Pal.Steel), 0.6f * size, 0.14f);
-                    Sparks(mid, 8, C(Pal.Steel), 0.12f, 3.5f, 0.3f, 1.2f);
-                    Ring(p, 0.2f * size, 0.8f * size, new Color(0.9f, 0.95f, 1f, 0.8f), 0.22f);
+                    // each bounce an anvil clink in Bram's forge colours
+                    Flash(mid, 0.15f, 0.55f, new Color(1f, 1f, 1f, 0.9f), 0.06f);
+                    Pow(mid, 1, heroAccent[(int)HeroId.Bram], 0.6f * size, 0.14f);
+                    Sparks(mid, 8, heroMain[(int)HeroId.Bram], 0.12f, 3.5f, 0.3f, 1.2f);
+                    Crack(p, 0.4f, 0.7f);
+                    Ring(p, 0.2f * size, 0.8f * size, (Color)heroMain[(int)HeroId.Bram], 0.22f);
                     break;
                 case FxKind.WolfSummon:
-                    Pillar(p, 1.2f * size, 2.4f * size, new Color(0.6f, 0.9f, 1f, 1f), 0.6f);
-                    Swirl(p, 1.2f * size, new Color(0.6f, 0.9f, 1f, 1f), 0.6f);
-                    Wisps(p + Vector3.up * 0.3f, 6, C(Pal.Ghost), 0.7f * size, 1.2f, 0.8f, 1f, 0.3f);
-                    Glow(p + Vector3.up * 0.3f, 12, C(Pal.Ghost), 0.25f * size, 1.6f, 0.7f, 0.8f, 0.3f);
-                    Stars(p + Vector3.up * 0.6f, 4, C(Pal.GhostEye), 0.3f * size, 1.2f, 0.6f, 1f, 0.4f);
-                    Smoke(p + Vector3.up * 0.2f, 6, C(Pal.GhostDark, 140), 0.6f * size, 0.8f, 0.7f, 0.4f, 0.3f);
-                    Ring(p, 0.2f * size, 1.2f * size, new Color(0.6f, 0.9f, 1f, 0.9f), 0.45f);
+                {
+                    // Fenn's own two colours (silver-cyan, purple) and the recipe's white flash as the wolf appears
+                    Color32 m = heroMain[(int)HeroId.Fenn], a = heroAccent[(int)HeroId.Fenn];
+                    Flash(mid, 0.2f * size, 0.8f * size, new Color(1f, 1f, 1f, 0.9f), 0.08f);
+                    Pillar(p, 1.2f * size, 2.4f * size, (Color)m, 0.6f);
+                    Swirl(p, 1.2f * size, (Color)m, 0.6f);
+                    Wisps(p + Vector3.up * 0.3f, 6, a, 0.7f * size, 1.2f, 0.8f, 1f, 0.3f);
+                    Glow(p + Vector3.up * 0.3f, 12, m, 0.25f * size, 1.6f, 0.7f, 0.8f, 0.3f);
+                    Stars(p + Vector3.up * 0.6f, 4, a, 0.3f * size, 1.2f, 0.6f, 1f, 0.4f);
+                    Ring(p, 0.2f * size, 1.2f * size, (Color)m, 0.45f);
                     break;
+                }
                 case FxKind.CloneSpawn:
                 case FxKind.CloneEnd:
                     Smoke(mid, 10, C(Pal.Violet, 170), 0.5f * size, 1.2f, 0.6f, 0.5f, 0.25f);
@@ -685,7 +740,7 @@ namespace BAM.Art
                     Sparks(mid, 12, C(Pal.Steel), 0.13f, 4f, 0.35f, 1.4f);
                     Dust(p + Vector3.up * 0.1f, 6, C(Pal.Ground, 210), 0.6f * size, 1.4f, 0.6f, 0.3f, 0.2f);
                     Chunks(p + Vector3.up * 0.15f, 4, C(Pal.Rock), 0.13f * size, 2.5f, 0.6f, 2.2f);
-                    Crack(p, 0.8f * size, 1f);
+                    Crack(p, 0.8f * size, 1f, new Color(0.45f, 0.55f, 0.7f, 0.6f)); // water, not lava
                     Ring(p, 0.3f * size, 1.0f * size, new Color(0.75f, 0.8f, 0.9f, 0.9f), 0.3f);
                     break;
             }
@@ -757,9 +812,6 @@ namespace BAM.Art
                 case ProjKind.BramHammerSpecial:
                     SpecialHit((int)HeroId.Bram, p, 1f);
                     Crack(new Vector3(p.x, 0f, p.z), 0.6f, 0.9f);
-                    Pow(p, 1, teamL, 0.8f, 0.15f);
-                    Sparks(p, 8, C(Pal.Steel), 0.12f, 3.5f, 0.3f, 1.2f);
-                    Stars(p, 2, teamL, 0.35f, 1.2f, 0.3f, 0.8f);
                     break;
                 case ProjKind.TyraArrow:
                     Stars(p, 1, C(Pal.White), 0.3f, 0f, 0.15f);
@@ -780,10 +832,15 @@ namespace BAM.Art
                     Bubbles(p, 3, C(Pal.Poison), 0.14f, 0.6f, 0.6f, 0.8f, 0.1f);
                     break;
                 case ProjKind.TiktaNeedleSpecial:
-                    SpecialHit((int)HeroId.Tikta, p, 0.6f);
-                    Bubbles(p, 7, C(Pal.Poison), 0.18f, 0.9f, 0.8f, 1f, 0.2f);
-                    Wisps(p, 2, C(Pal.Poison, 200), 0.5f, 0.4f, 0.7f, 0.8f, 0.1f);
+                {
+                    // four needles land together: each one small (recipe: tiny white flash, 4 green sparks, 2-3 purple bubbles)
+                    Color32 m = heroMain[(int)HeroId.Tikta], a = heroAccent[(int)HeroId.Tikta];
+                    Flash(p, 0.08f, 0.3f, new Color(1f, 1f, 1f, 0.9f), 0.05f);
+                    Sparks(p, 4, m, 0.1f, 3f, 0.2f, 0.6f);
+                    Bubbles(p, 3, a, 0.14f, 0.8f, 0.6f, 0.8f, 0.1f);
+                    Ring(new Vector3(p.x, 0f, p.z), 0.1f, 0.5f, (Color)m, 0.25f);
                     break;
+                }
                 case ProjKind.BlastFire:
                     Pow(p, 1, C(Pal.FireCore), 0.6f, 0.14f);
                     Flames(p, 5, C(Pal.Fire), 0.45f, 1.4f, 0.4f, 1f, 0.1f);
@@ -803,6 +860,15 @@ namespace BAM.Art
             }
         }
 
+        /// <summary>A skillshot that hit nothing: a small puff in its colour, no flash, so a miss never reads as a hit.</summary>
+        public static void Fizzle(ProjKind k, Vector3 p, int team)
+        {
+            Color32 c = k == ProjKind.TyraBolt ? heroMain[(int)HeroId.Tyra] : k == ProjKind.TiktaNeedleSpecial ? heroMain[(int)HeroId.Tikta]
+                : k == ProjKind.BramHammerSpecial ? heroMain[(int)HeroId.Bram] : C(Pal.TeamLight(team));
+            Glow(p, 3, c, 0.2f, 0.6f, 0.25f, 0.3f);
+            Dust(p, 2, C(Pal.Ground, 180), 0.35f, 0.6f, 0.4f, 0.2f, 0.1f);
+        }
+
         /// <summary>What a projectile leaves behind in flight; called every few hundredths of a second.</summary>
         public static void InFlight(ProjKind k, Vector3 p, Vector3 dir, int team)
         {
@@ -813,7 +879,7 @@ namespace BAM.Art
                 case ProjKind.TiktaNeedleSpecial: Bubbles(p, 1, C(Pal.Poison), 0.12f, 0.2f, 0.45f, 0.4f, 0.05f); break;
                 case ProjKind.BlastFire: Flames(p, 1, C(Pal.Fire), 0.35f, 0.3f, 0.3f, 0.6f, 0.05f); break;
                 case ProjKind.TyraBolt: Stars(p, 1, new Color32(200, 245, 255, 255), 0.25f, 0.2f, 0.25f, 0f, 0.05f); break;
-                case ProjKind.BramHammerSpecial: Glow(p, 1, C(Pal.TeamLight(team)), 0.3f, 0.2f, 0.2f); break;
+                case ProjKind.BramHammerSpecial: Sparks(p, 1, heroAccent[(int)HeroId.Bram], 0.1f, 1.5f, 0.25f, 0.3f); break; // a forge tail
                 case ProjKind.TowerShot: Glow(p, 1, C(Pal.TeamLight(team)), 0.35f, 0.1f, 0.2f); break;
             }
         }
