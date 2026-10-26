@@ -36,6 +36,7 @@ namespace BAM.Game
             public int Level;
             public StatusFlags Flags;
             public Quaternion Rot;
+            public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
 
         sealed class ShotRec
@@ -128,6 +129,16 @@ namespace BAM.Game
         /// <summary>The view of a unit (null when it has none), e.g. for the camera or the aim.</summary>
         public Transform ViewOf(Unit u) => u != null && unitBySerial.TryGetValue(u.Serial, out UnitRec r) ? r.V.transform : null;
 
+        /// <summary>Where the unit's health bar is drawn (its centre) and how wide it is; false when it has none or is not shown.</summary>
+        public bool BarOf(Unit u, out Vector3 centre, out float width)
+        {
+            centre = Vector3.zero; width = 0f;
+            if (u == null || !unitBySerial.TryGetValue(u.Serial, out UnitRec r) || r.Bar == null || !r.Bar.enabled || r.Vis <= 0f) return false;
+            centre = r.Bar.transform.position;
+            width = Mathf.Max(0.3f, r.Bar.bounds.size.x - 1f); // the bar's bounds are its width plus one
+            return true;
+        }
+
         /// <summary>Units the match intro keeps out of sight for now (null = none).</summary>
         public System.Predicate<Unit> Hidden;
 
@@ -189,6 +200,8 @@ namespace BAM.Game
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
             r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.Flags = (StatusFlags)0xFFFF;
             r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
+            r.Bar = null;
+            foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
             var t = v.transform;
             t.SetPositionAndRotation(Coords.Of(u), r.Rot);
             if (u.Kind == UnitKind.Hero)

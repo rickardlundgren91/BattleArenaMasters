@@ -85,6 +85,7 @@ namespace BAM.Game
             specialQueued = false; hintShown = false;
             BeginTop();
             BeginIntro();
+            BeginOverhead();
             rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
             var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
@@ -206,6 +207,7 @@ namespace BAM.Game
             if (m == null) return;
             canvas.enabled = !hidden;
             rings.Frame(hidden || (Intro != null && Intro.Active));
+            OverheadFrame(hidden || (Intro != null && Intro.Active));
             if (IntroFrame()) return; // the match intro: its own bars and name tags, no controls
             var kb = Keyboard.current;
             if (!hidden && kb != null && kb.spaceKey.wasPressedThisFrame) OnTap();
@@ -562,6 +564,7 @@ namespace BAM.Game
             canvasRect = (RectTransform)canvas.transform;
             BuildFloats();
             BuildIntro();
+            BuildOverhead();
             pointChevron = MakeChevron(canvasRect);
             ringChevron = MakeChevron(canvasRect);
             fade = UiKit.Fill(canvasRect, Color.clear);
