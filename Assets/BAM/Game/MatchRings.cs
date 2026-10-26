@@ -36,6 +36,10 @@ namespace BAM.Game
         readonly Ring[] hits = new Ring[8], ready = new Ring[2];
         // the battle spell's blink: where it lands while it is dragged (old SpellAimNow: a 0.45 ring on the ground)
         readonly Ring[] blink = new Ring[2];
+        // the island tutorial's goal spot (old HudTutorialIsland.drawIslandWorld): two white rings that grow from it, 3 px
+        readonly Ring[] goal = new Ring[2];
+        bool goalOn;
+        Vector3 goalAt;
         bool blinkOn;
         Vector2 blinkAt;
         Color blinkColor;
@@ -52,14 +56,14 @@ namespace BAM.Game
         {
             m = match; views = matchViews;
             autoTarget = null; autoAt = swingAt = -99f;
-            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink);
+            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal);
             blinkOn = false;
             aimOn = false;
         }
 
         public void End()
         {
-            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink);
+            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink); Free(goal);
             m = null; views = null; autoTarget = null;
         }
 
@@ -105,6 +109,12 @@ namespace BAM.Game
             blinkOn = on; blinkAt = at; blinkColor = color;
         }
 
+        /// <summary>The island tutorial's goal spot (world position), or off. Set every frame by the HUD.</summary>
+        public void SetGoal(bool on, Vector3 at)
+        {
+            goalOn = on; goalAt = at;
+        }
+
         public void AfterStep()
         {
             var ev = m.Events;
@@ -123,8 +133,18 @@ namespace BAM.Game
         public void Frame(bool hidden, float px)
         {
             HideAll();
+            if (goalOn && !hidden)
+            {
+                float gk = (Time.unscaledTime / 0.9f) % 1f;
+                for (int i = 0; i < goal.Length; i++)
+                {
+                    float gr = ((gk + 0.5f * i) % 1f) * 0.9f + 0.2f;
+                    Show(goal[i], goalAt, gr + 1.5f * px, new Color(1f, 1f, 1f, 0.9f - gr * 0.8f), 3f * px);
+                }
+            }
             var p = m.Player;
-            if (hidden || p == null || !p.Alive || m.State == MatchState.Over || (m.Tut != null && m.Tut.Island)) return;
+            // the island shows the range ring too (old View3D.SyncRange ran there as well)
+            if (hidden || p == null || !p.Alive || m.State == MatchState.Over) return;
             Vector3 at = views.DrawnAt(p);
             at.y = 0f;
             float r = p.Range;
@@ -220,7 +240,7 @@ namespace BAM.Game
 
         void HideAll()
         {
-            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink);
+            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink); Hide(goal);
         }
 
         static void Hide(Ring[] rings)

@@ -12,7 +12,8 @@ namespace BAM.Game
     sealed class JoystickZone : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
         public const float Radius = 125f;
-        const float DeadZone = 0.12f;
+        // the old dead zone: 6 of the stick's 44 px; past it the hero walks at full speed (Rickard 2026-10-08, again 2026-10-26)
+        const float DeadZone = 6f / 44f;
         const int None = int.MinValue;
 
         public RectTransform Area, Base, Knob;
@@ -55,7 +56,7 @@ namespace BAM.Game
             if (len > Radius) d *= Radius / len;
             Knob.anchoredPosition = origin + d;
             Vector2 v = d / Radius;
-            Value = v.sqrMagnitude < DeadZone * DeadZone ? Vector2.zero : v;
+            Value = v.sqrMagnitude < DeadZone * DeadZone ? Vector2.zero : v.normalized;
         }
 
         public void OnPointerUp(PointerEventData e)

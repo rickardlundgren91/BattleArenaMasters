@@ -215,7 +215,10 @@ namespace BAM.Game
         {
             if (m == null) return;
             canvas.enabled = !hidden;
-            rings.Frame(hidden || (Intro != null && Intro.Active), 1f / cam.PixelsPerTile);
+            // the old rings' widths are in the old game's CSS pixels: 400 across the portrait frame, not the phone's own pixels
+            // (on a 1080 wide phone one device pixel made them 2.7 times too thin, Rickard 2026-10-26 "jättesvag")
+            float cssPx = Screen.width > 1f && canvasRect.rect.width > 1f ? safe.rect.width * Screen.width / canvasRect.rect.width / 400f : 1f;
+            rings.Frame(hidden || (Intro != null && Intro.Active), cssPx / cam.PixelsPerTile);
             OverheadFrame(hidden || (Intro != null && Intro.Active));
             VignetteFrame(hidden || (Intro != null && Intro.Active));
             if (IntroFrame()) return; // the match intro: its own bars and name tags, no controls
@@ -410,10 +413,10 @@ namespace BAM.Game
                 if (on)
                 {
                     float pulse = Mathf.Sin(Time.unscaledTime * 5f);
-                    if (tut.RingOn) marks.ShowRange(Coords.World(tut.RingX, tut.RingY), 0.8f + 0.1f * pulse);
                     if (tut.PadOn && !tut.Jumping) marks.ShowCircle(Coords.World(tut.PadX, tut.PadY), 0.55f + 0.05f * pulse, true);
                 }
             }
+            rings.SetGoal(on && tut.RingOn, on ? Coords.World(tut.RingX, tut.RingY) : Vector3.zero);
             Chevron(pointChevron, on && tut.PointAt != null && tut.PointAt.Alive, on && tut.PointAt != null ? views.DrawnAt(tut.PointAt) + Vector3.up * 1.4f : Vector3.zero);
             Chevron(ringChevron, on && tut.RingOn && tut.ArrowOnRing, on ? Coords.World(tut.RingX, tut.RingY) + Vector3.up * 0.9f : Vector3.zero);
         }
