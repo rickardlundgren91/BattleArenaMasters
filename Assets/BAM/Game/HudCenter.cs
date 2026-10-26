@@ -49,7 +49,7 @@ namespace BAM.Game
         {
             LayoutCenter();
             // the countdown: "Match starts in" and the seconds on a glass banner
-            bool counting = m.State == MatchState.Countdown && !tutorial;
+            bool counting = m.State == MatchState.Countdown && !tutorial && !heroTest;
             if (countBanner.gameObject.activeSelf != counting)
             {
                 countBanner.gameObject.SetActive(counting);
@@ -69,7 +69,7 @@ namespace BAM.Game
 
             // the start banner: full for 1.5 s, then fading out over the last second
             float left = bannerUntil - Time.unscaledTime;
-            bool banner = left > 0f && !tutorial;
+            bool banner = left > 0f && !tutorial && !heroTest; // no start banner in HERO TEST (old Hud)
             if (startBanner.gameObject.activeSelf != banner) startBanner.gameObject.SetActive(banner);
             if (banner) startGroup.alpha = Mathf.Clamp01(left);
 

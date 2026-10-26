@@ -44,7 +44,7 @@ namespace BAM.Game
             t = 0f; skip = false; struck = false;
             lastNow = Time.unscaledTime;
             heroCount = 0;
-            active = m.Tut == null && m.State == MatchState.Countdown && -m.Time >= 2f && m.Player != null;
+            active = m.Tut == null && !m.HeroTest && m.State == MatchState.Countdown && -m.Time >= 2f && m.Player != null;
             if (!active) return;
             for (int i = 0; i < m.Heroes.Count && heroCount < 3; i++)
                 if (m.Heroes[i].Team == m.Player.Team && m.Heroes[i].Alive) heroes[heroCount++] = m.Heroes[i];

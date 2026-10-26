@@ -48,7 +48,7 @@ namespace BAM.Game
         Match m;
         MatchViews views;
         MatchCamera cam;
-        bool built, leftHanded, laidOutHand, tutorial, island, joyLogged;
+        bool built, leftHanded, laidOutHand, tutorial, island, joyLogged, heroTest;
         int lastTutStep;
         float lastDenied, deniedUntil, shakeUntil, bannerUntil, gainAt, lastCharge;
         // who killed the player last ("Defeated by" under the respawn countdown)
@@ -69,6 +69,7 @@ namespace BAM.Game
             m = match; views = matchViews; cam = camera;
             tutorial = m.Tut != null;
             island = tutorial && m.Tut.Island;
+            heroTest = m.HeroTest;
             if (!built) Build();
             specialRoot.gameObject.SetActive(!island); // no special on the training island
             marks = tutorial ? ArtKit.CreateAim() : null;
@@ -89,6 +90,7 @@ namespace BAM.Game
             BeginScore();
             BeginEmote();
             BeginSpell();
+            BeginHeroTest();
             rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
             var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
@@ -189,7 +191,7 @@ namespace BAM.Game
         public void AfterStep()
         {
             if (m.SpecialDeniedAt != lastDenied) { lastDenied = m.SpecialDeniedAt; Denied("No target in reach"); }
-            if (lastState == MatchState.Countdown && m.State == MatchState.Play && !tutorial)
+            if (lastState == MatchState.Countdown && m.State == MatchState.Play && !tutorial && !heroTest)
             {
                 bannerUntil = Time.unscaledTime + BannerTime;
                 BamAudio.Play(SfxId.CountdownGo);
@@ -225,6 +227,7 @@ namespace BAM.Game
             ScoreFrame();
             EmoteFrame(hidden);
             SpellFrame(hidden);
+            HeroTestFrame(hidden);
             Special();
             Aim(hidden);
             Hint(hidden);
@@ -568,6 +571,7 @@ namespace BAM.Game
             BuildPause();
             BuildScore();
             BuildSpell();
+            BuildHeroTest();
 
             BuildCenter();
 

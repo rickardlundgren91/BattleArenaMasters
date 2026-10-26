@@ -35,6 +35,8 @@ namespace BAM.Game
             public float Hp01 = -1f, Shield01 = -1f, Vis = -1f, Linger;
             public int Level;
             public StatusFlags Flags;
+            public float Channel = -1f;    // the recall channel shown, -1 none
+            public bool Sprint;
             public Quaternion Rot;
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
@@ -479,6 +481,17 @@ namespace BAM.Game
                 case EventType.Pull:
                     if (e.B != null) BamAudio.PlayAt(SfxId.KnutAnchorHook, Coords.Of(e.B));
                     break;
+                // battle spells (the art's port of View3DSpellLooks.cs): a blink from where it started, the others on the caster
+                case EventType.SpellCast:
+                    if (e.A != null && m.IsVisibleTo(e.A, Teams.Player))
+                        ArtKit.PlaySpell((SpellId)e.Kind, Coords.World(e.X, e.Y), Coords.Of(e.A));
+                    break;
+                case EventType.SpellCancel:
+                    if (e.A != null && m.IsVisibleTo(e.A, Teams.Player)) ArtKit.PlaySpellCancel(Coords.Of(e.A));
+                    break;
+                case EventType.Recall:
+                    if (e.A != null) ArtKit.PlayRecall(Coords.World(e.X, e.Y), Coords.World(e.A.SpawnX, e.A.SpawnY));
+                    break;
             }
         }
 
@@ -602,9 +615,29 @@ namespace BAM.Game
             if (m.Map.InGrass(u.X, u.Y)) flags |= StatusFlags.InGrass;
             if (flags != r.Flags) { r.Flags = flags; v.SetStatus(flags); }
 
+            if (u.Kind == UnitKind.Hero)
+            {
+                // the recall's channel ring and the Sprint trail (battle spells)
+                float ch = Match.SpellChanneling(u) ? Mathf.Clamp01((m.Time - u.SpellChanStart) / SpellDefs.RecallChannel) : -1f;
+                if (ch != r.Channel) { r.Channel = ch; v.SetChannel(ch); }
+                bool sprint = u.Spell == SpellId.Sprint && Sprinting(u);
+                if (sprint != r.Sprint) { r.Sprint = sprint; v.SetSprint(sprint); }
+            }
+
             float vis = !m.IsVisibleTo(u, Teams.Player) ? 0f : u.Team == Teams.Player && u.Kind == UnitKind.Hero && m.HiddenFromFoes(u) ? 0.5f : 1f;
             if (Hidden != null && Hidden(u)) vis = 0f; // the match intro: not yet beamed in
             if (vis != r.Vis) { r.Vis = vis; v.SetVisibility(vis); }
+        }
+
+        // the Sprint spell's speed status: the hero's own SpeedPct at SprintPct (Spells.cs CastSpell)
+        static bool Sprinting(Unit u)
+        {
+            for (int i = 0; i < u.StatusCount; i++)
+            {
+                var st = u.GetStatus(i);
+                if (st.Type == St.SpeedPct && st.By == u && Mathf.Abs(st.V - SpellDefs.SprintPct) < 1e-4f && st.T > 0f) return true;
+            }
+            return false;
         }
 
         /// <summary>Hands every view back (match end).</summary>

@@ -93,7 +93,10 @@ namespace BAM.Game
             shownClock = false; laidOut = Vector2.zero;
             int[] count = new int[2];
             for (int i = 0; i < portraits.Length; i++) { portraits[i].Unit = null; portraits[i].Root.gameObject.SetActive(false); }
-            for (int i = 0; i < m.Heroes.Count; i++)
+            // HERO TEST: no portraits, no clock, kills or stars (the old Hud hides them there); the tower bars stay
+            pill.gameObject.SetActive(!m.HeroTest);
+            for (int i = 0; i < stars.Length; i++) stars[i].gameObject.SetActive(!m.HeroTest);
+            for (int i = 0; i < m.Heroes.Count && !m.HeroTest; i++)
             {
                 var h = m.Heroes[i];
                 int team = h.Team == m.Player.Team ? 0 : 1;
