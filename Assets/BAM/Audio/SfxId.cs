@@ -18,5 +18,7 @@ namespace BAM.Audio
         MinionMelee, MinionRanged, SiegeShot, TowerShot, TowerDestroyed,
         // events
         HeroDeath, AllyDeath, MinionDeath, Respawn, LevelUp, WaveSpawn, GrassEnter, SpecialReady, LowHealth,
+        // Blast 2.0's Chain Reaction (XYZ #603 "chainboom"), added 2026-10-26
+        BlastChainBoom,
     }
 }

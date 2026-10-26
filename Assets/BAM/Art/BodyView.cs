@@ -311,6 +311,7 @@ namespace BAM.Art
             bar.Reset();
             bar.SetLevel(1);
             status.Set(StatusFlags.None);
+            if (marks != null) marks.Reset();
             SetMarker(Team == Teams.Player ? UnitMarker.Ally : UnitMarker.Enemy);
             SetFlash(Color.black);
             fading = true; // force ApplyLook to set the material
@@ -403,6 +404,12 @@ namespace BAM.Art
 
         public override void SetChannel(float progress01) => channel = progress01;
         public override void SetSprint(bool on) => sprint = on;
+        public override void SetDeathmark(float left) { if (left >= 0f || marks != null) Marks().SetDeathmark(left); }
+        public override void SetChainSpark(bool on) { if (on || marks != null) Marks().SetChainSpark(on); }
+        public override void SetChainCooldown(float frac) { if (frac >= 0f || marks != null) Marks().SetChainCooldown(frac); }
+
+        HeroMarks marks; // Tikta's Deathmark and Blast's chain marks, made the first time one shows
+        HeroMarks Marks() => marks ?? (marks = new HeroMarks(transform, def.Height, def.Radius));
 
         public override void SetMarker(UnitMarker m)
         {
@@ -575,6 +582,11 @@ namespace BAM.Art
                 }
             }
 
+            if (marks != null && marks.Any)
+            {
+                marks.Visible = renderersOn && vis > 0.01f && !dead;
+                marks.Tick(dt, idleT, ArtDriver.CamRot);
+            }
             if (renderersOn)
             {
                 bar.Tick(dt, ArtDriver.CamRot);

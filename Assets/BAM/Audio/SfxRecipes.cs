@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.LowHealth + 1;
+        public const int Count = (int)SfxId.BlastChainBoom + 1;
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)
@@ -83,6 +83,7 @@ namespace BAM.Audio
                 case SfxId.GrassEnter: return new SfxInfo(0.45f, 1, 0.3f, 2, 0.08f);
                 case SfxId.SpecialReady: return new SfxInfo(0.7f, 1, 0.5f, 4, 0f);
                 case SfxId.LowHealth: return new SfxInfo(0.85f, 1, 1.5f, 4, 0f);
+                case SfxId.BlastChainBoom: return new SfxInfo(0.95f, 2, 0.12f, 3, 0.04f); // wins a voice like Supernova's boom
                 default: return new SfxInfo(0.6f, 1, 0.05f, 1, 0f);
             }
         }
@@ -380,6 +381,12 @@ namespace BAM.Audio
                 case SfxId.SpecialReady: // two bright notes and a sparkle (the old game's ready)
                     s.Notes(Wave.Tri, ReadyNotes, 0.07f, 0.17f, 0.45f);
                     s.Tone(Wave.Sine, 2637f, 2637f, 0.18f, 0.08f, 0.09f, 0.003f, 0, 8f, 0.01f);
+                    break;
+                case SfxId.BlastChainBoom: // Chain Reaction's second blast (old "chainboom"): a sharp crack and a short bright ring, unlike Supernova's deep boom
+                    s.Noise(Filt.Band, 5200, 1400, 1.2f, 0.16f, 0.6f, 0, 0.002f);
+                    s.Tone(Wave.Square, 260, 120, 0.2f, 0.18f, 0, 0.003f);
+                    s.Tone(Wave.Tri, 1320, 1180, 0.32f, 0.12f, 0.03f, 0.005f);
+                    s.Tone(Wave.Sine, 1980, 1760, 0.26f, 0.07f, 0.05f, 0.005f);
                     break;
                 case SfxId.LowHealth: // two heartbeat thumps, pitched up so a phone speaker can play them
                     s.Tone(Wave.Tri, 300, 130, 0.12f, 0.55f, 0, 0.004f);

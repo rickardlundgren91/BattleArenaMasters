@@ -145,7 +145,8 @@ namespace BAM.Art
             public Material Mat, PalMat, AddMat, FadeMat;
             public float Age, Life, S0, S1, A0;
             public Color Col;
-            public bool Flat;
+            public bool Flat, Linear; // Linear: grows at an even pace (a fuse), not easing out
+            public Material TeleMat;
         }
 
         static readonly List<Blob> live = new List<Blob>(32);
@@ -443,6 +444,36 @@ namespace BAM.Art
             else Spawn(Shapes.RingMesh(thickness, Pal.White), pos, r0, r1, c, life, true, 0);
         }
 
+        static Texture2D teleTex;
+        static bool teleLoaded;
+
+        /// <summary>Blast's chain warning (ArtKit.PlayChainWarn): the edge on the radius for the whole fuse, a gold ring racing out to it.</summary>
+        public static void ChainWarn(Vector3 at, float radius, float fuse)
+        {
+            if (!teleLoaded) { teleLoaded = true; teleTex = RickardFx.Load("tx_fx_telegraph_ring"); }
+            Color violet = new Color(0.7f, 0.42f, 1f, 1f), gold = new Color(1f, 0.82f, 0.3f, 1f);
+            if (teleTex != null)
+            {
+                // his telegraph ring peaks at 0.887 of the picture: sized so its edge lands on the radius
+                SpawnTele(at, radius * 2.255f, radius * 2.255f, violet, fuse);
+                SpawnTele(at, 0.05f, radius * 2.255f, gold, fuse, true);
+            }
+            else
+            {
+                Spawn(Shapes.RingMesh(0.9f, Pal.White), at, radius, radius, violet, fuse, true, 0);
+                Spawn(Shapes.RingMesh(0.85f, Pal.White), at, 0.05f, radius, gold, fuse, true, 0);
+                live[live.Count - 1].Linear = true;
+            }
+            Flash(at + Vector3.up * 0.5f, 0.1f, 0.45f, new Color(1f, 0.96f, 0.82f, 0.9f), 0.12f);
+            Sparks(at + Vector3.up * 0.6f, 8, new Color32(255, 245, 209, 255), 0.1f, 2.5f, 0.2f, 1.2f);
+        }
+
+        static void SpawnTele(Vector3 at, float s0, float s1, Color c, float life, bool linear = false)
+        {
+            Spawn(FxAtlas.FullQuad(), at, s0, s1, c, life, true, 3);
+            live[live.Count - 1].Linear = linear;
+        }
+
         public static void Flash(Vector3 pos, float r0, float r1, Color c, float life) => Spawn(Shapes.Ball(), pos, r0, r1, c, life, false, 0);
 
         /// <summary>Cracks in the ground that fade (heavy landings, explosions). Radius in units.</summary>
@@ -512,7 +543,14 @@ namespace BAM.Art
         static void Spawn(Mesh mesh, Vector3 pos, float r0, float r1, Color c, float life, bool flat, int matKind)
         {
             Blob bu = free.Count > 0 ? free.Pop() : NewBurst();
-            bu.Mat = matKind == 1 && bu.AddMat != null ? bu.AddMat : matKind == 2 && bu.FadeMat != null ? bu.FadeMat : bu.PalMat;
+            if (matKind == 3 && bu.TeleMat == null && teleTex != null)
+            {
+                bu.TeleMat = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                bu.TeleMat.SetTexture(ArtMaterials.BaseMap, teleTex);
+                bu.TeleMat.mainTexture = teleTex;
+            }
+            bu.Mat = matKind == 1 && bu.AddMat != null ? bu.AddMat : matKind == 2 && bu.FadeMat != null ? bu.FadeMat : matKind == 3 && bu.TeleMat != null ? bu.TeleMat : bu.PalMat;
+            bu.Linear = false;
             bu.R.sharedMaterial = bu.Mat;
             bu.T.rotation = Quaternion.identity;
             bu.F.sharedMesh = mesh;
@@ -525,11 +563,12 @@ namespace BAM.Art
 
         static void Apply(Blob bu, float t)
         {
-            float e = 1f - (1f - t) * (1f - t);
+            float e = bu.Linear ? t : 1f - (1f - t) * (1f - t);
             float s = Mathf.Lerp(bu.S0, bu.S1, e);
             bu.T.localScale = bu.Flat ? new Vector3(s, 1f, s) : new Vector3(s, s, s);
             Color c = bu.Col;
             c.a = bu.A0 * (1f - t);
+            if (bu.Mat == bu.TeleMat) { float k = bu.Linear ? 0.55f + 0.45f * t : 0.8f + 0.2f * Mathf.Sin(bu.Age * 40f); c = new Color(bu.Col.r * k, bu.Col.g * k, bu.Col.b * k, 1f); } // additive: brightness is strength
             bu.Mat.SetColor(ArtMaterials.BaseColor, c);
         }
 
@@ -657,6 +696,29 @@ namespace BAM.Art
                     Dust(p + Vector3.up * 0.1f, 4, C(Pal.Ground, 200), 0.5f * size, 1.2f, 0.5f, 0.3f, 0.2f);
                     Wisps(p + Vector3.up * 0.3f, 3, heroAccent[(int)HeroId.Fenn], 0.5f * size, 0.6f, 0.6f, 0.6f, 0.2f);
                     break;
+                case FxKind.DeathmarkTaken:
+                {
+                    // a needle takes Tikta's mark: a short pink flash and four teal sparks thrown out, no smoke
+                    Vector3 h = p + Vector3.up * 1.6f;
+                    Flash(h, 0.15f, 0.6f, new Color(1f, 0.86f, 0.97f, 0.95f), 0.08f);
+                    Pow(h, 1, new Color32(255, 92, 199, 255), 0.7f, 0.16f);
+                    Ring(new Vector3(p.x, 0f, p.z), 0.2f, 0.7f, new Color(1f, 0.36f, 0.78f, 0.9f), 0.22f);
+                    Sparks(p + Vector3.up * 0.7f, 4, new Color32(97, 255, 224, 255), 0.1f, 3.5f, 0.22f, 0.6f);
+                    break;
+                }
+                case FxKind.ChainBoom:
+                {
+                    // Blast's chain goes off: a hot gold-violet flash, a violet shock ring ending on the true radius, gold sparks thrown up
+                    // inside it and a short light. No smoke, so heroes, bars and other warnings stay readable. size = radius
+                    Color violet = new Color(0.7f, 0.42f, 1f, 1f);
+                    Flash(mid, 0.3f * size, 1.1f * size, new Color(1f, 0.96f, 0.82f, 0.95f), 0.12f);
+                    Ring(p, 0.2f * size, size, violet, 0.3f);
+                    Sparks(p + Vector3.up * 0.3f, 10, new Color32(255, 209, 77, 255), 0.13f, 3.6f, 0.4f, 3f, 0.5f * size);
+                    Sparks(mid, 6, new Color32(255, 245, 209, 255), 0.1f, 3.5f, 0.18f, 0.5f);
+                    Glow(p + Vector3.up * 0.8f, 2, new Color32(255, 209, 77, 200), 1.3f * size, 0.1f, 0.35f);
+                    Glow(p + Vector3.up * 0.8f, 1, new Color32(179, 107, 255, 160), 1.6f * size, 0.1f, 0.45f);
+                    break;
+                }
                 case FxKind.TowerDestroyed:
                     Pow(p + Vector3.up * 1.5f, 1, C(Pal.Cream), 3f * size, 0.3f);
                     Flash(p + Vector3.up * 1.5f, 0.5f * size, 2.4f * size, new Color(1f, 0.9f, 0.7f, 1f), 0.4f);

@@ -67,6 +67,13 @@ namespace BAM.Art
         public virtual void SetChannel(float progress01) { }
         /// <summary>The Sprint spell is on: a lime speed trail while the unit moves.</summary>
         public virtual void SetSprint(bool on) { }
+        /// <summary>Tikta's Deathmark on this hero: seconds left, below 0 = off. A sigil over the head and a violet ring at the feet,
+        /// blinking in the last 0.75 s. Call it only while the player can see the unit.</summary>
+        public virtual void SetDeathmark(float left) { }
+        /// <summary>A gold and violet spark crown over a burning enemy while the player's Blast can chain on it.</summary>
+        public virtual void SetChainSpark(bool on) { }
+        /// <summary>The player's own Blast: Chain Reaction cooldown 0..1 as a violet arc at the feet that fills, below 0 = off.</summary>
+        public virtual void SetChainCooldown(float frac) { }
     }
 
     public abstract class ProjectileView : MonoBehaviour
@@ -98,7 +105,7 @@ namespace BAM.Art
     {
         Hit = 0, HitBig = 1, Death = 2, Respawn = 3, LevelUp = 4, Explosion = 5, TowerDestroyed = 6, ShieldPop = 7,
         Cast = 8, Bounce = 9, WolfSummon = 10, CloneSpawn = 11, CloneEnd = 12, MinionSpawn = 13, TowerShotFlash = 14, AnchorHit = 15,
-        AnvilStrike = 16, WolfLand = 17,
+        AnvilStrike = 16, WolfLand = 17, DeathmarkTaken = 18, ChainBoom = 19,
     }
 
     public static class ArtKit
@@ -342,6 +349,14 @@ namespace BAM.Art
         }
 
         /// <summary>Hands a view back to its pool (minions, projectiles and zones come and go all match long).</summary>
+        /// <summary>Blast's Chain Reaction warning at a frozen point: a violet ring with its edge on the radius, a gold ring growing
+        /// from the middle that reaches the edge exactly when the fuse runs out, and a spark at the point. Then play FxKind.ChainBoom.</summary>
+        public static void PlayChainWarn(Vector3 at, float radius, float fuse)
+        {
+            if (!ready) return;
+            Fx.ChainWarn(at, Mathf.Max(0.1f, radius), Mathf.Max(0.05f, fuse));
+        }
+
         /// <summary>A shown hero's height in world units, feet to crown, as the art fitted it (for the menu stages' framing).</summary>
         public static float HeightOf(UnitView view) => view is BodyView b ? b.ShownHeight : 1.8f;
 
