@@ -56,10 +56,17 @@ Vänstermenyn: **Policy och program** > **Appinnehåll** (Policy and programs > 
 | **Nyhetsappar** | Nej |
 
 ## 5. Butiksinformation
-Vänstermenyn: **Väx** > **Butiksnärvaro** > **Huvudbutiksinformation** (Grow users > Store presence > Main store listing).
+Vänstermenyn: **Väx användare** > **Butiksnärvaro** > **Butiksinformation** > **Standardbutiksinformation** (Grow users > Store presence > Store listings > Default store listing). Hittar du den inte: skriv "store listing" i sökrutan högst upp i Play Console.
 Klistra in från `store-listing.md`: namn, kort beskrivning, fullständig beskrivning. Ladda upp
-`store-icon-512.png` som appikon och `feature-graphic-1024x500.png` som grafik. Skärmdumpar (minst 2, stående) tar vi
-när spelet går på telefonen. Under **Butiksinställningar**: kategori **Spel > Action**, e-post
+`store-icon-512.png` som appikon och `feature-graphic-1024x500.png` som grafik.
+
+**Skärmdumpar (minst 2, stående), tar du på telefonen:**
+1. Starta spelet och ta skärmdumpar (oftast **av/på-knappen + volym ned** samtidigt): en från huvudmenyn eller
+   hjältevalet och två–tre mitt i en match.
+2. Play godtar inte bilder där långsidan är mer än dubbelt så lång som kortsidan. Moderna telefoner tar 20:9
+   (t.ex. 1080x2400), så de måste beskäras: öppna bilden i **Google Foto** > **Redigera** > **Beskär** > välj
+   formatet **9:16** > dra rutan över det viktiga > **Klart** > **Spara som kopia**.
+3. Ladda upp kopiorna under **Telefonskärmdumpar** (PNG eller JPEG, 320–3840 pixlar per sida). Under **Butiksinställningar**: kategori **Spel > Action**, e-post
 `support@battlearenamasters.com`, webbplats `https://battlearenamasters.com`. Klicka **Spara**.
 (För intern testning visas sidan inte för någon, men Play vill ofta ha den ifylld.)
 
@@ -68,11 +75,57 @@ när spelet går på telefonen. Under **Butiksinställningar**: kategori **Spel 
 2. Klicka **Bli testare** (Accept invite), sedan **ladda ned från Google Play**.
 3. Första gången kan det ta upp till en timme innan appen syns i Play.
 
+## 7. Sluten testning (krävs innan spelet kan bli publikt)
+Nya privata konton måste köra en **sluten test med minst 12 testare som varit anmälda utan avbrott i minst 14 dagar**
+innan man kan ansöka om produktion. Intern testning räknas inte. Klockan börjar först när testarna kan gå med, alltså
+efter att Google har godkänt den slutna versionen, så starta så tidigt som möjligt.
+
+**Innan:** allt i steg 4 (Appinnehåll) och steg 5 (Butiksinformation, med skärmdumpar) måste vara ifyllt. Den slutna
+testen granskas av Google, och Data safety krävs här (den behövs inte för bara intern testning).
+
+**a. Testargrupp (enklast med en Google-grupp, då kan spelarna gå med själva):**
+1. Gå till https://groups.google.com, inloggad med kontot som ska äga gruppen > **Skapa grupp**.
+2. **Gruppnamn:** `BAM Testers`. **Gruppens e-post:** t.ex. `bam-testers` (blir `bam-testers@googlegroups.com`) > **Nästa**.
+3. **Vem kan söka efter gruppen:** Alla på webben. **Vem kan gå med i gruppen:** **Alla kan be om att få gå med**
+   (du godkänner) eller **Vem som helst kan gå med** (enklast) > **Nästa** > hoppa över att lägga till medlemmar > **Skapa grupp**.
+4. Spelare går med via gruppens länk (`https://groups.google.com/g/bam-testers`) med samma Google-konto som de har i Play.
+
+(Alternativ: en e-postlista i Play Console som i steg 2, men då måste du skriva in varje adress själv.)
+
+**b. Skapa det slutna spåret:**
+1. Vänstermenyn: **Testa och släpp** > **Testning** > **Sluten testning** (Closed testing).
+2. Det finns redan ett spår som heter **Closed testing - Alpha**: klicka **Hantera spår** (Manage track).
+   (Eller **Skapa spår** om du vill ha ett eget namn.)
+3. Fliken **Länder/regioner** > **Lägg till länder/regioner** > kryssa **Sverige** och de länder där dina testare bor
+   (eller alla) > **Lägg till**.
+4. Fliken **Testare** > välj **Google-grupper** > skriv `bam-testers@googlegroups.com` > **Spara ändringar**.
+   **Feedback-URL eller e-postadress:** `support@battlearenamasters.com`.
+5. Under **Hur testare går med** finns en **opt-in-länk** (play.google.com/apps/testing/...). Den skickar du till spelarna
+   efter att de gått med i gruppen. Där trycker de **Bli testare** och laddar sedan ned spelet från Play.
+
+**c. Versionen:**
+- **Enklast:** gå till **Intern testning** > fliken **Versioner** > vid din version klickar du **Befordra version** >
+  **Sluten testning - Alpha** (Promote release). Samma AAB används, du behöver inte bygga om.
+- **Eller ny AAB:** i spåret **Sluten testning** > **Skapa ny version** > dra in en ny AAB från Unity (versionskoden
+  måste vara högre än alla tidigare uppladdade).
+- Skriv versionskommentarer (från `store-listing.md`) > **Nästa** > **Spara**.
+
+**d. Skicka till granskning:**
+1. Vänstermenyn: **Publiceringsöversikt** (Publishing overview).
+2. Under **Ändringar som inte har skickats för granskning** klickar du **Skicka X ändringar för granskning** > bekräfta.
+3. Första granskningen av en ny app kan ta **några dagar** (ibland upp till en vecka). Du får mejl när den är klar.
+
+**e. Under de 14 dagarna:**
+- Håll **minst 12 testare** anmälda hela tiden; skaffa gärna 15–20 så att det finns marginal om någon hoppar av.
+  En testare som lämnar och går med igen börjar om på sina 14 dagar.
+- Be testarna spela några gånger och ge feedback (Discord eller mejl). Google frågar om det när du ansöker.
+- Efter 14 dagar: **Översikt** (Dashboard) > **Ansök om produktion** (Apply for production). Formuläret frågar hur du
+  hittade testarna, vad de tyckte, vad du ändrade och varför spelet är redo. Svaret kommer oftast inom 7 dagar.
+
 ## Senare: nya versioner
 Bygg en ny AAB i Unity (versionskoden höjs automatiskt) > **Intern testning** > **Skapa ny version** > dra in filen >
 skriv vad som är nytt > **Spara och publicera**.
 
 ## Att komma ihåg
-- Intern testning räknas **inte** till kravet på 12 testare i 14 dagar som nya privata konton har innan produktion;
-  det kravet gäller **sluten testning** (closed testing) och tar vi när spelet är redo.
+- Intern testning räknas **inte** till kravet på 12 testare i 14 dagar; det gäller **sluten testning** (steg 7).
 - Ändrar vi vad spelet samlar in måste `data-safety.md`, integritetspolicyn och Data safety i Play uppdateras först.
