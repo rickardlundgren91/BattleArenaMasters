@@ -363,6 +363,7 @@ namespace BAM.UI
             heroStage.Picture = picture;
             heroStage.Spot = new Vector3(540, 0, 500);
             heroStage.HeroFill = 0.74f;
+            heroStage.Sway = 20f;
             heroStage.Tapped = () => heroStage.Swing();
 
             Arrow(heroStageRt, -1, () => OpenHero((heroPeek + HeroCatalog.Count - 1) % HeroCatalog.Count));

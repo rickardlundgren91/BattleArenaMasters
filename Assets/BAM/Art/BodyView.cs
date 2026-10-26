@@ -52,6 +52,8 @@ namespace BAM.Art
         float atkSpeed = 1f, atkTotal = 0.5f, castLen = 0.6f, hitA = -1f, deathFadeAt = 0.55f;
         bool imported;
         HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
+        PreviewBreath breath;     // the menu hero's living idle on top of its clip (Preview only)
+        bool breathTried;
         float gearAct;            // how much the attack and cast clips play, for the gear's rest pose
         int shadowRends;          // rends[0..shadowRends) may cast shadows; the gear after them never does
         const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5;
@@ -606,6 +608,11 @@ namespace BAM.Art
             recoil = Mathf.MoveTowards(recoil, 0f, dt * 5f);
 
             if (imported) AnimateImported(dt);
+            if (Preview && imported && clips != null && !dead)
+            {
+                if (!breathTried) { breathTried = true; breath = PreviewBreath.For(anim, HeroIndex); }
+                breath?.Apply(Time.unscaledTime, 1f - Mathf.Clamp01(gearAct));
+            }
             if (gear != null) gear.Tick(dt, moveW, gearAct, dead);
             if (dead) AnimateDeath(dt);
             else

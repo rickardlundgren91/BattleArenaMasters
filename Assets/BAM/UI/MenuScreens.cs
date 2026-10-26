@@ -100,6 +100,8 @@ namespace BAM.UI
         public Vector3 Spot = new Vector3(500, 0, 500); // far from the arena; each stage needs its own spot
         public System.Action Tapped;
         public float FeetAt = 0.07f, HeroFill = 0.75f;
+        /// <summary>Degrees the hero slowly turns either way on his own (old Speltest: 0.25 rad on Home, 0.35 on the hero page).</summary>
+        public float Sway = 14f;
 
         Camera cam;
         RenderTexture rt;
@@ -117,7 +119,7 @@ namespace BAM.UI
             try { view = ArtKit.CreateHeroPreview(id); }
             catch (System.Exception e) { Debug.LogException(e); view = null; }
             if (view == null) { Picture.enabled = false; return false; }
-            view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, yaw, 0));
+            view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, Facing(), 0));
             view.SetMoving(false, 0);
             heroHeight = MeasureHeight(view, Spot.y);
             shownId = id;
@@ -207,15 +209,21 @@ namespace BAM.UI
 
         void Update()
         {
-            if (dragging || spin == 0) return;
-            Turn(spin * Time.unscaledDeltaTime);
-            spin = Mathf.MoveTowards(spin, 0, Mathf.Max(360f, Mathf.Abs(spin) * 3f) * Time.unscaledDeltaTime);
+            if (!dragging && spin != 0)
+            {
+                Turn(spin * Time.unscaledDeltaTime);
+                spin = Mathf.MoveTowards(spin, 0, Mathf.Max(360f, Mathf.Abs(spin) * 3f) * Time.unscaledDeltaTime);
+            }
+            if (hasHero) view.transform.rotation = Quaternion.Euler(0, Facing(), 0);
         }
+
+        // the dragged yaw plus a slow sway, so the hero never stands frozen (old Speltest View3DTeam: sin(t * 0.6))
+        float Facing() => yaw + Sway * Mathf.Sin(Time.unscaledTime * 0.6f);
 
         void Turn(float degrees)
         {
             yaw = Mathf.Repeat(yaw + degrees, 360f);
-            if (hasHero) view.transform.rotation = Quaternion.Euler(0, yaw, 0);
+            if (hasHero) view.transform.rotation = Quaternion.Euler(0, Facing(), 0);
         }
 
         void OnEnable() { if (cam != null) cam.enabled = hasHero; }
