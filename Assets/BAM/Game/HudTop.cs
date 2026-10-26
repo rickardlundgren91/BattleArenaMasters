@@ -118,9 +118,66 @@ namespace BAM.Game
             for (int i = 0; i < ev.Count; i++)
             {
                 var e = ev[i];
-                if (e.Type == EventType.Damage) OnDamage(e);
+                if (e.Type == EventType.Damage) { if (MatchViews.IsTick(ev, i)) OnTick(e); else OnDamage(e); }
                 else if (e.Type == EventType.Death && e.B != null && e.B.IsRealHero) OnHeroDeath(e);
                 else if (e.Type == EventType.SpellCast || e.Type == EventType.SpellCancel) OnSpellEvent(e); // HudSpell.cs
+            }
+        }
+
+        // Burns and poisons tick 2 to 4 times a second (Rickard 2026-10-26: "flera gånger per sekund" looked bad): their ticks are
+        // summed per hero and shown as one small number in the burn's colour about once a second, the total unchanged
+        const float TickShowEvery = 1f;
+        static readonly Color BurnNum = Hex(0xff8a3a), PoisonNum = Hex(0x9be05a);
+        sealed class TickSum { public Unit Unit; public bool ToPlayer, Creep, Poison; public float Sum, Since = -99f, Last; }
+        readonly TickSum[] tickSums = new TickSum[12];
+
+        void OnTick(SimEvent e)
+        {
+            var b = e.B;
+            if (b == null || e.V <= 0f) return;
+            bool toPlayer = b == m.Player, byPlayer = e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
+            bool creep = byPlayer && b.IsMinionLike && b.Team != m.Player.Team;
+            if (!b.IsRealHero && !creep) return;
+            if (!toPlayer && !byPlayer) return;
+            float now = Time.unscaledTime;
+            TickSum free = null;
+            for (int i = 0; i < tickSums.Length; i++)
+            {
+                var t = tickSums[i] ?? (tickSums[i] = new TickSum());
+                if (t.Unit == b && t.ToPlayer == toPlayer) { t.Sum += e.V; t.Last = now; return; }
+                if (t.Unit == null && free == null) free = t;
+            }
+            if (free == null) return; // a dozen burning heroes at once: the rest stay quiet
+            free.Unit = b; free.ToPlayer = toPlayer; free.Creep = creep; free.Sum = e.V; free.Since = now; free.Last = now;
+            free.Poison = b.Has(St.Poison) && !b.Has(St.Burn);
+        }
+
+        // once a second (and when a burn stops) the summed ticks rise as one small number
+        void TickNumbers()
+        {
+            float now = Time.unscaledTime;
+            for (int i = 0; i < tickSums.Length; i++)
+            {
+                var t = tickSums[i];
+                if (t == null || t.Unit == null) continue;
+                bool due = now - t.Since >= TickShowEvery || now - t.Last > 0.6f;
+                if (!due) continue;
+                var u = t.Unit;
+                if (t.Sum >= 0.5f && u.Alive && (t.ToPlayer || m.IsVisibleTo(u, m.Player.Team)))
+                {
+                    var f = floats[nextFloat];
+                    nextFloat = (nextFloat + 1) % floats.Length;
+                    f.Unit = u; f.Born = now; f.Value = t.Sum; f.ToPlayer = t.ToPlayer; f.Big = false; f.Word = true; // never merged with a hit
+                    f.At = views.DrawnAt(u);
+                    f.Label.text = Int(Mathf.RoundToInt(t.Sum));
+                    f.Label.color = t.Poison ? PoisonNum : BurnNum;
+                    f.Label.fontSize = t.Creep ? 28 : 36;
+                    f.BaseA = t.Creep ? 0.7f : 0.95f;
+                    f.Label.gameObject.SetActive(true);
+                }
+                // still burning: keep summing for the next second; done: free the slot
+                if (now - t.Last > 0.6f || !u.Alive) t.Unit = null;
+                else { t.Sum = 0f; t.Since = now; }
             }
         }
 
@@ -257,6 +314,7 @@ namespace BAM.Game
 
         void Floats()
         {
+            TickNumbers();
             float now = Time.unscaledTime;
             for (int i = 0; i < floats.Length; i++)
             {

@@ -67,7 +67,7 @@ namespace BAM.Game
                     case EventType.Damage:
                     {
                         var b = e.B;
-                        if (b == null || e.V < 1f || b.MaxHp <= 0f) break;
+                        if (b == null || e.V < 1f || b.MaxHp <= 0f || MatchViews.IsTick(ev, i)) break; // a burn or poison tick never shakes
                         float f = Mathf.Min(1f, e.V / b.MaxHp);
                         bool mine = e.A != null && (e.A == p || e.A.Owner == p);
                         if (b == p) { if (f >= 0.03f) AddTrauma(Mathf.Min(0.6f, 0.15f + f * 1.8f)); if (f >= 0.15f) buzz = Mathf.Max(buzz, 0.3f); } // only a big hit buzzes (Rickard 2026-10-26: vibration, but not overused)

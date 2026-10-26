@@ -167,7 +167,7 @@ namespace BAM.Game
             pending.Clear();
             hitKeys.Clear();
             var ev = m.Events;
-            for (int i = 0; i < ev.Count; i++) OnEvent(ev[i]);
+            for (int i = 0; i < ev.Count; i++) { tickNow = ev[i].Type == EventType.Damage && IsTick(ev, i); OnEvent(ev[i]); }
             if (!bridgeShown && m.Tut.BridgeOpen) BuildArena();
             SyncUnits();
             SyncProjs();
@@ -384,6 +384,36 @@ namespace BAM.Game
             return a.Owner != null && a.Owner.Kind == UnitKind.Hero ? (int)a.Owner.Hero : -1;
         }
 
+        bool tickNow; // the event being read is a burn or poison tick
+
+        /// <summary>Damage event i is a damage-over-time tick: passive damage with no Hit of the same attacker on the same target
+        /// right after it in the tick (a hit's Damage is always followed by its Hit, Combat.DealDamage then Emit Hit).</summary>
+        static bool PoisonedBy(Unit u, Unit by)
+        {
+            if (u == null || by == null) return false;
+            for (int k = 0; k < u.StatusCount; k++)
+            {
+                var st = u.GetStatus(k);
+                if (st.Type == St.Poison && st.By == by) return true;
+            }
+            return false;
+        }
+
+        public static bool IsTick(System.Collections.Generic.List<SimEvent> ev, int i)
+        {
+            var e = ev[i];
+            if (e.Type != EventType.Damage || e.Dmg == DmgKind.Auto) return false;
+            // burn ticks are passive damage; Tikta's poison ticks are special damage from a poison she put on the target
+            if (e.Dmg == DmgKind.Special && !PoisonedBy(e.B, e.A)) return false;
+            for (int j = i + 1; j < ev.Count && j <= i + 3; j++)
+            {
+                var h = ev[j];
+                if (h.Type == EventType.Damage) break;
+                if (h.Type == EventType.Hit && h.ASerial == e.ASerial && h.BSerial == e.BSerial) return false;
+            }
+            return true;
+        }
+
         UnitView V(Unit u) => u != null && unitBySerial.TryGetValue(u.Serial, out UnitRec r) ? r.V : null;
 
         void OnEvent(in SimEvent e)
@@ -424,8 +454,9 @@ namespace BAM.Game
                     ArtKit.PlayFx(FxKind.Hit, Coords.World(e.X, e.Y), 0.6f);
                     break;
                 case EventType.Damage:
-                    // special and passive damage without a shot of its own (zones, splashes) still flinches the target
-                    if (e.Dmg != DmgKind.Auto && e.V > 0f && e.B != null) V(e.B)?.PlayHit(e.Dmg == DmgKind.Special);
+                    // special and passive damage without a shot of its own (zones, splashes) still flinches the target; a burn or
+                    // poison tick does not (2 to 4 a second looked like flicker, Rickard 2026-10-26)
+                    if (e.Dmg != DmgKind.Auto && e.V > 0f && e.B != null && !tickNow) V(e.B)?.PlayHit(e.Dmg == DmgKind.Special);
                     break;
                 case EventType.Death:
                 {
