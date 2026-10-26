@@ -258,7 +258,7 @@ namespace BAM.UI
             raw.texture = Portrait(info.Id);
             raw.raycastTarget = false;
             c.Pic = pic;
-            c.Aspect = raw.texture != null ? (float)raw.texture.width / raw.texture.height : 400f / 308f;
+            c.Aspect = 400f / 308f; // the portraits' own shape (an imported texture may report its power-of-two size)
 
             var name = UiKit.Label(br, info.Name, Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, UiKit.TextColor);
             name.horizontalOverflow = HorizontalWrapMode.Overflow;
