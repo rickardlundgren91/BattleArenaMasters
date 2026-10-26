@@ -30,7 +30,7 @@ namespace BAM.Game
         }
 
         // target: a dark edge, the gold band and a pulsing inner ring
-        readonly Ring[] range = new Ring[1], charge = new Ring[1], reach = new Ring[1], target = new Ring[3], tower = new Ring[1];
+        readonly Ring[] range = new Ring[3], charge = new Ring[1], reach = new Ring[1], target = new Ring[3], tower = new Ring[1];
         // Brawl Stars ideas 2 and 3 (Rickard 2026-10-26): a red ring under each enemy the dragged special would hit, and an orange
         // ring at the hero's feet while its special is ready
         readonly Ring[] hits = new Ring[8], ready = new Ring[2];
@@ -43,6 +43,7 @@ namespace BAM.Game
         bool blinkOn;
         Vector2 blinkAt;
         Color blinkColor;
+        static readonly Color RingEdge = new Color(0.03f, 0.05f, 0.1f, 0.4f);
         static readonly Color ReadyOrange = new Color(1f, 0.54f, 0.12f), HitRed = new Color(1f, 0.2f, 0.25f);
         bool aimOn, aimLine;
         Vector2 aimA, aimB;
@@ -149,10 +150,14 @@ namespace BAM.Game
             at.y = 0f;
             float r = p.Range;
 
-            // the auto range (View3D.SyncRange): 1.2 px and 0.2 resting; a swing flashes it to 2.7 px and 0.6 for a quarter second
+            // the auto range (View3D.SyncRange's 1.2 px at 0.2, flashing on a swing). Rickard 2026-10-26 "man ser knappt cirkeln" on
+            // the stone floor: stronger than the old one, 2 px white at 0.55 between two thin dark edges (as the old "you" ring is
+            // edged), so it reads on light stone and dark grass alike; a swing still flashes it wider and brighter
             float hit = Mathf.Clamp01(1f - (Time.time - swingAt) / 0.25f);
-            float ew = (1.2f + 1.5f * hit) * px;
-            Show(range[0], at, r + ew / 2f, new Color(1f, 1f, 1f, 0.2f + 0.4f * hit), ew);
+            float ew = (2f + 1.5f * hit) * px, dw = 1f * px;
+            Show(range[0], at, r + ew / 2f, new Color(1f, 1f, 1f, 0.55f + 0.4f * hit), ew);
+            Show(range[1], at, r + ew / 2f + dw, RingEdge, dw);
+            Show(range[2], at, r - ew / 2f, RingEdge, dw);
 
             // the attack charge grows out to the range until the next swing (none while stunned or disarmed)
             bool blocked = p.Has(St.Stun) || p.Has(St.Disarm);

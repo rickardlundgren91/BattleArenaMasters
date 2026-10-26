@@ -39,6 +39,7 @@ namespace BAM.Game
         SpecialButton special;
         JoystickZone joy;
         AimView aim, marks;
+        AimIndicator aimLook;
         Image fade;
         RectTransform canvasRect, pointChevron, ringChevron;
         float fadeInAt = -1f;
@@ -79,6 +80,7 @@ namespace BAM.Game
             canvas.gameObject.SetActive(true);
             canvas.enabled = true;
             aim = ArtKit.CreateAim();
+            aimLook = new AimIndicator(aim);
             lastTutStep = -1;
             lastDenied = m.SpecialDeniedAt; deniedUntil = shakeUntil = bannerUntil = 0f;
             gainAt = -99f; lastCharge = 0f; killedBy = null;
@@ -112,6 +114,8 @@ namespace BAM.Game
         {
             BamSettings.Changed -= ApplyLayout;
             CancelTouches();
+            aimLook?.Destroy();
+            aimLook = null;
             if (aim != null) ArtKit.Release(aim);
             aim = null;
             if (marks != null) ArtKit.Release(marks);
@@ -170,8 +174,13 @@ namespace BAM.Game
         {
             if (m == null || !m.Player.Alive) return;
             if (!m.Player.SpecialReady) { Denied("Special not ready"); return; }
-            Queue(Mathf.Atan2(-offset.y, offset.x), Mathf.Clamp01(offset.magnitude / SpecialButton.MaxDrag));
+            Queue(Mathf.Atan2(-offset.y, offset.x), AimK(offset));
         }
+
+        /// <summary>How far along the reach a drag aims, 0..1: the old HudAim, from 0.35 to 1.8 button radii off the centre, so the
+        /// aim starts at the hero (Moa can put her field on herself, Rickard 2026-10-26).</summary>
+        static float AimK(Vector2 offset) =>
+            Mathf.Clamp01((offset.magnitude - 0.35f * SpecialButton.Radius) / (1.45f * SpecialButton.Radius));
 
         void Queue(float angle, float k)
         {
@@ -335,31 +344,33 @@ namespace BAM.Game
             if (aim == null) return;
             var p = m.Player;
             aim.Hide();
+            aimLook.Hide();
             rings.SetAim(false, false, Vector2.zero, Vector2.zero, 0f);
-            if (hidden || !p.Alive || m.State != MatchState.Play) return;
+            if (hidden || !p.Alive || m.State != MatchState.Play || !special.Dragging) return;
             var d = p.HDef;
             Vector3 hero = views.DrawnAt(p);
-            bool ready = p.SpecialReady;
-            if (special.Dragging && !special.OverCancel)
+            bool ready = p.SpecialReady, cancel = special.OverCancel;
+            float dt = Time.unscaledDeltaTime;
+            Vector2 o = special.Offset;
+            Vector3 dir = new Vector3(o.x, 0f, o.y).normalized;
+            Vector2 from = new Vector2(p.X, p.Y), sdir = new Vector2(dir.x, -dir.z); // the rules' y runs the other way
+            // the MLBB-style indicator (AimIndicator.cs); cancelling dims it grey and drops the hit marks
+            if (d.Drag == AimShape.Line)
             {
-                Vector2 o = special.Offset;
-                Vector3 dir = new Vector3(o.x, 0f, o.y).normalized;
-                Vector2 from = new Vector2(p.X, p.Y), sdir = new Vector2(dir.x, -dir.z); // the rules' y runs the other way
-                if (d.Drag == AimShape.Line)
-                {
-                    aim.ShowLine(hero, dir, d.DragReach, d.DragWidth * 2f, ready);
-                    rings.SetAim(true, true, from, from + sdir * d.DragReach, d.DragWidth);
-                }
-                else if (d.Drag == AimShape.Circle)
-                {
-                    float k = Mathf.Clamp01(o.magnitude / SpecialButton.MaxDrag);
-                    float dist = Mathf.Min(d.DragReach, Mathf.Max(1.5f, k * d.DragReach)); // as the rules' AimPoint
-                    // Fenn's thrown wolf stops at the first wall: show where it really lands
-                    if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Mathf.Atan2(-o.y, o.x), dist);
-                    aim.ShowCircle(hero + dir * dist, d.DragWidth, ready);
-                    rings.SetAim(true, false, from + sdir * dist, Vector2.zero, d.DragWidth);
-                    aim.ShowRange(hero, d.DragReach);
-                }
+                aimLook.Range(hero, d.DragReach, ready, cancel);
+                aimLook.Line(hero, dir, d.DragReach, d.DragWidth * 2f, ready, cancel, dt);
+                if (!cancel) rings.SetAim(true, true, from, from + sdir * d.DragReach, d.DragWidth);
+            }
+            else if (d.Drag == AimShape.Circle)
+            {
+                float k = AimK(o);
+                // as the rules' AimPoint: at least 1.5 tiles out, except Moa's field, which may land on herself
+                float dist = p.Hero == HeroId.Moa ? k * d.DragReach : Mathf.Min(d.DragReach, Mathf.Max(1.5f, k * d.DragReach));
+                // Fenn's thrown wolf stops at the first wall: show where it really lands
+                if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Mathf.Atan2(-o.y, o.x), dist);
+                aimLook.Range(hero, d.DragReach, ready, cancel);
+                aimLook.Circle(hero + dir * dist, d.DragWidth, ready, cancel, dt);
+                if (!cancel) rings.SetAim(true, false, from + sdir * dist, Vector2.zero, d.DragWidth);
             }
         }
 
