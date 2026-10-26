@@ -26,9 +26,12 @@ namespace BAM.Game
         /// <summary>Where the stick waits when nobody touches it (local to Area, which has its pivot in the middle).</summary>
         public Vector2 RestPosition(bool rightSide)
         {
-            Rect r = Area.rect;
-            float x = Mathf.Min(r.width * 0.5f - 60f, 260f);
-            return new Vector2(rightSide ? r.xMax - x : r.xMin + x, r.yMin + 330f);
+            // the old game's joyRest: 22 % of the width in from the side, 13 % of the height up from the bottom, measured on the
+            // whole HUD (the safe area), not on the touch zone, so it never depends on the zone's layout
+            var frame = (RectTransform)Area.parent;
+            Rect f = frame.rect;
+            var at = new Vector3(rightSide ? f.xMax - 0.22f * f.width : f.xMin + 0.22f * f.width, f.yMin + 0.13f * f.height, 0f);
+            return Area.InverseTransformPoint(frame.TransformPoint(at));
         }
 
         public bool RightSide;

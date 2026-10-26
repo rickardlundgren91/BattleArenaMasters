@@ -48,7 +48,7 @@ namespace BAM.Game
         Match m;
         MatchViews views;
         MatchCamera cam;
-        bool built, leftHanded, laidOutHand, tutorial, island;
+        bool built, leftHanded, laidOutHand, tutorial, island, joyLogged;
         int lastTutStep;
         float lastDenied, deniedUntil, shakeUntil, bannerUntil, gainAt, lastCharge;
         // who killed the player last ("Defeated by" under the respawn countdown)
@@ -98,6 +98,7 @@ namespace BAM.Game
             BeginCenter();
             BeginTutorial();
             deniedText.gameObject.SetActive(false);
+            joyLogged = false;
             leftHanded = !BamSettings.LeftHanded; // forces the first layout
             ApplyLayout();
             BamSettings.Changed += ApplyLayout;
@@ -209,7 +210,7 @@ namespace BAM.Game
         {
             if (m == null) return;
             canvas.enabled = !hidden;
-            rings.Frame(hidden || (Intro != null && Intro.Active));
+            rings.Frame(hidden || (Intro != null && Intro.Active), 1f / cam.PixelsPerTile);
             OverheadFrame(hidden || (Intro != null && Intro.Active));
             VignetteFrame(hidden || (Intro != null && Intro.Active));
             if (IntroFrame()) return; // the match intro: its own bars and name tags, no controls
@@ -229,10 +230,20 @@ namespace BAM.Game
             Fps(dt);
             joy.Rest();
             if (!m.Player.Alive && joy.Held) joy.Release();
+            if (!joyLogged && m.State == MatchState.Play)
+            {
+                // the joystick did not show on Rickard's PC (2026-10-26): one line on where it is, to find out why if it still does not
+                joyLogged = true;
+                var bi = joy.Base.GetComponent<Image>();
+                Debug.Log("[BAM.Game] joystick: on " + joy.Base.gameObject.activeInHierarchy + ", screen " + RectTransformUtility.WorldToScreenPoint(null, joy.Base.position)
+                          + " of " + Screen.width + "x" + Screen.height + ", size " + joy.Base.rect.size + ", alpha " + joy.Look.alpha
+                          + ", picture " + (bi.sprite != null ? bi.sprite.texture.name : "none") + ", zone " + joyArea.rect);
+            }
         }
 
         // the frames of the last half second, averaged (so a single slow frame does not flicker the number)
         Text fpsText;
+        static readonly bool ShowFps = false;
         string[] fpsStrings;
         float fpsTime;
         int fpsFrames;
@@ -555,8 +566,8 @@ namespace BAM.Game
 
             BuildCenter();
 
-            // development builds only (BAM > Build test APK, the editor): never in the release AAB
-            if (Debug.isDebugBuild)
+            // off: the old HUD has no fps line (Rickard 2026-10-26 compared the two). Set ShowFps to see it in development builds.
+            if (ShowFps && Debug.isDebugBuild)
             {
                 fpsText = UiKit.Label(safe, "", 36, TextAnchor.UpperLeft, Color.white);
                 UiKit.Place(fpsText, 0f, 1f, 18f, -150f, 220f, 50f);

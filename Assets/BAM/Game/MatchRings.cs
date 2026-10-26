@@ -10,7 +10,8 @@ namespace BAM.Game
     /// thin white ring that flashes thicker on each attack, the attack charge as a ring growing out to it until the next swing,
     /// the special's own reach while it is ready (when it differs from the auto range), a gold ring on the unit the last auto
     /// attack picked (held 1.1 s), and an enemy tower's range when the player comes near it: faint white, red while it shoots
-    /// at the player. Drawn with ArtKit's aim rings, tinted per ring.
+    /// at the player. Drawn with ArtKit's aim rings, tinted per ring, each with its own thin ring mesh: the old rings are a
+    /// screen pixel or two wide (View3D.SyncRange's widths in pixels), and the aim ring's own band grows with its radius.
     /// </summary>
     sealed class MatchRings
     {
@@ -23,10 +24,13 @@ namespace BAM.Game
             public MeshRenderer Renderer;
             public MaterialPropertyBlock Block;
             public Color Shown = new Color(-1f, 0f, 0f, 0f);
+            public MeshFilter Filter;
+            public Mesh Orig, Own;
+            public float OwnInner = -1f;
         }
 
-        // range: three rings side by side make it thicker on a hit; target: an outer dark edge, three gold, one pulsing inner
-        readonly Ring[] range = new Ring[3], charge = new Ring[2], reach = new Ring[1], target = new Ring[5], tower = new Ring[3];
+        // target: a dark edge, the gold band and a pulsing inner ring
+        readonly Ring[] range = new Ring[1], charge = new Ring[1], reach = new Ring[1], target = new Ring[3], tower = new Ring[1];
         // Brawl Stars ideas 2 and 3 (Rickard 2026-10-26): a red ring under each enemy the dragged special would hit, and an orange
         // ring at the hero's feet while its special is ready
         readonly Ring[] hits = new Ring[8], ready = new Ring[2];
@@ -60,7 +64,8 @@ namespace BAM.Game
                 var v = ArtKit.CreateAim();
                 MeshRenderer rr = null;
                 foreach (var r in v.GetComponentsInChildren<MeshRenderer>(true)) if (r.gameObject.name == "Range") rr = r;
-                rings[i] = new Ring { View = v, Renderer = rr, Block = new MaterialPropertyBlock() };
+                var mf = rr != null ? rr.GetComponent<MeshFilter>() : null;
+                rings[i] = new Ring { View = v, Renderer = rr, Block = new MaterialPropertyBlock(), Filter = mf, Orig = mf != null ? mf.sharedMesh : null };
                 v.Hide();
             }
         }
@@ -73,6 +78,8 @@ namespace BAM.Game
                 {
                     rings[i].View.Hide();
                     if (rings[i].Renderer != null) rings[i].Renderer.SetPropertyBlock(null); // the pooled view goes back white
+                    if (rings[i].Filter != null && rings[i].Orig != null) rings[i].Filter.sharedMesh = rings[i].Orig; // and to its own band
+                    if (rings[i].Own != null) Object.Destroy(rings[i].Own);
                     ArtKit.Release(rings[i].View);
                 }
                 rings[i] = null;
@@ -100,7 +107,8 @@ namespace BAM.Game
             }
         }
 
-        public void Frame(bool hidden)
+        /// <param name="px">World units per screen pixel at the focus (the old rings' widths are in pixels).</param>
+        public void Frame(bool hidden, float px)
         {
             HideAll();
             var p = m.Player;
@@ -109,30 +117,25 @@ namespace BAM.Game
             at.y = 0f;
             float r = p.Range;
 
-            // the auto range: thin and faint, a hit flashes it thicker and brighter for a quarter second
+            // the auto range (View3D.SyncRange): 1.2 px and 0.2 resting; a swing flashes it to 2.7 px and 0.6 for a quarter second
             float hit = Mathf.Clamp01(1f - (Time.time - swingAt) / 0.25f);
-            // the old game's alphas (View3D.SyncRange): 0.2 resting, up to 0.6 on a swing. Faint, or it frames the hero.
-            Show(range[0], at, r, new Color(1f, 1f, 1f, hit > 0f ? 0.2f + 0.4f * hit : 0.2f));
-            if (hit > 0f)
-            {
-                Show(range[1], at, r * (1f + 0.02f * hit), new Color(1f, 1f, 1f, 0.35f * hit));
-                Show(range[2], at, r * (1f - 0.02f * hit), new Color(1f, 1f, 1f, 0.35f * hit));
-            }
+            float ew = (1.2f + 1.5f * hit) * px;
+            Show(range[0], at, r + ew / 2f, new Color(1f, 1f, 1f, 0.2f + 0.4f * hit), ew);
 
             // the attack charge grows out to the range until the next swing (none while stunned or disarmed)
             bool blocked = p.Has(St.Stun) || p.Has(St.Disarm);
             float k = blocked ? 0f : Mathf.Clamp01(p.AtkTimer / Mathf.Max(0.05f, p.AttackCd));
             if (k > 0.02f && k < 1f)
             {
-                Show(charge[0], at, r * k, new Color(1f, 1f, 1f, 0.15f + 0.3f * k)); // the old charge ring's own alpha
-                Show(charge[1], at, r * k * 0.985f, new Color(1f, 1f, 1f, 0.1f + 0.2f * k));
+                float cw = 1.5f * px;
+                Show(charge[0], at, r * k + cw / 2f, new Color(1f, 1f, 1f, 0.15f + 0.3f * k), cw);
             }
 
             // the special's own reach while it is ready, if it differs from the auto range
             if (p.SpecialReady && p.HDef != null)
             {
                 float sr = p.HDef.TapReach;
-                if (sr > 0.5f && Mathf.Abs(sr - r) > 0.25f) Show(reach[0], at, sr, new Color(1f, 1f, 1f, 0.12f));
+                if (sr > 0.5f && Mathf.Abs(sr - r) > 0.25f) Show(reach[0], at, sr + 0.6f * px, new Color(1f, 1f, 1f, 0.12f), 1.2f * px);
             }
 
             // a thick gold ring on who the last auto attack picked: held, then fading over the last 0.4 s
@@ -142,19 +145,19 @@ namespace BAM.Game
                 float fa = age < 0.7f ? 1f : 1f - (age - 0.7f) / 0.4f, pop = Mathf.Max(0f, 1f - age / 0.15f);
                 float rr = autoTarget.R + 0.22f + 0.12f * pop;
                 Vector3 tp = views.DrawnAt(autoTarget); tp.y = 0f;
-                Show(target[0], tp, rr * 1.12f, new Color(Dark.r, Dark.g, Dark.b, 0.55f * fa));
-                Show(target[1], tp, rr * 1.07f, new Color(Gold.r, Gold.g, Gold.b, fa));
-                Show(target[2], tp, rr * 1.035f, new Color(Gold.r, Gold.g, Gold.b, fa));
-                Show(target[3], tp, rr, new Color(Gold.r, Gold.g, Gold.b, fa));
-                Show(target[4], tp, rr * (0.72f + 0.06f * Mathf.Sin(age * 18f)), new Color(Gold.r, Gold.g, Gold.b, 0.7f * fa));
+                float gw = 3.5f * px, ri = rr * (0.72f + 0.06f * Mathf.Sin(age * 18f));
+                Show(target[0], tp, rr + gw + 1.5f * px, new Color(Dark.r, Dark.g, Dark.b, 0.55f * fa), 2f * (gw + 1.5f * px));
+                Show(target[1], tp, rr + gw, new Color(Gold.r, Gold.g, Gold.b, fa), 2f * gw);
+                Show(target[2], tp, ri + 1.2f * px, new Color(Gold.r, Gold.g, Gold.b, 0.7f * fa), 2.4f * px);
             }
 
             // ready: an orange ring at the hero's feet, breathing
             if (p.SpecialReady)
             {
                 float br = 0.5f + 0.5f * Mathf.Sin(Time.time * 5f);
-                Show(ready[0], at, p.R + 0.2f, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.65f + 0.3f * br));
-                Show(ready[1], at, (p.R + 0.2f) * (1.06f + 0.05f * br), new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.35f * br));
+                float rw = 2.5f * px, rr0 = Mathf.Max(0.55f, p.R + 0.35f) + 0.12f; // just outside the green "you" ring
+                Show(ready[0], at, rr0 + rw, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.65f + 0.3f * br), rw);
+                Show(ready[1], at, rr0 + rw + (1f + 2f * br) * px * 2f, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.35f * br), 1.5f * px);
             }
 
             // the dragged special's hit preview: who is inside the shape now (walls are not checked: a guide, not a promise)
@@ -177,7 +180,7 @@ namespace BAM.Game
                     else d = (q - aimA).magnitude;
                     if (d > aimHalf + u.R) continue;
                     Vector3 up = views.DrawnAt(u); up.y = 0f;
-                    Show(hits[n++], up, u.R + 0.25f, new Color(HitRed.r, HitRed.g, HitRed.b, 0.9f));
+                    Show(hits[n++], up, u.R + 0.25f, new Color(HitRed.r, HitRed.g, HitRed.b, 0.9f), 3f * px);
                 }
             }
 
@@ -190,12 +193,8 @@ namespace BAM.Game
                 {
                     bool onMe = tw.Target == p;
                     Vector3 tc = Coords.Of(tw); tc.y = 0f;
-                    Show(tower[0], tc, tr, onMe ? new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.75f) : new Color(1f, 1f, 1f, 0.35f));
-                    if (onMe)
-                    {
-                        Show(tower[1], tc, tr * 0.985f, new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.75f));
-                        Show(tower[2], tc, tr * 0.97f, new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.35f));
-                    }
+                    float w = (onMe ? 3f : 1.5f) * px;
+                    Show(tower[0], tc, tr + w / 2f, onMe ? new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.75f) : new Color(1f, 1f, 1f, 0.25f), w);
                 }
             }
         }
@@ -210,9 +209,23 @@ namespace BAM.Game
             for (int i = 0; i < rings.Length; i++) if (rings[i] != null) rings[i].View.Hide();
         }
 
-        static void Show(Ring ring, Vector3 center, float radius, Color color)
+        /// <summary>A ring whose outer edge is at radius and whose band is width wide (world units).</summary>
+        static void Show(Ring ring, Vector3 center, float radius, Color color, float width)
         {
             if (ring == null || radius <= 0.01f) return;
+            if (ring.Filter != null)
+            {
+                // the ring mesh runs from inner to 1 and is scaled by the radius: a fixed width needs its own inner edge
+                float inner = Mathf.Clamp(1f - width / radius, 0f, 0.999f);
+                inner = Mathf.Round(inner * 2000f) / 2000f; // rebuilt only when it really changes
+                if (ring.Own == null || inner != ring.OwnInner)
+                {
+                    ring.OwnInner = inner;
+                    if (ring.Own == null) ring.Own = new Mesh { name = "BAM.Ring" };
+                    BuildRing(ring.Own, inner);
+                }
+                if (ring.Filter.sharedMesh != ring.Own) ring.Filter.sharedMesh = ring.Own;
+            }
             ring.View.ShowRange(center, radius);
             if (ring.Renderer != null && color != ring.Shown)
             {
@@ -220,6 +233,45 @@ namespace BAM.Game
                 ring.Block.SetColor(BaseColor, color);
                 ring.Renderer.SetPropertyBlock(ring.Block);
             }
+        }
+
+        static readonly Vector3[] ringV = new Vector3[2 * (RingSeg + 1)];
+        static readonly Vector3[] ringN = new Vector3[2 * (RingSeg + 1)];
+        static readonly Color[] ringC = new Color[2 * (RingSeg + 1)];
+        static readonly Vector2[] ringUv = new Vector2[2 * (RingSeg + 1)];
+        static int[] ringT;
+        const int RingSeg = 96;
+
+        static void BuildRing(Mesh mesh, float inner)
+        {
+            for (int i = 0; i <= RingSeg; i++)
+            {
+                float a = i * Mathf.PI * 2f / RingSeg, c = Mathf.Cos(a), s = Mathf.Sin(a);
+                ringV[2 * i] = new Vector3(c * inner, 0f, s * inner);
+                ringV[2 * i + 1] = new Vector3(c, 0f, s);
+                ringN[2 * i] = ringN[2 * i + 1] = Vector3.up;
+                ringC[2 * i] = ringC[2 * i + 1] = Color.white;
+                ringUv[2 * i] = new Vector2(i / (float)RingSeg, 0f);
+                ringUv[2 * i + 1] = new Vector2(i / (float)RingSeg, 1f);
+            }
+            if (ringT == null)
+            {
+                ringT = new int[RingSeg * 6];
+                for (int i = 0; i < RingSeg; i++)
+                {
+                    int v = 2 * i, t = 6 * i;
+                    // facing up (clockwise seen from above, as Unity wants)
+                    ringT[t] = v; ringT[t + 1] = v + 2; ringT[t + 2] = v + 1;
+                    ringT[t + 3] = v + 2; ringT[t + 4] = v + 3; ringT[t + 5] = v + 1;
+                }
+            }
+            mesh.Clear();
+            mesh.vertices = ringV;
+            mesh.normals = ringN;
+            mesh.colors = ringC;
+            mesh.uv = ringUv;
+            mesh.triangles = ringT;
+            mesh.RecalculateBounds();
         }
     }
 }
