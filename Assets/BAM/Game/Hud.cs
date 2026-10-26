@@ -100,6 +100,7 @@ namespace BAM.Game
             specialIcon.sprite = icon != null ? Sprite.Create(icon, new Rect(0, 0, icon.width, icon.height), new Vector2(0.5f, 0.5f), 100f) : null;
             specialIcon.enabled = icon != null;
             specialName.text = icon != null ? "" : HeroCatalog.Get(m.Player.Hero).SpecialName;
+            if (BeginSplit(HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant())) { specialIcon.enabled = false; specialName.text = ""; } // its own tap and drag pictures (HudSplit.cs)
             BeginCenter();
             BeginTutorial();
             deniedText.gameObject.SetActive(false);
@@ -288,11 +289,11 @@ namespace BAM.Game
         {
             var p = m.Player;
             bool ready = p.Alive && p.SpecialReady;
-            specialFill.fillAmount = p.Alive ? p.Charge01 : 0f;
             // the Glass HUD's button (Hud.cs 739-749, HudGlass.drawGlassSpecialRim): a dark disc, brown when ready, an orange
             // charge ring, and when ready an orange ring breathing just outside it (sin 3.5 t)
             specialFill.color = ready ? GlassOrangeHi : GlassOrange;
             specialDisc.color = ready ? DiscReady : DiscCharging;
+            Split(p.Alive ? p.Charge01 : 0f, ready); // the two halves: ring, grey and gold level (HudSplit.cs)
             float pulse = Mathf.Sin(Time.unscaledTime * 3.5f);
             specialGlow.enabled = ready;
             if (ready)
@@ -539,6 +540,7 @@ namespace BAM.Game
             specialIcon = iconRt.gameObject.AddComponent<Image>();
             specialIcon.preserveAspect = false;
             specialIcon.raycastTarget = false;
+            BuildSplit(specialFill.rectTransform); // split down the middle: tap left, drag right (HudSplit.cs)
             // the gold frame round it all and a thin gold line round the icon, so it reads as a framed metal button
             RoundRing(Circle(specialRoot, "Rim", D, Hex(0xd9a441)).GetComponent<Image>(), D * 0.5f, Mathf.Max(1.5f, SpecialButton.Radius * 0.035f));
             RoundRing(Circle(specialRoot, "IconRim", D * 0.86f, new Color(1f, 214f / 255f, 130f / 255f, 0.55f)).GetComponent<Image>(), D * 0.43f, 1f);
