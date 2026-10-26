@@ -153,6 +153,9 @@ h2{margin:0 0 14px;font-family:var(--display);font-weight:900;font-size:clamp(28
 .pt-card ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:s}
 .pt-card li{display:flex;gap:12px;align-items:flex-start;font-weight:700}
 .pt-card li::before{counter-increment:s;content:counter(s);flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--teal);color:var(--night);font-weight:900;font-size:14px}
+.pt-title{margin:0;font-family:var(--display);font-size:22px;font-weight:900;color:var(--gold-hi)}
+.pt-card li span{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.pt-btn{padding:10px 18px;font-size:15px}
 .pt-card small{color:var(--muted);font-size:13.5px}
 .perks{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
 .perks li{padding-left:28px;position:relative}
@@ -203,7 +206,7 @@ footer a:hover{color:var(--gold-hi)}
       </div>
       <p class="soon" data-when="no-play">The Android playtest opens soon. We'll post the link in Discord first.</p>
       <div class="ctas" data-when="play" hidden>
-        <a class="btn btn-gold big" href="#playtest" data-link="play"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><path fill="#00a0ff" d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4L13.4 12 3.6 1.8z"/><path fill="#ffd400" d="m16.7 15.3-3.3-3.3 3.3-3.3 3.8 2.2c1.1.6 1.1 1.6 0 2.2l-3.8 2.2z"/><path fill="#ff3a44" d="M16.7 15.3 13.4 12 3.6 21.8c.4.4 1 .4 1.7.1l11.4-6.6"/><path fill="#00f076" d="M16.7 8.7 5.3 2.1c-.7-.4-1.3-.3-1.7.1L13.4 12l3.3-3.3z"/></svg>Join the Android playtest</a>
+        <a class="btn btn-gold big" href="#playtest" data-link="play" data-steps><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><path fill="#00a0ff" d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4L13.4 12 3.6 1.8z"/><path fill="#ffd400" d="m16.7 15.3-3.3-3.3 3.3-3.3 3.8 2.2c1.1.6 1.1 1.6 0 2.2l-3.8 2.2z"/><path fill="#ff3a44" d="M16.7 15.3 13.4 12 3.6 21.8c.4.4 1 .4 1.7.1l11.4-6.6"/><path fill="#00f076" d="M16.7 8.7 5.3 2.1c-.7-.4-1.3-.3-1.7.1L13.4 12l3.3-3.3z"/></svg>Become a tester</a>
         <a class="btn btn-ghost" href="https://discord.gg/geJVGJtuXx" data-link="discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Join our Discord</a>
       </div>
       <ul class="badges"><li>Closed Android playtest</li><li>Free</li><li class="hot">About 20 spots</li></ul>
@@ -277,16 +280,15 @@ footer a:hover{color:var(--gold-hi)}
         </ul>
       </div>
       <div class="pt-card">
+        <h3 class="pt-title">Become a tester in 3 steps</h3>
         <ol>
-          <li data-when="group" hidden><span>Join the <a href="#playtest" data-link="group">tester group</a> with the Google account on your phone</span></li>
-          <li>Open the test link on your Android phone</li>
-          <li>Tap "Become a tester"</li>
-          <li>Install Battle Arena Masters from Google Play</li>
+          <li data-when="group" hidden><span>Join the tester group with the Gmail you use on your Android phone.<a class="btn btn-gold pt-btn" href="#playtest" data-link="group">Join the tester group</a></span></li>
+          <li><span>Open the test link on your Android phone and tap "Become a tester".<a class="btn btn-gold pt-btn" href="#playtest" data-link="play" data-when="play" hidden>Open the test link</a></span></li>
+          <li><span>Install Battle Arena Masters from Google Play and jump into your first match.</span></li>
         </ol>
-        <a class="btn btn-gold" href="#playtest" data-link="play" data-when="play" hidden>Join the test on Google Play</a>
         <span class="pt-wait" data-when="no-play">Test link coming soon</span>
         <a class="btn btn-ghost" href="https://discord.gg/geJVGJtuXx" data-link="discord" data-when="no-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Get the link on Discord</a>
-        <small>Use the same Google account as on your phone. Please stay in the test for at least two weeks. You can leave any time after that.</small>
+        <small>Use the same Google account in every step. If the test link says the app isn't available, wait a few minutes after joining the group and try again. Please stay in the test for at least two weeks. You can leave any time after that.</small>
       </div>
     </div>
   </section>
@@ -300,7 +302,7 @@ footer a:hover{color:var(--gold-hi)}
         <details><summary>How long is a match?</summary><p>About 4 minutes on average, usually between 2 and 5. A match ends when one team destroys the other team's tower.</p></details>
         <details><summary>How long does it take to learn?</summary><p>You'll know the basics after a match or two: move, tap your special, or drag it to aim. Mastering all ten heroes takes a lot longer.</p></details>
         <details><summary>Do I have to aim every attack?</summary><p>No. Your hero attacks a random enemy in range on its own. You decide where to stand and when to use your special.</p></details>
-        <details><summary>When can I play?</summary><p>The Android playtest opens soon. The test link will be posted here and in our Discord first.</p></details>
+        <details><summary>When can I play?</summary><p data-when="no-play">The Android playtest opens soon. The test link will be posted here and in our Discord first.</p><p data-when="play" hidden>Now, on Android. Follow the <a href="#playtest">3 steps</a>: join the tester group, open the test link on your phone, and install.</p></details>
         <details><summary>Is it on iPhone?</summary><p>Not yet. We're starting with Android. Join the Discord to hear when that changes.</p></details>
         <details><summary>Which phones does it run on?</summary><p>Android first. We'll share more about other platforms later.</p></details>
         <details><summary>What do testers need to do?</summary><p>Stay in the test for at least two weeks, play when you want, and tell us what you think on Discord.</p></details>
@@ -322,8 +324,8 @@ footer a:hover{color:var(--gold-hi)}
 <script>
 // Fill in these links. Empty play = the page points to Discord for the test link. Empty group = no tester-group step.
 var LINKS = {
-  play: "",     // Google Play test link, e.g. https://play.google.com/apps/testing/...
-  group: "",    // Google Group for testers, e.g. https://groups.google.com/g/...
+  play: "https://play.google.com/apps/internaltest/4701491481232907787",     // Google Play test link, e.g. https://play.google.com/apps/testing/...
+  group: "https://groups.google.com/g/bam-playtesters",    // Google Group for testers, e.g. https://groups.google.com/g/...
   discord: "https://discord.gg/geJVGJtuXx"   // Discord invite, e.g. https://discord.gg/...
 };
 document.querySelectorAll("[data-when]").forEach(function (el) {
@@ -331,6 +333,7 @@ document.querySelectorAll("[data-when]").forEach(function (el) {
   el.hidden = !on;
 });
 document.querySelectorAll("[data-link]").forEach(function (a) {
+  if (a.hasAttribute("data-steps") && LINKS.group) return;
   var url = LINKS[a.dataset.link];
   if (url) { a.href = url; a.target = "_blank"; a.rel = "noopener"; }
 });
