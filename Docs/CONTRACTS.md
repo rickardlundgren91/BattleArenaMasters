@@ -50,7 +50,10 @@ Volume follows `BamSettings.SfxVolume`. Voice limits so that 20 minion hits in o
 `StopAll()` on pause and when leaving a match. All clips synthesized in code at boot (short, punchy, mobile-speaker
 friendly, nothing harsh above about 8 kHz, no clipping). See `SfxId` for the list; the game layer maps events to ids.
 Music: `PlayMusic(MusicId.Match)` when a match starts and after a resume (it goes on where it was), `StopMusic()` at the
-result screen; `StopAll()` also fades it out. One loop for now (`Resources/BAM/Music/ByteStrikeLoop`).
+result screen so the victory or defeat jingle plays alone, then `PlayMusic(MusicId.Menu)` 2.5 s later; `Screens.ShowMainMenu`
+plays `MusicId.Menu`; `StopAll()` also fades it out. Menu plays `Resources/BAM/Music/Menu` if it exists, else the match loop
+(`Resources/BAM/Music/ByteStrikeLoop`), and the same clip goes on without a restart between menu and match. A recorded clip
+at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, levelled at load.
 
 ## UI (BAM.UI) - called by BAM.Game; calls Core
 

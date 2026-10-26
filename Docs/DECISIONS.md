@@ -34,7 +34,8 @@ before going beyond it.
 - English only. Font Lilita One (OFL).
 - Graphics: effects, projectiles, zones and UI made in code; heroes, creeps, wolf and arena use Rickard's own old models,
   Mixamo animations and textures (changed 2026-10-25, see ARCHITECTURE rule 4). Every attack is always visible (rule 5).
-  Sounds synthesized in code. Music: Rickard's "Byte Strike" loop plays in matches (2026-10-25). On 2026-10-26 Rickard
+  Sounds synthesized in code. Music: Rickard's "Byte Strike" loop plays in matches (2026-10-25) and, "for all music for
+  now" (2026-10-26), in the menus until a menu track exists. On 2026-10-26 Rickard
   decided to keep it in the build although its rights are unclear (made on Google Flow Music, free tier, see LICENSES);
   re-check before the production release. No vibration for now.
 - Portrait, camera angled from above. 60 fps target with Low/High graphics.
