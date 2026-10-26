@@ -3,6 +3,7 @@ using BAM.Audio;
 using BAM.Core;
 using BAM.Sim;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace BAM.UI
@@ -44,9 +45,15 @@ namespace BAM.UI
             homeHero = UiKit.HeroBadge(body, HeroId.Bram);
             UiKit.Place(homeHero, 0.5f, 0, 0, platY - 20, 440, 440);
             var stageRt = UiKit.NewRect("Hero3D", body);
+            // A soft dark shadow on the stone under the feet, so he stands on the platform and does not seem to float.
+            var shadow = UiKit.Fill(body, new Color(0.02f, 0.03f, 0.08f, 0.5f), UiKit.Circle);
+            UiKit.Place(shadow, 0.5f, 0, 0, platY - 34, 300, 64);
+            var shadowCore = UiKit.Fill(shadow.rectTransform, new Color(0.02f, 0.03f, 0.08f, 0.35f), UiKit.Circle);
+            UiKit.Stretch(shadowCore.rectTransform, 60, 14, 60, 14);
             // The camera sees 1.82 units from 0.11 below the feet, so tall heroes keep air above the head and the feet land
-            // 6 % up the picture: on the ring's middle (platY).
-            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 900 * 0.11f / 1.82f, 900, 900);
+            // 6 % up the picture: a little below the ring's middle, on the shadow.
+            UiKit.Place(stageRt, 0.5f, 0, 0, platY - 22 - 900 * 0.11f / 1.82f, 900, 900);
+            stageRt.SetAsLastSibling(); // the hero over its shadow
             homeStage = stageRt.gameObject.AddComponent<HeroStage>();
 
             // Top bar: portrait, the game's name.
@@ -592,8 +599,12 @@ namespace BAM.UI
     /// Shows one hero's 3D model (ArtKit.CreateHeroPreview) in the UI: a small camera far from the arena films it into a
     /// RenderTexture drawn by a RawImage. The camera only runs while this is visible.
     /// </summary>
-    sealed class HeroStage : MonoBehaviour
+    sealed class HeroStage : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
+        const float StartYaw = 160f;  // faces the camera, a little turned
+        const float DegPerUnit = 0.45f; // a finger across the whole screen turns him about one and a half times
+        float yaw = StartYaw, spin;   // spin: degrees per second left after a flick, slowing down
+        bool dragging;
         static readonly Vector3 Spot = new Vector3(500, 0, 500);
         const int Size = 768;
 
@@ -613,7 +624,7 @@ namespace BAM.UI
             try { view = ArtKit.CreateHeroPreview(id); }
             catch (System.Exception e) { Debug.LogException(e); view = null; }
             if (view == null) { image.enabled = false; return false; }
-            view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, 160, 0)); // faces the camera, a little turned
+            view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, yaw, 0));
             view.SetMoving(false, 0);
             shownId = id;
             hasHero = true;
@@ -626,7 +637,7 @@ namespace BAM.UI
         {
             if (cam != null) return;
             image = gameObject.AddComponent<RawImage>();
-            image.raycastTarget = false;
+            image.raycastTarget = true; // drag sideways to turn the hero, as in the old game
             rt = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGB32) { name = "BAM.UI.HeroStage", antiAliasing = 4 };
             image.texture = rt;
             var go = new GameObject("BAM.HeroStageCamera");
@@ -643,6 +654,32 @@ namespace BAM.UI
             go.transform.position = Spot + new Vector3(0, 0.8f, -3.4f);
             go.transform.rotation = Quaternion.identity;
             cam.enabled = false;
+        }
+
+        // Drag sideways to turn the hero; let go mid-drag and he keeps turning a moment, slowing down.
+        public void OnBeginDrag(PointerEventData e) { dragging = true; spin = 0; }
+
+        public void OnDrag(PointerEventData e)
+        {
+            float d = -e.delta.x / transform.lossyScale.x * DegPerUnit;
+            Turn(d);
+            float dt = Mathf.Max(Time.unscaledDeltaTime, 0.001f);
+            spin = Mathf.Lerp(spin, d / dt, 0.5f);
+        }
+
+        public void OnEndDrag(PointerEventData e) => dragging = false;
+
+        void Update()
+        {
+            if (dragging || spin == 0) return;
+            Turn(spin * Time.unscaledDeltaTime);
+            spin = Mathf.MoveTowards(spin, 0, Mathf.Max(360f, Mathf.Abs(spin) * 3f) * Time.unscaledDeltaTime);
+        }
+
+        void Turn(float degrees)
+        {
+            yaw = Mathf.Repeat(yaw + degrees, 360f);
+            if (hasHero) view.transform.rotation = Quaternion.Euler(0, yaw, 0);
         }
 
         void OnEnable() { if (cam != null) cam.enabled = hasHero; }
