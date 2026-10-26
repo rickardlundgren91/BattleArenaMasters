@@ -15,7 +15,7 @@ namespace BAM.Art
         public bool Left;
         /// <summary>A staff held along the forearm in the bind pose, so it stands up when the arm hangs (Moa; old MX_ALONG).</summary>
         public bool Along;
-        /// <summary>Degrees above level the weapon is turned to about its grip while the hero is not swinging (Bram; old MX_HOLD_UP).</summary>
+        /// <summary>Degrees above level the weapon is turned to about its grip while the hero is not swinging (Bram; old MX_HOLD_UP); below level when negative (Tikta); 0 = left as the fist holds it.</summary>
         public float HoldUp;
         /// <summary>Degrees the held weapon also turns from straight ahead towards its own hand's side (Bram 30: beside the face; past 90 it leans back, Bonk 160: over the shoulder).</summary>
         public float HoldOut;
@@ -65,14 +65,16 @@ namespace BAM.Art
             var g = new GearDef[8];
             g[(int)HeroId.Fenn] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f } },
-                Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f },
+                // a bit smaller than the old game's 1.0 and 0.5 on his new Original body (Rickard 2026-10-26: sword huge, "lite för stor sköld")
+                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 0.85f, Grip = 0.2f } },
+                Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.42f },
             };
-            // arms out as in the old game (MX_ARM_SPREAD 22) and the hammer leaning out to his right, so it stands beside his face,
-            // not in front of it (Rickard 2026-10-26: "bram täcker sig själv" on the hero page)
+            // arms out as in the old game (MX_ARM_SPREAD 22) and the hammer leaning up and back over his right shoulder, so it never
+            // covers his face (Rickard 2026-10-26: "bram täcker sig själv"); leaning out only 30 it still stood in front of his face
+            // from the menu stage's angle (turned 20 degrees, swaying 14)
             g[(int)HeroId.Bram] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 50f, HoldOut = 30f } },
+                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 50f, HoldOut = 130f } },
                 ArmSpread = 22f,
             };
             // held by the shank just under the ring, so it hangs from the fist with the flukes down (Rickard 2026-10-16/19)
@@ -92,21 +94,22 @@ namespace BAM.Art
             g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true } } };
             // her old needle daggers, one in each fist out of the thumb side (old View3DOwnHeroFx.cs MxNeedles before the Needle
             // Wing: NeedleMesh/NeedleTex as Props tikta_needle, NEEDLE_LEN 0.36, NEEDLE_GRIP 0.14; Rickard 2026-10-26: "tikta ska
-            // ha sina gamla vapen, typ två daggers")
+            // ha sina gamla vapen, typ två daggers"); at rest the blades point down along her forearms, since her guard idle holds
+            // a fist at her mouth and out of the thumb side the needle stuck into her face
             g[(int)HeroId.Tikta] = new GearDef
             {
                 Weapons = new[]
                 {
-                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true },
-                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true, HoldUp = -70f, HoldOut = 20f },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f },
                 },
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
             // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
             // (Rickard 2026-10-26: "klubban ska vara för stor för honom"); at rest it leans back over his right shoulder instead of
-            // standing up in front of his face
-            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 45f, HoldOut = 160f } } };
+            // standing up in front of his face, low enough that its top stays inside the menu stage's picture
+            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 30f, HoldOut = 165f } } };
             return g;
         }
 
@@ -228,7 +231,7 @@ namespace BAM.Art
             wT[i] = t; hand[i] = hd; index[i] = ix;
             bindP[i] = t.localPosition; bindR[i] = t.localRotation; bindS[i] = t.localScale;
             float gy = W.Grip * mh;
-            Vector3 ax = W.HoldUp > 0f ? Weapons.ShaftAxis(mesh, gy) : Vector3.zero; // a hammer's box is not centred on its shaft
+            Vector3 ax = W.HoldUp != 0f ? Weapons.ShaftAxis(mesh, gy) : Vector3.zero; // a hammer's box is not centred on its shaft
             gripL[i] = new Vector3(ax.x, gy, ax.z);
         }
 
@@ -290,7 +293,7 @@ namespace BAM.Art
                 if (t == null) continue;
                 WeaponDef W = defs[i];
                 if (W.Thrown) t.localScale = bindS[i] * show;
-                if (W.HoldUp > 0f) HoldAngle(i, W, dead ? 0f : 1f - Mathf.Clamp01(actW));
+                if (W.HoldUp != 0f) HoldAngle(i, W, dead ? 0f : 1f - Mathf.Clamp01(actW));
             }
             if (sAnchor != null) ShieldFace(moveW);
         }
