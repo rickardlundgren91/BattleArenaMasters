@@ -84,17 +84,22 @@ namespace BAM.Game
     }
 
     /// <summary>
-    /// The special button: a tap fires it at the automatic target; a drag aims it and fires on release; dragging back onto
-    /// the button cancels. Offset is the finger relative to the button's centre in canvas units.
+    /// The special button: a tap fires it at the automatic target; a drag aims it and fires on release; letting go on the cancel
+    /// mark above the button cancels (the old HudAim.cs; Rickard 2026-10-25: back on the button no longer cancels). A drag starts
+    /// once the finger has moved half a button radius from where it touched, so a sloppy tap stays a tap. Offset is the finger
+    /// relative to the button's centre in canvas units.
     /// </summary>
     sealed class SpecialButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
-        public const float DragStart = 55f, MaxDrag = 300f, CancelRadius = 125f;
+        public const float Radius = 135f, DragStart = 0.5f * Radius, MaxDrag = 300f;
+        /// <summary>The cancel mark: this far above the button's centre, this big (the old CANCEL_Y, CANCEL_R).</summary>
+        public const float CancelUp = 3.6f * Radius, CancelRadius = 0.85f * Radius;
         const int None = int.MinValue;
 
         public RectTransform Rect;
         public bool Pressed, Dragging, OverCancel;
         public Vector2 Offset;
+        Vector2 start;
         /// <summary>A tap, or an aimed release with the final offset.</summary>
         public Action Tapped;
         public Action<Vector2> Aimed;
@@ -105,6 +110,8 @@ namespace BAM.Game
             if (pointer != None) return;
             pointer = e.pointerId;
             Pressed = true; Dragging = false; OverCancel = false; Offset = Vector2.zero;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, e.position, null, out Vector2 local);
+            start = local - Rect.rect.center;
         }
 
         public void OnDrag(PointerEventData e)
@@ -112,9 +119,8 @@ namespace BAM.Game
             if (e.pointerId != pointer) return;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, e.position, null, out Vector2 local);
             Offset = local - Rect.rect.center;
-            float len = Offset.magnitude;
-            if (!Dragging && len > DragStart) Dragging = true;
-            OverCancel = Dragging && len < CancelRadius;
+            if (!Dragging && (Offset - start).magnitude > DragStart) Dragging = true;
+            OverCancel = Dragging && (Offset - new Vector2(0f, CancelUp)).magnitude < CancelRadius;
         }
 
         public void OnPointerUp(PointerEventData e)

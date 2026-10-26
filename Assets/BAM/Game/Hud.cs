@@ -32,7 +32,10 @@ namespace BAM.Game
         RectTransform safe;
         Text centerText, respawnTitle, respawnText, defeatedText, bannerText, deniedText, specialName;
         RectTransform specialRoot, joyArea;
-        Image specialFill, specialFace, specialGlow, specialIcon, specialOff, gainRing;
+        Image specialFill, specialFace, specialGlow, specialIcon, specialOff, gainRing, cancelBack, dragDot;
+        RectTransform cancelMark, dragRing;
+        Text cancelText;
+        readonly Image[] cancelCross = new Image[2];
         SpecialButton special;
         JoystickZone joy;
         AimView aim, marks;
@@ -319,6 +322,32 @@ namespace BAM.Game
             float shake = Time.unscaledTime < shakeUntil ? Mathf.Sin(Time.unscaledTime * 70f) * 14f * (shakeUntil - Time.unscaledTime) / ShakeTime : 0f;
             specialFace.rectTransform.anchoredPosition = new Vector2(shake, 0f);
             if (special.Pressed && !p.Alive) special.Cancel();
+            DragMarks();
+        }
+
+        static readonly Color CancelOff = new Color(0.04f, 0.05f, 0.1f, 0.5f), CancelOn = new Color(0.9f, 0.2f, 0.2f, 0.55f), DotRed = new Color(1f, 0.35f, 0.35f, 0.85f);
+
+        // while the special is dragged (the old HudAim.cs): the reach ring round the button, a dot under the finger and the
+        // cancel mark above, red with CANCEL while the finger is on it
+        void DragMarks()
+        {
+            bool drag = special.Dragging;
+            if (cancelMark.gameObject.activeSelf != drag)
+            {
+                cancelMark.gameObject.SetActive(drag);
+                dragRing.gameObject.SetActive(drag);
+                dragDot.gameObject.SetActive(drag);
+            }
+            if (!drag) { if (cancelText.gameObject.activeSelf) cancelText.gameObject.SetActive(false); return; }
+            bool on = special.OverCancel;
+            cancelBack.color = on ? CancelOn : CancelOff;
+            cancelMark.localScale = Vector3.one * (on ? 1.12f : 1f);
+            for (int i = 0; i < 2; i++) cancelCross[i].color = on ? Color.white : new Color(1f, 1f, 1f, 0.75f);
+            if (cancelText.gameObject.activeSelf != on) cancelText.gameObject.SetActive(on);
+            Vector2 o = special.Offset;
+            if (o.magnitude > SpecialButton.MaxDrag) o = o.normalized * SpecialButton.MaxDrag;
+            dragDot.rectTransform.anchoredPosition = o;
+            dragDot.color = on ? DotRed : new Color(1f, 1f, 1f, 0.85f);
         }
 
         void Aim(bool hidden)
@@ -518,6 +547,35 @@ namespace BAM.Game
             gainRing = Circle(specialRoot, "Gain", 290f, Color.clear).GetComponent<Image>();
             gainRing.sprite = UiKit.CircleRing;
             gainRing.enabled = false;
+            dragRing = Circle(specialRoot, "Reach", 2f * SpecialButton.MaxDrag, new Color(1f, 1f, 1f, 0.35f));
+            dragRing.GetComponent<Image>().sprite = UiKit.CircleRing;
+            dragRing.gameObject.SetActive(false);
+            dragDot = Circle(specialRoot, "Finger", 0.64f * SpecialButton.Radius, Color.white).GetComponent<Image>();
+            dragDot.gameObject.SetActive(false);
+            cancelMark = UiKit.NewRect("Cancel", specialRoot);
+            cancelMark.anchorMin = cancelMark.anchorMax = cancelMark.pivot = new Vector2(0.5f, 0.5f);
+            cancelMark.sizeDelta = Vector2.one * 2f * SpecialButton.CancelRadius;
+            cancelMark.anchoredPosition = new Vector2(0f, SpecialButton.CancelUp);
+            cancelBack = UiKit.Fill(cancelMark, CancelOff, UiKit.Circle);
+            var edge = UiKit.Fill(cancelMark, new Color(1f, 1f, 1f, 0.5f), UiKit.CircleRing);
+            edge.raycastTarget = false;
+            for (int i = 0; i < 2; i++)
+            {
+                var bar = UiKit.NewRect("Cross", cancelMark);
+                bar.anchorMin = bar.anchorMax = bar.pivot = new Vector2(0.5f, 0.5f);
+                bar.sizeDelta = new Vector2(SpecialButton.CancelRadius * 1.07f, Mathf.Max(6f, SpecialButton.CancelRadius * 0.16f));
+                bar.localRotation = Quaternion.Euler(0f, 0f, i == 0 ? 45f : -45f);
+                cancelCross[i] = bar.gameObject.AddComponent<Image>();
+                cancelCross[i].sprite = UiKit.Rounded;
+                cancelCross[i].type = Image.Type.Sliced;
+                cancelCross[i].pixelsPerUnitMultiplier = 4f;
+                cancelCross[i].raycastTarget = false;
+            }
+            cancelMark.gameObject.SetActive(false);
+            cancelText = UiKit.Label(specialRoot, "CANCEL", 38, TextAnchor.MiddleCenter, new Color(1f, 0.7f, 0.7f));
+            UiKit.Place(cancelText, 0.5f, 0.5f, 0f, SpecialButton.Radius * 1.25f, 300f, 50f);
+            UiKit.AddOutline(cancelText, 2);
+            cancelText.gameObject.SetActive(false);
             specialName = UiKit.Label(specialFace.transform, "", 40, TextAnchor.MiddleCenter, Color.white);
             UiKit.Stretch(specialName.rectTransform, 20, 20, 20, 20);
             specialName.resizeTextForBestFit = true;

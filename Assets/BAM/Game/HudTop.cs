@@ -20,7 +20,7 @@ namespace BAM.Game
         static readonly Color TopOwn = Hex(0x2fe3d0), TopFoe = Hex(0xff9a2e), TopPanel = Hex(0x0b1a3a), TopEdge = Hex(0x1b2d5e);
         static readonly Color PortraitBack = Hex(0x2b3a6a), PlayerEdge = Hex(0xffd75a), DeadEdge = new Color(0.59f, 0.63f, 0.75f, 0.6f);
         static readonly Color OwnTrail = Hex(0xb8fff6), FoeTrail = Hex(0xffe0a8), DmgToPlayer = Hex(0xff6b6b);
-        static readonly Color BigHit = Hex(0xffc857);
+        static readonly Color BigHit = Hex(0xffc857), CreepHit = new Color(1f, 1f, 1f, 0.7f);
         static readonly Color StarOff = new Color(1f, 1f, 1f, 0.18f);
         static string[] intStrings;
 
@@ -62,6 +62,7 @@ namespace BAM.Game
             public Vector3 At;
             public float Born = -99f, Value;
             public bool ToPlayer, Big;
+            public float BaseA = 1f;
         }
         readonly FloatText[] floats = new FloatText[FloatCount];
         int nextFloat;
@@ -113,8 +114,11 @@ namespace BAM.Game
         void OnDamage(SimEvent e)
         {
             var b = e.B;
-            if (b == null || !b.IsRealHero || e.V < 0.5f) return;
+            if (b == null || e.V < 0.5f) return;
             bool toPlayer = b == m.Player, byPlayer = e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
+            // the player's own hits on minions get small, dim numbers (the old game, all modes since 2026-10-25)
+            bool creep = byPlayer && b.IsMinionLike && b.Team != m.Player.Team;
+            if (!b.IsRealHero && !creep) return;
             if (!toPlayer && !byPlayer) return;
             if (!toPlayer && !m.IsVisibleTo(b, m.Player.Team)) return;
             float now = Time.unscaledTime;
@@ -132,11 +136,12 @@ namespace BAM.Game
             var t = floats[nextFloat];
             nextFloat = (nextFloat + 1) % floats.Length;
             t.Unit = b; t.Born = now; t.Value = e.V; t.ToPlayer = toPlayer;
-            t.Big = e.V >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
+            t.Big = !creep && e.V >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
             t.At = views.DrawnAt(b);
             t.Label.text = Int(Mathf.RoundToInt(e.V));
-            t.Label.color = toPlayer ? DmgToPlayer : t.Big ? BigHit : Color.white;
-            t.Label.fontSize = t.Big ? 66 : 50;
+            t.Label.color = toPlayer ? DmgToPlayer : creep ? CreepHit : t.Big ? BigHit : Color.white;
+            t.Label.fontSize = creep ? 34 : t.Big ? 66 : 50;
+            t.BaseA = creep ? 0.7f : 1f;
             t.Label.gameObject.SetActive(true);
         }
 
@@ -228,7 +233,7 @@ namespace BAM.Game
                 f.Label.rectTransform.anchoredPosition = local + new Vector2(f.ToPlayer ? -26f : 26f, 30f + 90f * t);
                 f.Label.rectTransform.localScale = Vector3.one * pop;
                 var c = f.Label.color;
-                c.a = t < 0.66f ? 1f : 1f - (t - 0.66f) / 0.34f;
+                c.a = f.BaseA * (t < 0.66f ? 1f : 1f - (t - 0.66f) / 0.34f);
                 f.Label.color = c;
             }
         }
