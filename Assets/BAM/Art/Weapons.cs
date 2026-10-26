@@ -54,7 +54,7 @@ namespace BAM.Art
 
         static GearDef[] Make()
         {
-            var g = new GearDef[7];
+            var g = new GearDef[8];
             g[(int)HeroId.Fenn] = new GearDef
             {
                 Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f } },
@@ -86,6 +86,8 @@ namespace BAM.Art
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
+            // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle like Bram's hammer
+            g[(int)HeroId.Bonk] = new GearDef { Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.62f, Grip = 0.12f, HoldUp = 40f } } };
             return g;
         }
 

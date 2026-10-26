@@ -174,6 +174,9 @@ namespace BAM.Art.Editor
             new Spec { Out = "Minions", Hero = "Ranged", Model = "Creeps/Ranged", Attack = "Knut/Anim/Throw", Height = 0.78f, Release = 0.4f },
             new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Height = 0.9f, Release = 0.45f },
             new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Blast/Anim/Idle", Run = "Blast/Anim/Run", Attack = "Blast/Anim/Attack1", Cast = "Blast/Anim/Cast", Hit = "Blast/Anim/Hit", Death = "Blast/Anim/Dying", Height = 1.88f, Release = 0.4f },
+            // Bonk (hero 8, Rickard's Tripo body rigged in Mixamo 2026-10-26; his wolf pelt reweighted to the chest so it no longer
+            // stretches with his left arm and head). No clips of his own yet: Knut's heavy moves, Bram's Anvil Strike for the slam
+            new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Height = 2.0f, Release = 0.45f },
         };
 
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
