@@ -280,6 +280,7 @@ namespace BAM.Game
         static readonly Vector2[] ringUv = new Vector2[2 * (RingSeg + 1)];
         static int[] ringT;
         const int RingSeg = 96;
+        static readonly Vector2 PaletteWhite = new Vector2(0.5f / 16f, 0.5f / 16f); // Art Pal.UV(Pal.White)
 
         static void BuildRing(Mesh mesh, float inner)
         {
@@ -290,8 +291,9 @@ namespace BAM.Game
                 ringV[2 * i + 1] = new Vector3(c, 0f, s);
                 ringN[2 * i] = ringN[2 * i + 1] = Vector3.up;
                 ringC[2 * i] = ringC[2 * i + 1] = Color.white;
-                ringUv[2 * i] = new Vector2(i / (float)RingSeg, 0f);
-                ringUv[2 * i + 1] = new Vector2(i / (float)RingSeg, 1f);
+                // the ring material colours through Art's 16x16 palette texture by UV: every vertex on cell 0 (white), so the band
+                // is exactly the tint. (UVs running 0..1 across the palette made the rings a dim mix of its colours, 2026-10-26.)
+                ringUv[2 * i] = ringUv[2 * i + 1] = PaletteWhite;
             }
             if (ringT == null)
             {

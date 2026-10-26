@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace BAM.Game
 {
     /// <summary>
-    /// The marks the old game draws by the heroes' health bars (ABC2 Hud.cs drawHero): the name over the player's own hero only
+    /// The marks the old game draws by the heroes' health bars (ABC2 Hud.cs drawHero): the name over every hero
     /// (white with a dark edge), a thin crossed-out eye over a hero of the player's team while the enemy cannot see it (fading in
     /// and out over about 0.15 s), a small pulsing diamond by another hero's bar while its special is ready
     /// (HudTelegraph.cs drawCharged), the interrupt window as a bar under the health bar (drawChannel),
@@ -15,6 +15,7 @@ namespace BAM.Game
     /// </summary>
     sealed partial class Hud
     {
+        static readonly Color NameAlly = Hex(0x9fd4ff), NameFoe = Hex(0xff9aa4);
         static readonly Color EyeStroke = Hex(0xdfe9e6), EyeEdge = Hex(0x08101a);
 
         sealed class Overhead
@@ -98,16 +99,17 @@ namespace BAM.Game
                 o.Root.anchoredPosition = at;
                 float size = ts * 1.05f;
 
-                // the name: over your own hero only (K3 clutter budget 2026-10-19), small, white with a dark edge, just above the
-                // bar. The old game calls the player's own hero "You", not by its hero name.
+                // the name over every hero (Rickard 2026-10-26 "ha namn över alla spelare", the old game showed only your own):
+                // small with a dark edge just above the bar; "You" in white for the player, the hero's name in a light team colour
                 bool mine = u == m.Player;
-                if (o.Name.gameObject.activeSelf != mine) o.Name.gameObject.SetActive(mine);
-                if (mine)
+                if (!o.Name.gameObject.activeSelf) o.Name.gameObject.SetActive(true);
+                string label = mine ? "You" : HeroCatalog.Get(u.Hero).Name;
+                if (o.Name.text != label) o.Name.text = label;
+                o.Name.color = mine ? Color.white : u.Team == m.Player.Team ? NameAlly : NameFoe;
+                o.Name.fontSize = Mathf.Max(8, Mathf.RoundToInt(ts * (mine ? 0.27f : 0.23f)));
+                o.Name.rectTransform.sizeDelta = new Vector2(ts * 4f, ts * 0.5f);
+                o.Name.rectTransform.anchoredPosition = new Vector2(0f, size * 0.17f);
                 {
-                    if (o.Name.text != "You") o.Name.text = "You";
-                    o.Name.fontSize = Mathf.Max(8, Mathf.RoundToInt(ts * 0.27f));
-                    o.Name.rectTransform.sizeDelta = new Vector2(ts * 4f, ts * 0.5f);
-                    o.Name.rectTransform.anchoredPosition = new Vector2(0f, size * 0.17f);
                     float ew = Mathf.Max(1f, ts * 0.035f);
                     o.NameEdge.effectDistance = new Vector2(ew, -ew);
                 }

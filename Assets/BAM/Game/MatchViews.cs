@@ -53,6 +53,7 @@ namespace BAM.Game
             public int LaunchFrame = -1;   // Time.frameCount when its view was made
             // a ghost is drawn without the rules: a shot that ended before it was seen, a melee slash finishing its swing, a lob
             public bool Ghost;
+            public bool Hit;               // the rules hit with it (MarkHit given)
             public Vector3 From, To;
             public float Age, Flight, Linger;
         }
@@ -79,6 +80,10 @@ namespace BAM.Game
         readonly List<Pending> pending = new List<Pending>(32);
         readonly Stack<UnitRec> unitRecPool = new Stack<UnitRec>(64);
         readonly Stack<ShotRec> shotRecPool = new Stack<ShotRec>(64);
+        // the attacker and shot kind of every Hit this tick: a shot the rules drop in the same tick landed, so its look plays
+        // its splash (ProjectileView.MarkHit); a shot dropped without one fizzles as a miss
+        readonly HashSet<int> hitKeys = new HashSet<int>();
+        static int HitKey(int srcSerial, ProjKind kind) => srcSerial * 64 + (int)kind;
         readonly Stack<ZoneRec> zoneRecPool = new Stack<ZoneRec>(16);
         int step;
         int lastWave;
@@ -158,6 +163,7 @@ namespace BAM.Game
         {
             step++;
             pending.Clear();
+            hitKeys.Clear();
             var ev = m.Events;
             for (int i = 0; i < ev.Count; i++) OnEvent(ev[i]);
             if (!bridgeShown && m.Tut.BridgeOpen) BuildArena();
@@ -248,6 +254,8 @@ namespace BAM.Game
                 if (s.Ghost || s.Seen == step) continue;
                 shotBySerial.Remove(s.Serial);
                 s.P = null;
+                s.Hit = hitKeys.Contains(HitKey(s.SrcSerial, s.Kind));
+                if (s.Hit && s.V != null) s.V.MarkHit();
                 if (s.V == null)
                 {
                     // it left the hand and landed inside one tick, so it was never drawn: show the flight now
@@ -268,6 +276,7 @@ namespace BAM.Game
                 if (pd.A == 0) continue;
                 var s = shotRecPool.Count > 0 ? shotRecPool.Pop() : new ShotRec();
                 Init(s, null, 0, pd.Kind, pd.Src.Team, pd.Src.Serial);
+                s.Hit = hitKeys.Contains(HitKey(pd.Src.Serial, pd.Kind));
                 shots.Add(s);
                 Vector3 to = pd.Tgt != null ? Coords.Of(pd.Tgt) : Coords.Of(pd.Src);
                 StartGhost(s, Coords.Of(pd.Src), to, 0.1f, s.Melee ? SlashLinger : 0f);
@@ -302,7 +311,7 @@ namespace BAM.Game
         {
             s.P = p; s.Serial = serial; s.Kind = kind; s.Team = team; s.SrcSerial = src; s.V = null; s.Ghost = false;
             s.Melee = kind == ProjKind.FennSlash || kind == ProjKind.KnutHit || kind == ProjKind.WolfBite || kind == ProjKind.MeleeMinionHit;
-            s.Age = 0f; s.Flight = 0f; s.Linger = 0f; s.LastT = -1f;
+            s.Age = 0f; s.Flight = 0f; s.Linger = 0f; s.LastT = -1f; s.Hit = false;
         }
 
         void FreeShot(ShotRec s) { s.P = null; s.V = null; shotRecPool.Push(s); }
@@ -342,6 +351,7 @@ namespace BAM.Game
                 s.V = ArtKit.CreateProjectile(s.Kind, s.Team);
                 s.V.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
                 s.V.Launch(from, to, Mathf.Max(flight, 0.05f));
+                if (s.Hit) s.V.MarkHit();
             }
         }
 
@@ -364,6 +374,14 @@ namespace BAM.Game
 
         // ---------------------------------------------------------------- events
 
+        /// <summary>Whose colours a hit wears: the hero, or the hero who owns the wolf or clone; -1 for minions and towers.</summary>
+        static int HeroOf(Unit a)
+        {
+            if (a == null) return -1;
+            if (a.Kind == UnitKind.Hero) return (int)a.Hero;
+            return a.Owner != null && a.Owner.Kind == UnitKind.Hero ? (int)a.Owner.Hero : -1;
+        }
+
         UnitView V(Unit u) => u != null && unitBySerial.TryGetValue(u.Serial, out UnitRec r) ? r.V : null;
 
         void OnEvent(in SimEvent e)
@@ -384,13 +402,14 @@ namespace BAM.Game
                     var kind = (ProjKind)e.Kind;
                     Vector3 at = Coords.World(e.X, e.Y);
                     V(b)?.PlayHit(e.Big);
+                    if (e.A != null) hitKeys.Add(HitKey(e.A.Serial, kind));
                     // Bram's bounces get their own gold line; Tyra's bolt and Tikta's needles carry the special's look in their own
                     // impact, so they add only the small hit (fx review 2026-10-26, P1-2/P1-3)
                     FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash
                         : kind == ProjKind.BramHammerSpecial ? FxKind.Bounce
                         : kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial ? FxKind.Hit
                         : e.Big ? FxKind.HitBig : FxKind.Hit;
-                    ArtKit.PlayFx(fx, at, b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f, b != null ? b.Team : 0);
+                    ArtKit.PlayFx(fx, at, b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f, b != null ? b.Team : 0, HeroOf(e.A));
                     if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? b.Team : 0);
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
                         : b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
@@ -440,7 +459,7 @@ namespace BAM.Game
                     // a hidden enemy casting in a bush stays hidden: casting does not reveal in the rules (fx review P2-1)
                     if (a == null || !m.IsVisibleTo(a, Teams.Player)) break;
                     V(a)?.PlayCast();
-                    ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, a.Team);
+                    ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, a.Team, e.Kind);
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
                     // Blast's tap bomb is a ground fuse in the rules; draw the lob onto it so the throw is seen
                     if ((HeroId)e.Kind == HeroId.Blast && !e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
@@ -472,8 +491,9 @@ namespace BAM.Game
                     break;
                 case EventType.WolfPounce:
                     // the bite sounds on prey only; its hit look comes from the rules' own Hit event (fx review P2-3). A landing on
-                    // nothing shows no bite (FxKind.WolfLand comes with the art's next change).
+                    // nothing shows no bite, only a soft landing
                     if (e.A != null && e.B != null) BamAudio.PlayAt(SfxId.WolfBite, Coords.Of(e.B));
+                    else if (e.A != null && m.IsVisibleTo(e.A, Teams.Player)) ArtKit.PlayFx(FxKind.WolfLand, Coords.World(e.X, e.Y), 1f, e.A.Team);
                     break;
                 case EventType.Shield:
                     if (e.Big && e.B != null) BamAudio.PlayAt(SfxId.MoaShield, Coords.Of(e.B));
@@ -482,7 +502,8 @@ namespace BAM.Game
                 {
                     Vector3 at = Coords.World(e.X, e.Y);
                     float size = Mathf.Max(0.5f, e.V);
-                    ArtKit.PlayFx(FxKind.Explosion, at, size, e.A != null ? e.A.Team : 0);
+                    // Bram's passive (every 4th hammer) is the heavy anvil blow, not a bomb
+                    ArtKit.PlayFx((ProjKind)e.Kind == ProjKind.BramHammer ? FxKind.AnvilStrike : FxKind.Explosion, at, size, e.A != null ? e.A.Team : 0);
                     BamAudio.PlayAt((ProjKind)e.Kind == ProjKind.BlastBomb ? SfxId.BlastExplosion : SfxId.HitHeavy, at);
                     break;
                 }
