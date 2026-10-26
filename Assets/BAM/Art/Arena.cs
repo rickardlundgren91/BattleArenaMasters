@@ -143,6 +143,9 @@ namespace BAM.Art
             if (rockPic != null && info.Rocks != null) RockPictures(root, info, rockPic);
             Add(root, "Marks", marks.ToMesh("Arena Marks"), MarksMaterial(), false);
             if (info.Island) Island.Build(root, info);
+            // the old game had no sun: its arena was lit by the warm ambient alone, so walls, rocks and bushes keep their dark greens
+            // (Rickard 2026-10-26, side by side: "det skiljer mycket"). The sun only lights the units, not this layer.
+            SetLayer(root.transform, ArtKit.ArenaLayer);
             return root;
         }
 
@@ -311,6 +314,12 @@ namespace BAM.Art
         }
 
         static readonly int CullId = Shader.PropertyToID("_Cull");
+
+        static void SetLayer(Transform t, int layer)
+        {
+            t.gameObject.layer = layer;
+            for (int i = 0; i < t.childCount; i++) SetLayer(t.GetChild(i), layer);
+        }
         static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness"), SpecColorId = Shader.PropertyToID("_SpecColor");
 
         static void Matte(Material m)

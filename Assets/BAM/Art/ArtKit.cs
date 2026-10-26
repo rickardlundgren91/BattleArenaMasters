@@ -109,6 +109,8 @@ namespace BAM.Art
         /// <summary>Bumped on every quality change; views compare it to know when to re-apply their settings.</summary>
         internal static int QualityVersion;
         internal static Material TrailMaterial;
+        /// <summary>The arena's static geometry: lit by the ambient only, as the old game (it had no sun). An unnamed layer.</summary>
+        internal const int ArenaLayer = 29;
 
         /// <summary>Once at boot. Builds shared materials and meshes and warms the pools.</summary>
         public static void Init()
@@ -174,6 +176,7 @@ namespace BAM.Art
             sun = lg.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.96f, 0.88f);
+            sun.cullingMask = ~(1 << ArenaLayer); // the units only: the arena keeps the old game's ambient-only look
             sun.intensity = 1f;     // as the old game's scene light; 1.3 washed the arena out (Rickard 2026-10-26: "det skiljer mycket")
             sun.shadowStrength = 0.55f;
             sun.shadowBias = 0.04f;
