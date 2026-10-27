@@ -146,9 +146,13 @@ namespace BAM.Online.UI
             white = Texture2D.whiteTexture;
             mat = uiMaterial != null ? new Material(uiMaterial) : new Material(Shader.Find("UI/Default"));
             fontMat = new Material(mat); addMat = new Material(mat);
-            if (fontMat.HasProperty("_TextureSampleAdd")) fontMat.SetVector("_TextureSampleAdd", new Vector4(1, 1, 1, 0));
+            // _TextureSampleAdd is not in UI/Default's Properties, so HasProperty says no and it was never set. Then the glyphs took
+            // whatever UGUI last left in the global of that name: (0,0,0,0) after an image, so text came out black on BAM's
+            // menu (2026-10-27). Set it on every material: (1,1,1,0) makes the font's alpha-only texture white, 0 keeps images as they are.
+            fontMat.SetVector("_TextureSampleAdd", new Vector4(1, 1, 1, 0));
+            mat.SetVector("_TextureSampleAdd", Vector4.zero); addMat.SetVector("_TextureSampleAdd", Vector4.zero);
             if (addMat.HasProperty("_DstBlend")) addMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
-            eraseMat = new Material(mat);
+            eraseMat = new Material(mat); eraseMat.SetVector("_TextureSampleAdd", Vector4.zero);
             if (eraseMat.HasProperty("_SrcBlend")) eraseMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.Zero);
             linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             LoadFonts();

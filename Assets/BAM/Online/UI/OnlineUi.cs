@@ -117,8 +117,11 @@ namespace BAM.Online.UI
                 HubRankEmblem(rk, acx + ar * 0.78f, acy + ar * 0.72f, cw(1.9f));
             }
             string nm = on ? (string.IsNullOrEmpty(Account.Name) ? "Choose a name" : Account.Name) : "Play online";
-            ctx.font = Lil(cw(3.8f)); while (nm.Length > 3 && ctx.measureText(nm) > tw) nm = nm.Substring(0, nm.Length - 2) + "…";
-            Text(nm, tx, cy - cw(2.8f), Lil(cw(3.8f)), HUB_TEXT);
+            // shrink a long name a little before cutting it ("Choose a name" was cut to "Choose a na…")
+            float ns = 3.8f; ctx.font = Lil(cw(ns));
+            while (ns > 2.9f && ctx.measureText(nm) > tw) { ns -= 0.1f; ctx.font = Lil(cw(ns)); }
+            while (nm.Length > 3 && ctx.measureText(nm) > tw) nm = nm.Substring(0, nm.Length - 2) + "…";
+            Text(nm, tx, cy - cw(2.8f), Lil(cw(ns)), HUB_TEXT);
             string rl = on ? "Lv " + Progress.LevelOf(t.xp) + " · " + RankInfo.NAMES[rk] + " · " + t.rating : "Friends and Top 100";
             string rf = Treb(Min11(cw(2.7f)), true);
             ctx.font = rf; while (rl.Length > 3 && ctx.measureText(rl) > tw) rl = rl.Substring(0, rl.Length - 2) + "…";
