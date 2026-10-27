@@ -86,3 +86,4 @@ Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources
 | Files | What | Origin | Made by | Rights / proof | Credit |
 |---|---|---|---|---|---|
 | `ui_ingameView_joystick.png`, `ui_ingameView_joystick_base.png`, `ui_ingameView_specialButton_fill.png` (3) | The joystick and the SPECIAL button's charge ring in a match | Old game `ui_ingameView_*.png` | Rickard / the old project | Rickard's own (he confirmed on a decision card 2026-10-26 13:05: "Ja, jag äger dem") | None |
+| `menu_nav_battleIcon_inactive.png` | The crossed swords between killer and victim in the kill feed (2026-10-27) | Old game `AbcUI/menu_nav_battleIcon_inactive.png` | Rickard / the old project | Rickard's own (same confirmation as the row above) | None |

@@ -13,7 +13,7 @@ namespace BAM.Game
     /// each); the two tower bars with their percent, emptying towards the edge with a light trail; a centre pill with
     /// kills · clock · kills, the level under the clock and its progress along the bottom; the star advantage as pips under each
     /// bar. Also the floating damage numbers (drawFloatText: white for the player's damage, red for damage to the player, gold
-    /// for its big hits, small and dim on minions). No kill feed: Rickard took the kill texts out on 2026-10-20.
+    /// for its big hits, small and dim on minions). The kill feed under the strip's centre is in HudKillFeed.cs.
     /// </summary>
     sealed partial class Hud
     {
@@ -110,6 +110,7 @@ namespace BAM.Game
             }
             for (int i = 0; i < 2; i++) { bars[i].Trailing = 1f; bars[i].Since = 0f; bars[i].Shown = -1; }
             for (int i = 0; i < floats.Length; i++) { floats[i].Born = -99f; floats[i].Unit = null; floats[i].Label.gameObject.SetActive(false); }
+            BeginKillFeed();
         }
 
         // ---------------------------------------------------------------- after every tick: damage numbers and the kill feed
@@ -256,6 +257,7 @@ namespace BAM.Game
         {
             var victim = e.B;
             if (victim == m.Player) killedBy = e.A;
+            OnKillFeed(e); // HudKillFeed.cs
         }
         string Colored(Unit u)
         {
@@ -296,6 +298,7 @@ namespace BAM.Game
             Bar(bars[0], m.Towers[own], dt);
             Bar(bars[1], m.Towers[foe], dt);
             for (int i = 0; i < portraits.Length; i++) PortraitFrame(portraits[i], i < 3 ? TopOwn : TopFoe);
+            KillFeedFrame(dt);
         }
 
         // the old CombatFeel.Trail: up at once, down after 0.3 s at 0.9 of the bar per second
@@ -407,6 +410,7 @@ namespace BAM.Game
                 g.enabled = false;
                 starGlyphs[i] = g;
             }
+            BuildKillFeed();
         }
 
         RectTransform TopRect(string name)
@@ -449,6 +453,7 @@ namespace BAM.Game
             Pill(pill, pillFill, gPill);
             RoundRing(pillGold, gH * 0.5f, 1.5f);
             LayoutPillText();
+            LayoutKillFeed(W, H);
 
             for (int i = 0; i < portraits.Length; i++)
             {
