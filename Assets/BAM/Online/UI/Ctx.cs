@@ -665,6 +665,16 @@ namespace BAM.Online.UI
             float r = st.lineWidth / 2; int n = st.lineWidth * Scale > 5 ? 16 : 8;
             DrawText(text, x, y, st.stroke, r, n); // the glyphs are looked up once and emitted n times
         }
+        // Glyphs are drawn with the font's own shader (GUI/Text Shader: vertex colour, texture alpha). UI/Default needs
+        // _TextureSampleAdd = (1,1,1,0) to make the alpha-only font texture white, and on BAM's Unity 6.6 setting it on the material
+        // did not take (all online text came out black, 2026-10-27). The font's shader is in every build, as the font uses it.
+        Material textMat;
+        Material FontMat(Font f)
+        {
+            if (textMat == null && f != null && f.material != null && f.material.shader != null && f.material.shader.isSupported)
+                textMat = new Material(f.material) { name = "ctx_text" };
+            return textMat != null ? textMat : fontMat;
+        }
         CharacterInfo[] glyphs = new CharacterInfo[64]; bool[] hasGlyph = new bool[64];
         // ringN > 0: the text is drawn ringN times round (x, y) at distance ringR (strokeText)
         void DrawText(string text, float x, float y, Paint paint, float ringR = 0, int ringN = 0)
@@ -678,7 +688,7 @@ namespace BAM.Online.UI
             w *= k;
             string al = st.align; float ox = al == "center" ? -w / 2 : al == "right" || al == "end" ? -w : 0;
             string bl = st.baseline; float oy = bl == "middle" ? s.px * 0.35f : bl == "top" || bl == "hanging" ? s.px * 0.8f : bl == "bottom" || bl == "ideographic" ? -s.px * 0.2f : 0;
-            Use(s.font.material.mainTexture, fontMat); SetPaint(paint);
+            Use(s.font.material.mainTexture, FontMat(s.font)); SetPaint(paint);
             float bx = x, by = y;
             for (int r = 0; r < Math.Max(1, ringN); r++)
             {
