@@ -21,6 +21,15 @@ namespace BAM.Build
             BamKeystoreWindow.Open();
         }
 
+        // Online needs the upload key: Google Play Games only signs in apps whose key it knows (upload and app signing), so the
+        // debug-signed test APK cannot sign in. This one is a release APK signed with the upload key, installed over USB.
+        [MenuItem("BAM/Build signed APK for online test and run on phone (USB)", priority = 23)]
+        static void BuildSignedApkMenu()
+        {
+            if (!Prepare()) return;
+            BamKeystoreWindow.Open(true);
+        }
+
         [MenuItem("BAM/Build test APK (own phone)", priority = 21)]
         static void BuildApkMenu()
         {
@@ -117,6 +126,37 @@ namespace BAM.Build
                     "Titta i Console efter röda rader. Fel lösenord eller alias ger ofta ett fel som nämner 'keystore' eller 'signing'.", "OK");
         }
 
+        /// <summary>Release APK signed with the upload key and run on the phone over USB; the version code is not raised.</summary>
+        public static void BuildSignedApk(string keystorePath, string keystorePass, string alias, string keyPass)
+        {
+            string file = Path.Combine(OutputDir(), "BAM-" + BamVersion.Name + "-signed.apk");
+            bool ok = false;
+            try
+            {
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = keystorePath;
+                PlayerSettings.Android.keystorePass = keystorePass;
+                PlayerSettings.Android.keyaliasName = alias;
+                PlayerSettings.Android.keyaliasPass = keyPass;
+                EditorUserBuildSettings.buildAppBundle = false;
+                EditorUserBuildSettings.development = false;
+                ok = Run(file, BuildOptions.AutoRunPlayer, "signed APK " + BamVersion.Name);
+            }
+            finally
+            {
+                PlayerSettings.Android.keystorePass = "";
+                PlayerSettings.Android.keyaliasPass = "";
+                PlayerSettings.Android.keystoreName = "";
+                PlayerSettings.Android.keyaliasName = "";
+                PlayerSettings.Android.useCustomKeystore = false;
+                EditorUserBuildSettings.buildAppBundle = true;
+                AssetDatabase.SaveAssets();
+            }
+            if (!ok)
+                EditorUtility.DisplayDialog("Bygget misslyckades",
+                    "Titta i Console efter röda rader. Är telefonen inkopplad med USB-felsökning på? Fel lösenord ger ett fel som nämner 'keystore' eller 'signing'.", "OK");
+        }
+
         // Development APK signed with Unity's debug key: installs on a phone directly, can never go to Play.
         static void BuildApk(bool run)
         {
@@ -191,11 +231,13 @@ namespace BAM.Build
         const string AliasPref = "BAM.Build.KeyAlias";
 
         string keystorePath, alias, keystorePass = "", keyPass = "";
+        bool apk; // the signed APK for the own phone instead of the AAB
 
-        public static void Open()
+        public static void Open(bool apk = false)
         {
             var w = CreateInstance<BamKeystoreWindow>();
-            w.titleContent = new GUIContent("BAM: bygg AAB");
+            w.apk = apk;
+            w.titleContent = new GUIContent(apk ? "BAM: bygg signerad APK" : "BAM: bygg AAB");
             w.keystorePath = EditorPrefs.GetString(PathPref, "");
             w.alias = EditorPrefs.GetString(AliasPref, "bam-upload");
             w.minSize = w.maxSize = new Vector2(480, 220);
@@ -204,7 +246,7 @@ namespace BAM.Build
 
         void OnGUI()
         {
-            EditorGUILayout.LabelField("Version " + BamVersion.Name + ", versionskod " + (BamVersion.Current + 1), EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(apk ? "Version " + BamVersion.Name + ", APK till telefonen via USB" : "Version " + BamVersion.Name + ", versionskod " + (BamVersion.Current + 1), EditorStyles.boldLabel);
             EditorGUILayout.Space();
 
             EditorGUILayout.BeginHorizontal();
@@ -230,7 +272,7 @@ namespace BAM.Build
             if (GUILayout.Button("Avbryt")) Close();
             using (new EditorGUI.DisabledScope(problem != null))
             {
-                if (GUILayout.Button("Bygg AAB"))
+                if (GUILayout.Button(apk ? "Bygg APK och kör" : "Bygg AAB"))
                 {
                     EditorPrefs.SetString(PathPref, keystorePath);
                     EditorPrefs.SetString(AliasPref, alias);
@@ -238,7 +280,8 @@ namespace BAM.Build
                     keystorePass = keyPass = "";
                     Close();
                     // A build inside OnGUI breaks the GUI layout, so it starts once the window is gone.
-                    EditorApplication.delayCall += () => BamBuild.BuildAab(p, kp, a, ap);
+                    bool asApk = apk;
+                    EditorApplication.delayCall += () => { if (asApk) BamBuild.BuildSignedApk(p, kp, a, ap); else BamBuild.BuildAab(p, kp, a, ap); };
                 }
             }
             EditorGUILayout.EndHorizontal();
