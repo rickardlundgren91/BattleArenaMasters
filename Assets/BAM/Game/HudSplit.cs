@@ -12,10 +12,12 @@ namespace BAM.Game
     /// icon, both halves are grey until the special is ready, a faint line parts them and TAP / DRAG sit under each half.
     /// With its own pictures (Resources/BAM/Menu/special_&lt;hero&gt;_tap and _drag) the tap picture fills the left half and the drag
     /// picture the right; without them the hero's one special icon covers the disc as before.
+    /// Unlike the old wheel the two pictures sit over the grey and the gold level, larger, and the grey is lighter (Rickard
+    /// 2026-10-27 "svårt att se skill ikonen vad det är": under the grey they read as dark grey blobs).
     /// </summary>
     sealed partial class Hud
     {
-        static readonly Color SplitGrey = new Color(70f / 255f, 74f / 255f, 92f / 255f, 0.78f),
+        static readonly Color SplitGrey = new Color(70f / 255f, 74f / 255f, 92f / 255f, 0.45f),
             LevelCharging = new Color(1f, 180f / 255f, 50f / 255f, 0.3f), LevelReady = new Color(1f, 196f / 255f, 64f / 255f, 0.38f);
 
         Image specialFillRight, splitGrey, tapIcon, dragIcon;
@@ -34,10 +36,6 @@ namespace BAM.Game
             specialFillRight.transform.SetSiblingIndex(fillLeft.GetSiblingIndex() + 1);
             specialFillRight.fillClockwise = false;
 
-            // the two pictures, each centred in its half (old: 0.7 R across, 0.44 R off the middle, 0.12 R up)
-            tapIcon = HalfIcon("Tap", -1f);
-            dragIcon = HalfIcon("Drag", 1f);
-
             // grey over both halves while not ready (old: the whole radius, over the ring too)
             splitGrey = Circle(specialRoot, "Grey", 2f * R, SplitGrey).GetComponent<Image>();
 
@@ -55,6 +53,12 @@ namespace BAM.Game
                 splitLevel[h] = rt;
             }
 
+            // the two pictures on top, each centred in its half and clipped round (old: 0.7 R across under the grey)
+            var iconMask = Circle(specialRoot, "Pictures", 2f * 0.87f * R, Color.white);
+            iconMask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            tapIcon = HalfIcon(iconMask, "Tap", -1f);
+            dragIcon = HalfIcon(iconMask, "Drag", 1f);
+
             // the line between the halves
             var line = UiKit.NewRect("Line", specialRoot);
             line.anchorMin = line.anchorMax = line.pivot = new Vector2(0.5f, 0.5f);
@@ -69,16 +73,17 @@ namespace BAM.Game
                 var t = UiKit.Label(specialRoot, h == 0 ? "TAP" : "DRAG", Mathf.RoundToInt(R * 0.26f), TextAnchor.MiddleCenter,
                     new Color(1f, 1f, 1f, 0.8f));
                 UiKit.Place(t, 0.5f, 0.5f, (h == 0 ? -1f : 1f) * R * 0.45f, -R * 0.63f, R, R * 0.4f);
+                UiKit.AddOutline(t, 2);
             }
         }
 
-        Image HalfIcon(string name, float side)
+        static Image HalfIcon(Transform parent, string name, float side)
         {
             const float R = SpecialButton.Radius;
-            var rt = UiKit.NewRect(name + "Icon", specialFace.transform);
+            var rt = UiKit.NewRect(name + "Icon", parent);
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = Vector2.one * 0.7f * R;
-            rt.anchoredPosition = new Vector2(side * R * 0.44f, R * 0.12f);
+            rt.sizeDelta = Vector2.one * 0.86f * R;
+            rt.anchoredPosition = new Vector2(side * R * 0.44f, R * 0.1f);
             var img = rt.gameObject.AddComponent<Image>();
             img.preserveAspect = true;
             img.raycastTarget = false;
@@ -110,6 +115,8 @@ namespace BAM.Game
             specialFill.fillAmount = specialFillRight.fillAmount = 0.5f * frac;
             specialFillRight.color = specialFill.color;
             splitGrey.enabled = !ready;
+            // charging: the pictures a little dimmed, never hidden; ready: full colour
+            tapIcon.color = dragIcon.color = ready ? Color.white : new Color(0.8f, 0.8f, 0.8f, 0.85f);
             for (int h = 0; h < 2; h++)
             {
                 bool on = frac > 0.001f;
