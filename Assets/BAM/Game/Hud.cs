@@ -389,7 +389,7 @@ namespace BAM.Game
                 // Fenn's thrown wolf stops at the first wall: show where it really lands
                 if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Mathf.Atan2(-o.y, o.x), dist);
                 aimLook.Range(hero, d.DragReach, ready, cancel);
-                aimLook.Circle(hero + dir * dist, d.DragWidth, ready, cancel, dt);
+                aimLook.Circle(hero, hero + dir * dist, d.DragWidth, ready, cancel, dt);
                 if (!cancel) rings.SetAim(true, false, from + sdir * dist, Vector2.zero, d.DragWidth);
             }
         }
