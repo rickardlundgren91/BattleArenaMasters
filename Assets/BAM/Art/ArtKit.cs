@@ -119,6 +119,18 @@ namespace BAM.Art
         static readonly Dictionary<int, Stack<ZoneLook>> zonePools = new Dictionary<int, Stack<ZoneLook>>();
         static readonly List<Renderer> casters = new List<Renderer>(64);
 
+        static bool paused;
+        /// <summary>The art layer's frame time: 0 while the game is paused, so warnings, zones, shots and effects wait with the sim.</summary>
+        internal static float Dt => paused ? 0f : Time.deltaTime;
+
+        /// <summary>The game was paused or resumed (GameFlow.Pause/Resume): freezes the one-shot effects, particles, zones and shots.</summary>
+        public static void SetPaused(bool on)
+        {
+            if (paused == on) return;
+            paused = on;
+            if (ready) Fx.SetPaused(on);
+        }
+
         internal static bool High = true;
         internal static bool Shadows => High;
         /// <summary>Bumped on every quality change; views compare it to know when to re-apply their settings.</summary>
@@ -397,7 +409,11 @@ namespace BAM.Art
             if (c.transform.parent != root) c.transform.SetParent(root, false);
         }
 
-        /// <summary>Clears running particles and rings (handy at match end; not part of the contract).</summary>
-        internal static void ClearEffects() => Fx.ClearAll();
+        /// <summary>Clears running particles and rings and lifts a pause (GameFlow.Teardown, after MatchViews.Dispose).</summary>
+        public static void ClearEffects()
+        {
+            SetPaused(false);
+            if (ready) Fx.ClearAll();
+        }
     }
 }

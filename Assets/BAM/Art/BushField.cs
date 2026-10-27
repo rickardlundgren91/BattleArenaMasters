@@ -54,7 +54,7 @@ namespace BAM.Art
                 for (int i = 0; i < heroes.Count; i++)
                 {
                     var h = heroes[i];
-                    if (h.IsDead) continue;
+                    if (!h.Shown) continue; // a hidden enemy must not bend the bush it hides in
                     var hp = transform.InverseTransformPoint(h.transform.position);
                     float dx = b.x - hp.x, dz = b.z - hp.z, d2 = dx * dx + dz * dz;
                     if (d2 >= 1f) continue;

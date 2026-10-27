@@ -17,7 +17,7 @@ namespace BAM.Art
         {
             Camera c = Camera.main;
             if (c != null) { CamT = c.transform; CamRot = CamT.rotation; }
-            Fx.Tick(Time.deltaTime);
+            Fx.Tick(ArtKit.Dt);
         }
     }
 
@@ -138,6 +138,7 @@ namespace BAM.Art
         // ground, dust puffs and a 4x4 sheet of stone chips (null when missing: GroundSmash then uses the shared helpers)
         static ParticleSystem bCrack, bShock, bDust, bRocks;
         static ParticleSystem.EmitParams ep;
+        static readonly List<ParticleSystem> systems = new List<ParticleSystem>(32); // every one made, for ClearAll and SetPaused
         public static float Amount = 1f; // 1 on High, about half on Low
 
         sealed class Blob
@@ -356,6 +357,7 @@ namespace BAM.Art
             go.transform.SetParent(root, false);
             var ps = go.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            systems.Add(ps);
             var main = ps.main;
             main.loop = true;
             main.duration = 10f;
@@ -649,9 +651,18 @@ namespace BAM.Art
         {
             for (int i = live.Count - 1; i >= 0; i--) { live[i].T.gameObject.SetActive(false); free.Push(live[i]); }
             live.Clear();
-            if (glow != null) { glow.Clear(); spark.Clear(); smoke.Clear(); shard.Clear(); }
-            ParticleSystem[] extra = { star, flame, burst, wisp, dust, drop, bubble, leaf, chunk, shock, crackPs, swirl, pillar, rays, nova };
-            for (int i = 0; i < extra.Length; i++) if (extra[i] != null) extra[i].Clear();
+            for (int i = 0; i < systems.Count; i++) if (systems[i] != null) systems[i].Clear();
+        }
+
+        /// <summary>Freezes (or lets go of) every particle system; the rings and flashes stop with ArtKit.Dt.</summary>
+        public static void SetPaused(bool on)
+        {
+            for (int i = 0; i < systems.Count; i++)
+            {
+                var ps = systems[i];
+                if (ps == null) continue;
+                if (on) ps.Pause(true); else ps.Play(true); // emission is off, so Play only lets the live particles run on
+            }
         }
 
         // ---------------------------------------------------------------- the FxKind catalogue

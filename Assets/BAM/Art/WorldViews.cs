@@ -263,7 +263,7 @@ namespace BAM.Art
 
         void LateUpdate()
         {
-            float dt = Time.deltaTime;
+            float dt = ArtKit.Dt;
             age += dt;
             Vector3 p = transform.position;
             Vector3 d = p - lastPos; d.y = 0f;
@@ -329,8 +329,9 @@ namespace BAM.Art
 
         public void OnRelease()
         {
-            // the shot's own splash where it ended (bombs and the anchor have their own effects from the game layer)
-            if (launched && !melee && age > 0.02f && kind != ProjKind.BlastBomb && kind != ProjKind.KnutAnchor)
+            // the shot's own splash where it ended (bombs and the anchor have their own effects from the game layer); also when
+            // the shot came and went inside one hitch frame and was never drawn, so every attack still shows its hit
+            if (launched && !melee && kind != ProjKind.BlastBomb && kind != ProjKind.KnutAnchor)
             {
                 if (CanMiss(kind) && !hit) Fx.Fizzle(kind, vis.position, team);
                 else Fx.Impact(kind, vis.position, team);
@@ -449,7 +450,7 @@ namespace BAM.Art
             Tick(0f);
         }
 
-        void LateUpdate() => Tick(Time.deltaTime);
+        void LateUpdate() => Tick(ArtKit.Dt);
 
         void Tick(float dt)
         {
@@ -556,6 +557,13 @@ namespace BAM.Art
             circle = Part("Circle", Shapes.ZoneCircle(), mat, out circleR);
             range = Part("Range", Shapes.RingMesh(0.96f, Pal.White, 64), rangeMat, out rangeR);
             Hide();
+        }
+
+        // aims are not pooled (ArtKit.Release destroys them), and their two private materials would outlive the GameObject
+        void OnDestroy()
+        {
+            if (mat != null) Destroy(mat);
+            if (rangeMat != null) Destroy(rangeMat);
         }
 
         Transform Part(string name, Mesh m, Material material, out MeshRenderer r)

@@ -85,11 +85,15 @@ namespace BAM.Art
                 case HeroId.Moa: d = Moa(team); break;
                 case HeroId.Knut: d = Knut(team); break;
                 case HeroId.Tikta: d = Tikta(team); break;
+                // Bonk has no code figure (he only exists as Rickard's model): Knut's big melee rig gives him a ring, status rings
+                // and a swing that fit his size, never Blast's small bomb thrower
+                case HeroId.Bonk: d = Knut(team); break;
                 default: d = Blast(team); break;
             }
             d.Mesh = b.ToSkinnedMesh("Hero " + hero + " t" + team, d.Pivots);
             d.BarWidth = 0.95f;
             d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + hero);
+            if (d.Art == null && hero == HeroId.Bonk) Debug.LogError("[BAM.Art] Bonk has no HeroArt (run BAM > Art > Build Hero Art): showing a stand-in figure");
             if (d.Art != null)
             {
                 d.Height = d.Art.Height;

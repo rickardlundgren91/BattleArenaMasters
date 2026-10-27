@@ -27,6 +27,8 @@ namespace BAM.Art
         /// <summary>Heroes in the match now, for the bushes (BushField). Kept by OnEnable/OnDisable, so pooled views drop out.</summary>
         internal static readonly List<BodyView> Heroes = new List<BodyView>(8);
         internal bool IsDead => dead;
+        // what the player can actually see of it: an enemy hidden in a bush is still listed but must give nothing away
+        internal bool Shown => renderersOn && vis > 0.01f && !dead;
         internal bool IsPlayer => marker == UnitMarker.Player;
 
         void OnEnable() { if (IsHero && !Heroes.Contains(this)) Heroes.Add(this); }
@@ -392,6 +394,7 @@ namespace BAM.Art
             if (gear != null) gear.Reset();
             bar.Reset();
             bar.SetLevel(1);
+            status.Visible = false; // silently: a view parked while shielded must not pop its shield where it last stood (ApplyLook shows it again)
             status.Set(StatusFlags.None);
             if (marks != null) marks.Reset();
             SetMarker(Team == Teams.Player ? UnitMarker.Ally : UnitMarker.Enemy);

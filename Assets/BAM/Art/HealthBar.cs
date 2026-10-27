@@ -105,7 +105,7 @@ namespace BAM.Art
             Quad(QFrame, x0 - Border, y0 - Border, x1 + Border, y1 + Border, 0.01f);
             float s0 = Mathf.Min(hp, 1f - shield);           // shield sits after the health, or at the right end when full
             float hpEnd = x0 + w * hp;
-            float shA = x0 + w * Mathf.Max(hp, s0), shB = x0 + w * Mathf.Min(1f, Mathf.Max(hp, s0) + shield);
+            float shA = x0 + w * s0, shB = x0 + w * Mathf.Min(1f, s0 + shield); // health is cut where the shield starts
             float hpShown = Mathf.Min(hpEnd, shA);
             Quad(QHp, x0, y0, hpShown, y1, 0f);
             Quad(QShield, shA, y0, shB, y1, 0f);

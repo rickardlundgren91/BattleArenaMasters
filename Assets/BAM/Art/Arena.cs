@@ -32,6 +32,7 @@ namespace BAM.Art
         public static GameObject Build(ArenaInfo info)
         {
             var root = new GameObject("Arena");
+            owned = root.AddComponent<ArenaOwned>();
             var solid = new MeshBuilder();
             var marks = new MeshBuilder();
             Layer ground = Load("T_BAM_Ground_Cobble", 6f), road = Load("T_BAM_Ground_Road2", 4f), grass = Load("T_BAM_Ground_Grass", 6f),
@@ -146,6 +147,7 @@ namespace BAM.Art
             // the old game had no sun: its arena was lit by the warm ambient alone, so walls, rocks and bushes keep their dark greens
             // (Rickard 2026-10-26, side by side: "det skiljer mycket"). The sun only lights the units, not this layer.
             SetLayer(root.transform, ArtKit.ArenaLayer);
+            owned = null;
             return root;
         }
 
@@ -436,8 +438,18 @@ namespace BAM.Art
             return marksMat;
         }
 
+        static ArenaOwned owned; // the arena being built: keeps every mesh and material made for it, freed with it
+
+        static bool Shared(Material m) => m == leafMat || m == leafFaded || m == marksMat || m == ArtMaterials.Lit || m == ArtMaterials.LitFade
+            || m == ArtMaterials.LitClip || m == ArtMaterials.Unlit || m == ArtMaterials.UnlitFade || m == ArtMaterials.UnlitAdd;
+
         internal static GameObject Add(GameObject root, string name, Mesh mesh, Material mat, bool lit, bool cast = true)
         {
+            if (owned != null)
+            {
+                if (mesh != null) owned.Items.Add(mesh);
+                if (mat != null && !Shared(mat)) owned.Items.Add(mat);
+            }
             var go = new GameObject(name);
             go.transform.SetParent(root.transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
@@ -503,6 +515,19 @@ namespace BAM.Art
         {
             float ox = (float)rnd.NextDouble() * 0.7f - 0.35f, oz = (float)rnd.NextDouble() * 0.7f - 0.35f, r = 0.05f + (float)rnd.NextDouble() * 0.06f;
             m.Color(Pal.RoadEdge).Sphere(c + new Vector3(ox, r * 0.3f, oz), new Vector3(r * 1.3f, r * 0.6f, r), 6, 3);
+        }
+    }
+
+    /// <summary>On the arena root: the meshes and materials Arena and Island made for this one arena. Destroying a GameObject
+    /// leaves them alive (they are DontSave), so every match and the tutorial's bridge rebuild would keep the old arena's.</summary>
+    sealed class ArenaOwned : MonoBehaviour
+    {
+        internal readonly System.Collections.Generic.List<Object> Items = new System.Collections.Generic.List<Object>(128);
+
+        void OnDestroy()
+        {
+            for (int i = 0; i < Items.Count; i++) if (Items[i] != null) Destroy(Items[i]);
+            Items.Clear();
         }
     }
 }
