@@ -107,6 +107,7 @@ namespace BAM.Sim
                 var e = us[ei];
                 if (!e.Alive || e.Team == h.Team || e.Kind != UnitKind.Hero || e.Has(St.Untargetable) || !Sees(e)) continue;
                 int lf = LeadFight(lead, e);
+                if (TeamOutOfLeash(lead, e, lf)) continue; // too far from the human on our team (BotTeam.cs)
                 float d = Dist(h, e); bool low = HpR(e) < 0.35f;
                 float teamDps = TeamDpsOn(h, myDps, allies, e), ttkE = (e.Hp + ShieldOf(e)) / teamDps;
                 bool hitMe = now - HitAt(h, e) < 1.5f || now - h.LastCombat < 1 && d < e.Range + 0.5f;

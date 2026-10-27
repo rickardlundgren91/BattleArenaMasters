@@ -52,7 +52,11 @@ namespace BAM.Sim
         internal const float ChaseLookT = 1, ChaseCatchT = 2, ChaseLeash = 6, ChaseDropT = 3;
         // team play with the human (old SimTeamplay.cs)
         internal const float TeamJoinR = 12, TeamFightT = 2, TeamReach = 6, TeamStayHp = 0.5f, TeamJoinHp = 0.45f, TeamLowHp = 0.3f,
-            TeamFollowR = 5, TeamFollowStop = 2.5f, TeamIntentR = 8, TeamIntentKeep = 1.5f;
+            TeamFollowR = 5, TeamFollowStop = 2.5f, TeamIntentR = 8, TeamIntentKeep = 1.5f, TeamLeash = 10, TeamBackR = 8;
         internal const float HumanReact = 1.3f, SpHoldMax = 6;
+        // fair bots (old SimAiFair.cs): a hero out of view this long must be noticed again; aim lead builds up over LeadSeenT
+        internal const float NoticeGrace = 0.5f, LeadSeenT = 0.3f;
+        // human-like movement (old SimHumanMove.cs): walking turns at half rate, dodges turn at 16 rad/s, brake over the last 0.35 tiles
+        internal const float HmTurn = 0.5f, HmDodgeTurn = 16, HmBrake = 0.35f;
     }
 }

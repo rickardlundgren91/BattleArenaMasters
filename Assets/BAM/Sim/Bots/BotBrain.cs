@@ -112,7 +112,7 @@ namespace BAM.Sim
             if (emoteT > Now && !retreat && !danger) { float side = (int)(Now * 6) % 2 == 0 ? 1 : -1; M.MoveUnit(h, side, 0, dt); return; }
             if (kite != null && kite.Alive && Dist(h, kite) < kite.Range + kite.R + 0.9f)
             {
-                var k = kite; float ax = h.X - k.X, ay = h.Y - k.Y - fwd * 0.5f;
+                var k = kite; float ax = h.X - k.X, ay = h.Y - k.Y - fwd * 0.5f; HmKite(ref ax, ref ay);
                 if (M.Map.Free(h.X + ax * 0.2f, h.Y + ay * 0.2f, h.R)) { BotMove(ax, ay, dt, 18); return; }
             }
             if (hasGoal && gStop > 0)
@@ -122,11 +122,12 @@ namespace BAM.Sim
                 {
                     if (f.Kind == UnitKind.Hero && safety && h.Hero != HeroId.Tyra) // Tyra stands still to keep her passive (dodging comes first)
                     {
-                        if (!(strafeT > 0)) { strafeT = Srand(0.6f, 1.4f); strafe = strafe == 1 ? -1 : 1; }
+                        float sm = HmStrafe(); // uneven steps and short pauses (BotMove.cs)
                         strafeT -= dt;
                         float d = Dist(h, f); if (d == 0) d = 1;
                         float ux = (h.X - f.X) / d, uy = (h.Y - f.Y) / d, pull = (gStop - 0.35f - d) * 1.5f;
-                        float vx = -uy * strafe + ux * pull, vy = ux * strafe + uy * pull;
+                        float vx = -uy * strafe * sm + ux * pull, vy = ux * strafe * sm + uy * pull;
+                        if (sm == 0 && Math.Abs(pull) < 0.15f) { h.Facing = SimMath.Atan2(f.Y - h.Y, f.X - h.X); return; }
                         if (Walkable(h, h.X + vx * 0.3f, h.Y + vy * 0.3f) && !NearEnemyTowerAt(h.X + vx * 0.5f, h.Y + vy * 0.5f, h.Team, 0)) { BotMove(vx, vy, dt, 18); h.Facing = SimMath.Atan2(f.Y - h.Y, f.X - h.X); }
                         else strafe = -strafe;
                     }
@@ -155,7 +156,7 @@ namespace BAM.Sim
                 float nx = path.X[path.Index], ny = path.Y[path.Index], dx = nx - h.X, dy = ny - h.Y, d = Hyp(dx, dy);
                 bool last = path.Count - path.Index == 1;
                 if (d < (last ? 0.05f : 0.25f)) path.Index++;
-                else { float step = SpeedOf(h) * dt, k = last && d < step ? d / step : 1; BotMove(dx / d * k, dy / d * k, dt, last && d < 0.4f ? 0 : 18); }
+                else { float step = SpeedOf(h) * dt, k = last && d < step ? d / step : 1; k = Math.Min(k, HmPace(last, d, hasGoal && gFollow != null && gFollow.Kind == UnitKind.Hero)); BotMove(dx / d * k, dy / d * k, dt, last && d < 0.4f ? 0 : 18); }
             }
         }
 
@@ -163,7 +164,7 @@ namespace BAM.Sim
         void BotMove(float dx, float dy, float dt, float turn)
         {
             var h = H; float m = Hyp(dx, dy);
-            turn *= TK(7);
+            turn = HmTurn(turn) * TK(7); // softer turns (BotMove.cs)
             if (m == 0 || turn <= 0 || Now - mT > 0.25f) { M.MoveUnit(h, dx, dy, dt); if (m > 0) { mdx = dx / m; mdy = dy / m; mT = Now; } return; }
             float ux = dx / m, uy = dy / m, a = SimMath.Atan2(mdx * uy - mdy * ux, mdx * ux + mdy * uy), lim = turn * dt;
             if (a > lim || a < -lim) { float r = a > 0 ? lim : -lim, c = SimMath.Cos(r), s = SimMath.Sin(r); ux = mdx * c - mdy * s; uy = mdx * s + mdy * c; }
@@ -275,6 +276,7 @@ namespace BAM.Sim
             if (finish) { shouldTower = true; target = null; }
             if (target != null && shouldTower && !urgent && Dist(h, enemyTower) < Dist(h, target) + 4) target = null;
 
+            bool oHas = hasGoal; float oX = gX, oY = gY, oStop = gStop; Unit oFollow = gFollow; // the last goal (HmKeepGoal)
             hasGoal = false; kite = null;
             if (retreat) GoalRetreat(myTower, enemyTower, fwd);
             else if (danger)
@@ -306,8 +308,11 @@ namespace BAM.Sim
             if (v3 && target == null && !finish && (Mode == BotMode.Lane || Mode == BotMode.Group || Mode == BotMode.Support)) V3Goal(hpR, myTower, fwd);
             if (target == null && !finish && !retreat && (Mode == BotMode.Lane || Mode == BotMode.Group)) TeamFollow(hpR, myTower, fwd);
             else following = false;
+            TeamLeash(finish, fwd); // stay within range of the human (BotTeam.cs)
             if (hasGoal && hasBlocked && now < blockedT && Hyp(gX - blockedX, gY - blockedY) < 1.5f) hasGoal = false;
-            if (!hasGoal || !M.Map.FindPath(h.X, h.Y, gX, gY, now, path)) path.Clear();
+            if (target == null && !retreat && !danger && Mode != BotMode.BushChase && Mode != BotMode.Tower) HmOffset(); // own line per bot (BotMove.cs)
+            if (HmKeepGoal(oHas, oX, oY, oStop, oFollow)) { gX = oX; gY = oY; } // barely moved: keep the old goal and path
+            else if (!hasGoal || !M.Map.FindPath(h.X, h.Y, gX, gY, now, path)) path.Clear();
             if (!h.SpecialReady) spWantT = 0;
             if (h.SpecialReady)
             {
@@ -413,11 +418,8 @@ namespace BAM.Sim
             }
             if (!shouldTower && hasGoal && safety && Mode == BotMode.Lane && BushSpot(gX, gY, Math.Max(1.5f, h.Range - 0.5f), enemyTower, 0, out float ax, out float ay)) SetGoal(ax, ay, 0.3f);
             // people don't stand perfectly still while they wait at the wave: shuffle a little around the spot
-            if (TK(8) > 0 && Mode == BotMode.Lane && hasGoal && gStop == 0 && Hyp(h.X - gX, h.Y - gY) < 1.2f)
-            {
-                float jx = gX + Srand(-0.6f, 0.6f), jy = gY + Srand(-0.5f, 0.5f);
-                if (Walkable(h, jx, jy) && !NearEnemyTowerAt(jx, jy, h.Team, 0.3f)) { gX = jx; gY = jy; }
-            }
+            // (a new spot every 1.5-3 s, not every decision: BotMove.cs)
+            if (TK(8) > 0 && Mode == BotMode.Lane && hasGoal && gStop == 0 && Hyp(h.X - gX, h.Y - gY) < 1.2f) HmShuffle();
         }
 
         /// <summary>The team's minion furthest up the lane, else the enemy tower.</summary>

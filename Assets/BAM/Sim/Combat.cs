@@ -447,7 +447,7 @@ namespace BAM.Sim
         {
             if (h.Bot == null || t.Kind != UnitKind.Hero || t.IsClone) { ax = t.X; ay = t.Y; return; }
             var tier = h.Bot.Tier;
-            float k = tier.AimLead * Rng.Range(0.8f, 1.15f) * (tier.V3 ? 0.7f : 1);
+            float k = tier.AimLead * Rng.Range(0.8f, 1.15f) * (tier.V3 ? 0.7f : 1) * BotBrain.LeadSeen(this, h, t); // no lead on a walk it has not watched
             float n = tier.AimNoise * (1 - 0.25f * h.Bot.Skill) * (tier.V3 ? 1.2f : 1);
             float ft = FlightTime(f, a, b, SimMath.Dist(h, t));
             for (int i = 0; i < 2; i++) ft = FlightTime(f, a, b, SimMath.Hypot(t.X + t.MoVx * ft * k - h.X, t.Y + t.MoVy * ft * k - h.Y));
@@ -465,6 +465,7 @@ namespace BAM.Sim
             u.MoX = u.X; u.MoY = u.Y;
             for (int tm = 0; tm < 2; tm++)
                 if (tm != u.Team && IsVisibleTo(u, tm)) { u.LastSeenX[tm] = u.X; u.LastSeenY[tm] = u.Y; u.LastSeenT[tm] = Time; }
+            BotBrain.TrackSight(this, u);
         }
     }
 }

@@ -11,7 +11,8 @@ namespace BAM.Sim
         Unit TowerOf(int team) => M.Towers[team];
         static float Dist(Unit a, Unit b) => SimMath.Dist(a, b);
         static float Hyp(float x, float y) => SimMath.Hypot(x, y);
-        bool Sees(Unit e) => M.IsVisibleTo(e, H.Team);
+        /// <summary>The bot's team sees e and has had time to notice it (BotFair.cs). The rules' own visibility is M.IsVisibleTo.</summary>
+        bool Sees(Unit e) => AiSees(e);
         float Now => M.Time;
 
         /// <summary>Old speedOf: (base + flat) x (1 + pct), clamped to 0.5..6; towers 0.</summary>
@@ -64,7 +65,7 @@ namespace BAM.Sim
             for (int i = 0; i < us.Count; i++)
             {
                 var u = us[i];
-                if (u.Kind == UnitKind.Hero && u.Alive && u != e && u.Team == e.Team && !u.IsClone && !M.IsVisibleTo(u, h.Team) && !Remembered(u, h.Team, out _, out _)) n++;
+                if (u.Kind == UnitKind.Hero && u.Alive && u != e && u.Team == e.Team && !u.IsClone && !Sees(u) && !Remembered(u, h.Team, out _, out _)) n++;
             }
             return n;
         }
@@ -183,7 +184,7 @@ namespace BAM.Sim
                 if (e.Kind == UnitKind.Hero)
                 {
                     if (e.Has(St.Stun)) continue;
-                    if (!M.IsVisibleTo(e, h.Team) && !e.IsClone)
+                    if (!Sees(e) && !e.IsClone)
                     {
                         if (!Remembered(e, h.Team, out float mx, out float my)) continue;
                         if (Hyp(mx - px, my - py) - 1 <= e.Range + h.R + 1.5f) dps += DpsOf(e) * 0.7f;

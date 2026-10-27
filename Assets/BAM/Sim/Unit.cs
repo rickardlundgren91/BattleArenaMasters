@@ -101,6 +101,8 @@ namespace BAM.Sim
         public float MoVx, MoVy; internal float MoX, MoY; internal bool MoInit;
         public readonly float[] LastSeenX = new float[2], LastSeenY = new float[2], LastSeenT = { -99, -99 };
         public readonly float[] CastSeen = { float.NaN, float.NaN };
+        // per enemy team: when it came into view, went out of view, and when that team's bots notice it (Bots/BotFair.cs)
+        internal readonly float[] VisSince = { float.NaN, float.NaN }, HidAt = { float.NaN, float.NaN }, NoticeAt = { float.NaN, float.NaN };
 
         // ---------- minions ----------
         public int Wp;

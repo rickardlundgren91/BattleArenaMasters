@@ -6,6 +6,8 @@ namespace BAM.Sim
     // teammates join the player's fights, stay in them, pull back with the player and walk with the player; and with a
     // person in the match every bot reacts a little slower and holds its special for a moment worth it. A match without a
     // human (MatchConfig.PlayerIsBot, the headless runner) is unchanged. The old team signals (ATTACK/RETREAT) are not in BAM.
+    // Healthy bots also stay within TeamLeash of the human (old teamLeash, Rickard 2026-10-25: "they should back off when I back
+    // off, go in when I go in"): enemy heroes far from the human are not chased, and a goal outside the ring becomes a spot beside them.
     public sealed partial class BotBrain
     {
         bool HumanInMatch => !M.Config.PlayerIsBot && M.Tut == null && M.Player != null;
@@ -67,7 +69,7 @@ namespace BAM.Sim
         bool LeaderBacking(Unit l)
         {
             if (HpR(l) < BotTables.TeamLowHp) return true;
-            Unit e = null; float ed = 8; var us = M.Units;
+            Unit e = null; float ed = BotTables.TeamBackR; var us = M.Units;
             for (int i = 0; i < us.Count; i++)
             {
                 var u = us[i];
@@ -84,7 +86,7 @@ namespace BAM.Sim
             var h = H; var l = TeamLeader(); if (l == null || Dist(l, h) > 10) return;
             if (LeaderBacking(l))
             {
-                if (!retreat && CountSeenNear(Teams.Other(h.Team), h.Team, null, h.X, h.Y, 8) > 0) { retreat = true; retreatT = Now; }
+                if (!retreat && CountSeenNear(Teams.Other(h.Team), h.Team, null, h.X, h.Y, BotTables.TeamBackR) > 0) { retreat = true; retreatT = Now; }
                 return;
             }
             if (!retreat || hpR < BotTables.TeamStayHp || ttk < 4 || Dist(l, h) > 8 || !LeaderInFight(l)) return;
@@ -107,15 +109,52 @@ namespace BAM.Sim
             float d = Dist(h, l);
             if (d < (following ? BotTables.TeamFollowStop : BotTables.TeamFollowR) || HpR(l) < 0.3f) { following = false; return; } // close enough, or the leader is going home to heal
             if (myTower != null && myTower.Alive && Dist(l, myTower) < myTower.UDef.Range + 1 || Hyp(l.X - l.SpawnX, l.Y - l.SpawnY) < 4) { following = false; return; } // the leader is at home
-            int si = 0; var us = M.Units;
-            for (int i = 0; i < us.Count; i++) { var u = us[i]; if (u == h) break; if (u.Kind == UnitKind.Hero && u.Team == h.Team && u != l) si++; }
-            float side = si % 2 == 0 ? -1.3f : 1.3f;
-            float gx = l.X + side, gy = l.Y - fwd * 1.5f;
-            if (!Walkable(h, gx, gy)) { gx = l.X; gy = l.Y - fwd * 1.0f; }
-            if (!Walkable(h, gx, gy)) { gx = l.X; gy = l.Y; }
+            FollowSpot(l, fwd, out float gx, out float gy);
             var et = TowerOf(Teams.Other(h.Team)); // never walk in under the enemy tower on a plain follow
             if (et != null && et.Alive && Hyp(gx - et.X, gy - et.Y) < et.UDef.Range + 0.5f) { following = false; return; }
             following = true; Mode = BotMode.Follow; SetGoal(gx, gy);
+        }
+
+        /// <summary>A spot a little behind the human and to the side (the two bots take one side each).</summary>
+        void FollowSpot(Unit l, int fwd, out float gx, out float gy)
+        {
+            var h = H; int si = 0; var us = M.Units;
+            for (int i = 0; i < us.Count; i++) { var u = us[i]; if (u == h) break; if (u.Kind == UnitKind.Hero && u.Team == h.Team && u != l) si++; }
+            float side = si % 2 == 0 ? -1.3f : 1.3f;
+            gx = l.X + side; gy = l.Y - fwd * 1.5f;
+            if (!Walkable(h, gx, gy)) { gx = l.X; gy = l.Y - fwd * 1.0f; }
+            if (!Walkable(h, gx, gy)) { gx = l.X; gy = l.Y; }
+        }
+
+        /// <summary>The bot keeps within TeamLeash of the human (healthy bots only; a hurt one uses its own caution).</summary>
+        bool TeamLeashed(Unit l) => l != null && HpR(H) >= BotTables.TeamJoinHp;
+
+        /// <summary>PickHeroTarget: an enemy hero this far from the human is not ours to chase, unless the human is fighting it
+        /// (an enemy that just hit the bot, or one at our tower, is always fair game).</summary>
+        bool TeamOutOfLeash(Unit l, Unit e, int lf) => lf == 0 && TeamLeashed(l) && Dist(l, e) > BotTables.TeamLeash + 1.5f
+            && !(Now - HitAt(H, e) < BotTables.TeamFightT) && !AtOurTower(e);
+
+        bool AtOurTower(Unit e) { var mt = TowerOf(H.Team); return mt != null && mt.Alive && Dist(e, mt) < mt.UDef.Range + 2; }
+
+        bool TowerUnderAttack()
+        {
+            var us = M.Units;
+            for (int i = 0; i < us.Count; i++) { var u = us[i]; if (u.Kind == UnitKind.Hero && u.Alive && u.Team != H.Team && !u.IsClone && M.IsVisibleTo(u, H.Team) && AtOurTower(u)) return true; }
+            return false;
+        }
+
+        /// <summary>After the goal is picked: a goal outside the ring around the human becomes a spot beside them, so the bots back
+        /// off when the human backs off and go in when they go in. Retreat, danger and leaving the tower are the bot's own safety.</summary>
+        void TeamLeash(bool finish, int fwd)
+        {
+            var h = H; if (retreat || finish || Mode == BotMode.Danger || Mode == BotMode.LeaveTower) return;
+            var l = TeamLeader(); if (!TeamLeashed(l)) return;
+            if (TowerUnderAttack()) return; // defend the tower even when the human is elsewhere
+            var mt = TowerOf(h.Team); if (mt != null && mt.Alive && Dist(l, mt) < mt.UDef.Range + 1 || Hyp(l.X - l.SpawnX, l.Y - l.SpawnY) < 4) return; // the human is home healing: hold the wave meanwhile
+            if (hasGoal ? Hyp(gX - l.X, gY - l.Y) <= BotTables.TeamLeash : Dist(h, l) <= BotTables.TeamLeash) return;
+            if (focus != null && LeadFight(l, h, focus) != 0) return; // the human's own fight
+            Mode = BotMode.Follow; focus = null; following = true;
+            FollowSpot(l, fwd, out float gx, out float gy); SetGoal(gx, gy);
         }
 
         float HumanReaction() => HumanInMatch ? BotTables.HumanReact : 1;
@@ -136,7 +175,7 @@ namespace BAM.Sim
                     var u = us[i];
                     if (!u.Alive || u.Kind != UnitKind.Hero || u.IsClone) continue;
                     if (u.Team == H.Team) { if (u != H && Dist(u, H) < 9 && u.InCombat(now)) { go = true; break; } }
-                    else if (Sees(u) && HpR(u) < 0.45f) { go = true; break; }
+                    else if (M.IsVisibleTo(u, H.Team) && HpR(u) < 0.45f) { go = true; break; }
                 }
             }
             if (go) { spHoldT = 0; return false; }
