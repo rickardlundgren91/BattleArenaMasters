@@ -45,13 +45,13 @@ namespace BAM.Analytics
         public static void MatchStarted(MatchSetup setup)
         {
             if (!Allowed) return;
-            Sdk.MatchStart(setup.Hero.ToString(), setup.Difficulty.ToString(), setup.Tutorial);
+            Sdk.MatchStart(Played(setup).ToString(), setup.Difficulty.ToString(), setup.Tutorial);
         }
 
         public static void MatchEnded(MatchSetup setup, MatchResult result)
         {
             if (!Allowed) return;
-            Sdk.MatchEnd(setup.Hero.ToString(), setup.Difficulty.ToString(), setup.Tutorial, result.Won, result.Quit,
+            Sdk.MatchEnd(result.Hero.ToString(), setup.Difficulty.ToString(), setup.Tutorial, result.Won, result.Quit,
                 Mathf.RoundToInt(result.Seconds), result.Kills, result.Deaths, result.Level);
         }
 
@@ -60,6 +60,9 @@ namespace BAM.Analytics
             if (!Allowed) return;
             Sdk.TutorialStep(step, name ?? "");
         }
+
+        /// <summary>The hero actually played: the guided match is always Tyra, whatever was last picked in the menu.</summary>
+        static BAM.Sim.HeroId Played(MatchSetup setup) => setup.Tutorial ? BAM.Sim.HeroId.Tyra : setup.Hero;
 
         static bool Allowed => inited && BamSettings.AnalyticsConsent == Consent.Granted;
 
@@ -105,6 +108,10 @@ namespace BAM.Analytics
         static class Sdk
         {
             static bool starting, ready;
+            // events from before Unity Services finished starting (the first tutorial begins 0.6 s after the Yes), sent once it
+            // has, and only if sharing is still on then
+            static readonly System.Collections.Generic.List<CustomEvent> pending = new System.Collections.Generic.List<CustomEvent>(8);
+            const int MaxPending = 8;
 
             // Nothing is sent from the Editor, so testing in Unity never fills the dashboard; the log shows what would go.
             static bool Live => !Application.isEditor;
@@ -130,6 +137,7 @@ namespace BAM.Analytics
                 {
                     starting = false;
                 }
+                Flush();
                 // The player may have said no while we waited: EndUserConsent already stopped collection,
                 // and the pending deletion request goes out now that the SDK can take it.
                 if (ready && BamSettings.AnalyticsConsent != Consent.Granted && PlayerPrefs.GetInt(DeletePendingKey, 0) == 1)
@@ -153,8 +161,16 @@ namespace BAM.Analytics
                             ready = UnityServices.State == ServicesInitializationState.Initialized;
                         }
                         finally { starting = false; }
-                        if (!ready) return; // the flag stays, so it is tried again next start
+                        if (!ready) { pending.Clear(); return; } // the flag stays, so it is tried again next start
+                        // the player turned sharing back on while we waited: no deletion, collection runs (Start() returned early)
+                        if (BamSettings.AnalyticsConsent == Consent.Granted || PlayerPrefs.GetInt(DeletePendingKey, 0) != 1)
+                        {
+                            if (BamSettings.AnalyticsConsent == Consent.Granted) Debug.Log("[BAM.Analytics] started");
+                            Flush();
+                            return;
+                        }
                     }
+                    pending.Clear();
                     AnalyticsService.Instance.RequestDataDeletion();
                     Clear();
                     Debug.Log("[BAM.Analytics] data deletion requested");
@@ -163,6 +179,18 @@ namespace BAM.Analytics
                 {
                     Debug.LogWarning("[BAM.Analytics] deletion request failed, will retry next start: " + e.Message);
                 }
+            }
+
+            /// <summary>Sends the events kept while starting, if sharing is still on; drops them otherwise.</summary>
+            static void Flush()
+            {
+                if (ready && BamSettings.AnalyticsConsent == Consent.Granted)
+                    for (int i = 0; i < pending.Count; i++)
+                    {
+                        try { AnalyticsService.Instance.RecordEvent(pending[i]); }
+                        catch (Exception ex) { Debug.LogWarning("[BAM.Analytics] RecordEvent failed: " + ex.Message); }
+                    }
+                pending.Clear();
             }
 
             static void Clear()
@@ -209,11 +237,12 @@ namespace BAM.Analytics
             static CustomEvent New(string name)
             {
                 if (!Live) { Debug.Log("[BAM.Analytics] event " + name + " (Editor: not sent)"); return null; }
-                return ready ? new CustomEvent(name) : null;
+                return ready || starting ? new CustomEvent(name) : null;
             }
 
             static void Record(CustomEvent e)
             {
+                if (!ready) { if (pending.Count < MaxPending) pending.Add(e); return; }
                 try { AnalyticsService.Instance.RecordEvent(e); }
                 catch (Exception ex) { Debug.LogWarning("[BAM.Analytics] RecordEvent failed: " + ex.Message); }
             }

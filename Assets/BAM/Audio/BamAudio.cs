@@ -167,7 +167,7 @@ namespace BAM.Audio
                 if (clips[k] == null) Build(k);
                 if (!isFile[k]) return;
             }
-            float v = volume;
+            float v = volume, raw = volume;
             if (v * master <= 0.005f) return;
             ref SfxInfo inf = ref info[k];
             float now = Time.unscaledTime;
@@ -203,7 +203,7 @@ namespace BAM.Audio
 
             voiceId[vi] = id; voicePri[vi] = inf.Priority; voiceVol[vi] = v;
             voiceEnd[vi] = now + clip.length / Mathf.Max(0.05f, pitch);
-            lastStart[k] = now; lastVol[k] = v;
+            lastStart[k] = now; lastVol[k] = raw; // compared with the next call's raw volume, before the clip's gain
         }
 
         static void OnSettingsChanged()
@@ -282,7 +282,8 @@ namespace BAM.Audio
                 bool on = musicWant != MusicId.None && musicWant == musicLoaded && musicMaster > 0f;
                 float dt = Time.unscaledDeltaTime;
                 musicGain = on ? Mathf.Min(1f, musicGain + dt / MusicFadeIn) : Mathf.Max(0f, musicGain - dt / MusicFadeOut);
-                music.volume = musicGain * musicGain * MusicLevel * musicMaster; // squared: the fade sounds even to the ear
+                // squared: the fade sounds even to the ear; the switch only picks the direction, so turning Music off fades it out too
+                music.volume = musicGain * musicGain * MusicLevel * MusicVolume;
                 if (on) Resume();
                 else if (musicGain <= 0f && music.isPlaying) { music.Pause(); musicPaused = true; }
             }
