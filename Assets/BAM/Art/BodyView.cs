@@ -52,6 +52,13 @@ namespace BAM.Art
         AnimationClipPlayable[] clips;
         float[] clipLen;
         float atkSpeed = 1f, atkTotal = 0.5f, castLen = 0.6f, hitA = -1f, deathFadeAt = 0.55f;
+        // old Speltest's HeroMixamo layers: standing, the attack and the cast move the whole body; on the move only the upper body
+        // (this mask) swings while the legs keep running, so a hero hitting on the run no longer slides on frozen legs
+        AnimationLayerMixerPlayable layers;
+        AnimationMixerPlayable upper;
+        AnimationClipPlayable upAtk, upCast;
+        // the attack in Speltest's four phases (HeroAttack.cs, HeroMixamo.PoseMx): the coil, the slash, the hold on the blow, the recovery
+        float atkRel, atkSlash, atkHold, atkRec;
         bool imported;
         HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
         PreviewBreath breath;     // the menu hero's living idle on top of its clip (Preview only)
@@ -311,7 +318,10 @@ namespace BAM.Art
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             var output = AnimationPlayableOutput.Create(graph, "Anim", anim);
             mixer = AnimationMixerPlayable.Create(graph, src2.Length);
-            output.SetSourcePlayable(mixer);
+            layers = AnimationLayerMixerPlayable.Create(graph, 2);
+            output.SetSourcePlayable(layers);
+            graph.Connect(mixer, 0, layers, 0);
+            layers.SetInputWeight(0, 1f);
             clips = new AnimationClipPlayable[src2.Length];
             clipLen = new float[src2.Length];
             for (int c = 0; c < src2.Length; c++)
@@ -324,8 +334,19 @@ namespace BAM.Art
                 graph.Connect(clips[c], 0, mixer, c);
                 mixer.SetInputWeight(c, c == CIdle ? 1f : 0f);
             }
-            // walk and run are posed by hand each frame (AnimateImported): their time is the stride phase, not the clock
+            // the upper-body copies of the attack and the cast, for swinging on the move
+            upper = AnimationMixerPlayable.Create(graph, 2);
+            upAtk = AnimationClipPlayable.Create(graph, src2[CAttack] != null ? src2[CAttack] : idle);
+            upCast = AnimationClipPlayable.Create(graph, src2[CCast] != null ? src2[CCast] : idle);
+            graph.Connect(upAtk, 0, upper, 0);
+            graph.Connect(upCast, 0, upper, 1);
+            graph.Connect(upper, 0, layers, 1);
+            layers.SetLayerMaskFromAvatarMask(1, UpperMask());
+            layers.SetInputWeight(1, 0f);
+            // walk and run are posed by hand each frame (AnimateImported): their time is the stride phase, not the clock; so are the
+            // attack (its four phases) and the cast (so the upper-body copies stay on the same frame)
             clips[CWalk].Pause(); clips[CRun].Pause();
+            clips[CAttack].Pause(); clips[CCast].Pause(); upAtk.Pause(); upCast.Pause();
             // one-shot clips must hold their last frame, not loop back
             clips[CDeath].SetDuration(clipLen[CDeath]);
             castLen = Mathf.Min(0.9f, clipLen[CCast] / 1.2f);
@@ -413,13 +434,16 @@ namespace BAM.Art
             atkT = 0f;
             if (clips != null)
             {
-                // line the clip's release up with the windup, and never let the follow-through drag on
+                // the blow lands on the clip's release frame exactly when the rules' windup runs out; the coil goes quickly to 70 % of
+                // the way and waits there (anticipation), the slash plays the last 30 %, the clip stands still on the blow for this kind
+                // of hero's hit-stop (impact), then plays out (recovery), never dragging on
                 float len = clipLen[CAttack];
-                atkSpeed = Mathf.Clamp(def.Art.AttackRelease * len / windup, 0.6f, 4f);
-                atkTotal = Mathf.Min(len / atkSpeed, windup + 0.45f);
-                clips[CAttack].SetTime(0.0);
-                clips[CAttack].SetTime(0.0);
-                clips[CAttack].SetSpeed(atkSpeed);
+                atkRel = def.Art.AttackRelease * len;
+                atkSpeed = Mathf.Clamp(atkRel / windup, 0.6f, 4f);
+                atkSlash = Mathf.Min(0.12f, windup * 0.35f);
+                atkHold = AttackHold(HeroIndex);
+                atkRec = Mathf.Min((len - atkRel) / atkSpeed, 0.45f);
+                atkTotal = windup + atkHold + atkRec;
             }
             if (gear != null) gear.Throw(windup);
         }
@@ -428,7 +452,7 @@ namespace BAM.Art
         {
             castT = 0f;
             if (IsHero && !dead && vis > 0.01f) Fx.HeroCast(HeroIndex, transform.position); // never gives a hider away
-            if (clips != null) { clips[CCast].SetTime(0.0); clips[CCast].SetTime(0.0); clips[CCast].SetSpeed(1.2f); }
+            if (clips != null) { clips[CCast].SetTime(0.0); clips[CCast].SetTime(0.0); upCast.SetTime(0.0); upCast.SetTime(0.0); }
             if (gear != null) gear.Throw(castLen * 0.35f);
         }
 
@@ -702,12 +726,16 @@ namespace BAM.Art
                 {
                     atkT += dt;
                     wAtk = Mathf.Min(Mathf.Clamp01(atkT / 0.06f), Mathf.Clamp01((atkTotal - atkT) / 0.15f));
+                    double at = AttackTime(atkT);
+                    clips[CAttack].SetTime(at); upAtk.SetTime(at);
                     if (atkT >= atkTotal) atkT = -1f;
                 }
                 if (castT >= 0f)
                 {
                     castT += dt;
                     wCast = Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
+                    double ct = castT * 1.2f;
+                    clips[CCast].SetTime(ct); upCast.SetTime(ct);
                     if (castT >= castLen) castT = -1f;
                 }
                 if (hitA >= 0f)
@@ -718,6 +746,11 @@ namespace BAM.Art
                 }
             }
             gearAct = wAtk + wCast;
+            // on the move the swing goes to the upper-body layer and the legs keep their stride
+            float act = Mathf.Min(1f, wAtk + wCast), upW = dead ? 0f : act * moveW;
+            if (act > 1e-4f) { upper.SetInputWeight(0, wAtk / (wAtk + wCast)); upper.SetInputWeight(1, wCast / (wAtk + wCast)); }
+            layers.SetInputWeight(1, upW);
+            wAtk *= 1f - moveW; wCast *= 1f - moveW;
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
             float rest = 1f - over;
@@ -831,6 +864,41 @@ namespace BAM.Art
             }
             if (v > 0f) groundSpd[c] = v;
             return v;
+        }
+
+        // where the attack clip stands atkT s into the swing (the four phases, see PlayAttack)
+        double AttackTime(float t)
+        {
+            float coil = windup - atkSlash;
+            if (t < coil) { float w = t / Mathf.Max(1e-4f, coil); return atkRel * 0.7f * (1f - (1f - w) * (1f - w) * (1f - w)); }
+            if (t < windup) { float w = (t - coil) / Mathf.Max(1e-4f, atkSlash); return atkRel * (0.7f + 0.3f * w * w); }
+            if (t < windup + atkHold) return atkRel;
+            return Mathf.Min(clipLen[CAttack], atkRel + (t - windup - atkHold) * atkSpeed);
+        }
+
+        // the hit-stop on the blow by kind of hero (Speltest HeroAttack.cs ATK_STYLE hold): melee 0.06 s, ranged 0.035, magic 0.045,
+        // tank 0.085 (Bram, Knut and Bonk; Speltest's ATK_CLASS has Bram and Knut as tanks)
+        static float AttackHold(int hero)
+        {
+            switch ((HeroId)hero)
+            {
+                case HeroId.Bram: case HeroId.Knut: case HeroId.Bonk: return 0.085f;
+                case HeroId.Tyra: return 0.035f;
+                case HeroId.Moa: case HeroId.Blast: return 0.045f;
+                default: return 0.06f;
+            }
+        }
+
+        static AvatarMask upperMask;
+        // Speltest's MxUpper: the spine, head, arms and fingers
+        static AvatarMask UpperMask()
+        {
+            if (upperMask != null) return upperMask;
+            var m = new AvatarMask();
+            for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++) m.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
+            foreach (var p in new[] { AvatarMaskBodyPart.Body, AvatarMaskBodyPart.Head, AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm, AvatarMaskBodyPart.LeftFingers, AvatarMaskBodyPart.RightFingers })
+                m.SetHumanoidBodyPartActive(p, true);
+            return upperMask = m;
         }
 
         void Wrap(int c)
