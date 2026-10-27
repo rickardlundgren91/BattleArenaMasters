@@ -15,6 +15,8 @@ namespace BAM.UI
         /// <summary>Home's top-left profile chip (the old one, cw(40) x cw(12)), built in the given parent; a tap opens the profile.</summary>
         public static Func<RectTransform, RectTransform> HomeChip;
         public static Action OpenFriends, OpenAccount, OpenPlayFriends, OnlineMatch;
+        /// <summary>How many friends are online now (the badge on Home's FRIENDS button).</summary>
+        public static Func<int> FriendsOnline;
         /// <summary>Once, after the first match after the tutorial: asks to go online. True when the question was shown.</summary>
         public static Func<bool> AskToGoOnline;
     }

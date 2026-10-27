@@ -41,6 +41,8 @@ namespace BAM.Online.UI
         public static void OpenProfile() { Init(); OnlineMenu.Close(); OnlineMenu.Go(SignedIn ? "profile" : "golive"); }
         public static void OpenRank() { Init(); OnlineMenu.Close(); OnlineMenu.Go("rank"); }
         public static void OpenFriends() { Init(); OnlineMenu.Close(); OnlineMenu.OpenFriends(); }
+        /// <summary>Friends online now (not in a match), for the badge on Home's FRIENDS button.</summary>
+        public static int FriendsOnline() { int n = 0; foreach (var f in Social.Friends) if (f.Presence == Social.Presence.Online) n++; return n; }
         public static void OpenAccount() { Init(); OnlineMenu.Close(); OnlineMenu.Go("account"); }
         /// <summary>Play with friends: the room page (create a room or join one with a code; BAM.Online.Mp).</summary>
         public static void OpenPlayFriends() { Init(); OnlineMenu.Close(); OnlineMenu.Go("mp"); }
@@ -94,7 +96,7 @@ namespace BAM.Online.UI
 
     static partial class OnlineMenu
     {
-        /// <summary>The Home chip into a texture of pw x ph pixels (MenuHome3.HubTopBar3, the chip without the ONE_PLAY bar).</summary>
+        /// <summary>The Home chip into a texture of pw x ph pixels (MenuHome3.HubTopBar3 in its ONE_PLAY look, on the top bar).</summary>
         internal static void DrawChip(Ctx c, int pw, int ph)
         {
             ctx = c; W = 400; H = 400 * ph / (float)Math.Max(1, pw);
@@ -102,9 +104,8 @@ namespace BAM.Online.UI
             ctx.scale(k, k);
             var st = Account.State; var t = Progress.Shown;
             bool on = st == Account.Status.Ready || st == Account.Status.NeedsName || st == Account.Status.Offline && Account.Enabled;
-            float px = 0, py = 0, cy = chipH / 2;
-            ctx.fillStyle = "rgba(14,18,48,0.88)"; ctx.beginPath(); ctx.roundRect(px + 1, py + 1, chipW - 2, chipH - 2, chipH / 2); ctx.fill();
-            ctx.strokeStyle = "rgba(150,160,255,0.25)"; ctx.lineWidth = cw(0.4f); ctx.beginPath(); ctx.roundRect(px + 1, py + 1, chipW - 2, chipH - 2, chipH / 2); ctx.stroke();
+            float px = 0, cy = chipH / 2;
+            // BAM's Home is the old ONE_PLAY look: the chip sits on the top bar's glass, so it has no background of its own
             float acx = px + chipH / 2, ar = chipH / 2 - cw(1), acy = cy;
             ctx.fillStyle = VGrad(acy - ar, acy + ar, "#4c6bff", "#7a3cff"); ctx.beginPath(); ctx.arc(acx, acy, ar, 0, 7); ctx.fill();
             if (!DrawPortrait(TopHero(t), acx, acy, ar)) Text(on && !string.IsNullOrEmpty(Account.Name) ? Account.Name.Substring(0, 1).ToUpper() : "?", acx, acy, Lil(ar), "#fff", "center");
@@ -121,7 +122,7 @@ namespace BAM.Online.UI
             string rl = on ? "Lv " + Progress.LevelOf(t.xp) + " · " + RankInfo.NAMES[rk] + " · " + t.rating : "Friends and Top 100";
             string rf = Treb(Min11(cw(2.7f)), true);
             ctx.font = rf; while (rl.Length > 3 && ctx.measureText(rl) > tw) rl = rl.Substring(0, rl.Length - 2) + "…";
-            Text(rl, tx, cy + cw(1.1f), rf, on ? RankInfo.COLORS[rk] : HUB_ACCENT);
+            Text(rl, tx, cy + cw(1.1f), rf, on ? RankInfo.COLORS[rk] : HUB_ACCENT, shadow: "rgba(0,0,0,0.85)", sh: cw(0.35f), stroke: "rgba(6,8,26,0.9)", sw: cw(0.35f)); // a dark edge, so it reads on the glass
             if (on)
             {
                 float bY = cy + cw(4), bH = cw(1), barW = tw;

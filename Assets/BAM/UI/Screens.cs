@@ -96,6 +96,7 @@ namespace BAM.UI
             dialog.Hide();
             HideHint();
             FillResult(result, match);
+            NoteMatchForOnline(result);
             Push(resultScreen);
             if (!result.Quit) BamAudio.Play(result.Won ? SfxId.Victory : SfxId.Defeat);
         }
@@ -171,7 +172,7 @@ namespace BAM.UI
 
         static void OnShown(GameObject screen)
         {
-            if (screen == mainMenu) RefreshHome();
+            if (screen == mainMenu) { RefreshHome(); AskOnlineOnce(); }
             else if (screen == heroSelect) RefreshHeroSelect();
             else if (screen == heroPage) RefreshHeroPage();
             else if (screen == settings) RefreshSettings();

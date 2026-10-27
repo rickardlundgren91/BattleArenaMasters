@@ -11,7 +11,7 @@ namespace BAM.UI
     // rune frame and a gold tick, the others dim with a chevron), CLASSIC opening its BOT DIFFICULTY under it, and the orange
     // PLAY at the bottom, which starts the chosen mode. Home's PLAY and MODES icon follow the chosen mode too (HubPlayNow).
     // BAM's modes: CLASSIC (3v3 against bots), TRAINING (the guided match) and HERO TEST ("Try out any hero", the old mode
-    // list's entry); RANKED and the online modes are not in BAM.
+    // list's entry); RANKED is not in BAM. Online builds add ONLINE MATCH and PLAY WITH FRIENDS under them (OnlineEntries.cs).
     public static partial class Screens
     {
         enum Mode { Classic, Training, HeroTest }
@@ -88,6 +88,7 @@ namespace BAM.UI
             Stretched(title.rectTransform, SheetX, 6 * Cw + 3.5f * Cw - 4 * Cw, SheetX, 8 * Cw);
 
             for (int i = 0; i < SheetModes.Length; i++) modeCards[i] = BuildModeCard(SheetModes[i]);
+            BuildOnlineRows();
 
             // CLASSIC's BOT DIFFICULTY (the map pick of the old sheet is left out: BAM has one arena)
             modeExpand = UiKit.NewRect("Classic", modeSheet);
@@ -256,9 +257,10 @@ namespace BAM.UI
                 y += oh + OptGap;
             }
             if (homeMode != Mode.Classic) modeExpand.gameObject.SetActive(false);
+            y = LayoutOnlineRows(y);
             Stretched(modeSheetPlay, SheetX, y + Cw, SheetX, 14 * Cw);
             modePlaySub.text = PlaySubFor(homeMode, false);
-            float rows = SheetModes.Length;
+            float rows = SheetModes.Length + OnlineRowCount;
             modeSheet.sizeDelta = new Vector2(0, 19 * Cw + rows * OptH + (rows - 1) * OptGap + (homeMode == Mode.Classic ? ExpH : 0) + 4 * Cw + 13 * Cw + 6 * Cw + 6 * Cw);
         }
 

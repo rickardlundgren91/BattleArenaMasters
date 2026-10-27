@@ -20,6 +20,7 @@ namespace BAM.Online.UI
             OnlineHooks.Back = OnlineUi.Back;
             OnlineHooks.HomeChip = OnlineUi.HomeChip;
             OnlineHooks.OpenFriends = OnlineUi.OpenFriends;
+            OnlineHooks.FriendsOnline = OnlineUi.FriendsOnline;
             OnlineHooks.OpenAccount = OnlineUi.OpenAccount;
             OnlineHooks.OpenPlayFriends = OnlineUi.OpenPlayFriends;
             OnlineHooks.OnlineMatch = OnlineUi.OnlineMatch;

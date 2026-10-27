@@ -194,6 +194,7 @@ namespace BAM.UI
                 low = Group("Low", 0);
                 BuildStage();
                 BuildRow();
+                OnlineFriendsPill(low, BrowBottom + BrowH); // online builds only
                 BuildTopBar();
                 BuildTutCard();
                 top.SetAsLastSibling(); // the top bar over the hero
@@ -485,6 +486,7 @@ namespace BAM.UI
                 homeTitle.alignment = TextAnchor.MiddleLeft;
                 Edge(homeTitle, new Color(6 / 255f, 8 / 255f, 26 / 255f, 0.9f), 0.25f * Cw, new Color(0, 0, 0, 0.85f), 0.35f * Cw);
                 AtTop(homeTitle.rectTransform, tx, cy + 1.1f * Cw - 2.5f * Cw, 50 * Cw, 5 * Cw);
+                if (OnlineChip(top, cy)) { disc.gameObject.SetActive(false); homeName.gameObject.SetActive(false); homeTitle.gameObject.SetActive(false); } // online builds: the old profile chip
 
                 // HubRoundBtn with HubGear: Settings
                 float rb = 11 * Cw;
