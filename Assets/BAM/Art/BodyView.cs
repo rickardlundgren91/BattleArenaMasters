@@ -454,9 +454,9 @@ namespace BAM.Art
                 atkRel = def.Art.AttackRelease * len;
                 atkSpeed = Mathf.Clamp(atkRel / windup, 0.6f, 4f);
                 atkSlash = Mathf.Min(0.12f, windup * 0.35f);
-                atkHold = AttackHold(HeroIndex);
+                atkHold = Phased(HeroIndex) ? AttackHold(HeroIndex) : 0f;
                 atkRec = Mathf.Min((len - atkRel) / atkSpeed, 0.45f);
-                atkTotal = windup + atkHold + atkRec;
+                atkTotal = Phased(HeroIndex) ? windup + atkHold + atkRec : Mathf.Min(len / atkSpeed, windup + 0.45f);
             }
             if (gear != null) gear.Throw(windup);
         }
@@ -761,11 +761,11 @@ namespace BAM.Art
             }
             gearAct = wAtk + wCast;
             // on the move the swing goes to the upper-body layer and the legs keep their stride
-            float act = Mathf.Min(1f, wAtk + wCast), upW = dead ? 0f : act * moveW;
+            float act = Mathf.Min(1f, wAtk + wCast), upW = dead || !Phased(HeroIndex) ? 0f : act * moveW;
             if (act > 1e-4f) { upper.SetInputWeight(0, wAtk / (wAtk + wCast)); upper.SetInputWeight(1, wCast / (wAtk + wCast)); }
             SetLayered(upW > 1e-4f);
             if (layered) layers.SetInputWeight(1, upW);
-            wAtk *= 1f - moveW; wCast *= 1f - moveW;
+            if (upW > 0f) { wAtk *= 1f - moveW; wCast *= 1f - moveW; }
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
             float rest = 1f - over;
@@ -928,12 +928,18 @@ namespace BAM.Art
         // where the attack clip stands atkT s into the swing (the four phases, see PlayAttack)
         double AttackTime(float t)
         {
+            if (!Phased(HeroIndex)) return Mathf.Min(clipLen[CAttack], t * atkSpeed); // as before 2026-10-27: the clip at its own pace
             float coil = windup - atkSlash;
             if (t < coil) { float w = t / Mathf.Max(1e-4f, coil); return atkRel * 0.7f * (1f - (1f - w) * (1f - w) * (1f - w)); }
             if (t < windup) { float w = (t - coil) / Mathf.Max(1e-4f, atkSlash); return atkRel * (0.7f + 0.3f * w * w); }
             if (t < windup + atkHold) return atkRel;
             return Mathf.Min(clipLen[CAttack], atkRel + (t - windup - atkHold) * atkSpeed);
         }
+
+        // the four phases and the upper-body swing on the move are switched off for every hero (Rickard 2026-10-27, after trying
+        // them: Tyra "nästan alltid har dragen båge och att armen ser ut att gå in i karaktären", Knut's swing "snabbspolar just vid
+        // attacken"). The clips play at their own pace as before; the code stays for a later, gentler try.
+        static bool Phased(int hero) => false;
 
         // the hit-stop on the blow by kind of hero (Speltest HeroAttack.cs ATK_STYLE hold): melee 0.06 s, ranged 0.035, magic 0.045,
         // tank 0.085 (Bram, Knut and Bonk; Speltest's ATK_CLASS has Bram and Knut as tanks)
