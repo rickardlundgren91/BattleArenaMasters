@@ -1,0 +1,24 @@
+{
+    "name": "BAM.Online",
+    "rootNamespace": "BAM.Online",
+    "references": [
+        "BAM.Sim",
+        "BAM.Core",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication",
+        "Unity.Services.CloudCode",
+        "Unity.Services.Leaderboards",
+        "Unity.Services.Friends"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "BAM_ONLINE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

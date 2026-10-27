@@ -16,6 +16,14 @@ namespace BAM.Game
         public static Vector3 Lerp(float px, float py, float x, float y, float a) => new Vector3(px + (x - px) * a, 0f, H - (py + (y - py) * a));
         public static Vector3 Dir(float facing) => new Vector3(Mathf.Cos(facing), 0f, -Mathf.Sin(facing));
         public static Vector3 Of(Unit u) => World(u.X, u.Y);
+
+        /// <summary>Online, a player of the top team sees the map from the other end (MatchCamera turns half a circle), so a
+        /// direction on the screen points the other way on the map. Set by GameFlow at match start.</summary>
+        public static bool Turned;
+        /// <summary>A screen direction (x right, y up) as the camera sees it: turned half a circle when Turned.</summary>
+        public static Vector2 Screen(Vector2 v) => Turned ? -v : v;
+        /// <summary>The rules' angle of a screen direction (screen up is -y on the map, or +y when Turned).</summary>
+        public static float ScreenAngle(Vector2 v) { v = Screen(v); return Mathf.Atan2(-v.y, v.x); }
     }
 
     /// <summary>
@@ -73,6 +81,9 @@ namespace BAM.Game
         const float SlashLinger = 0.22f;   // a melee slash finishes its sweep after the hit
 
         readonly Match m;
+        // the team of this phone's player: its side is drawn blue and the other red (online the player may be on the top team)
+        int Mine => m.Player != null ? m.Player.Team : Teams.Player;
+        int Side(int team) => team == Mine ? Teams.Player : Teams.Enemy;
         readonly List<UnitRec> units = new List<UnitRec>(128);
         readonly Dictionary<int, UnitRec> unitBySerial = new Dictionary<int, UnitRec>(128);
         readonly List<UnitRec> dying = new List<UnitRec>(32);
@@ -204,10 +215,10 @@ namespace BAM.Game
             UnitView v;
             switch (u.Kind)
             {
-                case UnitKind.Hero: v = ArtKit.CreateHero(u.Hero, u.Team); break;
-                case UnitKind.Tower: v = ArtKit.CreateTower(u.Team); break;
-                case UnitKind.Wolf: v = ArtKit.CreateWolf(u.Team); break;
-                default: v = u == TutDummy ? ArtKit.CreateTarget() : ArtKit.CreateMinion(u.Minion, u.Team); break; // the guided match's practice target is a board
+                case UnitKind.Hero: v = ArtKit.CreateHero(u.Hero, Side(u.Team)); break;
+                case UnitKind.Tower: v = ArtKit.CreateTower(Side(u.Team)); break;
+                case UnitKind.Wolf: v = ArtKit.CreateWolf(Side(u.Team)); break;
+                default: v = u == TutDummy ? ArtKit.CreateTarget() : ArtKit.CreateMinion(u.Minion, Side(u.Team)); break; // the guided match's practice target is a board
             }
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
@@ -218,9 +229,9 @@ namespace BAM.Game
             var t = v.transform;
             t.SetPositionAndRotation(Coords.Of(u), r.Rot);
             if (u.Kind == UnitKind.Hero)
-                v.SetMarker(u.IsPlayer ? UnitMarker.Player : u.Team == Teams.Player ? UnitMarker.Ally : UnitMarker.Enemy);
+                v.SetMarker(u.IsPlayer ? UnitMarker.Player : u.Team == Mine ? UnitMarker.Ally : UnitMarker.Enemy);
             if (!u.Alive) { r.Dead = true; v.SetDead(true); }
-            else if (u.Kind == UnitKind.Minion && m.Time > 0f && u != TutDummy) ArtKit.PlayFx(FxKind.MinionSpawn, t.position, 1f, u.Team);
+            else if (u.Kind == UnitKind.Minion && m.Time > 0f && u != TutDummy) ArtKit.PlayFx(FxKind.MinionSpawn, t.position, 1f, Side(u.Team));
             units.Add(r);
             unitBySerial[u.Serial] = r;
             return r;
@@ -331,7 +342,7 @@ namespace BAM.Game
 
         void LaunchView(ShotRec s, Proj p)
         {
-            var v = ArtKit.CreateProjectile(p.Kind, p.Team);
+            var v = ArtKit.CreateProjectile(p.Kind, Side(p.Team));
             s.V = v;
             s.LaunchFrame = Time.frameCount;
             Vector3 from = Coords.World(p.PX, p.PY), to;
@@ -358,7 +369,7 @@ namespace BAM.Game
             s.Ghost = true; s.From = from; s.To = to; s.Flight = flight; s.Linger = linger; s.Age = 0f; s.Fresh = true;
             if (s.V == null)
             {
-                s.V = ArtKit.CreateProjectile(s.Kind, s.Team);
+                s.V = ArtKit.CreateProjectile(s.Kind, Side(s.Team));
                 s.V.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
                 s.V.Launch(from, to, Mathf.Max(flight, 0.05f));
                 if (s.Hit) s.V.MarkHit();
@@ -369,7 +380,7 @@ namespace BAM.Game
         {
             var z = zoneRecPool.Count > 0 ? zoneRecPool.Pop() : new ZoneRec();
             z.Serial = p.Serial;
-            z.V = ArtKit.CreateZone(p.Zone, p.Team);
+            z.V = ArtKit.CreateZone(p.Zone, Side(p.Team));
             z.V.Show(Coords.World(p.X, p.Y), Coords.Dir(p.Ang), p.ZoneLength, p.Radius, Mathf.Max(0.05f, p.TimeLeft));
             zones.Add(z);
             zoneBySerial[p.Serial] = z;
@@ -453,8 +464,8 @@ namespace BAM.Game
                         : kind == ProjKind.BramHammerSpecial ? FxKind.Bounce
                         : kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial ? FxKind.Hit
                         : e.Big ? FxKind.HitBig : FxKind.Hit;
-                    ArtKit.PlayFx(fx, at, b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f, b != null ? b.Team : 0, HeroOf(e.A));
-                    if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? b.Team : 0);
+                    ArtKit.PlayFx(fx, at, b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f, b != null ? Side(b.Team) : 0, HeroOf(e.A));
+                    if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? Side(b.Team) : 0);
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
                         : b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
                         // as in Speltest's sound mix v2: the plain hit thumps only when a hero's (or the wolf's) blow lands on you
@@ -477,13 +488,13 @@ namespace BAM.Game
                     var b = e.B;
                     if (b == null) break;
                     if (unitBySerial.TryGetValue(b.Serial, out UnitRec r) && !r.Dead) { r.Dead = true; r.V.SetDead(true); }
-                    ArtKit.PlayFx(FxKind.Death, Coords.Of(b), b.Kind == UnitKind.Hero ? 1.2f : 0.8f, b.Team);
+                    ArtKit.PlayFx(FxKind.Death, Coords.Of(b), b.Kind == UnitKind.Hero ? 1.2f : 0.8f, Side(b.Team));
                     if (b.Kind == UnitKind.Hero)
                     {
                         bool myKill = b.Team != m.Player.Team && b.IsRealHero && e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
                         if (b == m.Player) BamAudio.Play(SfxId.HeroDeath);
                         else if (myKill) BamAudio.Play(SfxId.HeroDeath); // the kill confirm: loud, not by distance (Brawl Stars idea 5); no extra chime (Speltest sound mix v2)
-                        else BamAudio.PlayAt(b.Team == Teams.Player ? SfxId.AllyDeath : SfxId.HeroDeath, Coords.Of(b));
+                        else BamAudio.PlayAt(b.Team == Mine ? SfxId.AllyDeath : SfxId.HeroDeath, Coords.Of(b));
                     }
                     break;
                 }
@@ -496,7 +507,7 @@ namespace BAM.Game
                         if (r.Dead) { r.Dead = false; r.V.SetDead(false); }
                         r.Hp01 = -1f; r.Vis = -1f;
                     }
-                    ArtKit.PlayFx(FxKind.Respawn, Coords.Of(a), 1f, a.Team);
+                    ArtKit.PlayFx(FxKind.Respawn, Coords.Of(a), 1f, Side(a.Team));
                     if (a == m.Player) BamAudio.Play(SfxId.Respawn);
                     break;
                 }
@@ -504,9 +515,9 @@ namespace BAM.Game
                 {
                     var a = e.A;
                     // a hidden enemy casting in a bush stays hidden: casting does not reveal in the rules (fx review P2-1)
-                    if (a == null || !m.IsVisibleTo(a, Teams.Player)) break;
+                    if (a == null || !m.IsVisibleTo(a, Mine)) break;
                     V(a)?.PlayCast();
-                    ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, a.Team, e.Kind);
+                    ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, Side(a.Team), e.Kind);
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
                     // Blast's tap bomb is a ground fuse in the rules; draw the lob onto it so the throw is seen
                     if ((HeroId)e.Kind == HeroId.Blast && !e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
@@ -516,31 +527,31 @@ namespace BAM.Game
                     if (e.A != null) BamAudio.PlayAt(SfxId.Stunned, Coords.Of(e.A));
                     break;
                 case EventType.LevelUp:
-                    if (m.Player != null && m.Player.Alive) ArtKit.PlayFx(FxKind.LevelUp, Coords.Of(m.Player), 1f, Teams.Player);
+                    if (m.Player != null && m.Player.Alive) ArtKit.PlayFx(FxKind.LevelUp, Coords.Of(m.Player), 1f, 0);
                     BamAudio.Play(SfxId.LevelUp, 0.8f);
                     break;
                 case EventType.TowerDown:
                     if (e.A != null)
                     {
-                        ArtKit.PlayFx(FxKind.TowerDestroyed, Coords.Of(e.A), 1f, e.A.Team);
+                        ArtKit.PlayFx(FxKind.TowerDestroyed, Coords.Of(e.A), 1f, Side(e.A.Team));
                         BamAudio.PlayAt(SfxId.TowerDestroyed, Coords.Of(e.A));
                         if (unitBySerial.TryGetValue(e.A.Serial, out UnitRec r) && !r.Dead) { r.Dead = true; r.V.SetDead(true); }
                     }
                     break;
                 case EventType.CloneSpawn:
-                    if (e.A != null) { ArtKit.PlayFx(FxKind.CloneSpawn, Coords.Of(e.A), 1f, e.A.Team); BamAudio.PlayAt(SfxId.CloneAppear, Coords.Of(e.A)); }
+                    if (e.A != null) { ArtKit.PlayFx(FxKind.CloneSpawn, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneAppear, Coords.Of(e.A)); }
                     break;
                 case EventType.CloneEnd:
-                    if (e.A != null) { ArtKit.PlayFx(FxKind.CloneEnd, Coords.Of(e.A), 1f, e.A.Team); BamAudio.PlayAt(SfxId.CloneVanish, Coords.Of(e.A)); }
+                    if (e.A != null) { ArtKit.PlayFx(FxKind.CloneEnd, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneVanish, Coords.Of(e.A)); }
                     break;
                 case EventType.WolfSummon:
-                    if (e.A != null && m.IsVisibleTo(e.A, Teams.Player)) ArtKit.PlayFx(FxKind.WolfSummon, Coords.Of(e.A), 1f, e.A.Team);
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.WolfSummon, Coords.Of(e.A), 1f, Side(e.A.Team));
                     break;
                 case EventType.WolfPounce:
                     // the bite sounds on prey only; its hit look comes from the rules' own Hit event (fx review P2-3). A landing on
                     // nothing shows no bite, only a soft landing
                     if (e.A != null && e.B != null) BamAudio.PlayAt(SfxId.WolfBite, Coords.Of(e.B));
-                    else if (e.A != null && m.IsVisibleTo(e.A, Teams.Player)) ArtKit.PlayFx(FxKind.WolfLand, Coords.World(e.X, e.Y), 1f, e.A.Team);
+                    else if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.WolfLand, Coords.World(e.X, e.Y), 1f, Side(e.A.Team));
                     break;
                 case EventType.Shield:
                     if (e.Big && e.B != null) BamAudio.PlayAt(SfxId.MoaShield, Coords.Of(e.B));
@@ -555,7 +566,7 @@ namespace BAM.Game
                     FxKind ek = pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : FxKind.Explosion;
                     // Bonk: his auto slam (a power swing a size bigger) and Ground Slam, both the club into the ground
                     float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
-                    ArtKit.PlayFx(ek, at, esize, e.A != null ? e.A.Team : 0, HeroOf(e.A));
+                    ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
                         : pk == ProjKind.BramHammer ? SfxId.BramHammerBounce : SfxId.None;
@@ -564,7 +575,7 @@ namespace BAM.Game
                 }
                 // Tikta 2.0: her needle takes the Deathmark (its own Hit follows in the same tick)
                 case EventType.TiktaMarkPop:
-                    if (e.B != null && m.IsVisibleTo(e.B, Teams.Player)) ArtKit.PlayFx(FxKind.DeathmarkTaken, Coords.Of(e.B), 1f, e.B.Team, (int)HeroId.Tikta);
+                    if (e.B != null && m.IsVisibleTo(e.B, Mine)) ArtKit.PlayFx(FxKind.DeathmarkTaken, Coords.Of(e.B), 1f, Side(e.B.Team), (int)HeroId.Tikta);
                     break;
                 // Blast 2.0: Chain Reaction is set off; its blast follows BlastChainS.Delay later as an Explosion of ProjKind.BlastChain.
                 // The warning shows to everyone, so enemies there can see it coming.
@@ -573,10 +584,10 @@ namespace BAM.Game
                     break;
                 // Bonk's boulder knocks a hero back: the rules slide it (drawn between ticks as any move), a thud and dust where it was hit
                 case EventType.Knock:
-                    if (e.B != null && m.IsVisibleTo(e.B, Teams.Player))
+                    if (e.B != null && m.IsVisibleTo(e.B, Mine))
                     {
                         BamAudio.PlayAt(SfxId.BonkKnock, Coords.Of(e.B));
-                        ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(e.B), 0.45f, e.B.Team);
+                        ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(e.B), 0.45f, Side(e.B.Team));
                     }
                     break;
                 case EventType.Pull:
@@ -584,11 +595,11 @@ namespace BAM.Game
                     break;
                 // battle spells (the art's port of View3DSpellLooks.cs): a blink from where it started, the others on the caster
                 case EventType.SpellCast:
-                    if (e.A != null && m.IsVisibleTo(e.A, Teams.Player))
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine))
                         ArtKit.PlaySpell((SpellId)e.Kind, Coords.World(e.X, e.Y), Coords.Of(e.A));
                     break;
                 case EventType.SpellCancel:
-                    if (e.A != null && m.IsVisibleTo(e.A, Teams.Player)) ArtKit.PlaySpellCancel(Coords.Of(e.A));
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlaySpellCancel(Coords.Of(e.A));
                     break;
                 case EventType.Recall:
                     if (e.A != null) ArtKit.PlayRecall(Coords.World(e.X, e.Y), Coords.World(e.A.SpawnX, e.A.SpawnY));
@@ -715,7 +726,7 @@ namespace BAM.Game
             if (u.Kind == UnitKind.Hero && u.Level != r.Level) { r.Level = u.Level; v.SetLevel(u.Level); }
 
             var flags = u.Flags;
-            if (u.Team != Teams.Player) flags &= ~StatusFlags.Illusion; // the enemy's clone looks exactly like Fenn
+            if (u.Team != Mine) flags &= ~StatusFlags.Illusion; // the enemy's clone looks exactly like Fenn
             if (m.Map.InGrass(u.X, u.Y)) flags |= StatusFlags.InGrass;
             if (flags != r.Flags) { r.Flags = flags; v.SetStatus(flags); }
 
@@ -729,7 +740,7 @@ namespace BAM.Game
                 HeroMarks(r, u, v);
             }
 
-            float vis = !m.IsVisibleTo(u, Teams.Player) ? 0f : u.Team == Teams.Player && u.Kind == UnitKind.Hero && m.HiddenFromFoes(u) ? 0.5f : 1f;
+            float vis = !m.IsVisibleTo(u, Mine) ? 0f : u.Team == Mine && u.Kind == UnitKind.Hero && m.HiddenFromFoes(u) ? 0.5f : 1f;
             if (Hidden != null && Hidden(u)) vis = 0f; // the match intro: not yet beamed in
             if (vis != r.Vis) { r.Vis = vis; v.SetVisibility(vis); }
         }
@@ -738,7 +749,7 @@ namespace BAM.Game
         // Chain Reaction: a spark crown over each enemy burning from her while the chain is ready, a cooldown arc at her feet
         void HeroMarks(UnitRec r, Unit u, UnitView v)
         {
-            bool seen = m.IsVisibleTo(u, Teams.Player);
+            bool seen = m.IsVisibleTo(u, Mine);
             float mark = seen ? MarkLeft(u) : -1f;
             if (mark > 0f) { v.SetDeathmark(mark); r.Marked = true; }
             else if (r.Marked) { v.SetDeathmark(-1f); r.Marked = false; }

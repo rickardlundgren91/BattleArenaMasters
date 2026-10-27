@@ -85,6 +85,8 @@ namespace BAM.Sim
         public float RespawnT, DiedAt = -99, SpawnX, SpawnY;
         /// <summary>The bot playing this hero (null for the player and for tutorial dummies).</summary>
         public BotBrain Bot;
+        /// <summary>The human seat playing this hero (Match.Humans index), -1 for bots, dummies and minions.</summary>
+        public int Seat = -1;
         // passives and specials
         internal int Needles; internal float NeedleT, NeedleEnd;   // Tikta's Needle Storm
         internal int TiktaCastId, TiktaBonusCast;                   // Tikta 2.0: her casts counted, the cast that already had its Deathmark bonus

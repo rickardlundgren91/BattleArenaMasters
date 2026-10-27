@@ -143,7 +143,7 @@ namespace BAM.Sim
             }
             if (m.MbSideT > 0) m.MbSideT -= dt;
 
-            float k = 1 - (float)Math.Exp(-dt * MnSmooth);
+            float k = 1 - SimMath.Exp(-dt * MnSmooth);
             if (m.MbState == MinionState.Attack || !hasGoal)
             {
                 if (m.MbState == MinionState.Attack && !(m.AimT > Time)) m.Facing = SimMath.Atan2(t.Y - m.Y, t.X - m.X);

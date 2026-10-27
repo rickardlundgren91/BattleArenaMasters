@@ -132,7 +132,7 @@ namespace BAM.Game
             if (!spellMoved) return;
             spellFinger = at;
             spellOverCancel = (at - SpellCancelCentre()).magnitude < r * 1.3f; // only the cancel mark cancels
-            spellAng = Mathf.Atan2(-d.y, d.x); // screen up is -y on the map
+            spellAng = Coords.ScreenAngle(d); // screen up is -y on the map (turned online on the top team)
             spellK = Mathf.Clamp01((d.magnitude - r * 0.35f) / (r * 2.5f));
         }
 
@@ -149,7 +149,7 @@ namespace BAM.Game
         void SpellPress()
         {
             Vector2 v = joy != null ? joy.Value : Vector2.zero;
-            QueueSpell(v.sqrMagnitude > 0f ? Mathf.Atan2(-v.y, v.x) : float.NaN, 1f);
+            QueueSpell(v.sqrMagnitude > 0f ? Coords.ScreenAngle(v) : float.NaN, 1f);
         }
 
         void QueueSpell(float angle, float k)

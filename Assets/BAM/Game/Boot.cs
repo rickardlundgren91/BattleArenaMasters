@@ -39,6 +39,7 @@ namespace BAM.Game
             Screens.Init();
             BamAnalytics.Init();
             Flow.Game = flow;
+            Flow.Booted?.Invoke(); // online (BAM_ONLINE builds): sign-in and the online pages
 
             // the very first start goes straight into the guided match (GameFlow.StartFirstTutorial), with a Skip button
             Screens.ShowConsentIfNeeded(() =>

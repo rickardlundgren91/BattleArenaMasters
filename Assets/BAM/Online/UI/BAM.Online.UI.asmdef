@@ -1,0 +1,25 @@
+{
+    "name": "BAM.Online.UI",
+    "rootNamespace": "BAM.Online.UI",
+    "references": [
+        "BAM.Sim",
+        "BAM.Core",
+        "BAM.Audio",
+        "BAM.UI",
+        "BAM.Online",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "BAM.Online.Mp"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "BAM_ONLINE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

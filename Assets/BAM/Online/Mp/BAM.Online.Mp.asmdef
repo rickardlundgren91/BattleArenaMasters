@@ -1,0 +1,26 @@
+{
+    "name": "BAM.Online.Mp",
+    "rootNamespace": "BAM.Online.Mp",
+    "references": [
+        "BAM.Sim",
+        "BAM.Core",
+        "BAM.Online",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication",
+        "Unity.Services.Lobbies",
+        "Unity.Services.Relay",
+        "Unity.Networking.Transport",
+        "Unity.Collections"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "BAM_ONLINE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

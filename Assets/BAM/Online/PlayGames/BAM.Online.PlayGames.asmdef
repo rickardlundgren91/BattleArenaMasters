@@ -1,0 +1,22 @@
+{
+    "name": "BAM.Online.PlayGames",
+    "rootNamespace": "BAM.Online",
+    "references": [
+        "BAM.Online",
+        "Google.Play.Games"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "BAM_ONLINE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

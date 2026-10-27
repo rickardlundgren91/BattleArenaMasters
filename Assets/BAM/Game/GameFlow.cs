@@ -34,6 +34,12 @@ namespace BAM.Game
         readonly MatchIntro intro = new MatchIntro();
         bool inMatch, paused, over, resultShown, resultMusic, endSent;
         float acc, overAt;
+        // an online match (BAM.Online lockstep): the rules step only with the ticks the link knows, never on their own
+        IMatchNet net;
+        PlayerInput[] netInputs;
+        string netStatus;
+        // a guest that fell behind steps up to this many extra ticks a frame to catch up
+        const int NetCatchUp = 4, NetBacklogOk = 3;
         // the guided match is two matches with one hero: the training island, then the first battle in the arena (Rickard 2026-10-26: one hero all through, Tyra)
         float islandSeconds;
         // the first start shows Home this long before the guided match takes over (its picture zooms in and fades, Hud.Dissolve)
@@ -107,6 +113,7 @@ namespace BAM.Game
         public void RestartMatch()
         {
             if (match == null) return;
+            if (net != null) { QuitToMenu(); return; } // an online match cannot be restarted alone: back to the room
             SendEnd(true);
             Teardown();
             Begin(setup.Tutorial);
@@ -143,7 +150,8 @@ namespace BAM.Game
         {
             if (island) islandSeconds = 0f;
             int seed = setup.Seed != 0 ? setup.Seed : Random.Range(1, int.MaxValue);
-            var cfg = new MatchConfig
+            net = setup.Net;
+            var cfg = net != null ? net.Config : new MatchConfig
             {
                 PlayerHero = setup.Tutorial ? HeroId.Tyra : setup.Hero,
                 Difficulty = setup.Difficulty,
@@ -154,6 +162,8 @@ namespace BAM.Game
                 HeroTest = setup.HeroTest && !setup.Tutorial,
                 HeroTestLevel = setup.Level > 0 ? setup.Level : 1,
             };
+            if (net != null) { seed = cfg.Seed; netInputs = new PlayerInput[Match.MaxSeats]; netStatus = null; }
+            Coords.Turned = net != null && net.Turned;
             match = Match.Create(cfg);
             Screens.HideAll();
             views = new MatchViews(match);
@@ -169,8 +179,12 @@ namespace BAM.Game
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
             BamAudio.PlayMusic(MusicId.Match);
-            if ((!setup.Tutorial || island) && !setup.HeroTest) BamAnalytics.MatchStarted(setup); // HERO TEST is practice, not a match (old: no stats)
-            Debug.Log("[BAM.Game] match started: " + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + ", seed " + seed);
+            if ((!setup.Tutorial || island) && !setup.HeroTest)
+            {
+                BamAnalytics.MatchStarted(setup); // HERO TEST is practice, not a match (old: no stats)
+                Flow.MatchStarted?.Invoke();      // online: "in a match" for friends
+            }
+            Debug.Log("[BAM.Game] match started: " + (net != null ? "online, seat " + cfg.LocalSeat + " of " + cfg.Seats.Length + ", " : "") + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + ", seed " + seed);
         }
 
         void Teardown()
@@ -197,7 +211,8 @@ namespace BAM.Game
             if (!inMatch) return; // the back press may have left the match
 
             float dt = Time.deltaTime;
-            if (!paused && !over)
+            if (net != null && !over) NetTicks(dt);
+            else if (!paused && !over)
             {
                 acc += juice.Stopping ? dt * 0.1f : dt; // the old hit-stop: ticks come slower for a moment
                 int n = 0;
@@ -238,6 +253,44 @@ namespace BAM.Game
             }
         }
 
+        // Online: this phone's controls go to the link 60 times a second (also while the pause screen is up, then as no input:
+        // the others play on), and the rules step with every tick the link knows. Hit-stop stays off, so no phone slows the host.
+        void NetTicks(float dt)
+        {
+            acc += dt;
+            int n = 0, extra = 0;
+            while (acc >= Rules.Tick && n < MaxTicksPerFrame)
+            {
+                acc -= Rules.Tick; n++;
+                PlayerInput input = paused ? PlayerInput.None : hud.TakeInput();
+                net.Submit(in input);
+                if (net.Next(match, netInputs) && NetStep()) break;
+                while (net.Backlog > NetBacklogOk && extra < NetCatchUp && net.Next(match, netInputs)) { extra++; if (NetStep()) break; }
+                if (over) break;
+            }
+            if (acc >= Rules.Tick) acc = 0f;
+            net.Flush();
+            string st = net.Status;
+            if (st != netStatus)
+            {
+                netStatus = st;
+                if (st != null) Screens.ShowHint(st); else Screens.HideHint();
+            }
+        }
+
+        // one online tick; true when the match ended with it
+        bool NetStep()
+        {
+            match.Step(netInputs);
+            net.AfterStep(match);
+            Screens.CountEvents(match);
+            views.AfterStep();
+            juice.AfterStep();
+            hud.AfterStep();
+            if (IsOver()) { over = true; overAt = Time.unscaledTime; acc = 0f; return true; }
+            return false;
+        }
+
         bool IslandDone() => match.Tut != null && match.Tut.Island && match.Tut.Done;
 
         // the island's pad threw the hero and the screen is black: the arena half starts behind it and fades in
@@ -254,7 +307,7 @@ namespace BAM.Game
         MatchResult Result(bool quit)
         {
             var p = match.Player;
-            bool won = match.State == MatchState.Over ? match.Winner == Teams.Player : match.Tut != null && match.Tut.Done;
+            bool won = match.State == MatchState.Over ? match.Winner == p.Team : match.Tut != null && match.Tut.Done;
             return new MatchResult
             {
                 Won = !quit && won,
@@ -285,13 +338,17 @@ namespace BAM.Game
         {
             if (match == null || endSent) return;
             endSent = true;
+            if (net != null) net.MatchEnded(quit && !over);
             if (setup.HeroTest) return;
-            BamAnalytics.MatchEnded(setup, Result(quit && !over));
+            var r = Result(quit && !over);
+            BamAnalytics.MatchEnded(setup, r);
+            Flow.MatchEnded?.Invoke(r); // online: level, XP and rating are counted on the server
         }
 
         void OnApplicationPause(bool pausedByOs)
         {
-            if (pausedByOs) Pause();
+            if (pausedByOs && net == null) Pause(); // online the match goes on (the link notices a phone that stays away)
+            if (!pausedByOs) Flow.Resumed?.Invoke();
         }
 
         // Android's notification shade or a system dialog only takes focus (no OnApplicationPause): pause there too

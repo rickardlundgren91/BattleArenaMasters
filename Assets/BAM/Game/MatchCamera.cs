@@ -125,6 +125,9 @@ namespace BAM.Game
             if (bars != null) bars.enabled = on;
         }
 
+        // ahead = towards the enemy: up the screen, which online on the top team (Coords.Turned) is down the map's z
+        static Vector3 LeadV => new Vector3(0f, 0f, Coords.Turned ? -Lead : Lead);
+
         Vector3 Target(out float speed)
         {
             speed = 6f;
@@ -132,7 +135,7 @@ namespace BAM.Game
             if (m.State == MatchState.Over)
             {
                 // the fallen tower
-                var tw = m.Towers[m.Winner == Teams.Player ? Teams.Enemy : Teams.Player];
+                var tw = m.Towers[Teams.Other(m.Winner)];
                 if (tw != null) return Coords.Of(tw);
             }
             if (m.Tut != null && m.Tut.Island)
@@ -142,7 +145,7 @@ namespace BAM.Game
                 return m.Tut.CamHold ? Coords.World(m.Tut.CamX, m.Tut.CamY) : Coords.Of(p);
             }
             if (m.Tut != null && p.Alive) return TutTarget(p, ref speed);
-            if (p.Alive) { watched = null; return Coords.Of(p) + new Vector3(0f, 0f, Lead); }
+            if (p.Alive) { watched = null; return Coords.Of(p) + LeadV; }
             // spectating: the teammate nearest to where the player fell, kept until it dies
             if (watched == null || !watched.Alive)
             {
@@ -156,8 +159,8 @@ namespace BAM.Game
                     if (d < best) { best = d; watched = h; }
                 }
             }
-            if (watched == null) return Coords.World(p.SpawnX, p.SpawnY) + new Vector3(0f, 0f, Lead);
-            return Coords.Of(watched) + new Vector3(0f, 0f, Lead);
+            if (watched == null) return Coords.World(p.SpawnX, p.SpawnY) + LeadV;
+            return Coords.Of(watched) + LeadV;
         }
 
         Vector3 TutTarget(Unit p, ref float speed)
@@ -165,7 +168,7 @@ namespace BAM.Game
             var tut = m.Tut;
             Vector3 hero = Coords.Of(p);
             var tw = tut.Tower;
-            if (tw == null) return hero + new Vector3(0f, 0f, Lead);
+            if (tw == null) return hero + LeadV;
             float towerZ = m.Map.H - tw.Y, viewH = FrameLength;
             bool opening = tut.Step == Tutorial.StepMove && m.Time < Tutorial.OpeningTime;
             speed = opening ? 2.5f : 4f;
@@ -179,7 +182,7 @@ namespace BAM.Game
         // the focus lands FocusDown of the way down the frame: the camera sits a little above it along its own up
         void Place()
         {
-            var rot = Quaternion.Euler(Pitch, 0f, 0f);
+            var rot = Quaternion.Euler(Pitch, Coords.Turned ? 180f : 0f, 0f); // online, top team: from the other end of the map
             cam.transform.SetPositionAndRotation(focus - rot * Vector3.forward * Back + rot * Vector3.up * lift, rot);
         }
     }

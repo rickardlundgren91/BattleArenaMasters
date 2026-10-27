@@ -119,6 +119,7 @@ namespace BAM.UI
         public static bool HandleBack()
         {
             if (!ready) return false;
+            if (OnlineHooks.Back != null && OnlineHooks.Back()) return true; // an online page or invite closes first
             if (dialog.Open)
             {
                 // The consent question has no back action on purpose: the player answers Allow or No thanks.

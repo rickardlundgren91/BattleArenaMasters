@@ -1,3 +1,4 @@
+using System;
 using BAM.Sim;
 
 namespace BAM.Core
@@ -11,6 +12,7 @@ namespace BAM.Core
         public int Seed;        // 0 = pick one at random
         public bool HeroTest;   // HERO TEST: Hero against dummies, never ends (Reset/Exit on its bar)
         public int Level;       // HERO TEST: the fixed level (1 if 0)
+        public IMatchNet Net;   // an online match (BAM.Online); null = offline
     }
 
     /// <summary>What the result screen and analytics get when a match ends.</summary>
@@ -44,5 +46,16 @@ namespace BAM.Core
     public static class Flow
     {
         public static IGameFlow Game;
+
+        // The online parts (BAM.Online, only in builds with BAM_ONLINE) hook in here from their own assemblies before the game
+        // boots; the game never references them, and offline nobody listens.
+        /// <summary>The menus are built and Flow.Game is set.</summary>
+        public static Action Booted;
+        /// <summary>A real match started (not HERO TEST; the guided match once).</summary>
+        public static Action MatchStarted;
+        /// <summary>That match ended or was left (exactly once, like the analytics' matchEnd).</summary>
+        public static Action<MatchResult> MatchEnded;
+        /// <summary>The app came back from the background.</summary>
+        public static Action Resumed;
     }
 }

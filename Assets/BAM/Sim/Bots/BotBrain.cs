@@ -91,7 +91,7 @@ namespace BAM.Sim
         {
             var h = H; t -= dt;
             bool resumed = Now - lastThinkT > 2.5f * dt; lastThinkT = Now; // the last ticks were skipped (stun, cast, recall, death)
-            if (float.IsNaN(afk)) afk = BotTables.AfkMax * (float)Math.Pow(Srnd(), BotTables.AfkExp);
+            if (float.IsNaN(afk)) afk = BotTables.AfkMax * SimMath.Pow(Srnd(), BotTables.AfkExp);
             if (Now < afk) return;
             var myTower = TowerOf(h.Team); var enemyTower = TowerOf(Teams.Other(h.Team));
             int fwd = Fwd;

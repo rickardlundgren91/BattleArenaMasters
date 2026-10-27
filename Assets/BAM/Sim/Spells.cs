@@ -48,7 +48,8 @@ namespace BAM.Sim
             for (int i = 0; i < Heroes.Count; i++)
             {
                 var h = Heroes[i];
-                h.Spell = h == Player ? (Config.PlayerSpell != SpellId.None ? Config.PlayerSpell : SpellId.Blink) : SpellDefs.All[Rng.Int(SpellDefs.All.Length)];
+                var pick = Config.Seats != null && h.Seat >= 0 ? Config.Seats[h.Seat].Spell : h == Player ? Config.PlayerSpell : SpellId.None;
+                h.Spell = h.Seat >= 0 || h == Player ? (pick != SpellId.None ? pick : SpellId.Blink) : SpellDefs.All[Rng.Int(SpellDefs.All.Length)];
                 h.SpellAt = 0; h.SpellChanEnd = -1;
             }
         }

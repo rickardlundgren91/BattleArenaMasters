@@ -82,6 +82,8 @@ namespace BAM.UI
             if (!string.IsNullOrEmpty(BamInfo.PrivacyPolicyUrl))
                 LinkRow(content, "Privacy policy", "Open", () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
 
+            if (OnlineHooks.OpenAccount != null) LinkRow(content, "Account", "Open", () => OnlineHooks.OpenAccount());
+
             SetHead(content, "HELP");
             tutorialRow = LinkRow(content, "How to play", "Tutorial", () => StartTutorial());
             LinkRow(content, "Licenses", "Open", () => Push(licenses));

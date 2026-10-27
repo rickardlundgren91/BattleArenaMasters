@@ -1,0 +1,227 @@
+using System;
+using System.Collections.Generic;
+using BAM.Core;
+using BAM.Sim;
+using UnityEngine;
+using UnityEngine.Scripting;
+
+namespace BAM.Online
+{
+    /// <summary>
+    /// Account level, XP, Rating and lifetime stats (ported from Speltest Progression.cs + PlayerStats, 2026-10-26).
+    /// What changed from Speltest: the SERVER is the truth. Cloud Code ReportMatch.js counts every match with the same formula
+    /// as <see cref="Apply"/> and keeps the totals in protected Cloud Save data, so an edited phone cannot raise its own level,
+    /// Rating or stats. This class only shows them: the last numbers the server sent (<see cref="Server"/>), plus the matches
+    /// that are finished but not reported yet (offline, or no network), counted here the same way so the profile moves at once.
+    /// A match that waits is sent with the time it ended, so a batch sent later is judged by when each match was played.
+    /// </summary>
+    public static class Progress
+    {
+        // Keep these equal to Cloud/Scripts/ReportMatch.js
+        public const int MaxLevel = 30;
+        public const int XpWin = 100, XpLoss = 60, XpKill = 5, XpFightMax = 60, XpFirstWin = 50;
+        public const int RatingWin = 20, RatingLoss = 8;
+        public const int MinSeconds = 45;
+        const int MaxPending = 50;
+
+        const string ServerKey = "bam.online.state", PendingKey = "bam.online.pending";
+
+        static bool loaded;
+        static Totals server = new Totals();
+        static readonly List<MatchReport> pending = new List<MatchReport>();
+        static Totals shown;
+
+        /// <summary>Raised on the main thread when the numbers on screen change (a match, or an answer from the server).</summary>
+        public static event Action Changed;
+
+        /// <summary>The numbers to show: the server's last totals plus the matches still waiting to be sent.</summary>
+        public static Totals Shown { get { Load(); return shown; } }
+        public static Totals Server { get { Load(); return server; } }
+        public static int PendingCount { get { Load(); return pending.Count; } }
+
+        // XP to go from level l to l + 1: 100, 150, 200 ... (level 5 after ~9 matches, 10 after ~35, 30 after ~300)
+        public static int XpToNext(int l) => 100 + 50 * (l - 1);
+        public static int LevelOf(int xp)
+        {
+            int l = 1;
+            while (l < MaxLevel && xp >= XpToNext(l)) { xp -= XpToNext(l); l++; }
+            return l;
+        }
+        /// <summary>XP into the current level and what the level needs, for the bar. At max level (1, 1).</summary>
+        public static void IntoLevel(int xp, out int have, out int need)
+        {
+            int l = 1;
+            while (l < MaxLevel && xp >= XpToNext(l)) { xp -= XpToNext(l); l++; }
+            if (l >= MaxLevel) { have = 1; need = 1; } else { have = xp; need = XpToNext(l); }
+        }
+
+        public static int XpFor(bool won, int kills, bool firstWinToday)
+            => (won ? XpWin : XpLoss) + Math.Min(XpFightMax, Math.Max(0, kills) * XpKill) + (won && firstWinToday ? XpFirstWin : 0);
+
+        /// <summary>The tutorial, matches left from the pause menu and very short matches give nothing (as in Speltest).</summary>
+        public static bool Counts(MatchResult r) => !r.Tutorial && !r.Quit && r.Seconds >= MinSeconds;
+
+        /// <summary>Called by the game once per finished match. Queues it for the server and updates the shown numbers.</summary>
+        public static void MatchEnded(MatchResult r)
+        {
+            Load();
+            if (!Counts(r)) return;
+            var m = new MatchReport
+            {
+                id = Guid.NewGuid().ToString("N"),
+                at = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                won = r.Won,
+                seconds = (int)r.Seconds,
+                kills = r.Kills,
+                deaths = r.Deaths,
+                hero = r.Hero.ToString(),
+                difficulty = r.Difficulty.ToString(),
+            };
+            pending.Add(m);
+            if (pending.Count > MaxPending) pending.RemoveAt(0);
+            SavePending();
+            Recount();
+        }
+
+        // ---------- what the server says ----------
+
+        internal static List<MatchReport> Pending { get { Load(); return pending; } }
+
+        /// <summary>The server counted (or refused) these matches: drop them and take its totals.</summary>
+        internal static void ServerAnswered(Totals totals, ICollection<string> doneIds)
+        {
+            Load();
+            if (totals != null) server = totals;
+            if (doneIds != null && doneIds.Count > 0)
+                for (int i = pending.Count - 1; i >= 0; i--)
+                    if (doneIds.Contains(pending[i].id)) pending.RemoveAt(i);
+            PlayerPrefs.SetString(ServerKey, JsonUtility.ToJson(server));
+            SavePending();
+            Recount();
+        }
+
+        /// <summary>Another account signed in (or the account was deleted): forget the old totals, keep unsent matches.</summary>
+        internal static void ResetServer()
+        {
+            Load();
+            server = new Totals();
+            PlayerPrefs.DeleteKey(ServerKey);
+            Recount();
+        }
+
+        // ---------- counting ----------
+
+        /// <summary>One match added to totals, the same way as ReportMatch.js. Used for matches the server has not seen yet.</summary>
+        public static void Apply(Totals t, MatchReport m)
+        {
+            long day = m.at / 86400;
+            bool firstWin = m.won && t.winDay != day;
+            t.xp += XpFor(m.won, m.kills, firstWin);
+            if (firstWin) t.winDay = day;
+            t.rating += m.won ? RatingWin : RatingLoss;
+            t.matches++;
+            if (m.won) { t.wins++; t.streak++; if (t.streak > t.bestStreak) t.bestStreak = t.streak; }
+            else { t.losses++; t.streak = 0; }
+            t.kills += Math.Max(0, m.kills);
+            t.deaths += Math.Max(0, m.deaths);
+            t.seconds += Math.Max(0, m.seconds);
+            t.level = LevelOf(t.xp);
+            var h = t.Hero(m.hero);
+            h.m++;
+            if (m.won) h.w++;
+        }
+
+        static void Recount()
+        {
+            shown = server.Copy();
+            for (int i = 0; i < pending.Count; i++) Apply(shown, pending[i]);
+            shown.level = LevelOf(shown.xp);
+            Changed?.Invoke();
+        }
+
+        static void Load()
+        {
+            if (loaded) return;
+            loaded = true;
+            try
+            {
+                var s = PlayerPrefs.GetString(ServerKey, "");
+                if (s.Length > 0) server = JsonUtility.FromJson<Totals>(s) ?? new Totals();
+                var p = PlayerPrefs.GetString(PendingKey, "");
+                if (p.Length > 0)
+                {
+                    var list = JsonUtility.FromJson<PendingList>(p);
+                    if (list != null && list.items != null) pending.AddRange(list.items);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BAM.Online] saved progress unreadable, starting over: " + e.Message);
+                server = new Totals();
+                pending.Clear();
+            }
+            shown = server.Copy();
+            for (int i = 0; i < pending.Count; i++) Apply(shown, pending[i]);
+        }
+
+        static void SavePending()
+        {
+            PlayerPrefs.SetString(PendingKey, JsonUtility.ToJson(new PendingList { items = pending.ToArray() }));
+            PlayerPrefs.Save();
+        }
+
+        [Serializable] class PendingList { public MatchReport[] items; }
+    }
+
+    /// <summary>One finished match as sent to Cloud Code ReportMatch. Field names are the JSON keys the script reads.</summary>
+    [Serializable, Preserve]
+    public class MatchReport
+    {
+        public string id;          // so a match sent twice (lost answer) is counted once
+        public long at;            // unix seconds when it ended
+        public bool won;
+        public int seconds, kills, deaths;
+        public string hero, difficulty;
+    }
+
+    /// <summary>A player's totals. Same shape as the "bam-progress" protected Cloud Save item and the public profile.</summary>
+    [Serializable, Preserve]
+    public class Totals
+    {
+        public int xp, level = 1, rating, matches, wins, losses, kills, deaths, streak, bestStreak;
+        public long seconds, winDay = -1;
+        public List<HeroTotals> heroes = new List<HeroTotals>();
+
+        public HeroTotals Hero(string id)
+        {
+            for (int i = 0; i < heroes.Count; i++) if (heroes[i].id == id) return heroes[i];
+            var h = new HeroTotals { id = id };
+            heroes.Add(h);
+            return h;
+        }
+
+        /// <summary>The most played heroes first.</summary>
+        public void TopHeroes(List<HeroTotals> into, int max)
+        {
+            into.Clear();
+            into.AddRange(heroes);
+            into.Sort((a, b) => b.m.CompareTo(a.m));
+            if (into.Count > max) into.RemoveRange(max, into.Count - max);
+        }
+
+        public Totals Copy()
+        {
+            var c = (Totals)MemberwiseClone();
+            c.heroes = new List<HeroTotals>(heroes.Count);
+            for (int i = 0; i < heroes.Count; i++) c.heroes.Add(new HeroTotals { id = heroes[i].id, m = heroes[i].m, w = heroes[i].w });
+            return c;
+        }
+    }
+
+    [Serializable, Preserve]
+    public class HeroTotals
+    {
+        public string id;
+        public int m, w;   // matches, wins
+    }
+}

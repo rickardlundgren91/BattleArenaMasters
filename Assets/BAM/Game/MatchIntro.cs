@@ -44,7 +44,7 @@ namespace BAM.Game
             t = 0f; skip = false; struck = false;
             lastNow = Time.unscaledTime;
             heroCount = 0;
-            active = m.Tut == null && !m.HeroTest && m.State == MatchState.Countdown && -m.Time >= 2f && m.Player != null;
+            active = m.Tut == null && !m.HeroTest && m.State == MatchState.Countdown && -m.Time >= 2f && m.Player != null && !Coords.Turned; // its moves are planned from the south
             if (!active) return;
             for (int i = 0; i < m.Heroes.Count && heroCount < 3; i++)
                 if (m.Heroes[i].Team == m.Player.Team && m.Heroes[i].Alive) heroes[heroCount++] = m.Heroes[i];
@@ -130,8 +130,8 @@ namespace BAM.Game
             for (int i = 0; i < heroCount; i++)
             {
                 Vector3 at = views.DrawnAt(heroes[i]);
-                ArtKit.PlayFx(FxKind.Respawn, at, 1.6f, heroes[i].Team);
-                ArtKit.PlayFx(FxKind.LevelUp, at, 1.2f, heroes[i].Team);
+                ArtKit.PlayFx(FxKind.Respawn, at, 1.6f, Teams.Player); // the player's own team, drawn blue
+                ArtKit.PlayFx(FxKind.LevelUp, at, 1.2f, Teams.Player);
             }
             BamAudio.Play(SfxId.Respawn, 0.9f);
         }

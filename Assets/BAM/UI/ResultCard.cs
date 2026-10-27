@@ -334,7 +334,7 @@ namespace BAM.UI
             for (int side = 0; side < 2; side++)
             {
                 int team = side == 0 ? mine : Teams.Other(mine);
-                resHead[side].color = team == Teams.Player ? ResBlueHead : ResRedHead;
+                resHead[side].color = side == 0 ? ResBlueHead : ResRedHead;
                 resRowsPerTeam[side] = 0;
                 for (int i = 0; i < n && row < resRows.Length; i++)
                 {
@@ -347,7 +347,7 @@ namespace BAM.UI
                     rr.Mine.enabled = me;
                     rr.Pic.texture = Portrait(x.U.Hero);
                     rr.Pic.enabled = rr.Pic.texture != null;
-                    rr.Ring.color = team == Teams.Player ? ResBlueRing : ResRedRing;
+                    rr.Ring.color = side == 0 ? ResBlueRing : ResRedRing;
                     rr.Name.text = HeroCatalog.Get(x.U.Hero).Name;
                     rr.Name.color = me ? ResMe : Color.white;
                     rr.Role.text = x.Role;

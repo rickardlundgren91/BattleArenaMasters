@@ -26,6 +26,20 @@ namespace BAM.Sim
         /// <summary>HERO TEST (HeroTest.cs): the player's hero against dummies, at HeroTestLevel, never ending.</summary>
         public bool HeroTest;
         public int HeroTestLevel = 1;
+        /// <summary>An online match (BAM.Online's lockstep): one entry per human, in seat order, the same on every phone.
+        /// Null = the single player above. The other places of both teams are bots of Difficulty, drawn with the seed.</summary>
+        public SeatConfig[] Seats;
+        /// <summary>With Seats: the seat this phone plays. Only Player (camera, HUD, marker) follows it; the rules never read it,
+        /// so every phone runs the very same match.</summary>
+        public int LocalSeat;
+    }
+
+    /// <summary>One human of an online match.</summary>
+    public sealed class SeatConfig
+    {
+        public HeroId Hero;
+        public int Team;
+        public SpellId Spell = SpellId.Blink;
     }
 
     /// <summary>The player's controls for one tick, in map space (x right, y down the map).</summary>
@@ -63,6 +77,8 @@ namespace BAM.Sim
         public readonly int[] Kills = new int[2], Stars = new int[2];
         public bool NoStars;
         public Unit Player;
+        /// <summary>The heroes people play, by seat (the player alone offline; online every phone's hero, Config.Seats).</summary>
+        public readonly List<Unit> Humans = new List<Unit>(6);
         public readonly Unit[] Towers = new Unit[2];
         public readonly List<Unit> Units = new List<Unit>(96);
         /// <summary>The real heroes (no clones), by HeroIndex.</summary>
@@ -76,8 +92,14 @@ namespace BAM.Sim
         public float SpecialDeniedAt = -99;
 
         int nextSerial = 1;
-        float specialBuf, bufAng = float.NaN, bufK;
-        float inMoveX, inMoveY;
+        // each seat's controls (the special is buffered a moment, so a press during a swing is not lost)
+        public const int MaxSeats = 6;
+        readonly float[] seatMoveX = new float[MaxSeats], seatMoveY = new float[MaxSeats], seatSpecBuf = new float[MaxSeats], seatBufK = new float[MaxSeats];
+        readonly float[] seatBufAng = { float.NaN, float.NaN, float.NaN, float.NaN, float.NaN, float.NaN };
+        readonly PlayerInput[] oneInput = new PlayerInput[1];
+        // the player's (seat 0) buffered special, read by the guided match
+        float specialBuf => seatSpecBuf[0];
+        float bufAng => seatBufAng[0];
         readonly List<Unit> unitBuf = new List<Unit>(96), atkBuf = new List<Unit>(48), aiBuf = new List<Unit>(48), tmpBuf = new List<Unit>(48);
         readonly List<Proj> projBuf = new List<Proj>(160), projPool = new List<Proj>(160);
         readonly List<Spawn> spawns = new List<Spawn>(16);
@@ -95,8 +117,9 @@ namespace BAM.Sim
             WaveT = Rules.WaveFirst;
             for (int t = 0; t < 2; t++) Towers[t] = NewTower(t, Map.TowerX[t], Map.TowerY[t]);
             Map.TowerTile0 = TileOf(Towers[0]); Map.TowerTile1 = TileOf(Towers[1]);
-            if (cfg.Tutorial) { if (cfg.Island) StartIsland(); else StartTutorial(); return; }
-            if (cfg.HeroTest) { StartHeroTest(); return; }
+            if (cfg.Tutorial) { if (cfg.Island) StartIsland(); else StartTutorial(); SeatSingle(); return; }
+            if (cfg.HeroTest) { StartHeroTest(); SeatSingle(); return; }
+            if (cfg.Seats != null) { StartSeats(); AssignSpells(); return; }
 
             // the line-up: the player's hero and five others, drawn with the seed (bots never copy the player's hero)
             var pool = new List<HeroId>(7);
@@ -121,7 +144,88 @@ namespace BAM.Sim
                 h.Bot = new BotBrain(h, enemyTier, this);
             }
             AssignSpells();
+            SeatSingle();
         }
+
+        // offline the player is seat 0
+        void SeatSingle()
+        {
+            if (Player == null || Humans.Count > 0) return;
+            Player.Seat = 0; Humans.Add(Player);
+        }
+
+        // An online line-up: each team's humans in the middle first (seat order), its other places bots; the bots' heroes are
+        // drawn with the seed from those no human plays.
+        void StartSeats()
+        {
+            var seats = Config.Seats;
+            var pool = new List<HeroId>(8);
+            for (int i = 0; i < HeroCatalog.Count; i++)
+            {
+                bool taken = false;
+                for (int s = 0; s < seats.Length; s++) if (seats[s].Hero == (HeroId)i) taken = true;
+                if (!taken) pool.Add((HeroId)i);
+            }
+            for (int i = pool.Count - 1; i > 0; i--) { int j = Rng.Int(i + 1); var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
+            var tier = Defs.Tier(Config.Difficulty);
+            var bySeat = new Unit[seats.Length];
+            int[] mid = { 1, 0, 2 };
+            int next = 0;
+            for (int team = 0; team < 2; team++)
+            {
+                int place = 0;
+                for (int s = 0; s < seats.Length && place < 3; s++)
+                {
+                    if (seats[s].Team != team) continue;
+                    var h = NewHero(seats[s].Hero, team, Map.SpawnX[team][mid[place]], Map.SpawnY[team][mid[place]]);
+                    h.Seat = s; bySeat[s] = h; place++;
+                }
+                for (; place < 3; place++)
+                {
+                    var id = pool.Count > 0 ? pool[next++ % pool.Count] : HeroId.Bram;
+                    var h = NewHero(id, team, Map.SpawnX[team][mid[place]], Map.SpawnY[team][mid[place]]);
+                    h.Bot = new BotBrain(h, tier, this);
+                }
+            }
+            for (int s = 0; s < seats.Length; s++) Humans.Add(bySeat[s]); // a seat over a full team stays null (the lobby never makes one)
+            int me = Config.LocalSeat;
+            if (me >= 0 && me < Humans.Count && Humans[me] != null) { Player = Humans[me]; Player.IsPlayer = true; }
+        }
+
+        /// <summary>The human the bots of a team follow: its first seat still played by a person (offline: the player).</summary>
+        public Unit LeaderOf(int team)
+        {
+            for (int i = 0; i < Humans.Count; i++) { var h = Humans[i]; if (h != null && h.Team == team && h.Bot == null) return h; }
+            return null;
+        }
+
+        /// <summary>Online: a person left, a bot of the match's level plays their hero from now on. Every phone calls it before
+        /// the same tick.</summary>
+        public void SeatToBot(int seat)
+        {
+            if (seat < 0 || seat >= Humans.Count) return;
+            var h = Humans[seat];
+            if (h == null || h.Bot != null) return;
+            h.Bot = new BotBrain(h, Defs.Tier(Config.Difficulty), this);
+            seatSpecBuf[seat] = 0; seatMoveX[seat] = seatMoveY[seat] = 0;
+        }
+
+        /// <summary>A fingerprint of the match: online phones compare it now and then, so a match that has drifted apart shows.</summary>
+        public ulong Checksum()
+        {
+            ulong h = 14695981039346656037UL;
+            h = Mix(h, Rng.State); h = Mix(h, (ulong)Ticks); h = Mix(h, (ulong)Units.Count); h = Mix(h, (ulong)Projs.Count);
+            h = Mix(h, (ulong)(WaveN * 31 + Kills[0] * 7 + Kills[1]));
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                h = Mix(h, (ulong)u.Serial); h = Mix(h, Bits(u.X)); h = Mix(h, Bits(u.Y)); h = Mix(h, Bits(u.Hp)); h = Mix(h, Bits(u.Charge));
+            }
+            for (int i = 0; i < Projs.Count; i++) { h = Mix(h, Bits(Projs[i].X)); h = Mix(h, Bits(Projs[i].Y)); }
+            return h;
+        }
+        static ulong Mix(ulong h, ulong v) => (h ^ v) * 1099511628211UL;
+        static ulong Bits(float f) => (uint)BitConverter.SingleToInt32Bits(f);
 
         int TileOf(Unit u) => (int)Math.Floor(u.Y) * Map.W + (int)Math.Floor(u.X);
 
@@ -163,6 +267,13 @@ namespace BAM.Sim
         // ---------- the tick ----------
         public void Step(in PlayerInput input)
         {
+            oneInput[0] = input;
+            Step(oneInput);
+        }
+
+        /// <summary>One tick with every seat's controls (inputs[i] for Humans[i]; missing ones count as no input).</summary>
+        public void Step(PlayerInput[] inputs)
+        {
             Events.Clear();
             for (int i = 0; i < Units.Count; i++) { var u = Units[i]; u.PX = u.X; u.PY = u.Y; }
             for (int i = 0; i < Projs.Count; i++) { var p = Projs[i]; p.PX = p.X; p.PY = p.Y; }
@@ -179,9 +290,14 @@ namespace BAM.Sim
                 return;
             }
             Time += dt; Ticks++;
-            inMoveX = input.MoveX; inMoveY = input.MoveY;
-            if (input.Special) { specialBuf = Rules.SpecialBuffer; bufAng = input.AimAngle; bufK = input.AimK; }
-            if (input.Spell && Player != null) CastSpell(Player, input.SpellAngle, input.SpellK); // the battle spell (Spells.cs)
+            for (int s = 0; s < Humans.Count && s < inputs.Length && s < MaxSeats; s++)
+            {
+                var h = Humans[s]; if (h == null) continue;
+                var input = inputs[s];
+                seatMoveX[s] = input.MoveX; seatMoveY[s] = input.MoveY;
+                if (input.Special) { seatSpecBuf[s] = Rules.SpecialBuffer; seatBufAng[s] = input.AimAngle; seatBufK[s] = input.AimK; }
+                if (input.Spell) CastSpell(h, input.SpellAngle, input.SpellK); // the battle spell (Spells.cs)
+            }
 
             // minions of a wave come out one by one
             for (int i = spawns.Count - 1; i >= 0; i--)
@@ -249,7 +365,7 @@ namespace BAM.Sim
                     if (CanAct(u) && !u.Has(St.Casting))
                     {
                         if (u.Bot != null) { if (u.SpellChanEnd < 0) u.Bot.Think(dt); } // a bot stands still while it recalls
-                        else if (u == Player) PlayerAct(u, dt);
+                        else if (u.Seat >= 0) PlayerAct(u, dt);
                         else if (u.IsClone) AiClone(u, dt);
                     }
                     if (!u.IsClone) TrackMotion(u, dt);
@@ -270,7 +386,7 @@ namespace BAM.Sim
                 }
                 UpdateAttack(u, dt);
             }
-            specialBuf = Math.Max(0, specialBuf - dt);
+            for (int s = 0; s < MaxSeats; s++) seatSpecBuf[s] = Math.Max(0, seatSpecBuf[s] - dt);
 
             // minions gone 0.6 s after death, clones at once
             int w = 0;
@@ -288,12 +404,13 @@ namespace BAM.Sim
 
         void PlayerAct(Unit u, float dt)
         {
-            MoveUnit(u, inMoveX, inMoveY, dt);
-            if (specialBuf > 0)
+            int s = u.Seat;
+            MoveUnit(u, seatMoveX[s], seatMoveY[s], dt);
+            if (seatSpecBuf[s] > 0)
             {
-                bool cast = TryCastSpecial(u, bufAng, bufK);
-                if (cast) specialBuf = 0;
-                else if (specialBuf <= dt && u.SpecialReady) { SpecialDeniedAt = Time; Emit(EventType.SpecialDenied, u, null); }
+                bool cast = TryCastSpecial(u, seatBufAng[s], seatBufK[s]);
+                if (cast) seatSpecBuf[s] = 0;
+                else if (seatSpecBuf[s] <= dt && u.SpecialReady) { if (u == Player) SpecialDeniedAt = Time; Emit(EventType.SpecialDenied, u, null); }
             }
         }
 

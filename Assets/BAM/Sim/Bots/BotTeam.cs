@@ -10,14 +10,14 @@ namespace BAM.Sim
     // off, go in when I go in"): enemy heroes far from the human are not chased, and a goal outside the ring becomes a spot beside them.
     public sealed partial class BotBrain
     {
-        bool HumanInMatch => !M.Config.PlayerIsBot && M.Tut == null && M.Player != null;
+        bool HumanInMatch => !M.Config.PlayerIsBot && M.Tut == null && M.Humans.Count > 0;
 
         /// <summary>The human on this bot's team (null = none, or they are dead).</summary>
         Unit TeamLeader()
         {
             if (!HumanInMatch) return null;
-            var l = M.Player;
-            return l != H && l.Team == H.Team && l.Alive ? l : null;
+            var l = M.LeaderOf(H.Team); // the player, or online the team's first human seat (never "this phone's" hero)
+            return l != null && l != H && l.Alive ? l : null;
         }
 
         /// <summary>Is the leader l (near h) fighting enemy hero e? 0 = no, 1 = l hit e, 2 = e hit l (peel), 3 = l is walking at e.</summary>

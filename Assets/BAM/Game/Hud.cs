@@ -164,7 +164,8 @@ namespace BAM.Game
                 float ky = (kb.wKey.isPressed || kb.upArrowKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);
                 if (kx != 0f || ky != 0f) v = new Vector2(kx, ky).normalized;
             }
-            // screen up is up the map, which is -y in map space
+            // screen up is up the map, which is -y in map space (online on the top team the camera is turned: Coords.Screen)
+            v = Coords.Screen(v);
             input.MoveX = v.x;
             input.MoveY = -v.y;
             if (specialQueued)
@@ -193,7 +194,7 @@ namespace BAM.Game
         {
             if (m == null || !m.Player.Alive) return;
             if (!m.Player.SpecialReady) { Denied("Special not ready"); return; }
-            Queue(Mathf.Atan2(-offset.y, offset.x), AimK(offset));
+            Queue(Coords.ScreenAngle(offset), AimK(offset));
         }
 
         /// <summary>How far along the reach a drag aims, 0..1: the old HudAim, from 0.35 to 1.8 button radii off the centre, so the
@@ -372,7 +373,7 @@ namespace BAM.Game
             bool ready = p.SpecialReady, cancel = special.OverCancel;
             float dt = Time.unscaledDeltaTime;
             Vector2 o = special.Offset;
-            Vector3 dir = new Vector3(o.x, 0f, o.y).normalized;
+            Vector2 so = Coords.Screen(o); Vector3 dir = new Vector3(so.x, 0f, so.y).normalized;
             Vector2 from = new Vector2(p.X, p.Y), sdir = new Vector2(dir.x, -dir.z); // the rules' y runs the other way
             // the MLBB-style indicator (AimIndicator.cs); cancelling dims it grey and drops the hit marks
             if (d.Drag == AimShape.Line)
@@ -387,7 +388,7 @@ namespace BAM.Game
                 // as the rules' AimPoint: at least 1.5 tiles out, except Moa's field, which may land on herself
                 float dist = p.Hero == HeroId.Moa ? k * d.DragReach : Mathf.Min(d.DragReach, Mathf.Max(1.5f, k * d.DragReach));
                 // Fenn's thrown wolf stops at the first wall: show where it really lands
-                if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Mathf.Atan2(-o.y, o.x), dist);
+                if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Coords.ScreenAngle(o), dist);
                 aimLook.Range(hero, d.DragReach, ready, cancel);
                 aimLook.Circle(hero, hero + dir * dist, d.DragWidth, ready, cancel, dt);
                 if (!cancel) rings.SetAim(true, false, from + sdir * dist, Vector2.zero, d.DragWidth);
