@@ -245,7 +245,9 @@ namespace BAM.Game
             BamAudio.SetListener(cam.Focus);
             hud.Frame(dt, paused || resultShown);
 
-            if (over && !resultShown && !TutorialEnd && Time.unscaledTime - overAt >= ResultDelay) ShowResult();
+            // not while paused (the tower fell, then Pause or the notification shade within ResultDelay): the result would clear the
+            // pause screen and leave the match paused under it with no way to resume; it comes up once the player resumes
+            if (over && !resultShown && !paused && !TutorialEnd && Time.unscaledTime - overAt >= ResultDelay) ShowResult();
             else if (resultShown && !resultMusic && Time.unscaledTime - overAt >= ResultDelay + ResultMusicDelay)
             {
                 resultMusic = true;

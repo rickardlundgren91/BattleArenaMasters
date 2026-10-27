@@ -36,14 +36,14 @@ namespace BAM.Online
             sending = true;
             try
             {
-                while (list.Count > 0)
+                while (list.Count > 0 && Account.State == Account.Status.Ready)
                 {
-                    int n = Math.Min(SendBatch, list.Count);
+                    int n = Math.Min(SendBatch, list.Count), before = list.Count;
                     var batch = list.GetRange(0, n);
                     var ans = await Call<ReportAnswer>("ReportMatch", new Dictionary<string, object> { { "matches", batch } }, "done");
                     var done = new HashSet<string>(ans.done ?? new List<string>());
                     Progress.ServerAnswered(ans.totals, done);
-                    if (done.Count == 0) break;   // nothing taken: try again later instead of looping
+                    if (done.Count == 0 || list.Count >= before) break;   // nothing taken (or only ids we no longer have): try again later instead of looping
                 }
             }
             catch (Exception e)
@@ -68,6 +68,7 @@ namespace BAM.Online
                 {
                     Account.NameChosen(a.name);
                     Social.NameChanged(a.name);
+                    Social.Start();   // a new player signs in as NeedsName, so friends could not start then
                     _ = SendPending();
                 }
                 return a;

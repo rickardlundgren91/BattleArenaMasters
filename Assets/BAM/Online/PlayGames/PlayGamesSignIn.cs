@@ -31,15 +31,33 @@ namespace BAM.Online
                     done.TrySetResult(new PlatformSignIn { Ok = false, Error = status == SignInStatus.Canceled ? "Sign-in was cancelled" : "Google Play Games sign-in failed" });
                     return;
                 }
-                string display = PlayGamesPlatform.Instance.GetUserDisplayName();
-                PlayGamesPlatform.Instance.RequestServerSideAccess(true, code =>
+                // an exception in a plugin callback would leave the Task waiting forever (Account.cs then times out)
+                try
                 {
-                    if (string.IsNullOrEmpty(code)) done.TrySetResult(new PlatformSignIn { Ok = false, Error = "Google Play Games gave no server code" });
-                    else done.TrySetResult(new PlatformSignIn { Ok = true, ServerCode = code, DisplayName = display });
-                });
+                    string display = PlayGamesPlatform.Instance.GetUserDisplayName();
+                    PlayGamesPlatform.Instance.RequestServerSideAccess(true, code =>
+                    {
+                        // no code also when Google refused the consent (403 access_denied: the account is not an OAuth test user)
+                        if (string.IsNullOrEmpty(code)) done.TrySetResult(new PlatformSignIn { Ok = false, Error = "Google Play Games gave no server code" });
+                        else done.TrySetResult(new PlatformSignIn { Ok = true, ServerCode = code, DisplayName = display });
+                    });
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning("[BAM.Online] Play Games server access: " + e);
+                    done.TrySetResult(new PlatformSignIn { Ok = false, Error = "Google Play Games sign-in failed" });
+                }
             }
-            if (interactive) PlayGamesPlatform.Instance.ManuallyAuthenticate(Signed);
-            else PlayGamesPlatform.Instance.Authenticate(Signed);
+            try
+            {
+                if (interactive) PlayGamesPlatform.Instance.ManuallyAuthenticate(Signed);
+                else PlayGamesPlatform.Instance.Authenticate(Signed);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[BAM.Online] Play Games sign-in: " + e);
+                done.TrySetResult(new PlatformSignIn { Ok = false, Error = "Google Play Games sign-in failed" });
+            }
             return done.Task;
         }
     }

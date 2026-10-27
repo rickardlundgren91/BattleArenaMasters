@@ -30,6 +30,9 @@ namespace BAM.Online
         }
 
         const string EnabledKey = "bam.online.on", PlayerKey = "bam.online.player";
+        // Play Games may never call back (a sign-in screen that errors, e.g. 403 access_denied while the OAuth app is in Testing);
+        // a silent sign-in gets less time than one where the player is looking at a Google screen
+        const int SilentTimeoutMs = 30000, InteractiveTimeoutMs = 120000, ServicesTimeoutMs = 30000;
 
         static Task running;
         static string lastError = "";
@@ -38,6 +41,9 @@ namespace BAM.Online
         /// <summary>Why the last attempt failed, for a small line under the button. Empty when nothing failed.</summary>
         public static string LastError => lastError;
         public static string PlayerId => State == Status.Ready || State == Status.NeedsName ? AuthenticationService.Instance.PlayerId : null;
+        /// <summary>Signed in, but Unity's session ran out (a long time in the background): the next server call would fail.</summary>
+        internal static bool SessionLost => (State == Status.Ready || State == Status.NeedsName)
+            && (!AuthenticationService.Instance.IsSignedIn || AuthenticationService.Instance.IsExpired);
         /// <summary>The player's unique name, null before one is chosen.</summary>
         public static string Name { get; internal set; }
         /// <summary>The Play Games name, offered as the first name suggestion.</summary>
@@ -59,7 +65,10 @@ namespace BAM.Online
         public static void Start(bool interactive = false)
         {
             if (!Enabled || running != null) return;
-            running = SignIn(interactive);
+            // a sign-in that finished without waiting (Play Games answered at once) already ran its finally: keeping its Task
+            // here would block every later Start
+            var t = SignIn(interactive);
+            if (!t.IsCompleted) running = t;
         }
 
         /// <summary>The player chose to go online: from the first-time question or a sign-in button.</summary>
@@ -77,14 +86,24 @@ namespace BAM.Online
                 // Analytics (BamAnalytics) may have started Unity Services a moment before: then the state is Initializing and
                 // going on at once gave "Singleton is not initialized" on the first server call (Rickard's phone, 2026-10-27)
                 if (UnityServices.State == ServicesInitializationState.Uninitialized) await UnityServices.InitializeAsync();
-                while (UnityServices.State == ServicesInitializationState.Initializing) await Task.Delay(50);
+                float until = Time.realtimeSinceStartup + ServicesTimeoutMs / 1000f;
+                while (UnityServices.State == ServicesInitializationState.Initializing && Time.realtimeSinceStartup < until) await Task.Delay(50);
                 if (UnityServices.State != ServicesInitializationState.Initialized) throw new Exception("Unity Services did not start (" + UnityServices.State + ")");
                 var auth = AuthenticationService.Instance;
+                // after a long pause the session may have expired: IsSignedIn stays true, but every call fails until we sign in again
+                if (auth.IsSignedIn && auth.IsExpired) auth.SignOut();
                 if (!auth.IsSignedIn)
                 {
                     if (Platform != null)
                     {
-                        var p = await Platform.SignIn(interactive);
+                        var asked = Platform.SignIn(interactive);
+                        if (await Task.WhenAny(asked, Task.Delay(interactive ? InteractiveTimeoutMs : SilentTimeoutMs)) != asked)
+                        {
+                            lastError = "Google Play Games did not answer";
+                            Set(Status.NeedsSignIn);
+                            return;
+                        }
+                        var p = await asked;
                         if (!p.Ok) { lastError = p.Error ?? ""; Set(Status.NeedsSignIn); return; }
                         PlatformName = p.DisplayName ?? "";
                         // every start uses a fresh Play Games code: a cached Unity session could belong to another Google account
@@ -137,10 +156,12 @@ namespace BAM.Online
         {
             if (State != Status.Ready && State != Status.NeedsName) return false;
             Set(Status.Working);
+            bool serverDone = false;
             try
             {
                 Social.Stop();
                 await Server.DeleteMe();
+                serverDone = true;
                 await AuthenticationService.Instance.DeleteAccountAsync();
                 PlayerPrefs.DeleteKey(PlayerKey);
                 Progress.ResetServer();
@@ -153,7 +174,19 @@ namespace BAM.Online
             {
                 lastError = Short(e);
                 Debug.LogWarning("[BAM.Online] delete failed: " + e);
-                Set(Status.Ready);
+                if (serverDone)
+                {
+                    // the server half is done (name freed, data gone) but Unity still has the player: show it without a name,
+                    // so Delete can be tried again and nothing pretends the old name is still ours
+                    Name = null;
+                    Progress.ResetServer();
+                    Set(Status.NeedsName);
+                }
+                else
+                {
+                    Set(string.IsNullOrEmpty(Name) ? Status.NeedsName : Status.Ready);
+                    Social.Start();
+                }
                 return false;
             }
         }

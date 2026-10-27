@@ -46,7 +46,7 @@ namespace BAM.Online.Mp
         NetworkDriver driver; NetworkPipeline rel; bool bound;
         readonly List<KeyValuePair<int, NetworkConnection>> conns = new List<KeyValuePair<int, NetworkConnection>>();
         int nextConn = 1;
-        string lobbyId, relayCode; float heartbeatT; bool busy, closed, paused;
+        string lobbyId, relayCode; float heartbeatT, reallocAt; bool busy, closed, paused;
         NetworkReachability reach;
         byte[] inBuf = new byte[4096];
 
@@ -133,7 +133,7 @@ namespace BAM.Online.Mp
         public void Unseat(string playerId)
         {
             if (!host || lobbyId == null || string.IsNullOrEmpty(playerId)) return;
-            try { _ = LobbyService.Instance.RemovePlayerAsync(lobbyId, playerId).ContinueWith(t => { }); } catch (Exception) { }
+            try { _ = LobbyService.Instance.RemovePlayerAsync(lobbyId, playerId).ContinueWith(t => { _ = t.Exception; }); } catch (Exception) { }
         }
 
         static string RelayCode(Lobby l) => l.Data != null && l.Data.TryGetValue(RelayKey, out var d) ? d.Value : null;
@@ -206,7 +206,7 @@ namespace BAM.Online.Mp
             }
             if (closed || paused || !driver.IsCreated || !bound) { Heartbeat(); return; }
             driver.ScheduleUpdate().Complete();
-            if (host && driver.GetRelayConnectionStatus() == RelayConnectionStatus.AllocationInvalid && !busy) { Reallocate(); return; }
+            if (host && driver.GetRelayConnectionStatus() == RelayConnectionStatus.AllocationInvalid && !busy && Time.realtimeSinceStartup >= reallocAt) { Reallocate(); return; }
             if (host) { NetworkConnection c; while ((c = driver.Accept()) != default(NetworkConnection)) conns.Add(new KeyValuePair<int, NetworkConnection>(nextConn++, c)); }
             for (int i = 0; i < conns.Count; i++)
             {
@@ -221,6 +221,7 @@ namespace BAM.Online.Mp
                         var na = new NativeArray<byte>(n, Allocator.Temp); reader.ReadBytes(na); NativeArray<byte>.Copy(na, 0, inBuf, 0, n); na.Dispose();
                         OnData?.Invoke(id, inBuf, n);
                         if (closed || !driver.IsCreated) return;
+                        if (i >= conns.Count || conns[i].Key != id) { i--; break; } // kicked while reading (Busy, Bye): the next one moved up to i
                     }
                     else if (ev == NetworkEvent.Type.Disconnect)
                     {
@@ -237,7 +238,7 @@ namespace BAM.Online.Mp
         {
             if (!host || lobbyId == null || closed || paused) return;
             heartbeatT -= Time.unscaledDeltaTime; if (heartbeatT > 0) return; heartbeatT = 15;
-            _ = LobbyService.Instance.SendHeartbeatPingAsync(lobbyId).ContinueWith(t => { });
+            _ = LobbyService.Instance.SendHeartbeatPingAsync(lobbyId).ContinueWith(t => { _ = t.Exception; });
         }
 
         // the host slept past Relay's timeout: a new Relay seat, its code into the lobby (a friend joining later finds it there)
@@ -251,7 +252,7 @@ namespace BAM.Online.Mp
                 await NewAllocation(); if (closed) return;
                 await LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { Data = new Dictionary<string, DataObject> { { RelayKey, new DataObject(DataObject.VisibilityOptions.Member, relayCode) } } });
             }
-            catch (Exception e) { Debug.LogWarning("[BAM.Online] room: " + e); }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] room: " + e); reallocAt = Time.realtimeSinceStartup + 5; } // offline or rate limited: not again every frame
             finally { busy = false; }
         }
 
@@ -283,7 +284,7 @@ namespace BAM.Online.Mp
         public void Kick(int conn)
         {
             for (int i = 0; i < conns.Count; i++)
-                if (conns[i].Key == conn) { driver.ScheduleUpdate().Complete(); driver.Disconnect(conns[i].Value); conns.RemoveAt(i); break; }
+                if (conns[i].Key == conn) { driver.ScheduleFlushSend(default).Complete(); driver.Disconnect(conns[i].Value); conns.RemoveAt(i); break; } // flush, not update: an update drops the events not read yet
         }
 
         public void Close()
@@ -298,8 +299,8 @@ namespace BAM.Online.Mp
             if (lobbyId == null) return; var id = lobbyId; lobbyId = null;
             try
             {
-                if (host) _ = LobbyService.Instance.DeleteLobbyAsync(id).ContinueWith(t => { });
-                else _ = LobbyService.Instance.RemovePlayerAsync(id, AuthenticationService.Instance.PlayerId).ContinueWith(t => { });
+                if (host) _ = LobbyService.Instance.DeleteLobbyAsync(id).ContinueWith(t => { _ = t.Exception; });
+                else _ = LobbyService.Instance.RemovePlayerAsync(id, AuthenticationService.Instance.PlayerId).ContinueWith(t => { _ = t.Exception; });
             }
             catch (Exception) { }
         }
@@ -343,6 +344,6 @@ namespace BAM.Online.Mp
             return res;
         }
 
-        public void Delete(string id) { try { _ = LobbyService.Instance.DeleteLobbyAsync(id).ContinueWith(t => { }); } catch (Exception) { } }
+        public void Delete(string id) { try { _ = LobbyService.Instance.DeleteLobbyAsync(id).ContinueWith(t => { _ = t.Exception; }); } catch (Exception) { } }
     }
 }

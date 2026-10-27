@@ -106,6 +106,12 @@ namespace BAM.Online.UI
             var f = Frame(out float dpr);
             ctx.Begin(f.x, Screen.height - f.yMax, FrameCss, f.height / dpr, dpr);
             try { OnlineMenu.Draw(ctx, FrameCss, f.height / dpr); }
+            catch (System.Exception e)
+            {
+                // a page that throws would throw again every frame behind a blocker with no Back button: close it instead
+                Debug.LogException(e);
+                OnlineMenu.Close();
+            }
             finally { ctx.End(); }
         }
 

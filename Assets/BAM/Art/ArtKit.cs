@@ -231,7 +231,13 @@ namespace BAM.Art
             }
         }
 
-        internal static void RegisterCaster(Renderer r) => casters.Add(r);
+        internal static void RegisterCaster(Renderer r)
+        {
+            // every arena registers its renderers and only a quality change dropped the destroyed ones: prune them here, so
+            // the list does not grow by one arena's worth every match
+            if (casters.Count >= 64) casters.RemoveAll(c => c == null);
+            casters.Add(r);
+        }
 
         /// <summary>Static map geometry (ground, walls, grass, rocks, towers' bases, void edges), batched for few draw calls.</summary>
         public static GameObject BuildArena(ArenaInfo arena)

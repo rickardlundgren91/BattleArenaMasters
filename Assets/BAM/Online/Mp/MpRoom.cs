@@ -35,6 +35,7 @@ namespace BAM.Online.Mp
             public HeroId Hero; public SpellId Spell = SpellId.Blink;
             public bool InMatch, Loaded;
             public float Ping = -1;
+            public long Behind = -1; // host, in a match: first frame this guest has not been sent (its link was full), -1 = up to date
         }
 
         public static Phase State { get; private set; }
@@ -126,6 +127,7 @@ namespace BAM.Online.Mp
                 if (IsHost) Broadcast(w, false); else relay.Send(w);
                 relay.Close();
             }
+            net?.Lockstep.GoSolo("You left the room, bots play on");
             relay = null; net = null; Members.Clear(); startT = -1;
         }
 
@@ -298,7 +300,7 @@ namespace BAM.Online.Mp
             for (int i = 0; i < Members.Count; i++)
             {
                 var m = Members[i];
-                m.Seat = i; m.InMatch = true; m.Loaded = m.Conn < 0;
+                m.Seat = i; m.InMatch = true; m.Loaded = m.Conn < 0; m.Behind = -1;
                 seats[i] = new SeatConfig { Hero = m.Hero, Team = Quick ? TeamOf(m.Side, Versus) : TeamOf(i, Mode), Spell = m.Spell };
             }
             for (int i = 1; i < Members.Count; i++)
@@ -316,7 +318,7 @@ namespace BAM.Online.Mp
         {
             var cfg = new MatchConfig { Seats = seats, LocalSeat = mySeat, Seed = seed, Difficulty = diff, PlayerHero = seats[mySeat].Hero, PlayerSpell = seats[mySeat].Spell };
             net = new MpMatchNet(IsHost, cfg, Mode == Versus && seats[mySeat].Team != Teams.Player);
-            if (IsHost) net.Lockstep.Send = m => Broadcast(m, true);
+            if (IsHost) net.Lockstep.Send = SendFrames;
             else net.Lockstep.Send = m => relay?.Send(m);
             State = Phase.Match; Status = ""; WantPage = false;
             Debug.Log("[BAM.Online] online match: " + seats.Length + " players, " + ModeNames[Mode] + ", seat " + mySeat + ", seed " + seed);
@@ -502,10 +504,10 @@ namespace BAM.Online.Mp
                 case MpMsg.Busy: { string s = r.Str(); if (QuickRetry(s)) return; Leave(); Status = s; Changed?.Invoke(); return; }
                 case MpMsg.Room:
                 {
-                    Mode = r.U8(); int n = r.U8();
+                    Mode = Math.Min(r.U8(), Versus); int n = Math.Min(r.U8(), MpRelay.MaxPlayers);
                     Members.Clear();
                     for (int i = 0; i < n; i++)
-                        Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = (HeroId)r.U8(), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
+                        Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
                     bool q = r.U8() == 1; int ps = r.U8();
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
                     Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
@@ -514,9 +516,10 @@ namespace BAM.Online.Mp
                 }
                 case MpMsg.Start:
                 {
-                    int seed = r.I32(); var diff = (Difficulty)r.U8(); Mode = r.U8(); int n = r.U8();
+                    int seed = r.I32(); var diff = (Difficulty)r.U8(); Mode = Math.Min(r.U8(), Versus); int n = r.U8();
+                    if (n > MpRelay.MaxPlayers) return;
                     var seats = new SeatConfig[n];
-                    for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = (HeroId)r.U8(), Team = r.U8(), Spell = (SpellId)r.U8() }; r.Str(); }
+                    for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; r.Str(); }
                     int mine = r.U8();
                     if (mine <= 0 || mine >= n) return;
                     Begin(seed, diff, seats, mine);
@@ -548,6 +551,33 @@ namespace BAM.Online.Mp
             w.U8(Quick ? 1 : 0); w.U8(partySize);
             Broadcast(w, false);
             Changed?.Invoke();
+        }
+
+        // host, in a match: a guest whose frames can no longer go out (asleep, network gone: Relay's window is full) has lost one
+        // for good and cannot follow any more; a bot plays it at once on every phone (it plays on alone when it notices)
+        static readonly MpWriter refill = new MpWriter();
+        const int MaxBehind = 8 * 60; // frames (8 s, as the disconnect timeout): a guest further behind becomes a bot
+
+        static void SendFrames(MpWriter msg)
+        {
+            if (relay == null || net == null) return;
+            var ls = net.Lockstep;
+            bool frames = msg.Len > 0 && msg.Data[0] == MpMsg.Frames;
+            foreach (var m in Members)
+            {
+                if (m.Conn < 0 || !m.InMatch) continue;
+                if (!frames) { relay.SendTo(m.Conn, msg); continue; }
+                // a full link (a guest on a slow network for a moment) loses no frame: it is sent again, in order, once there is room;
+                // sending the newer frames first would make the guest give up ("Frames went missing")
+                if (m.Behind < 0 && !relay.SendTo(m.Conn, msg)) m.Behind = ls.OutFirst;
+                while (m.Behind >= 0)
+                {
+                    long to = ls.Refill(refill, m.Behind);
+                    if (to < 0 || ls.Built - m.Behind > MaxBehind) { m.Behind = -1; m.InMatch = false; ls.SeatLeft(m.Seat); Debug.Log("[BAM.Online] " + m.Name + " fell too far behind, a bot plays on"); break; }
+                    if (!relay.SendTo(m.Conn, refill)) break;
+                    m.Behind = to >= ls.Built ? -1 : to;
+                }
+            }
         }
 
         static void Broadcast(MpWriter msg, bool inMatchOnly)
@@ -635,5 +665,6 @@ namespace BAM.Online.Mp
         }
         void Update() { MpRoom.Tick(Time.unscaledDeltaTime); MpSocial.Tick(Time.unscaledDeltaTime); }
         void OnApplicationPause(bool p) => MpRoom.Pause(p);
+        void OnApplicationQuit() { MpRoom.Leave(); MpPresence.Off(); }
     }
 }

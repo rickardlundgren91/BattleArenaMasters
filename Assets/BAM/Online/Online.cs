@@ -34,6 +34,7 @@ namespace BAM.Online
         public static void Resumed()
         {
             if (Account.State == Account.Status.Offline) Account.Start();
+            else if (Account.SessionLost) Account.Start();   // the Unity session expired in the background: sign in again
             else if (Account.State == Account.Status.Ready) _ = Server.SendPending();
         }
     }

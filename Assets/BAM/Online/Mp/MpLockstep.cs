@@ -65,6 +65,9 @@ namespace BAM.Online.Mp
         /// <summary>Frames known and not yet stepped.</summary>
         public int Backlog => (int)(built - stepped);
         public long Stepped => stepped;
+        /// <summary>Host: frames made so far, and the first frame of the message Send is sending now.</summary>
+        public long Built => built;
+        public long OutFirst => outFirst;
 
         // ---------------------------------------------------------------- this phone's controls, 60 a second
 
@@ -127,6 +130,22 @@ namespace BAM.Online.Mp
             if (outCount >= 60) Flush();
         }
 
+        /// <summary>Host: writes frames from..(at most 60 on) again for a guest whose link was full, as one Frames message.
+        /// Returns the frame after the last one written, or -1 when frame from is no longer kept.</summary>
+        public long Refill(MpWriter w, long from)
+        {
+            if (from < 0 || from >= built || built - from >= Cap - 1) return -1;
+            long to = Math.Min(built, from + 60);
+            w.Begin(MpMsg.Frames); w.I32((int)from); w.U8((int)(to - from));
+            for (long f = from; f < to; f++)
+            {
+                w.U8(masks[f % Cap]);
+                int b = (int)(f % Cap) * Seats;
+                for (int s = 0; s < Seats; s++) MpInput.Write(w, in ring[b + s]);
+            }
+            return to;
+        }
+
         /// <summary>Host: a guest's controls arrived.</summary>
         public void OnIn(int seat, ref MpReader r)
         {
@@ -186,6 +205,7 @@ namespace BAM.Online.Mp
         {
             if (Host || solo) return;
             solo = true; Problem = why; outCount = 0;
+            outMsg.Begin(MpMsg.LeftMatch); Send?.Invoke(outMsg); // a host still there makes our seat a bot (else our hero runs on with our last input)
             for (int s = 0; s < Seats; s++) if (s != Local) soloMask |= 1 << s;
             Log?.Invoke("playing on with bots: " + why);
         }

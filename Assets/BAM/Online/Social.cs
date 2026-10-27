@@ -50,6 +50,7 @@ namespace BAM.Online
             try
             {
                 await FriendsService.Instance.InitializeAsync();
+                if (Account.State != Account.Status.Ready) return;   // signed out or deleted while the service started
                 var f = FriendsService.Instance;
                 f.RelationshipAdded += OnChange;
                 f.RelationshipDeleted += OnChange;
@@ -77,6 +78,7 @@ namespace BAM.Online
             f.RelationshipDeleted -= OnChange;
             f.PresenceUpdated -= OnChange;
             active = false;
+            seenIncoming = -1;   // a new account must not toast the old one's requests
             friends.Clear(); incoming.Clear(); outgoing.Clear(); blocked.Clear(); relation.Clear();
             Changed?.Invoke();
         }
