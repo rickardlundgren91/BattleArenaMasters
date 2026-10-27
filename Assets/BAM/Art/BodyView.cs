@@ -739,7 +739,10 @@ namespace BAM.Art
                 if (atkT >= 0f)
                 {
                     atkT += dt;
-                    wAtk = Mathf.Min(Mathf.Clamp01(atkT / 0.06f), Mathf.Clamp01((atkTotal - atkT) / 0.15f));
+                    // the swing blends in over up to 0.16 s, not 0.06 (Rickard 2026-10-27: Bram's hammer hung low on the walk and
+                    // "teleporteras" up into the swing); still well inside the windup, so the blow lands on time
+                    float blendIn = Mathf.Clamp(windup * 0.45f, 0.06f, 0.16f);
+                    wAtk = Mathf.Min(Mathf.Clamp01(atkT / blendIn), Mathf.Clamp01((atkTotal - atkT) / 0.18f));
                     double at = AttackTime(atkT);
                     clips[CAttack].SetTime(at); upAtk.SetTime(at);
                     if (atkT >= atkTotal) atkT = -1f;
