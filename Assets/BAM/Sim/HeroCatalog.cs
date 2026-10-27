@@ -42,7 +42,7 @@ namespace BAM.Sim
                 PassiveName = "Queen's Instinct", PassiveDesc = "When an enemy would drop an ally near her below 25% health, she shields that ally. Every 22 s.",
                 Health = 2, Damage = 1, Speed = 2, Difficulty = 1 },
             new HeroInfo { Id = HeroId.Knut, Name = "Knut", Title = "The Anchor", Role = "Tank", Ranged = false,
-                SpecialName = "Anchor Throw", SpecialDesc = "Throws an anchor that pulls the first enemy hero it hits to him and stuns it. Drag to aim.",
+                SpecialName = "Anchor Throw", SpecialDesc = "Throws an anchor at a nearby enemy that pulls the first enemy it hits to him and stuns it. Drag to aim.",
                 PassiveName = "Anchor Drag", PassiveDesc = "His attacks slow the target.",
                 Health = 3, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tikta, Name = "Tikta", Title = "The Needle Wing", Role = "Assassin", Ranged = false,

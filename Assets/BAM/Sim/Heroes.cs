@@ -57,8 +57,9 @@ namespace BAM.Sim
         public const float QueenRange = 4, QueenThreshold = 0.25f, QueenShieldPercent = 0.08f, QueenDuration = 2, QueenCooldown = 22;
     }
 
-    /// <summary>Knut, Anchor Throw: an anchor on a chain that pulls the first enemy hero it hits to him and stuns it (the stun
-    /// lasts the pull plus 0.4 s). Tap: at an enemy in reach. Drag: the aimed way. Passive: his auto attacks slow (Defs).</summary>
+    /// <summary>Knut, Anchor Throw: an anchor on a chain that pulls the first enemy it hits to him and stuns it (the stun
+    /// lasts the pull plus 0.4 s). Tap: at a random enemy hero or minion in reach, no hero first (Rickard 2026-10-27; towers are
+    /// never a special's target). Drag: the aimed way. Passive: his auto attacks slow (Defs).</summary>
     public static class KnutS
     {
         public const float HookRadius = 0.4f, HookDistance = 6.5f, TapReach = 3.5f, OutSpeed = 14, OutTime = 1.2f, Release = 0.5f;
@@ -595,8 +596,10 @@ namespace BAM.Sim
             if (Aimed(h, out ang, out _)) { castX = h.X + SimMath.Cos(ang) * KnutS.HookDistance; castY = h.Y + SimMath.Sin(ang) * KnutS.HookDistance; }
             else
             {
-                var t = PickInReach(h, KnutS.TapReach, Pick.Heroes, true); // the anchor only catches heroes, so a tap with none in reach spends nothing
-                if (t == null) return false;
+                // any enemy in reach, like an auto attack's pick: no hero first (Rickard 2026-10-27); none in reach spends nothing
+                var l = EnemiesInRange(h, KnutS.TapReach, Pick.HeroOrMinion, true, spBuf);
+                if (l.Count == 0) return false;
+                var t = PickRandom(l);
                 LeadAim(h, t, Flight.Hook, KnutS.OutTime, KnutS.OutSpeed * KnutS.OutTime / 2, out float ax, out float ay);
                 ang = SimMath.Atan2(ay - h.Y, ax - h.X);
                 castX = ax; castY = ay; castTgt = t;
@@ -607,8 +610,8 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>The anchor flies out slowing to a stop, catches the first enemy hero it touches (one under Moa's shield only takes
-        /// the hit) and comes back, pulling its catch to Knut; the catch is stunned for the pull and 0.4 s more.</summary>
+        /// <summary>The anchor flies out slowing to a stop, catches the first enemy hero or minion it touches (a hero under
+        /// Moa's shield only takes the hit) and comes back, pulling its catch to Knut; the catch is stunned for the pull and 0.4 s more.</summary>
         void HookUpdate(Proj p, float dt)
         {
             var h = p.Src;
@@ -622,7 +625,7 @@ namespace BAM.Sim
                 for (int i = 0; i < Units.Count; i++)
                 {
                     var u = Units[i];
-                    if (u.Alive && u.Team != h.Team && u.Kind == UnitKind.Hero && !u.Has(St.Untargetable) && SimMath.Hypot(u.X - p.X, u.Y - p.Y) <= KnutS.HookRadius + u.R) { hit = u; break; }
+                    if (u.Alive && u.Team != h.Team && u.Kind != UnitKind.Tower && !u.Has(St.Untargetable) && SimMath.Hypot(u.X - p.X, u.Y - p.Y) <= KnutS.HookRadius + u.R) { hit = u; break; }
                 }
                 if (hit != null)
                 {
@@ -674,7 +677,7 @@ namespace BAM.Sim
                 castX = h.X + SimMath.Cos(aa) * TiktaS.LineReach; castY = h.Y + SimMath.Sin(aa) * TiktaS.LineReach;
                 return true;
             }
-            if (EnemiesInRange(h, TiktaS.Reach, Pick.Heroes, true, spBuf).Count == 0) return false;
+            if (EnemiesInRange(h, TiktaS.Reach, Pick.HeroOrMinion, true, spBuf).Count == 0) return false; // any enemy, no hero first (Rickard 2026-10-27)
             h.Needles = TiktaS.Count; h.NeedleT = 0; h.NeedleEnd = Time + TiktaS.Count * TiktaS.Interval + 0.1f;
             ++h.TiktaCastId; // the storm's four needles share one cast id
             Channel(h, (TiktaS.Count - 1) * TiktaS.Interval + 0.05f);
@@ -683,7 +686,7 @@ namespace BAM.Sim
         }
 
         /// <summary>Per tick for every living real hero: Tikta's storm sends its next needle at a random enemy hero or minion in
-        /// reach (none: that needle is lost); a stun ends it.</summary>
+        /// reach, no hero first (none: that needle is lost); a stun ends it.</summary>
         void UpdateSpecial(Unit h, float dt)
         {
             if (h.Needles <= 0) return;
