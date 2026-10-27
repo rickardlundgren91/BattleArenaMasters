@@ -55,6 +55,8 @@ namespace BAM.Art
         // old Speltest's HeroMixamo layers: standing, the attack and the cast move the whole body; on the move only the upper body
         // (this mask) swings while the legs keep running, so a hero hitting on the run no longer slides on frozen legs
         AnimationLayerMixerPlayable layers;
+        AnimationPlayableOutput animOut;
+        bool layered; // the layers are in the graph only while a swing runs on the move (Rickard 2026-10-27: Bram floated on Home)
         AnimationMixerPlayable upper;
         AnimationClipPlayable upAtk, upCast;
         // the attack in Speltest's four phases (HeroAttack.cs, HeroMixamo.PoseMx): the coil, the slash, the hold on the blow, the recovery
@@ -62,6 +64,10 @@ namespace BAM.Art
         bool imported;
         HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
         PreviewBreath breath;     // the menu hero's living idle on top of its clip (Preview only)
+        // the menu hero's feet kept on the stage (Rickard 2026-10-27: Bram and Fenn floated above the ring on Home): each idle stands
+        // the model at its own height over the root, so the lowest foot bone is held where it was in the bind pose, standing on the ground
+        Transform instT, footL, footR, toeL, toeR;
+        float footRef = float.NaN, groundOff;
         bool breathTried;
         float gearAct;            // how much the attack and cast clips play, for the gear's rest pose
         int shadowRends;          // rends[0..shadowRends) may cast shadows; the gear after them never does
@@ -304,6 +310,14 @@ namespace BAM.Art
 
             anim = inst.GetComponent<Animator>();
             if (anim == null) anim = inst.AddComponent<Animator>();
+            instT = it;
+            if (anim.isHuman)
+            {
+                footL = anim.GetBoneTransform(HumanBodyBones.LeftFoot); footR = anim.GetBoneTransform(HumanBodyBones.RightFoot);
+                toeL = anim.GetBoneTransform(HumanBodyBones.LeftToes); toeR = anim.GetBoneTransform(HumanBodyBones.RightToes);
+                float f = LowestFoot();
+                if (!float.IsNaN(f)) footRef = f - transform.position.y; // the bind pose, its mesh's sole on the ground
+            }
             anim.runtimeAnimatorController = null;
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -318,10 +332,9 @@ namespace BAM.Art
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             var output = AnimationPlayableOutput.Create(graph, "Anim", anim);
             mixer = AnimationMixerPlayable.Create(graph, src2.Length);
+            animOut = output;
+            output.SetSourcePlayable(mixer);
             layers = AnimationLayerMixerPlayable.Create(graph, 2);
-            output.SetSourcePlayable(layers);
-            graph.Connect(mixer, 0, layers, 0);
-            layers.SetInputWeight(0, 1f);
             clips = new AnimationClipPlayable[src2.Length];
             clipLen = new float[src2.Length];
             for (int c = 0; c < src2.Length; c++)
@@ -650,6 +663,7 @@ namespace BAM.Art
             {
                 if (!breathTried) { breathTried = true; breath = PreviewBreath.For(anim, HeroIndex); }
                 breath?.Apply(Time.unscaledTime, 1f - Mathf.Clamp01(gearAct));
+                GroundFeet(dt);
             }
             if (gear != null) gear.Tick(dt, moveW, gearAct, dead);
             if (dead) AnimateDeath(dt);
@@ -749,7 +763,8 @@ namespace BAM.Art
             // on the move the swing goes to the upper-body layer and the legs keep their stride
             float act = Mathf.Min(1f, wAtk + wCast), upW = dead ? 0f : act * moveW;
             if (act > 1e-4f) { upper.SetInputWeight(0, wAtk / (wAtk + wCast)); upper.SetInputWeight(1, wCast / (wAtk + wCast)); }
-            layers.SetInputWeight(1, upW);
+            SetLayered(upW > 1e-4f);
+            if (layered) layers.SetInputWeight(1, upW);
             wAtk *= 1f - moveW; wCast *= 1f - moveW;
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
@@ -864,6 +879,50 @@ namespace BAM.Art
             }
             if (v > 0f) groundSpd[c] = v;
             return v;
+        }
+
+        float LowestFoot()
+        {
+            float y = float.MaxValue;
+            if (footL != null) y = Mathf.Min(y, footL.position.y);
+            if (footR != null) y = Mathf.Min(y, footR.position.y);
+            if (toeL != null) y = Mathf.Min(y, toeL.position.y);
+            if (toeR != null) y = Mathf.Min(y, toeR.position.y);
+            return y == float.MaxValue ? float.NaN : y;
+        }
+
+        // moves the model so its lowest foot bone stays at its bind-pose height over the stage (smoothed, so a step or a swing does
+        // not make it bob); only on the menu stages
+        void GroundFeet(float dt)
+        {
+            if (float.IsNaN(footRef) || instT == null) return;
+            float low = LowestFoot();
+            if (float.IsNaN(low)) return;
+            float err = low - transform.position.y - footRef; // world units above where the foot should be
+            float step = -err * Mathf.Min(1f, Mathf.Max(dt, 1f / 60f) * 8f);
+            groundOff += step;
+            Transform par = instT.parent;
+            float k = par != null ? Mathf.Max(1e-4f, par.lossyScale.y) : 1f;
+            instT.localPosition += new Vector3(0f, step / k, 0f);
+        }
+
+        // standing (and in the menu) the graph is the plain mixer as before the layers came; a swing on the move routes it through
+        // the layer mixer, whose second layer carries the upper body
+        void SetLayered(bool on)
+        {
+            if (on == layered) return;
+            layered = on;
+            if (on)
+            {
+                graph.Connect(mixer, 0, layers, 0);
+                layers.SetInputWeight(0, 1f);
+                animOut.SetSourcePlayable(layers);
+            }
+            else
+            {
+                animOut.SetSourcePlayable(mixer);
+                graph.Disconnect(layers, 0);
+            }
         }
 
         // where the attack clip stands atkT s into the swing (the four phases, see PlayAttack)

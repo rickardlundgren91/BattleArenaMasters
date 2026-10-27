@@ -406,7 +406,10 @@ namespace BAM.Art
         const int LaneSegs = 10, LaneTongues = 10;
         MeshRenderer[] laneFloor, laneTongue, laneCore;
         GameObject laneFire;
-        int laneTicks;
+        int laneTicks, laneLit;
+        // Rickard 2026-10-27 ("blasts drag skill känns lite för lite och enkel"): the lane catches fire from Blast to its end in a
+        // quick run of his fireballs (tx_fx_blast_explosion), leaves his burn marks (tx_fx_blast_scorch) and throws his embers
+        const float LaneIgniteStep = 0.035f, LaneIgniteEvery = 0.6f;
 
         public void Build(ZoneKind k, int t)
         {
@@ -489,6 +492,10 @@ namespace BAM.Art
                 if (laneFire != null) laneFire.SetActive(false); // lights with the first burn, as the old game
                 int n = Mathf.Clamp(Mathf.RoundToInt(length / 1.5f), 1, 6);
                 for (int i = 0; i < n; i++) Fx.Crack(center + dir * (length * (i + 0.5f) / n), radius * 1.1f, duration, 0.55f);
+                laneLit = 0;
+                int sc = Mathf.Clamp(Mathf.RoundToInt(length / 0.9f), 1, 8);
+                for (int i = 0; i < sc; i++)
+                    Fx.Pic("tx_fx_blast_scorch", center + dir * (length * (i + 0.5f) / sc), new Color(1f, 1f, 1f, 0.75f), radius * 3f, duration + 0.6f);
             }
             else if (kind == ZoneKind.HoneyField)
             {
@@ -547,6 +554,7 @@ namespace BAM.Art
                 if (on) rimMat.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r * a, baseColor.g * a, baseColor.b * a, 1f));
             }
             if (warn) return;
+            if (kind == ZoneKind.FireLane && length > 0f) LaneIgnite();
             if (kind == ZoneKind.FireLane && length > 0f && laneFire != null) LaneFire();
 
             emitT -= dt;
@@ -579,6 +587,24 @@ namespace BAM.Art
             else Fx.Sparks(center + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.08f, 1.5f, 0.2f, 1f);
         }
 
+        // the fire runs down the lane: one fireball per step, an ember spray and a thump of light under it
+        void LaneIgnite()
+        {
+            int steps = Mathf.Clamp(Mathf.CeilToInt(length / LaneIgniteEvery), 1, 12);
+            int want = Mathf.Min(steps, Mathf.FloorToInt(age / LaneIgniteStep) + 1);
+            Vector3 side = new Vector3(dir.z, 0f, -dir.x);
+            Color32 accent = Fx.HeroAccent(HeroId.Blast), main = Fx.HeroMain(HeroId.Blast);
+            for (; laneLit < want; laneLit++)
+            {
+                Vector3 p = center + dir * (length * (laneLit + 0.5f) / steps) + side * ((Random.value * 2f - 1f) * radius * 0.3f);
+                bool last = laneLit == steps - 1;
+                Fx.Pic("tx_fx_blast_explosion", p + Vector3.up * 0.4f, Color.white, (last ? 1.9f : 1.4f) * Mathf.Max(1f, radius * 2f), last ? 0.45f : 0.35f);
+                Fx.Embers(p + Vector3.up * 0.2f, last ? 6 : 3, accent, 0.11f, 1.8f, 0.8f, 1.8f, radius * 0.4f);
+                Fx.Flames(p + Vector3.up * 0.1f, 2, main, 0.5f, 0.6f, 0.45f, 1.5f, radius * 0.3f);
+                if (laneLit == 0 || last) Fx.ImpactRing(p, radius * (last ? 2.2f : 1.4f), new Color(1f, 0.55f, 0.15f, 0.9f), 0.3f);
+            }
+        }
+
         void MakeLaneFire()
         {
             laneFire = new GameObject("Inferno");
@@ -602,8 +628,12 @@ namespace BAM.Art
                 int n = Mathf.Max(4, Mathf.RoundToInt(length * 1.6f));
                 Vector3 side = new Vector3(dir.z, 0f, -dir.x);
                 for (int i = 0; i < n; i++)
-                    Fx.Sparks(center + dir * ((i + Random.value) / n * length) + side * ((Random.value * 2f - 1f) * radius * 0.8f) + Vector3.up * 0.15f,
-                        1, new Color32(255, 217, 115, 255), 0.15f, 0.3f, 0.4f, 1.85f);
+                    Fx.Embers(center + dir * ((i + Random.value) / n * length) + side * ((Random.value * 2f - 1f) * radius * 0.8f) + Vector3.up * 0.15f,
+                        1, new Color32(255, 217, 115, 255), 0.15f, 0.3f, 0.6f, 1.85f);
+                // and a few of his fireballs flare up along it on every burn
+                for (int i = 0; i < 2; i++)
+                    Fx.Pic("tx_fx_blast_explosion", center + dir * (Random.Range(0.15f, 0.95f) * length) + side * ((Random.value * 2f - 1f) * radius * 0.5f) + Vector3.up * 0.35f,
+                        new Color(1f, 1f, 1f, 0.9f), 1.0f, 0.3f);
             }
             if (age < tick) { if (laneFire.activeSelf) laneFire.SetActive(false); return; }
             if (!laneFire.activeSelf) laneFire.SetActive(true);
