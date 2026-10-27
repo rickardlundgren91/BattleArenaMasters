@@ -103,7 +103,21 @@ namespace BAM.Audio
             float d = Mathf.Sqrt(dx * dx + dz * dz);
             float t = Mathf.Clamp01((d - NearDist) / (FarDist - NearDist));
             float att = Mathf.Lerp(1f, FarFloor, t * t * (3f - 2f * t));
+            if (Ducked) att *= DuckLevel;
             Start(id, volume * att, 1f, Mathf.Clamp(dx / PanDist, -1f, 1f) * PanMax);
+        }
+
+        // Speltest's sound mix v2 (Sound.cs DuckNow): on the player's kill or special the music and the world's other sounds
+        // dip for a moment, so its own moment is the one heard
+        const float DuckLevel = 0.5f, DuckDown = 0.08f, DuckUp = 0.4f;
+        static float duckUntil, duckGain = 1f;
+        static bool Ducked => Time.unscaledTime < duckUntil;
+
+        /// <summary>Dips the music and the sounds played with PlayAt to half for the given seconds.</summary>
+        public static void Duck(float seconds)
+        {
+            if (!Ready) return;
+            duckUntil = Mathf.Max(duckUntil, Time.unscaledTime + seconds);
         }
 
         /// <summary>The game layer moves the listener point with the camera's focus every frame.</summary>
@@ -282,8 +296,9 @@ namespace BAM.Audio
                 bool on = musicWant != MusicId.None && musicWant == musicLoaded && musicMaster > 0f;
                 float dt = Time.unscaledDeltaTime;
                 musicGain = on ? Mathf.Min(1f, musicGain + dt / MusicFadeIn) : Mathf.Max(0f, musicGain - dt / MusicFadeOut);
+                duckGain = Ducked ? Mathf.Max(DuckLevel, duckGain - dt * (1f - DuckLevel) / DuckDown) : Mathf.Min(1f, duckGain + dt * (1f - DuckLevel) / DuckUp);
                 // squared: the fade sounds even to the ear; the switch only picks the direction, so turning Music off fades it out too
-                music.volume = musicGain * musicGain * MusicLevel * MusicVolume;
+                music.volume = musicGain * musicGain * MusicLevel * MusicVolume * duckGain;
                 if (on) Resume();
                 else if (musicGain <= 0f && music.isPlaying) { music.Pause(); musicPaused = true; }
             }

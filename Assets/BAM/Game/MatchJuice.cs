@@ -48,7 +48,7 @@ namespace BAM.Game
             }
         }
 
-        static bool Heavy(HeroId h) => h == HeroId.Knut || h == HeroId.Blast || h == HeroId.Bonk;
+        internal static bool Heavy(HeroId h) => h == HeroId.Knut || h == HeroId.Blast || h == HeroId.Bonk;
 
         static float Dist(Unit a, Unit b) => Mathf.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
 

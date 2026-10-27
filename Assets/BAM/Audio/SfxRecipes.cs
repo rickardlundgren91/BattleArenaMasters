@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.BonkStun + 1;
+        public const int Count = (int)SfxId.Emote + 1;
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)
@@ -90,6 +90,17 @@ namespace BAM.Audio
                 case SfxId.BonkBoulderThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);
                 case SfxId.BonkKnock: return new SfxInfo(0.8f, 2, 0.1f, 3, 0.05f);
                 case SfxId.BonkStun: return new SfxInfo(0.75f, 1, 0.5f, 3, 0f); // one at a time, however many he stuns
+                // gaps as Speltest's Sound.cs GAP: a volley through four minions ticks once, the tower alarm at most every 8 s
+                case SfxId.HitConfirmLight: return new SfxInfo(0.6f, 2, 0.08f, 4, 0.06f);
+                case SfxId.HitConfirmHeavy: return new SfxInfo(0.7f, 2, 0.1f, 4, 0.06f);
+                case SfxId.LastHit: return new SfxInfo(0.55f, 2, 0.08f, 2, 0.04f);
+                case SfxId.MultiKill: return new SfxInfo(0.8f, 1, 0.5f, 5, 0f);
+                case SfxId.TowerHot: return new SfxInfo(0.8f, 1, 0.6f, 4, 0.03f);
+                case SfxId.TowerUnderAttack: return new SfxInfo(0.65f, 1, 8f, 4, 0f);
+                case SfxId.BramAnvil: return new SfxInfo(0.9f, 2, 0.15f, 3, 0.04f);
+                case SfxId.MoaHoney: return new SfxInfo(0.7f, 2, 0.15f, 3, 0.03f);
+                case SfxId.SpellBlink: case SfxId.SpellRecall: case SfxId.SpellShield: return new SfxInfo(0.75f, 2, 0.2f, 3, 0.02f);
+                case SfxId.Emote: return new SfxInfo(0.55f, 2, 0.5f, 2, 0f);
                 default: return new SfxInfo(0.6f, 1, 0.05f, 1, 0f);
             }
         }

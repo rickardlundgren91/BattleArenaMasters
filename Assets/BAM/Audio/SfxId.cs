@@ -23,5 +23,10 @@ namespace BAM.Audio
         // Bonk, hero 8 (2026-10-26): his club swing, Ground Slam's wind-up and landing, Boulder Toss and its knockback
         AttackBonk, BonkSlamWindup, BonkSlam, BonkBoulderThrow, BonkKnock,
         BonkStun, // Ground Slam stuns a hero (Rickard's clip 2026-10-26)
+        // match feel 2026-10-27, Rickard's own Speltest clips as Speltest plays them (HeroJuice.cs, Sound.cs sound mix v2): the player's
+        // hit landing on an enemy hero, its last hit on a minion, a multi kill, the tower ramping up on you, its own tower under attack
+        // far away, Bram's Anvil Strike, Moa's shield taking hold, three battle spells and an emote
+        HitConfirmLight, HitConfirmHeavy, LastHit, MultiKill, TowerHot, TowerUnderAttack, BramAnvil, MoaHoney,
+        SpellBlink, SpellRecall, SpellShield, Emote,
     }
 }

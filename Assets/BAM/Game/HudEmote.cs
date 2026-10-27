@@ -46,6 +46,7 @@ namespace BAM.Game
         // per hero (by its place in m.Heroes): when its emote started (match time) and which one; NaN = none
         readonly float[] emoteAt = new float[8];
         readonly int[] emoteKind = new int[8];
+        readonly float[] emoteHeard = new float[8];
         float emoteLast = -1e9f, heldAt;
         bool holding;
         int wheelPick = -1;
@@ -119,7 +120,6 @@ namespace BAM.Game
             if (me < 0 || me >= emoteAt.Length) return;
             emoteLast = Time.unscaledTime;
             emoteAt[me] = m.Time; emoteKind[me] = kind;
-            BamAudio.Play(SfxId.UiTap);
             // a bot answers with a heart now and then, as in the old offline game
             int n = 0;
             for (int i = 0; i < m.Heroes.Count && i < emoteAt.Length; i++) if (BotCanEmote(i)) n++;
@@ -248,6 +248,8 @@ namespace BAM.Game
                             && (emoteKind[i] <= 1 || u.Team == m.Player.Team) && views.BarOf(u, out bar, out _);
                 if (mk.Root.gameObject.activeSelf != show) mk.Root.gameObject.SetActive(show);
                 if (!show) continue;
+                // each emote pops with Speltest's emote sound once, also a bot's answer (Sound.cs "emote")
+                if (emoteHeard[i] != emoteAt[i]) { emoteHeard[i] = emoteAt[i]; BamAudio.Play(SfxId.Emote, 0.8f); }
                 Vector3 sp = cam.Camera.WorldToScreenPoint(bar);
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, sp, null, out Vector2 at);
                 float size = ts * 1.05f;

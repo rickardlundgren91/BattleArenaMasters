@@ -103,6 +103,12 @@ namespace BAM.Game
         int step;
         int lastWave;
         bool playerWasReady, playerInGrass, playerLow;
+        // the match-feel sounds (Speltest HeroJuice.cs, Sound.cs sound mix v2): each hero's last kill for Double/Triple Kill, the
+        // shots in a row a tower has put on the player, and the player's own tower's health while the player is far from it
+        readonly Dictionary<int, float> killAt = new Dictionary<int, float>();
+        readonly Dictionary<int, int> killRun = new Dictionary<int, int>();
+        int towerRunSerial = -1, towerRun;
+        float towerRunAt = -99f, ownTowerHp = -1f;
         GameObject arena;
         bool bridgeShown;
 
@@ -446,7 +452,14 @@ namespace BAM.Game
                     // Bonk's club has no shot: it lands e.V s later as an Explosion of ProjKind.BonkClub (cracks and dust)
                     if ((ProjKind)e.Kind == ProjKind.BonkClub) { Sound(SfxId.BonkSlamWindup, a, e.Big ? 0.8f : 0.55f); break; }
                     pending.Add(new Pending { A = a.Serial, Src = a, Tgt = e.B, Kind = (ProjKind)e.Kind });
-                    // a tower's shot is heard only when it aims at you (Speltest)
+                    // a tower's shot is heard only when it aims at you (Speltest), sharper from its third shot in a row on you, as its
+                    // damage ramps up (Speltest towerHot at towerStreak 2; the rules' TowerRamp resets after TowerRampReset)
+                    if (a.Kind == UnitKind.Tower && e.B == m.Player)
+                    {
+                        if (a.Serial == towerRunSerial && m.Time - towerRunAt < Rules.TowerRampReset) towerRun++; else towerRun = 0;
+                        towerRunSerial = a.Serial; towerRunAt = m.Time;
+                        if (towerRun >= 2) { Sound(SfxId.TowerHot, a, 0.9f); break; }
+                    }
                     if (a.Kind != UnitKind.Tower || e.B == m.Player) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
                     break;
                 }
@@ -473,6 +486,11 @@ namespace BAM.Game
                         : SfxId.None;
                     // Rickard 2026-10-26: minions fight silently; only heroes, the wolf and towers make combat sounds
                     if (id != SfxId.None && (e.A == null || e.A.Kind != UnitKind.Minion)) BamAudio.PlayAt(id, at, b != null && b.Kind == UnitKind.Minion ? 0.5f : 0.8f);
+                    // someone else's Tyra bolt or Tikta needles landing on a hero you can see (Speltest tyrapierce, tiktasting); the
+                    // player's own already sound in HitConfirm
+                    if ((kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial) && b != null && b.IsRealHero && e.A != null
+                        && e.A != m.Player && m.IsVisibleTo(b, Mine))
+                        BamAudio.PlayAt(kind == ProjKind.TyraBolt ? SfxId.HitConfirmHeavy : SfxId.HitConfirmLight, at, 0.75f);
                     break;
                 }
                 case EventType.Blocked:
@@ -482,6 +500,7 @@ namespace BAM.Game
                     // special and passive damage without a shot of its own (zones, splashes) still flinches the target; a burn or
                     // poison tick does not (2 to 4 a second looked like flicker, Rickard 2026-10-26)
                     if (e.Dmg != DmgKind.Auto && e.V > 0f && e.B != null && !tickNow) V(e.B)?.PlayHit(e.Dmg == DmgKind.Special);
+                    if (!tickNow) HitConfirm(e);
                     break;
                 case EventType.Death:
                 {
@@ -492,10 +511,15 @@ namespace BAM.Game
                     if (b.Kind == UnitKind.Hero)
                     {
                         bool myKill = b.Team != m.Player.Team && b.IsRealHero && e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
+                        if (myKill) BamAudio.Duck(1f); // the rest of the world steps back for the player's kill (Speltest sound mix v2)
                         if (b == m.Player) BamAudio.Play(SfxId.HeroDeath);
                         else if (myKill) BamAudio.Play(SfxId.HeroDeath); // the kill confirm: loud, not by distance (Brawl Stars idea 5); no extra chime (Speltest sound mix v2)
                         else BamAudio.PlayAt(b.Team == Mine ? SfxId.AllyDeath : SfxId.HeroDeath, Coords.Of(b));
+                        if (b.IsRealHero) MultiKill(e);
                     }
+                    // the player's last hit on a minion: a small coin chime (Speltest sound mix v2); others' minion kills stay silent
+                    else if (b.Kind == UnitKind.Minion && b.Team != Mine && e.A != null && (e.A == m.Player || e.A.Owner == m.Player))
+                        BamAudio.Play(SfxId.LastHit, 0.6f);
                     break;
                 }
                 case EventType.Respawn:
@@ -518,6 +542,7 @@ namespace BAM.Game
                     if (a == null || !m.IsVisibleTo(a, Mine)) break;
                     V(a)?.PlayCast();
                     ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, Side(a.Team), e.Kind);
+                    if (a == m.Player) BamAudio.Duck(0.8f);
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
                     // Blast's tap bomb is a ground fuse in the rules; draw the lob onto it so the throw is seen
                     if ((HeroId)e.Kind == HeroId.Blast && !e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
@@ -534,6 +559,7 @@ namespace BAM.Game
                     if (e.A != null)
                     {
                         ArtKit.PlayFx(FxKind.TowerDestroyed, Coords.Of(e.A), 1f, Side(e.A.Team));
+                        BamAudio.Duck(1.5f);
                         BamAudio.PlayAt(SfxId.TowerDestroyed, Coords.Of(e.A));
                         if (unitBySerial.TryGetValue(e.A.Serial, out UnitRec r) && !r.Dead) { r.Dead = true; r.V.SetDead(true); }
                     }
@@ -555,6 +581,8 @@ namespace BAM.Game
                     break;
                 case EventType.Shield:
                     if (e.Big && e.B != null) BamAudio.PlayAt(SfxId.MoaShield, Coords.Of(e.B));
+                    // her special's shield taking hold on an ally (Speltest "moashield": honey)
+                    else if (e.B != null && m.IsVisibleTo(e.B, Mine)) BamAudio.PlayAt(SfxId.MoaHoney, Coords.Of(e.B), 0.75f);
                     break;
                 case EventType.Explosion:
                 {
@@ -569,7 +597,7 @@ namespace BAM.Game
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
-                        : pk == ProjKind.BramHammer ? SfxId.BramHammerBounce : SfxId.None;
+                        : pk == ProjKind.BramHammer ? SfxId.BramAnvil : SfxId.None; // Bram's Anvil Strike: Speltest's anvil (bramsmash)
                     if (boom != SfxId.None) BamAudio.PlayAt(boom, at);
                     break;
                 }
@@ -596,13 +624,18 @@ namespace BAM.Game
                 // battle spells (the art's port of View3DSpellLooks.cs): a blink from where it started, the others on the caster
                 case EventType.SpellCast:
                     if (e.A != null && m.IsVisibleTo(e.A, Mine))
+                    {
                         ArtKit.PlaySpell((SpellId)e.Kind, Coords.World(e.X, e.Y), Coords.Of(e.A));
+                        var sp = (SpellId)e.Kind;
+                        Sound(sp == SpellId.Blink ? SfxId.SpellBlink : sp == SpellId.Shield ? SfxId.SpellShield : SfxId.None, e.A, 0.8f);
+                    }
                     break;
                 case EventType.SpellCancel:
                     if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlaySpellCancel(Coords.Of(e.A));
                     break;
                 case EventType.Recall:
                     if (e.A != null) ArtKit.PlayRecall(Coords.World(e.X, e.Y), Coords.World(e.A.SpawnX, e.A.SpawnY));
+                    if (e.A == m.Player) BamAudio.Play(SfxId.SpellRecall, 0.8f); // the beam home (Speltest's teleport)
                     break;
             }
         }
@@ -613,6 +646,37 @@ namespace BAM.Game
             Init(s, null, 0, kind, src.Team, src.Serial);
             shots.Add(s);
             StartGhost(s, DrawnAt(src), to, flight, 0f);
+        }
+
+        // Speltest HeroJuice.cs hit confirm: the player's hit (or its wolf's) landing on an enemy hero gives a short tick, a dull thud for
+        // the heavy heroes and a bright one 6 dB lower for the light ones, louder the bigger the hit. No buzz: Rickard 2026-10-26 keeps
+        // vibration for the big moments (MatchJuice). Burn and poison ticks never tick.
+        void HitConfirm(in SimEvent e)
+        {
+            var b = e.B; var p = m.Player;
+            if (b == null || p == null || e.A == null || e.V < 1f || !b.IsRealHero || b.Team == p.Team) return;
+            if (e.A != p && e.A.Owner != p) return;
+            if (!m.IsVisibleTo(b, Mine)) return;
+            float f = e.V / Mathf.Max(1f, b.MaxHp);
+            bool heavy = MatchJuice.Heavy(p.Hero);
+            BamAudio.Play(heavy ? SfxId.HitConfirmHeavy : SfxId.HitConfirmLight, (0.55f + Mathf.Min(0.35f, f * 2f)) * (heavy ? 1f : 0.5f));
+        }
+
+        // the old game's kill tags (ABC2 Sim.cs onDeath): a second kill within 8 s is a Double Kill, a third a Triple, the third kill
+        // without dying a Killing Spree, the last enemy down an Ace; a tag for the player's team plays Speltest's streak sound
+        void MultiKill(in SimEvent e)
+        {
+            var k = e.A; var b = e.B;
+            if (k == null || k.Kind != UnitKind.Hero || k.Team == b.Team) return;
+            bool tag = false;
+            if (killAt.TryGetValue(k.Serial, out float t) && m.Time - t < 8f) { killRun[k.Serial] = killRun[k.Serial] + 1; tag = true; }
+            else killRun[k.Serial] = 1;
+            killAt[k.Serial] = m.Time;
+            if (e.V == 3f) tag = true;
+            bool ace = true;
+            for (int i = 0; i < m.Heroes.Count; i++) { var h = m.Heroes[i]; if (h != b && h.IsRealHero && h.Team == b.Team && h.Alive) { ace = false; break; } }
+            if (ace) tag = true;
+            if (tag && k.Team == Mine) BamAudio.Play(SfxId.MultiKill, 0.9f);
         }
 
         void Sound(SfxId id, Unit a, float volume)
@@ -664,6 +728,16 @@ namespace BAM.Game
             if (low && !playerLow) BamAudio.Play(SfxId.LowHealth);
             playerLow = low;
             if (m.WaveN != lastWave) { lastWave = m.WaveN; BamAudio.Play(SfxId.WaveSpawn, 0.5f); }
+            // the player's own tower losing health while the player is more than 8 tiles from it (Speltest towerHit; at most every 8 s)
+            for (int i = 0; i < m.Units.Count; i++)
+            {
+                var t = m.Units[i];
+                if (t.Kind != UnitKind.Tower || t.Team != Mine || !t.Alive) continue;
+                float dx = t.X - p.X, dy = t.Y - p.Y;
+                if (ownTowerHp >= 0f && t.Hp < ownTowerHp && dx * dx + dy * dy > 64f && !Island) BamAudio.Play(SfxId.TowerUnderAttack, 0.6f);
+                ownTowerHp = t.Hp;
+                break;
+            }
         }
 
         // ---------------------------------------------------------------- every frame
