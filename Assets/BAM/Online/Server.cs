@@ -22,7 +22,7 @@ namespace BAM.Online
         /// <summary>The player's name and totals as the server has them.</summary>
         internal static async Task Refresh()
         {
-            var me = await Call<MeAnswer>("GetMe", null);
+            var me = await Call<MeAnswer>("GetMe", null, "totals");
             Account.Name = string.IsNullOrEmpty(me.name) ? null : me.name;
             Progress.ServerAnswered(me.totals, null);
         }
@@ -40,7 +40,7 @@ namespace BAM.Online
                 {
                     int n = Math.Min(SendBatch, list.Count);
                     var batch = list.GetRange(0, n);
-                    var ans = await Call<ReportAnswer>("ReportMatch", new Dictionary<string, object> { { "matches", batch } });
+                    var ans = await Call<ReportAnswer>("ReportMatch", new Dictionary<string, object> { { "matches", batch } }, "done");
                     var done = new HashSet<string>(ans.done ?? new List<string>());
                     Progress.ServerAnswered(ans.totals, done);
                     if (done.Count == 0) break;   // nothing taken: try again later instead of looping
@@ -63,7 +63,7 @@ namespace BAM.Online
             if (local != null) return new NameAnswer { ok = false, reason = local };
             try
             {
-                var a = await Call<NameAnswer>("SetName", new Dictionary<string, object> { { "name", NameRules.Clean(wanted) } });
+                var a = await Call<NameAnswer>("SetName", new Dictionary<string, object> { { "name", NameRules.Clean(wanted) } }, "ok");
                 if (a.ok)
                 {
                     Account.NameChosen(a.name);
@@ -81,7 +81,7 @@ namespace BAM.Online
         /// <summary>Another player's public profile, or null.</summary>
         public static async Task<PublicProfile> GetProfile(string playerId)
         {
-            try { return await Call<PublicProfile>("GetProfile", new Dictionary<string, object> { { "playerId", playerId } }); }
+            try { return await Call<PublicProfile>("GetProfile", new Dictionary<string, object> { { "playerId", playerId } }, "playerId"); }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] profile: " + e.Message); return null; }
         }
 
@@ -90,7 +90,7 @@ namespace BAM.Online
         {
             try
             {
-                var a = await Call<FindAnswer>("FindPlayer", new Dictionary<string, object> { { "name", NameRules.Clean(name) } });
+                var a = await Call<FindAnswer>("FindPlayer", new Dictionary<string, object> { { "name", NameRules.Clean(name) } }, "playerId");
                 return string.IsNullOrEmpty(a.playerId) ? null : a.playerId;
             }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] find: " + e.Message); return null; }
@@ -101,24 +101,37 @@ namespace BAM.Online
         {
             try
             {
-                var a = await Call<OkAnswer>("ReportPlayer", new Dictionary<string, object> { { "target", playerId }, { "reason", reason ?? "" } });
+                var a = await Call<OkAnswer>("ReportPlayer", new Dictionary<string, object> { { "target", playerId }, { "reason", reason ?? "" } }, "ok");
                 return a.ok;
             }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] report: " + e.Message); return false; }
         }
 
-        internal static Task DeleteMe() => Call<OkAnswer>("DeleteMe", null);
+        internal static Task DeleteMe() => Call<OkAnswer>("DeleteMe", null, "ok");
 
-        static Task<T> Call<T>(string script, Dictionary<string, object> args)
-            => CloudCodeService.Instance.CallEndpointAsync<T>(script, args ?? new Dictionary<string, object>());
+        // The answer is read with JsonUtility, which skips fields it does not know. Cloud Code's own reader stops at any unknown field,
+        // so a script on the Dashboard that is not BAM's (the "roll" dice example Unity fills a new script with) failed with
+        // "Could not find member 'roll' on object of type 'MeAnswer'" (Rickard's phone, 2026-10-27). Such a script is now named
+        // in the error instead: the answer must hold the field we need (need).
+        static async Task<T> Call<T>(string script, Dictionary<string, object> args, string need)
+        {
+            string json = await CloudCodeService.Instance.CallEndpointAsync(script, args ?? new Dictionary<string, object>());
+            json = json ?? "";
+            if (need != null && json.IndexOf("\"" + need + "\"", StringComparison.Ordinal) < 0)
+            {
+                Debug.LogWarning("[BAM.Online] Cloud Code " + script + " answered " + json);
+                throw new Exception("the server script " + script + " is not BAM's. Paste Assets/BAM/Online/Cloud/Scripts/" + script + ".js on the Unity Dashboard");
+            }
+            return JsonUtility.FromJson<T>(json);
+        }
 
-        [Preserve] class MeAnswer { public string name; public Totals totals; }
-        [Preserve] class ReportAnswer { public Totals totals; public List<string> done; }
-        [Preserve] class FindAnswer { public string playerId; }
-        [Preserve] class OkAnswer { public bool ok; }
+        [Serializable, Preserve] class MeAnswer { public string name; public Totals totals; }
+        [Serializable, Preserve] class ReportAnswer { public Totals totals; public List<string> done; }
+        [Serializable, Preserve] class FindAnswer { public string playerId; }
+        [Serializable, Preserve] class OkAnswer { public bool ok; }
     }
 
-    [Preserve]
+    [Serializable, Preserve]
     public class NameAnswer
     {
         public bool ok;
@@ -126,7 +139,7 @@ namespace BAM.Online
     }
 
     /// <summary>What anyone can see about a player (GetProfile.js). Built by the server from its own totals.</summary>
-    [Preserve]
+    [Serializable, Preserve]
     public class PublicProfile
     {
         public string playerId, name;
