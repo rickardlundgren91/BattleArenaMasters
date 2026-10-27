@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Privacy Policy · Battle Arena Masters</title>
-<meta name="description" content="Privacy Policy for Battle Arena Masters: an offline game that only sends usage data if you say yes, and how to turn it off or have it deleted.">
+<meta name="description" content="Privacy Policy for Battle Arena Masters: what the optional online account stores, what other players see, optional usage data, and how to delete your account.">
 <meta name="theme-color" content="#10161a">
 <link rel="icon" href="assets/icon.png">
 <style>
@@ -49,17 +49,19 @@ footer a{font-weight:800;color:var(--text);text-decoration:none;display:inline-f
 
 <main class="inner">
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated: 26 October 2026</p>
+<p class="meta">Last updated: 27 October 2026</p>
 <p>Battle Arena Masters ("BAM", "the game") is a mobile game made by <strong>BAM Games</strong> (Rickard Lundgren, Sweden; "we", "us"), who is responsible for the data described here. Questions about this policy or your data: <strong>support@battlearenamasters.com</strong>.</p>
 <h2>1. The short version</h2>
 <ul>
-  <li>BAM is an offline game. You play against computer-controlled bots. There are no accounts, no chat, no ads and no in-app purchases.</li>
-  <li>Your settings are stored only on your phone.</li>
-  <li>The only data that ever leaves your phone is <strong>optional usage data</strong> (it never includes your name or contact details), and only if you tap <strong>"Yes, share"</strong> when the game asks, or turn on <strong>Settings &gt; Share usage data</strong>. If you say no, the game sends nothing.</li>
-  <li>You can turn it off at any time. Turning it off stops sharing at once and asks our analytics provider to delete what was already sent.</li>
+  <li>You can play against computer-controlled bots without signing in. Then your settings stay on your phone and the game sends nothing, except optional usage data if you allow it.</li>
+  <li><strong>Online play is optional.</strong> If you sign in with <strong>Google Play Games</strong>, you get a player account with a player name you choose, a level, a Rating, match stats, a place on the Top 100 and a friends list, and you can play with and against other players. To run this, our game server stores your account, your player name and the results of your matches (section 4).</li>
+  <li>Your player name, level, Rating, match stats and most played heroes are <strong>public</strong> to other players of BAM. While you are online, other signed-in players can see that you are online and what you are doing (for example "In a match").</li>
+  <li>There is <strong>no chat</strong>, no ads and no in-app purchases.</li>
+  <li>You can <strong>delete your account and its data</strong> in the game at any time: <strong>Settings &gt; Account &gt; Delete account</strong>. How to do it without the game: <a href="https://battlearenamasters.com/delete-account">https://battlearenamasters.com/delete-account</a></li>
+  <li><strong>Optional usage data</strong> is sent only if you tap <strong>"Yes, share"</strong> when the game asks, or turn on <strong>Settings &gt; Share usage data</strong>. You can turn it off at any time.</li>
 </ul>
 <h2>2. Data stored only on your device</h2>
-<p>The game saves your settings on your phone: sound volume, graphics quality, left-handed controls, your answer to the usage data question, whether you finished the tutorial, and the hero and difficulty you picked last. This data is never sent to us or anyone else. It is removed when you uninstall the game or clear its data in Android settings.</p>
+<p>The game saves your settings on your phone: sound volume, graphics quality, left-handed controls, your answer to the usage data question, whether you finished the tutorial, and the hero and difficulty you picked last. It also keeps results of finished matches that have not reached our server yet. This data is removed when you uninstall the game or clear its data in Android settings.</p>
 <h2>3. Optional usage data (only with your consent)</h2>
 <p>If you allow it, the game uses <strong>Unity Analytics</strong>, a service from Unity Technologies, to send the following:</p>
 <p><strong>Game events we record</strong></p>
@@ -75,34 +77,55 @@ footer a{font-weight:800;color:var(--text);text-decoration:none;display:inline-f
   <li>Technical information about your device and the game: device model, Android version, language and region settings, screen size, game version and similar app performance information.</li>
   <li>Your IP address, which Unity uses to estimate your approximate location (country and region). Your precise location is never collected.</li>
 </ul>
-<p>The installation ID links these events together, so under the GDPR this counts as personal data even though it does not tell us who you are. We do <strong>not</strong> collect your name, email address, contacts, photos, precise location, messages or payment information, and we do not use the advertising ID.</p>
-<h2>4. Why we use it</h2>
+<p>The installation ID links these events together, so under the GDPR this counts as personal data even though it does not tell us who you are. We do not use usage data to identify you.</p>
+<h2>4. Online play (only if you sign in)</h2>
+<p>If you choose to sign in with Google Play Games, the game uses <strong>Google Play Games Services</strong> (from Google) to sign you in, and <strong>Unity Gaming Services</strong> (from Unity Technologies: Authentication, Cloud Code, Cloud Save, Leaderboards, Friends, Lobby and Relay) as our game server.</p>
+<p><strong>What is stored</strong></p>
+<ul>
+  <li><strong>Account IDs:</strong> a player ID created by Unity, linked to your Google Play Games player ID. We do not receive your email address or your Google password. Your Google Play Games name is only shown on your phone as a suggestion for your player name and is not stored by us.</li>
+  <li><strong>Your player name:</strong> the name you choose. It is unique and public.</li>
+  <li><strong>Match results:</strong> for each finished match: win or loss, how long it lasted, kills, deaths, the hero, the difficulty and when it ended. The server uses them to count your level, XP, Rating, totals and most played heroes, and to reject impossible results (cheating).</li>
+  <li><strong>Friends:</strong> your friends, the friend requests you send and receive, and the players you block.</li>
+  <li><strong>Reports:</strong> if you report a player, we store your player ID, theirs, the reason you picked (rude name, cheating or something else) and the time. If someone reports you, the same is stored about that report.</li>
+</ul>
+<p><strong>While you are online</strong></p>
+<ul>
+  <li>The game shows other signed-in players that you are online, with your player name, your hero and what you are doing (in the menu, in a room, looking for a match or in a match). This disappears about 30 seconds after you close the game.</li>
+  <li><strong>Invites</strong> you send hold the player IDs of the friends you invite and a room code, and disappear after about a minute.</li>
+  <li><strong>Online matches:</strong> your phone sends your controls (where you move and aim, and when you use your skills) to the other players in the match through Unity Relay. The other players' phones never get your IP address. These match messages are not stored after the match.</li>
+</ul>
+<p><strong>What is public:</strong> your player name, level, Rating, rank, match totals (matches, wins, losses, kills, deaths, time played, best streak) and your three most played heroes. Anyone who plays BAM online can see them on the Top 100 or on your profile. Reports and blocks are never shown to other players.</p>
+<p><strong>Legal basis (EU/EEA and UK):</strong> to give you the online play you asked for (GDPR Article 6(1)(b)), and our legitimate interest in fair play and in handling reports of abuse (Article 6(1)(f)).</p>
+<p><strong>How long:</strong> as long as your account exists. When you delete your account, your player name, totals, match history, friends and your place on the Top 100 are deleted. Reports you sent about other players may be kept for up to 12 months so that repeated abuse can be handled.</p>
+<p><strong>Delete your account:</strong> Settings &gt; Account &gt; Delete account (tap twice). This deletes your data on our game server and your Unity player account. It does not delete your Google account. If you cannot open the game, email <a href="mailto:support@battlearenamasters.com">support@battlearenamasters.com</a> with your player name and we will delete it within 30 days. More: <a href="https://battlearenamasters.com/delete-account">https://battlearenamasters.com/delete-account</a></p>
+<h2>5. Why we use usage data</h2>
 <p>Only to understand how the game is played and to make it better: for example, to balance the heroes and difficulty levels, to see where new players get stuck in the tutorial, and to find technical problems on certain devices. We do not use it for advertising, we do not build profiles of you, and we do not sell it.</p>
 <p><strong>Legal basis (EU/EEA and UK):</strong> your consent (GDPR Article 6(1)(a)). You can withdraw it at any time.</p>
-<h2>5. Your choices and rights</h2>
+<h2>6. Your choices and rights</h2>
 <ul>
-  <li><strong>Turn it off:</strong> Settings &gt; Share usage data. Collection stops at once, and the game sends Unity a request to delete the usage data linked to your installation ID.</li>
-  <li><strong>Ask us:</strong> email <a href="mailto:support@battlearenamasters.com">support@battlearenamasters.com</a> to ask about, get a copy of, or delete your data. We do not know who you are, so the quickest way to delete your data is the Settings switch above; we will help you by email if that is not possible.</li>
-  <li><strong>Uninstalling</strong> the game removes everything stored on your phone and stops all sharing.</li>
+  <li><strong>Turn usage data off:</strong> Settings &gt; Share usage data. Collection stops at once, and the game sends Unity a request to delete the usage data linked to your installation ID.</li>
+  <li><strong>Ask us:</strong> email <a href="mailto:support@battlearenamasters.com">support@battlearenamasters.com</a> to ask about, get a copy of, correct or delete your data. For online data, tell us your player name.</li>
+  <li><strong>Delete your account:</strong> Settings &gt; Account &gt; Delete account (section 4).</li>
+  <li><strong>Uninstalling</strong> the game removes everything stored on your phone and stops all sharing. It does not delete your online account, so delete that first if you want it gone.</li>
   <li>If you are in the EU/EEA you can complain to your data protection authority. In Sweden this is Integritetsskyddsmyndigheten (IMY), <a href="https://www.imy.se">www.imy.se</a>.</li>
 </ul>
-<h2>6. Who receives the data</h2>
-<p>Usage data is processed by <strong>Unity Technologies</strong> as our service provider (data processor), under Unity's terms and privacy policy: <a href="https://unity.com/legal/privacy-policy">https://unity.com/legal/privacy-policy</a>. Unity may process the data in countries outside the EU/EEA, including the United States, using legal safeguards such as the European Commission's Standard Contractual Clauses. We do not share or sell the data to anyone else.</p>
-<h2>7. How long we keep it</h2>
-<p>We keep usage data only as long as we need it to improve the game, and Unity stores it according to its own data retention rules. When you turn sharing off or ask us to delete it, a deletion request is sent to Unity.</p>
-<h2>8. Security</h2>
-<p>Usage data is sent over an encrypted connection (HTTPS).</p>
-<h2>9. This website</h2>
+<h2>7. Who receives the data</h2>
+<p>Usage data and the online data in section 4 are processed by <strong>Unity Technologies</strong> as our service provider (data processor), under Unity's terms and privacy policy: <a href="https://unity.com/legal/privacy-policy">https://unity.com/legal/privacy-policy</a>. Signing in with Google Play Games is handled by <strong>Google</strong>, under Google's privacy policy: <a href="https://policies.google.com/privacy">https://policies.google.com/privacy</a>. Unity may process the data in countries outside the EU/EEA, including the United States, using legal safeguards such as the European Commission's Standard Contractual Clauses. Other players see only what section 4 calls public, and your online status while you are online. We do not share or sell the data to anyone else.</p>
+<h2>8. How long we keep it</h2>
+<p>Online data: see section 4. We keep usage data only as long as we need it to improve the game, and Unity stores it according to its own data retention rules. When you turn sharing off or ask us to delete it, a deletion request is sent to Unity.</p>
+<h2>9. Security</h2>
+<p>All data is sent over encrypted connections. Only our game server can change your level, Rating, stats and place on the Top 100; the game on your phone cannot write them.</p>
+<h2>10. This website</h2>
 <ul>
   <li>battlearenamasters.com sets no cookies and has no login, forms or ads.</li>
   <li>It is hosted by Cloudflare. Like any web host, Cloudflare handles your IP address and browser details to deliver the page and protect it from attacks.</li>
   <li>Links to Discord and Google Play take you to those services, where their own privacy rules apply.</li>
 </ul>
-<h2>10. Children</h2>
-<p>BAM is not directed at children under 13, and we do not knowingly collect personal data from children under 13. If you believe a child has shared usage data, email us and we will have it deleted.</p>
-<h2>11. Changes</h2>
+<h2>11. Children</h2>
+<p>BAM is not directed at children under 13, and we do not knowingly collect personal data from children under 13. If you believe a child has shared usage data or made an account, email us and we will have it deleted.</p>
+<h2>12. Changes</h2>
 <p>If we change what the game collects, we will update this policy and the date above before the change reaches the game, and we will ask for your consent again if needed.</p>
-<h2>12. Contact</h2>
+<h2>13. Contact</h2>
 <p>BAM Games (Rickard Lundgren, Sweden) – <a href="mailto:support@battlearenamasters.com">support@battlearenamasters.com</a> – <a href="https://battlearenamasters.com">https://battlearenamasters.com</a></p>
 </main>
 
