@@ -98,6 +98,7 @@ namespace BAM.Game
 
         public void StartMatch(MatchSetup s)
         {
+            SendEnd(true); // a match left for another one (Settings > How to play from Pause) still gets its MatchEnded
             Teardown();
             setup = s;
             Begin(setup.Tutorial);
@@ -117,6 +118,7 @@ namespace BAM.Game
             paused = true;
             hud.CancelTouches();
             BamAudio.StopAll();
+            BAM.Art.ArtKit.SetPaused(true); // effects, zones and shots wait with the match
             Screens.ShowPause();
         }
 
@@ -125,6 +127,7 @@ namespace BAM.Game
             if (!inMatch || !paused) return;
             paused = false;
             acc = 0f;
+            BAM.Art.ArtKit.SetPaused(false);
             Screens.HidePause();
             BamAudio.PlayMusic(MusicId.Match); // Pause silenced it; it goes on where it was
         }
@@ -178,6 +181,7 @@ namespace BAM.Game
             intro.End(cam.Camera);
             views.Dispose();
             views = null;
+            BAM.Art.ArtKit.ClearEffects(); // every effect of the match goes (Bonk's too), and the art pause is lifted
             cam.End();
             match = null;
             BamAudio.StopAll();
@@ -189,7 +193,7 @@ namespace BAM.Game
             if (!inMatch) return;
             var kb = Keyboard.current;
             // Android's back button arrives as Escape: it closes our menus first, else it pauses
-            if (kb != null && kb.escapeKey.wasPressedThisFrame && !Screens.HandleBack()) Pause();
+            if (kb != null && kb.escapeKey.wasPressedThisFrame && !Screens.HandleBack() && (paused || !hud.HandleBack())) Pause();
             if (!inMatch) return; // the back press may have left the match
 
             float dt = Time.deltaTime;
@@ -208,15 +212,20 @@ namespace BAM.Game
                     acc -= Rules.Tick;
                     n++;
                     if (IslandDone()) { SecondHalf(); return; }
-                    if (IsOver()) { over = true; overAt = Time.unscaledTime; acc = 0f; break; }
+                    if (IsOver())
+                    {
+                        over = true; overAt = Time.unscaledTime; acc = 0f;
+                        if (TutorialEnd) TutorialFinished(); // done as the tower falls: leaving its end screen by Pause or a kill still counts
+                        break;
+                    }
                 }
                 if (acc >= Rules.Tick) acc = 0f;
             }
             float alpha = paused || over ? 1f : Mathf.Clamp01(acc / Rules.Tick);
-            views.Frame(alpha, dt);
+            views.Frame(alpha, dt, paused);
             cam.Frame(alpha, dt, over);
             juice.Frame(paused ? 0f : dt);
-            if (intro.Active) intro.Frame(cam.Camera);
+            if (intro.Active) intro.Frame(cam.Camera, paused);
             else juice.Apply(cam.Camera);
             BamAudio.SetListener(cam.Focus);
             hud.Frame(dt, paused || resultShown);
@@ -283,6 +292,12 @@ namespace BAM.Game
         void OnApplicationPause(bool pausedByOs)
         {
             if (pausedByOs) Pause();
+        }
+
+        // Android's notification shade or a system dialog only takes focus (no OnApplicationPause): pause there too
+        void OnApplicationFocus(bool focus)
+        {
+            if (!focus) Pause();
         }
     }
 }

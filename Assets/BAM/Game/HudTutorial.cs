@@ -69,9 +69,16 @@ namespace BAM.Game
             // the old picture grew towards the hero standing on Home's platform (Menu.DrawDissolve's tutLeadZoom)
             dissolve.rectTransform.localScale = Vector3.one * (1f + 0.6f * e);
             if (k < 1f) return;
+            StopDissolve();
+        }
+
+        // also when the match ends mid-fade (Skip in the first 1.6 s): the picture must not freeze over the next match's intro
+        void StopDissolve()
+        {
+            if (dissolve == null || dissolveAt < 0f) return;
             dissolveAt = -1f;
             dissolve.enabled = false;
-            Object.Destroy(dissolve.texture);
+            if (dissolve.texture != null) Object.Destroy(dissolve.texture);
             dissolve.texture = null;
         }
 
@@ -209,11 +216,10 @@ namespace BAM.Game
             g.alpha = Mathf.Clamp01((Time.unscaledTime - at) / 0.2f);
         }
 
-        // Healing shows (Rickard 2026-10-26: "ingen reg syntes"): every rise of Tyra's health in the arena half floats a green
-        // "+N" over her, and in the heal moment a soft green glow breathes round her feet while she is below full.
+        // Healing shows (Rickard 2026-10-26: "ingen reg syntes"): the green "+N" comes from the HUD's heal numbers (OnHeal, as in
+        // every match, so it is not doubled here), and in the heal moment a soft green glow breathes round her feet while she is below full.
         void HealFrame(bool play, Tutorial tu, Unit p)
         {
-            if (play && p.Alive && lastTutHp >= 0f && p.Hp > lastTutHp + 0.5f) FloatWord(p, "+" + Mathf.RoundToInt(p.Hp - lastTutHp), HealGreen);
             lastTutHp = p.Alive ? p.Hp : -1f;
             bool glow = play && p.Alive && tu.Step == Tutorial.StepHeal && p.Hp < p.MaxHp - 0.5f;
             if (healGlow.enabled != glow) { healGlow.enabled = glow; healRing.enabled = glow; }

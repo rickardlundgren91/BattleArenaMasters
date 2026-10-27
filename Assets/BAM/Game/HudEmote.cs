@@ -406,6 +406,11 @@ namespace BAM.Game
         public Action<Vector2> Down, Move, Up;
         int pointer = int.MinValue;
 
+        /// <summary>Forget the finger (no Up): an inactive button never gets its OnPointerUp, so a stale id would block every later press.</summary>
+        public void Release() => pointer = int.MinValue;
+
+        void OnDisable() => pointer = int.MinValue;
+
         public void OnPointerDown(PointerEventData e)
         {
             if (pointer != int.MinValue) return;

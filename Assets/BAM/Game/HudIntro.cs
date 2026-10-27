@@ -71,14 +71,15 @@ namespace BAM.Game
         }
 
         /// <summary>Every frame; true while the intro owns the screen.</summary>
-        bool IntroFrame()
+        bool IntroFrame(bool hidden)
         {
             bool on = Intro != null && Intro.Active;
             ShowIntro(on);
             if (!on) return false;
             var ptr = Pointer.current;
             var kb = Keyboard.current;
-            if ((ptr != null && ptr.press.wasPressedThisFrame) || (kb != null && kb.spaceKey.wasPressedThisFrame)) Intro.Skip();
+            // not while paused: a tap on the pause menu must not skip it behind the menu
+            if (!hidden && ((ptr != null && ptr.press.wasPressedThisFrame) || (kb != null && kb.spaceKey.wasPressedThisFrame))) Intro.Skip();
 
             float u = Intro.Progress, h = canvasRect.rect.height;
             float bar = h * 0.075f * (1f - Mathf.SmoothStep(0f, 1f, u));

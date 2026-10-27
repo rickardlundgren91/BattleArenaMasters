@@ -58,6 +58,7 @@ namespace BAM.Game
             public bool Hit;               // the rules hit with it (MarkHit given)
             public Vector3 From, To;
             public float Age, Flight, Linger;
+            public bool Fresh;             // a ghost started this frame: it starts aging next frame
         }
 
         sealed class ZoneRec
@@ -85,6 +86,7 @@ namespace BAM.Game
         // the attacker and shot kind of every Hit this tick: a shot the rules drop in the same tick landed, so its look plays
         // its splash (ProjectileView.MarkHit); a shot dropped without one fizzles as a miss
         readonly HashSet<int> hitKeys = new HashSet<int>();
+        readonly Dictionary<int, Vector3> hitAt = new Dictionary<int, Vector3>(); // where this tick's hits landed, by HitKey
         static int HitKey(int srcSerial, ProjKind kind) => srcSerial * 64 + (int)kind;
         readonly Stack<ZoneRec> zoneRecPool = new Stack<ZoneRec>(16);
         int step;
@@ -165,7 +167,7 @@ namespace BAM.Game
         {
             step++;
             pending.Clear();
-            hitKeys.Clear();
+            hitKeys.Clear(); hitAt.Clear();
             var ev = m.Events;
             for (int i = 0; i < ev.Count; i++) { tickNow = ev[i].Type == EventType.Damage && IsTick(ev, i); OnEvent(ev[i]); }
             if (!bridgeShown && m.Tut.BridgeOpen) BuildArena();
@@ -261,7 +263,12 @@ namespace BAM.Game
                 if (s.V == null)
                 {
                     // it left the hand and landed inside one tick, so it was never drawn: show the flight now
-                    if (s.LastT + Rules.Tick >= 0f) StartGhost(s, From(s.SrcSerial, s.LastX, s.LastY), Coords.World(s.LastX, s.LastY), 0.1f, s.Melee ? SlashLinger : 0f);
+                    // (its last seen spot is still in the hand, so it flies to where it hit, not shooter to shooter)
+                    if (s.LastT + Rules.Tick >= 0f)
+                    {
+                        Vector3 to = s.Hit && hitAt.TryGetValue(HitKey(s.SrcSerial, s.Kind), out Vector3 ha) ? ha : Coords.World(s.LastX, s.LastY);
+                        StartGhost(s, From(s.SrcSerial, s.LastX, s.LastY), to, 0.1f, s.Melee ? SlashLinger : 0f);
+                    }
                     else { shots.RemoveAt(i); FreeShot(s); } // cancelled in the hand (stun, death): nothing flew
                 }
                 else if (s.Melee) StartGhost(s, s.V.transform.position, s.V.transform.position, 0f, SlashLinger);
@@ -302,8 +309,8 @@ namespace BAM.Game
             Init(s, p, p.Serial, p.Kind, p.Team, p.Src != null ? p.Src.Serial : 0);
             shots.Add(s);
             shotBySerial[p.Serial] = s;
-            // pair it with the AttackStart of this tick, so that attack is not drawn twice
-            if (p.Mode == ProjMode.Auto && p.Src != null)
+            // pair it with the AttackStart of this tick, so that attack is not drawn twice (any mode: Tikta's storm needles too)
+            if (p.Src != null)
                 for (int i = 0; i < pending.Count; i++)
                     if (pending[i].A == p.Src.Serial && pending[i].Kind == p.Kind) { var pd = pending[i]; pd.A = 0; pending[i] = pd; break; }
             return s;
@@ -348,7 +355,7 @@ namespace BAM.Game
 
         void StartGhost(ShotRec s, Vector3 from, Vector3 to, float flight, float linger)
         {
-            s.Ghost = true; s.From = from; s.To = to; s.Flight = flight; s.Linger = linger; s.Age = 0f;
+            s.Ghost = true; s.From = from; s.To = to; s.Flight = flight; s.Linger = linger; s.Age = 0f; s.Fresh = true;
             if (s.V == null)
             {
                 s.V = ArtKit.CreateProjectile(s.Kind, s.Team);
@@ -438,7 +445,7 @@ namespace BAM.Game
                     var kind = (ProjKind)e.Kind;
                     Vector3 at = Coords.World(e.X, e.Y);
                     V(b)?.PlayHit(e.Big);
-                    if (e.A != null) hitKeys.Add(HitKey(e.A.Serial, kind));
+                    if (e.A != null) { int hk = HitKey(e.A.Serial, kind); hitKeys.Add(hk); hitAt[hk] = at; }
                     if (kind == ProjKind.BonkSlam && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f); // the slam stuns
                     // Bram's bounces get their own gold line; Tyra's bolt and Tikta's needles carry the special's look in their own
                     // impact, so they add only the small hit (fx review 2026-10-26, P1-2/P1-3)
@@ -650,7 +657,8 @@ namespace BAM.Game
 
         // ---------------------------------------------------------------- every frame
 
-        public void Frame(float alpha, float dt)
+        /// <summary>paused: the ghost shots wait with the game (the art layer's own shots and zones wait on ArtKit.SetPaused).</summary>
+        public void Frame(float alpha, float dt, bool paused = false)
         {
             for (int i = 0; i < units.Count; i++) DrawUnit(units[i], alpha, dt);
             for (int i = dying.Count - 1; i >= 0; i--)
@@ -667,7 +675,8 @@ namespace BAM.Game
                 var s = shots[i];
                 if (s.Ghost)
                 {
-                    s.Age += dt;
+                    if (!paused && !s.Fresh) s.Age += dt;
+                    s.Fresh = false;
                     float k = s.Flight > 0f ? Mathf.Clamp01(s.Age / s.Flight) : 1f;
                     s.V.transform.position = Vector3.Lerp(s.From, s.To, k);
                     if (s.Age >= s.Flight + s.Linger) { ArtKit.Release(s.V); shots.RemoveAt(i); FreeShot(s); }

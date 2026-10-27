@@ -37,8 +37,20 @@ namespace BAM.Game
         readonly List<HtButtonRec> htPicks = new List<HtButtonRec>();
         bool htList;
 
-        static bool HtOpen { get => PlayerPrefs.GetInt(HtOpenKey, 1) == 1; set { PlayerPrefs.SetInt(HtOpenKey, value ? 1 : 0); PlayerPrefs.Save(); } }
-        static bool HtFastCd { get => PlayerPrefs.GetInt(HtFastKey, 0) == 1; set { PlayerPrefs.SetInt(HtFastKey, value ? 1 : 0); PlayerPrefs.Save(); } }
+        // read from PlayerPrefs once, then kept (the bar asks every frame; on Android each read is a native call)
+        static int htOpenC = -1, htFastC = -1;
+        static bool HtOpen
+        {
+            get { if (htOpenC < 0) htOpenC = PlayerPrefs.GetInt(HtOpenKey, 1); return htOpenC == 1; }
+            set { htOpenC = value ? 1 : 0; PlayerPrefs.SetInt(HtOpenKey, htOpenC); PlayerPrefs.Save(); }
+        }
+        static bool HtFastCd
+        {
+            get { if (htFastC < 0) htFastC = PlayerPrefs.GetInt(HtFastKey, 0); return htFastC == 1; }
+            set { htFastC = value ? 1 : 0; PlayerPrefs.SetInt(HtFastKey, htFastC); PlayerPrefs.Save(); }
+        }
+        HtButtonRec[] htBar;
+        static readonly string[] htLevelText = new string[32];
 
         void BuildHeroTest()
         {
@@ -111,7 +123,8 @@ namespace BAM.Game
             htCatcher.gameObject.SetActive(open && htList);
             htShow.Root.gameObject.SetActive(!open);
             htPanel.gameObject.SetActive(open);
-            foreach (var b in new[] { htPrev, htName, htNext, htLevel, htReset, htCd, htHide, htExit }) b.Root.gameObject.SetActive(open);
+            if (htBar == null) htBar = new[] { htPrev, htName, htNext, htLevel, htReset, htCd, htHide, htExit };
+            foreach (var b in htBar) if (b.Root.gameObject.activeSelf != open) b.Root.gameObject.SetActive(open);
             htListRoot.gameObject.SetActive(open && htList);
             if (!open)
             {
@@ -121,7 +134,8 @@ namespace BAM.Game
 
             string nm = HeroCatalog.Get(m.Player.Hero).Name;
             SetText(htName.Label, nm);
-            SetText(htLevel.Label, "Lv " + m.Config.HeroTestLevel);
+            int lv = m.Config.HeroTestLevel;
+            SetText(htLevel.Label, lv >= 0 && lv < htLevelText.Length ? htLevelText[lv] ?? (htLevelText[lv] = "Lv " + lv) : "Lv " + lv);
             SetText(htCd.Label, m.HeroTestFastCd ? "CD 1s" : "CD off");
             float caret = fs * 0.9f;
             float wName = Mathf.Max(7.5f * fs, TextWidth(htName.Label, fs) + caret + 16f * s);

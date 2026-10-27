@@ -90,6 +90,8 @@ namespace BAM.Game
         {
             topRoot.gameObject.SetActive(!tutorial);
             shownSeconds = shownLevel = shownK0 = shownK1 = shownS0 = shownS1 = -1;
+            // the burn/poison/heal sums hold the last match's units: drop them, or one stray number pops over the new match
+            for (int i = 0; i < tickSums.Length; i++) if (tickSums[i] != null) { tickSums[i].Unit = null; tickSums[i].Sum = 0f; }
             shownClock = false; laidOut = Vector2.zero;
             int[] count = new int[2];
             for (int i = 0; i < portraits.Length; i++) { portraits[i].Unit = null; portraits[i].Root.gameObject.SetActive(false); }

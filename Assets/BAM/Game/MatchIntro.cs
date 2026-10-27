@@ -76,12 +76,13 @@ namespace BAM.Game
             if (ownsProjection && cam != null) { cam.ResetProjectionMatrix(); ownsProjection = false; }
         }
 
-        /// <summary>After MatchCamera.Frame: while the intro plays, it takes the camera over from the match pose.</summary>
-        public void Frame(Camera cam)
+        /// <summary>After MatchCamera.Frame: while the intro plays, it takes the camera over from the match pose; frozen while paused.</summary>
+        public void Frame(Camera cam, bool paused = false)
         {
             if (!active) return;
             if (m.State != MatchState.Countdown) { Finish(cam); return; }
-            float now = Time.unscaledTime, dt = Mathf.Min(0.1f, now - lastNow);
+            // paused: it holds its pose (no clock, no beam-in sound behind the pause menu) and goes on from there on Resume
+            float now = Time.unscaledTime, dt = paused ? 0f : Mathf.Min(0.1f, now - lastNow);
             lastNow = now;
             float left = -m.Time; // never later than the countdown reaching 0
             float speed = skip ? 5f : left > 0.05f ? Mathf.Max(1f, (Total - t) / left) : 50f;

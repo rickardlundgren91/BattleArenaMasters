@@ -26,6 +26,9 @@ namespace BAM.Game
             public RawImage Pic;
             public RectTransform Disc;
             public Text Name, Role, Kda, Secs;
+            // what the row shows now, so its texts and portrait are only rebuilt when they change (no per-frame garbage)
+            public Unit Shown;
+            public int K = -1, D = -1, A = -1, S = -1;
         }
 
         RectTransform scoreRoot;
@@ -68,6 +71,7 @@ namespace BAM.Game
         {
             scoreOpen = scoreAskLeave = false;
             if (scoreRoot != null) scoreRoot.gameObject.SetActive(false);
+            foreach (var row in scoreRows) if (row != null) row.Shown = null; // a new match: every row rebuilds
         }
 
         /// <summary>The glass tool: the score tab in a match, pause in the guided match.</summary>
@@ -91,7 +95,7 @@ namespace BAM.Game
             float W = safe.rect.width, H = safe.rect.height;
             if (new Vector2(W, H) != scoreLaidOut) { scoreLaidOut = new Vector2(W, H); LayoutScore(W, H); }
 
-            int[] used = { 0, 0 };
+            int used0 = 0, used1 = 0;
             for (int i = 0; i < scoreRows.Length; i++) scoreRows[i].Root.gameObject.SetActive(false);
             int n = 0;
             for (int i = 0; i < m.Heroes.Count && n < scoreRows.Length; i++)
@@ -99,21 +103,30 @@ namespace BAM.Game
                 var u = m.Heroes[i];
                 if (!u.IsRealHero) continue;
                 int t = u.Team == m.Player.Team ? 0 : 1;
-                if (used[t] >= 3) continue;
+                int slot = t == 0 ? used0 : used1;
+                if (slot >= 3) continue;
+                if (t == 0) used0++; else used1++;
                 var row = scoreRows[n++];
-                PlaceScoreRow(row, t, used[t]++, W, H);
+                PlaceScoreRow(row, t, slot, W, H);
                 row.Root.gameObject.SetActive(true);
-                var info = HeroCatalog.Get(u.Hero);
-                var tex = Resources.Load<Texture2D>("BAM/Menu/portrait_" + info.Name.ToLowerInvariant());
-                if (row.Pic.texture != tex) row.Pic.texture = tex;
-                row.Back.color = u == m.Player ? RowMine : RowOther;
-                row.Stripe.color = t == 0 ? ScoreBlue : ScoreRed;
-                SetText(row.Name, info.Name);
-                SetText(row.Role, u == m.Player ? "You · " + info.Role : info.Role);
-                SetText(row.Kda, u.Kills + " / " + u.Deaths + " / " + u.Assists);
+                if (row.Shown != u)
+                {
+                    row.Shown = u; row.K = row.D = row.A = row.S = -1;
+                    var info = HeroCatalog.Get(u.Hero);
+                    row.Pic.texture = Resources.Load<Texture2D>("BAM/Menu/portrait_" + info.Name.ToLowerInvariant());
+                    row.Back.color = u == m.Player ? RowMine : RowOther;
+                    row.Stripe.color = t == 0 ? ScoreBlue : ScoreRed;
+                    SetText(row.Name, info.Name);
+                    SetText(row.Role, u == m.Player ? "You · " + info.Role : info.Role);
+                }
+                if (u.Kills != row.K || u.Deaths != row.D || u.Assists != row.A)
+                {
+                    row.K = u.Kills; row.D = u.Deaths; row.A = u.Assists;
+                    SetText(row.Kda, u.Kills + " / " + u.Deaths + " / " + u.Assists);
+                }
                 bool dead = !u.Alive;
                 if (row.Dark.enabled != dead) { row.Dark.enabled = dead; row.Secs.enabled = dead; }
-                if (dead) SetText(row.Secs, Mathf.CeilToInt(Mathf.Max(0f, u.RespawnT)).ToString());
+                if (dead) SetText(row.Secs, Int(Mathf.CeilToInt(Mathf.Max(0f, u.RespawnT))));
             }
 
             scoreExit.gameObject.SetActive(!scoreAskLeave);

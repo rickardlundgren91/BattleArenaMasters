@@ -27,7 +27,8 @@ namespace BAM.Game
             public float EyeA;
         }
 
-        readonly Overhead[] overheads = new Overhead[8];
+        readonly Overhead[] overheads = new Overhead[10];
+        readonly List<Unit> overUnits = new List<Unit>(10);
         RectTransform overRoot;
 
         void BuildOverhead()
@@ -86,10 +87,15 @@ namespace BAM.Game
             // on a wide window, so the marks are sized from the camera, not from the canvas
             float ts = cam.PixelsPerTile * (Screen.width > 1f ? canvasRect.rect.width / Screen.width : 1f);
             float dt = Time.unscaledDeltaTime;
+            // the heroes, then the live Fenn clones (they are not in m.Heroes): an enemy decoy must wear Fenn's name too
+            overUnits.Clear();
+            overUnits.AddRange(m.Heroes);
+            for (int i = 0; i < m.Units.Count && overUnits.Count < overheads.Length; i++)
+                if (m.Units[i].IsClone && m.Units[i].Alive) overUnits.Add(m.Units[i]);
             for (int i = 0; i < overheads.Length; i++)
             {
                 var o = overheads[i];
-                Unit u = i < m.Heroes.Count ? m.Heroes[i] : null;
+                Unit u = i < overUnits.Count ? overUnits[i] : null;
                 Vector3 bar = Vector3.zero; float bw = 0f;
                 bool show = on && u != null && u.Alive && views.BarOf(u, out bar, out bw);
                 if (o.Root.gameObject.activeSelf != show) o.Root.gameObject.SetActive(show);
@@ -101,9 +107,11 @@ namespace BAM.Game
 
                 // the name over every hero (Rickard 2026-10-26 "ha namn över alla spelare", the old game showed only your own):
                 // small with a dark edge just above the bar; "You" in white for the player, the hero's name in a light team colour
-                bool mine = u == m.Player;
+                // a clone wears its owner's name and charged mark; the charge bar stays under the real hero only
+                Unit who = u.IsClone && u.Owner != null ? u.Owner : u;
+                bool mine = who == m.Player;
                 if (!o.Name.gameObject.activeSelf) o.Name.gameObject.SetActive(true);
-                string label = mine ? "You" : HeroCatalog.Get(u.Hero).Name;
+                string label = mine ? "You" : HeroCatalog.Get(who.Hero).Name;
                 if (o.Name.text != label) o.Name.text = label;
                 o.Name.color = mine ? Color.white : u.Team == m.Player.Team ? NameAlly : NameFoe;
                 o.Name.fontSize = Mathf.Max(8, Mathf.RoundToInt(ts * (mine ? 0.27f : 0.23f)));
@@ -129,7 +137,7 @@ namespace BAM.Game
 
                 // another hero whose special is ready (drawCharged): a pulsing diamond by the right end of its bar, red on an
                 // enemy (it can fire now), mint on a teammate (who can follow up); none on the player's own hero
-                bool charged = !mine && u.SpecialReady && !u.IsClone;
+                bool charged = !mine && who.SpecialReady;
                 if (o.Diamond.enabled != charged) o.Diamond.enabled = charged;
                 if (charged)
                 {
@@ -143,9 +151,10 @@ namespace BAM.Game
 
                 // the special's charge under your own hero's bar (Brawl Stars idea 3, Rickard 2026-10-26: a small marker under the
                 // hero that says whether the special is ready): orange filling up, bright and pulsing once it is ready
-                if (o.ChargeBack.enabled != mine) { o.ChargeBack.enabled = mine; o.ChargeFill.enabled = mine; }
+                bool bar0 = u == m.Player;
+                if (o.ChargeBack.enabled != bar0) { o.ChargeBack.enabled = bar0; o.ChargeFill.enabled = bar0; }
                 float under = -ts * 0.12f - 6f;
-                if (mine)
+                if (bar0)
                 {
                     float k = u.Charge01, cw = bw * ts * 0.8f;
                     bool ready = u.SpecialReady;

@@ -46,7 +46,7 @@ namespace BAM.Game
             spellSecs = UiKit.Label(spellRoot, "", 30, TextAnchor.MiddleCenter, Color.white);
             spellSecs.raycastTarget = false;
             UiKit.Stretch(spellSecs.rectTransform, -20f, -20f, -20f, -20f);
-            var touch = spellRoot.gameObject.AddComponent<EmoteButton>(); // down, moves and up in the safe area's coordinates
+            var touch = spellTouch = spellRoot.gameObject.AddComponent<EmoteButton>(); // down, moves and up in the safe area's coordinates
             touch.Down = SpellDown;
             touch.Move = SpellMove;
             touch.Up = SpellUp;
@@ -168,8 +168,11 @@ namespace BAM.Game
             input.SpellK = spellQueuedK;
         }
 
+        EmoteButton spellTouch;
+
         void CancelSpellTouch()
         {
+            if (spellTouch != null) spellTouch.Release();
             spellAiming = false; spellMoved = false; spellOverCancel = false; spellQueued = false;
         }
 
@@ -209,7 +212,7 @@ namespace BAM.Game
             if (spellSecs.enabled != secs) spellSecs.enabled = secs;
             if (secs)
             {
-                SetText(spellSecs, Mathf.CeilToInt(left).ToString());
+                SetText(spellSecs, Int(Mathf.CeilToInt(left)));
                 spellSecs.fontSize = Mathf.RoundToInt(r * 0.62f * 1.35f);
             }
 

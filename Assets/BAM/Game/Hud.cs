@@ -123,10 +123,22 @@ namespace BAM.Game
             marks = null;
             rings.End();
             if (introRoot != null) ShowIntro(false);
+            StopDissolve();
             if (canvas != null) canvas.gameObject.SetActive(false);
             if (hintShown) Screens.HideHint();
             hintShown = false;
             m = null; views = null;
+        }
+
+        /// <summary>Android back inside the HUD: closes the top overlay (the Leave question, the score sheet, the HERO TEST list).
+        /// False when there was none, so the back press pauses as before.</summary>
+        public bool HandleBack()
+        {
+            if (m == null) return false;
+            if (scoreAskLeave) { scoreAskLeave = false; return true; }
+            if (scoreOpen) { CloseScore(); return true; }
+            if (htList) { htList = false; return true; }
+            return false;
         }
 
         public void CancelTouches()
@@ -135,6 +147,8 @@ namespace BAM.Game
             if (special != null) special.Cancel();
             specialQueued = false;
             CancelSpellTouch();
+            if (heartButton != null) heartButton.Release();
+            holding = false; wheelPick = -1;
         }
 
         // ---------------------------------------------------------------- input for one tick
@@ -164,11 +178,13 @@ namespace BAM.Game
             return input;
         }
 
-        void OnTap()
+        void OnTap() => Tap(false);
+
+        void Tap(bool fromKey)
         {
             if (m == null || !m.Player.Alive) return;
-            // after the hold card has shown, letting go only hides it (Rickard 2026-10-26: reading must not cast)
-            if (m.Tut == null && Time.unscaledTime - special.PressedAt >= HoldTime) return;
+            // after the hold card has shown, letting go only hides it (Rickard 2026-10-26: reading must not cast); Space has no hold
+            if (!fromKey && m.Tut == null && Time.unscaledTime - special.PressedAt >= HoldTime) return;
             if (!m.Player.SpecialReady) { Denied("Special not ready"); return; }
             Queue(float.NaN, 0f);
         }
@@ -233,9 +249,9 @@ namespace BAM.Game
             rings.Frame(hidden || (Intro != null && Intro.Active), cssPx / cam.PixelsPerTile);
             OverheadFrame(hidden || (Intro != null && Intro.Active));
             VignetteFrame(hidden || (Intro != null && Intro.Active));
-            if (IntroFrame()) return; // the match intro: its own bars and name tags, no controls
+            if (IntroFrame(hidden)) return; // the match intro: its own bars and name tags, no controls
             var kb = Keyboard.current;
-            if (!hidden && kb != null && kb.spaceKey.wasPressedThisFrame) OnTap();
+            if (!hidden && kb != null && kb.spaceKey.wasPressedThisFrame) Tap(true);
 
             Top(dt);
             Center();
