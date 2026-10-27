@@ -44,6 +44,7 @@ namespace BAM.UI
 
         static void RefreshHome()
         {
+            ClampHero(); // a hero that is locked for this account (HeroLocks.cs)
             var id = (HeroId)BamSettings.LastHero;
             var info = HeroCatalog.Get(id);
             bool shown = homeStage.Show(id);

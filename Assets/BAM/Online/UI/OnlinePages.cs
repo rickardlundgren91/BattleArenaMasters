@@ -150,7 +150,7 @@ namespace BAM.Online.UI
             }
             return y;
         }
-        // the level card: badge, XP bar and how XP is earned (MenuProgress.HubProfileLevel; BAM has no unlocks yet, so no "Next:")
+        // the level card: badge, XP bar and the next hero it opens, or how XP is earned once all are open (MenuProgress.HubProfileLevel)
         static float HubProfileLevel(Totals t, float x, float y, float w)
         {
             float h = cw(21);
@@ -166,7 +166,9 @@ namespace BAM.Online.UI
             float bY = y + cw(9.5f), bH = cw(1.8f);
             ctx.fillStyle = "rgba(255,255,255,0.1)"; ctx.beginPath(); ctx.roundRect(tx, bY, tw, bH, bH / 2); ctx.fill();
             float f = need > 0 ? (float)have / need : 1; if (f > 0) { ctx.fillStyle = HUB_ACCENT; ctx.beginPath(); ctx.roundRect(tx, bY, Math.Max(bH, tw * f), bH, bH / 2); ctx.fill(); }
-            Text("Win " + Progress.XpWin + " XP, lose " + Progress.XpLoss + " XP, first win of the day +" + Progress.XpFirstWin, tx, bY + bH + cw(4), Treb(Min11(cw(2.8f)), true), HUB_DIM);
+            string next = Progress.NextUnlock();
+            Text(next != null ? "Next: " + next : "Win " + Progress.XpWin + " XP, lose " + Progress.XpLoss + " XP, first win of the day +" + Progress.XpFirstWin,
+                tx, bY + bH + cw(4), Treb(Min11(cw(2.8f)), true), next != null ? "#ffd257" : HUB_DIM);
             return y + h + cw(2);
         }
         // kills, deaths, time played and the streaks (MenuProgress.HubProfileFight; BAM counts no assists, so Streak takes that tile)

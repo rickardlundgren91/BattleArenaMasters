@@ -117,7 +117,7 @@ namespace BAM.UI
         static ScrollRect heroScroll;
         static readonly string[] HeroRoles = { "Tank", "Fighter", "Assassin", "Mage", "Marksman", "Support" };
 
-        sealed class HeroCard { public int Index; public Image Fill, Edge, EdgeOn; public GameObject Check; public RectTransform Box, Pic; public float Aspect; }
+        sealed class HeroCard { public int Index; public Image Fill, Edge, EdgeOn; public GameObject Check, Lock; public Text LockLevel; public RectTransform Box, Pic; public float Aspect; }
 
         static void BuildHeroSelect()
         {
@@ -271,6 +271,7 @@ namespace BAM.UI
             Mid(check.rectTransform, 1, 1, -3 * Cw, -3 * Cw, 5.2f * Cw, 5.2f * Cw);
             Tick(check.rectTransform, 1.3f * Cw, HubDark);
             c.Check = check.gameObject;
+            c.Lock = BuildCardLock(card, out c.LockLevel); // HeroLocks.cs
 
             var b = card.gameObject.AddComponent<Button>();
             b.transition = Selectable.Transition.None;
@@ -300,9 +301,13 @@ namespace BAM.UI
 
         static void RefreshHeroSelect()
         {
+            ClampHero();
             int chosen = BamSettings.LastHero;
             foreach (var c in heroCards)
             {
+                int lv = LockLevel(c.Index);
+                c.Lock.SetActive(lv > 0);
+                if (lv > 0) c.LockLevel.text = "LEVEL " + lv;
                 bool on = c.Index == chosen;
                 c.Fill.color = on ? HubSelFill : HubPanel;
                 c.Edge.enabled = !on;
@@ -321,6 +326,9 @@ namespace BAM.UI
         static Image heroRing, heroRingGlow, heroRingShadow;
         static GameObject heroSelectedTag;
         static Text heroCount, heroName, heroTitle, heroRoleText, heroSelectText;
+        static RawImage heroSelectMint;
+        static Texture heroSelectMintTex;
+        static GameObject heroSelectLock;
         static RectTransform heroRolePill, heroRoleIcon;
         static readonly Image[] heroBars = new Image[5];
         static readonly Text[] heroValues = new Text[5];
@@ -468,6 +476,7 @@ namespace BAM.UI
             var mi = mint.gameObject.AddComponent<RawImage>();
             mi.texture = HomeArt.Gradient(new Color32(0x43, 0xf0, 0xbd, 0xff), new Color32(0x22, 0xb8, 0x8c, 0xff));
             mi.raycastTarget = false;
+            heroSelectMint = mi; heroSelectMintTex = mi.texture;
             var sheen = Pic(face.rectTransform, "Sheen", UiKit.Rounded, new Color(1, 1, 1, 0.18f));
             Radius(sheen, 3.4f * Cw);
             TopLeft(sheen.rectTransform, 0.7f * Cw, 0.7f * Cw, 1080, h * 0.42f);
@@ -476,6 +485,10 @@ namespace BAM.UI
             heroSelectText = UiKit.Label(heroSelectRt, "", Mathf.RoundToInt(5.2f * Cw), TextAnchor.MiddleCenter, HubDark);
             UiKit.Stretch(heroSelectText.rectTransform);
             heroSelectText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var selLock = Padlock(heroSelectRt, 1.8f * Cw, UiKit.TextDim);
+            selLock.anchorMin = selLock.anchorMax = new Vector2(0.5f, 0.5f);
+            selLock.anchoredPosition = new Vector2(-25 * Cw, 0);
+            heroSelectLock = selLock.gameObject;
             var hitImg = heroSelectRt.gameObject.AddComponent<Image>();
             hitImg.color = Color.clear;
             var sb = heroSelectRt.gameObject.AddComponent<Button>();
@@ -483,6 +496,7 @@ namespace BAM.UI
             sb.navigation = new Navigation { mode = Navigation.Mode.None };
             sb.onClick.AddListener(() =>
             {
+                if (LockLevel(heroPeek) > 0) { BamAudio.Play(SfxId.UiBack); return; } // locked: the button says the level
                 BamAudio.Play(SfxId.UiConfirm);
                 BamSettings.LastHero = heroPeek;
                 ShowTab(0);
@@ -621,7 +635,7 @@ namespace BAM.UI
             heroSelectedTag.SetActive(chosen);
             heroCount.text = (heroPeek + 1) + "/" + HeroCatalog.Count;
             heroSelectRt.gameObject.SetActive(!chosen); // already chosen: SELECTED on the stage says it
-            heroSelectText.text = "SELECT " + info.Name.ToUpperInvariant();
+            SelectLocked(LockLevel(heroPeek), info.Name);
 
             // the stage takes the height that is left, so everything fits without scrolling on a phone
             LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);

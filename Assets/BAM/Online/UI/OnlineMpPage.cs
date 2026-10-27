@@ -95,6 +95,12 @@ namespace BAM.Online.UI
                 if (im != null && im.ok) { ctx.save(); ctx.beginPath(); ctx.roundRect(hx + 2, y + 2, s - 4, s - 4, 6); ctx.clip(); Cover(im, hx + 2, y + 2, s - 4, s - 4, 0.2f); ctx.restore(); }
                 else Text(info.Name.Substring(0, 1), hx + s / 2, y + s / 2, Lil(s * 0.5f), "#fff", "center");
                 if (!on) { ctx.fillStyle = "rgba(10,13,38,0.45)"; ctx.beginPath(); ctx.roundRect(hx, y, s, s, 8); ctx.fill(); }
+                if (!Progress.HeroOpen(id)) // opened by the account level (Progress.HeroLevel): veiled with the level, no pick
+                {
+                    ctx.fillStyle = "rgba(8,10,30,0.62)"; ctx.beginPath(); ctx.roundRect(hx, y, s, s, 8); ctx.fill();
+                    Text("LV " + Progress.HeroLevel(id), hx + s / 2, y + s / 2, Treb(Math.Max(9, s * 0.26f), true), "#e8eaff", "center");
+                    continue;
+                }
                 Btn("mpHero" + i, hx, y, s, s, () => MpRoom.Pick(id));
             }
         }

@@ -39,6 +39,10 @@ namespace BAM.Online
         public static Totals Server { get { Load(); return server; } }
         public static int PendingCount { get { Load(); return pending.Count; } }
 
+        /// <summary>What the last counted match gave, for the result card (Speltest Progression.lastXp etc.). Zero XP = nothing.</summary>
+        public static int LastXp, LastRating, LastLevelBefore;
+        public static bool LastFirstWin;
+
         // XP to go from level l to l + 1: 100, 150, 200 ... (level 5 after ~9 matches, 10 after ~35, 30 after ~300)
         public static int XpToNext(int l) => 100 + 50 * (l - 1);
         public static int LevelOf(int xp)
@@ -55,6 +59,42 @@ namespace BAM.Online
             if (l >= MaxLevel) { have = 1; need = 1; } else { have = xp; need = XpToNext(l); }
         }
 
+        // ---------- hero unlocks (Speltest Progression.cs, Rickard 2026-10-27: "Hjältar låses upp med nivå") ----------
+        // The first FreeHeroes of the hero list (HeroCatalog: Bram, Fenn, Tyra) are open from the start, then one more every
+        // HeroLevelStep levels: Moa 2, Knut 4, Tikta 6, Blast 8, Bonk 10 (~35 matches). Only the menu is locked: HERO TEST (TRY)
+        // and the bots still use every hero, so a player meets the heroes they unlock later. The level is the server's, so the
+        // locks follow the account to a new phone.
+        public const int FreeHeroes = 3, HeroLevelStep = 2;
+
+        /// <summary>The account level that opens this hero (1 = open from the start).</summary>
+        public static int HeroLevel(HeroId id)
+        {
+            int i = Array.FindIndex(HeroCatalog.All, h => h.Id == id);
+            return i < FreeHeroes ? 1 : HeroLevelStep * (i - FreeHeroes + 1);
+        }
+
+        public static bool HeroOpen(HeroId id) => Shown.level >= HeroLevel(id);
+
+        /// <summary>The heroes that open when the level goes from `from` to `to`, e.g. "Moa" or "Knut, Tikta"; null for none.</summary>
+        public static string UnlockedBetween(int from, int to)
+        {
+            string r = null;
+            foreach (var h in HeroCatalog.All)
+            {
+                int l = HeroLevel(h.Id);
+                if (l > from && l <= to) r = r == null ? h.Name : r + ", " + h.Name;
+            }
+            return r;
+        }
+
+        /// <summary>The next hero still locked, e.g. "Level 4: Knut", or null when every hero is open.</summary>
+        public static string NextUnlock()
+        {
+            int lv = Shown.level;
+            for (int l = lv + 1; l <= MaxLevel; l++) { var u = UnlockedBetween(l - 1, l); if (u != null) return "Level " + l + ": " + u; }
+            return null;
+        }
+
         public static int XpFor(bool won, int kills, bool firstWinToday)
             => (won ? XpWin : XpLoss) + Math.Min(XpFightMax, Math.Max(0, kills) * XpKill) + (won && firstWinToday ? XpFirstWin : 0);
 
@@ -65,6 +105,7 @@ namespace BAM.Online
         public static void MatchEnded(MatchResult r)
         {
             Load();
+            LastXp = LastRating = 0;
             if (!Counts(r)) return;
             var m = new MatchReport
             {
@@ -77,6 +118,12 @@ namespace BAM.Online
                 hero = r.Hero.ToString(),
                 difficulty = r.Difficulty.ToString(),
             };
+            var before = shown;
+            long day = m.at / 86400;
+            LastFirstWin = m.won && before.winDay != day;
+            LastXp = XpFor(m.won, m.kills, LastFirstWin);
+            LastRating = m.won ? RatingWin : RatingLoss;
+            LastLevelBefore = before.level;
             pending.Add(m);
             if (pending.Count > MaxPending) pending.RemoveAt(0);
             SavePending();

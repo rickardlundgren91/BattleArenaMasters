@@ -20,6 +20,7 @@ namespace BAM.UI
         static readonly Color ResSilver = Hex(0xb9c0e0), ResSilverText = Hex(0xdfe4ff), ResMvpGoldInk = Hex(0x3a2400), ResMvpSilverInk = Hex(0x1a1f4a);
         static readonly Color ResOrange = Hex(0xff9a2e), ResOrangeInk = Hex(0x3a1a00), ResNavy = Hex(0x262d66), ResNavyEdge = new Color(154 / 255f, 162 / 255f, 214 / 255f, 0.5f);
         static readonly Color ResPicBack = Hex(0x2b2350), ResDeaths = Hex(0xff8a96);
+        static readonly Color ResXpBack = new Color(1, 1, 1, 0.12f), ResXpFill = Hex(0x3ee6b0), ResLevelUp = Hex(0xffd257);
 
         static Color Hex(int rgb) => new Color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f);
 
@@ -43,6 +44,10 @@ namespace BAM.UI
         static Image resAgainShadow, resHomeShadow, resHomeEdge, resAgainShine;
         static Text resAgainText, resHomeText;
         static CanvasGroup resFade;
+        // the account XP under the table or the small card (online builds; Speltest HudV3 drawResult's Progression lines)
+        static Text resXp, resLevel, resUnlock;
+        static Image resXpBack, resXpFill;
+        static float resXpPart;
         static bool resTableMode, resWon;
         static int resRowCount;
         static readonly int[] resRowsPerTeam = new int[2];
@@ -224,6 +229,12 @@ namespace BAM.UI
                 resBigLabel[i].text = labels[i];
             }
 
+            resXp = ResText(resCard, true, ResMe, TextAnchor.MiddleCenter);
+            resXpBack = Pic(resCard, "XpBack", UiKit.Rounded, ResXpBack);
+            resXpFill = Pic(resCard, "XpFill", UiKit.Rounded, ResXpFill);
+            resLevel = ResText(resCard, false, ResSub, TextAnchor.MiddleCenter);
+            resUnlock = ResText(resCard, false, ResLevelUp, TextAnchor.MiddleCenter);
+
             resAgain = ResButton("PLAY AGAIN", true, RestartMatch, out resAgainShadow, out resAgainText, out resAgainShine);
             resHome = ResButton("HOME", false, GoToMenu, out resHomeShadow, out resHomeText, out resHomeEdge);
         }
@@ -309,6 +320,7 @@ namespace BAM.UI
             resTable.gameObject.SetActive(resTableMode);
             resSmall.gameObject.SetActive(!resTableMode);
             resAgain.gameObject.SetActive(!r.Tutorial || !r.Won);
+            FillXp();
             if (resTableMode) FillScores(m);
             else
             {
@@ -323,6 +335,24 @@ namespace BAM.UI
                 resBigValue[2].text = assists.ToString();
             }
             LayoutResult();
+        }
+
+        // "+160 XP · +20 Rating  (first win today)", the level bar, "LEVEL UP! Level 4 · 40 / 200 XP"; hidden offline or for a
+        // match that gives nothing (the tutorial, a match left, under 45 s)
+        static void FillXp()
+        {
+            var g = OnlineHooks.LastGain != null ? OnlineHooks.LastGain() : default;
+            bool on = g.Xp > 0;
+            resXp.gameObject.SetActive(on); resLevel.gameObject.SetActive(on);
+            resXpBack.gameObject.SetActive(on); resXpFill.gameObject.SetActive(on);
+            resUnlock.gameObject.SetActive(on && g.Unlocked != null);
+            if (!on) return;
+            if (g.Unlocked != null) resUnlock.text = "NEW HERO UNLOCKED: " + g.Unlocked.ToUpperInvariant();
+            bool up = g.Level > g.LevelBefore;
+            resXp.text = "+" + g.Xp + " XP  ·  +" + g.Rating + " Rating" + (g.FirstWin ? "  (first win today)" : "");
+            resLevel.text = (up ? "LEVEL UP! " : "") + "Level " + g.Level + " · " + g.LevelText;
+            resLevel.color = up ? ResLevelUp : ResSub;
+            resXpPart = Mathf.Clamp01(g.LevelProgress);
         }
 
         static void FillScores(Match m)
@@ -384,8 +414,8 @@ namespace BAM.UI
             Centre(resTitle.rectTransform, cw0 / 2, H * 0.055f, cw0, H * 0.08f);
             Centre(resSub.rectTransform, cw0 / 2, H * 0.1f, cw0, H * 0.04f);
 
-            if (sc) LayoutScores(W, H, cw0);
-            else LayoutSmall(W, H, cw0);
+            float ly = sc ? LayoutScores(W, H, cw0) + H * 0.035f : LayoutSmall(W, H, cw0);
+            LayoutXp(W, H, cw0, ly);
 
             LayoutButton(resAgain, resAgainShadow, resAgainText, W * 0.1f, H * 0.74f, W * 0.8f, H * 0.065f);
             resAgainShine.rectTransform.anchorMin = new Vector2(0, 1); resAgainShine.rectTransform.anchorMax = new Vector2(1, 1);
@@ -402,7 +432,21 @@ namespace BAM.UI
             RingRadius(resHomeEdge, hr);
         }
 
-        static void LayoutScores(float W, float H, float w)
+        static void LayoutXp(float W, float H, float w, float ly)
+        {
+            Size(resXp, W * 0.045f); Size(resLevel, W * 0.026f);
+            Centre(resXp.rectTransform, w / 2, ly, w, H * 0.045f);
+            float bx = w * 0.12f, bw = w * 0.76f, by = ly + H * 0.03f, bh = H * 0.012f;
+            TopLeft(resXpBack.rectTransform, bx, by, bw, bh);
+            TopLeft(resXpFill.rectTransform, bx, by, Mathf.Max(bh, bw * resXpPart), bh);
+            Radius(resXpBack, bh / 2); Radius(resXpFill, bh / 2);
+            Centre(resLevel.rectTransform, w / 2, by + H * 0.028f, w, H * 0.03f);
+            Size(resUnlock, W * 0.03f);
+            Centre(resUnlock.rectTransform, w / 2, by + H * 0.066f, w, H * 0.035f);
+        }
+
+        // returns where the table ends, measured from the card's top
+        static float LayoutScores(float W, float H, float w)
         {
             float y0 = H * 0.125f, rh = H * 0.042f, hh = H * 0.03f, pad = w * 0.04f;
             float xName = w * 0.17f, xKda = w * 0.58f, xScore = w * 0.79f, xMvp = w * 0.92f;
@@ -440,9 +484,11 @@ namespace BAM.UI
                 }
                 y += H * 0.012f;
             }
+            return y0 + y;
         }
 
-        static void LayoutSmall(float W, float H, float w)
+        // returns where the account XP line goes, measured from the card's top
+        static float LayoutSmall(float W, float H, float w)
         {
             TopLeft(resSmall, 0, 0, w, H * 0.5f);
             float py = H * 0.14f, r = W * 0.09f, cx = w / 2;
@@ -459,6 +505,7 @@ namespace BAM.UI
                 Centre(resBigValue[i].rectTransform, sx, sy, sw, H * 0.05f);
                 Centre(resBigLabel[i].rectTransform, sx, sy + H * 0.03f, sw, H * 0.03f);
             }
+            return sy + H * 0.075f;
         }
 
         static void LayoutButton(Button b, Image shadow, Text text, float x, float y, float w, float h)

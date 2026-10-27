@@ -13,10 +13,12 @@ namespace BAM.Online.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Hook()
         {
-            Flow.Booted = () => { BAM.Online.Online.Boot(); OnlineUi.Init(); };
-            Flow.MatchStarted = BAM.Online.Online.MatchStarted;
-            Flow.MatchEnded = BAM.Online.Online.MatchEnded;
-            Flow.Resumed = BAM.Online.Online.Resumed;
+            // the game calls these in the middle of its own flow (boot, the result card, OnApplicationPause): an online error must
+            // never break the offline game, so it is only logged
+            Flow.Booted = () => Safe("boot", () => { BAM.Online.Online.Boot(); OnlineUi.Init(); });
+            Flow.MatchStarted = () => Safe("match start", BAM.Online.Online.MatchStarted);
+            Flow.MatchEnded = r => Safe("match end", () => BAM.Online.Online.MatchEnded(r));
+            Flow.Resumed = () => Safe("resume", BAM.Online.Online.Resumed);
             OnlineHooks.Back = OnlineUi.Back;
             OnlineHooks.HomeChip = OnlineUi.HomeChip;
             OnlineHooks.OpenFriends = OnlineUi.OpenFriends;
@@ -25,6 +27,30 @@ namespace BAM.Online.UI
             OnlineHooks.OpenPlayFriends = OnlineUi.OpenPlayFriends;
             OnlineHooks.OnlineMatch = OnlineUi.OnlineMatch;
             OnlineHooks.AskToGoOnline = OnlineUi.AskToGoOnline;
+            OnlineHooks.LastGain = LastGain;
+            OnlineHooks.HeroLockLevel = id => Progress.HeroOpen(id) ? 0 : Progress.HeroLevel(id);
+            OnlineHooks.Level = () => Progress.Shown.level;
+        }
+
+        static void Safe(string what, System.Action a)
+        {
+            try { a(); }
+            catch (System.Exception e) { Debug.LogWarning("[BAM.Online] " + what + ": " + e); }
+        }
+
+        static MatchGain LastGain()
+        {
+            var t = Progress.Shown;
+            Progress.IntoLevel(t.xp, out int have, out int need);
+            bool max = t.level >= Progress.MaxLevel;
+            return new MatchGain
+            {
+                Xp = Progress.LastXp, Rating = Progress.LastRating, Level = t.level, LevelBefore = Progress.LastLevelBefore,
+                FirstWin = Progress.LastFirstWin,
+                LevelProgress = max || need <= 0 ? 1f : (float)have / need,
+                LevelText = max ? "Max level" : have + " / " + need + " XP",
+                Unlocked = Progress.LastXp > 0 ? Progress.UnlockedBetween(Progress.LastLevelBefore, t.level) : null,
+            };
         }
     }
 }
