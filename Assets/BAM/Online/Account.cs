@@ -74,7 +74,11 @@ namespace BAM.Online
             Set(Status.Working);
             try
             {
+                // Analytics (BamAnalytics) may have started Unity Services a moment before: then the state is Initializing and
+                // going on at once gave "Singleton is not initialized" on the first server call (Rickard's phone, 2026-10-27)
                 if (UnityServices.State == ServicesInitializationState.Uninitialized) await UnityServices.InitializeAsync();
+                while (UnityServices.State == ServicesInitializationState.Initializing) await Task.Delay(50);
+                if (UnityServices.State != ServicesInitializationState.Initialized) throw new Exception("Unity Services did not start (" + UnityServices.State + ")");
                 var auth = AuthenticationService.Instance;
                 if (!auth.IsSignedIn)
                 {
