@@ -12,6 +12,10 @@ using UnityEngine;
 // (Speltest NetLobby.Quick): look for an open quick lobby of this version and join the oldest, or open one and wait; a waiting
 // player who finds an older open lobby joins that one instead, so two players who search at the same moment still meet. Two
 // players, one on each team, bots fill the rest; it starts by itself. Invites from the online list are in MpSocial.cs.
+// 2026-10-27 (Rickard: "1-3 spelare grupp 1 och 1-3 spelare grupp 2 ska kunna spela mot varandra"): a group searches together.
+// The one who invited the others presses ONLINE MATCH in the room; the room's lobby then opens to the queue. If another group (or
+// a single player) is already waiting, the whole group moves there instead (MpMsg.Move: every phone joins that lobby by id). The
+// first group to join a waiting lobby claims it (it goes private again); one group per team, bots fill the empty places.
 // No ranking or chat.
 namespace BAM.Online.Mp
 {
@@ -26,7 +30,8 @@ namespace BAM.Online.Mp
         public sealed class Member
         {
             public int Id, Conn = -1, Seat = -1;
-            public string Name = "", PlayerId = "";
+            public string Name = "", PlayerId = "", Party = "";
+            public int Side; // ONLINE MATCH: 0 the host's group, 1 the group that joined
             public HeroId Hero; public SpellId Spell = SpellId.Blink;
             public bool InMatch, Loaded;
             public float Ping = -1;
@@ -58,9 +63,15 @@ namespace BAM.Online.Mp
         /// <summary>When the search began (Time.realtimeSinceStartup), for "Looking… 12 s".</summary>
         public static float SearchSince { get; private set; }
         /// <summary>A quick match is about to start (both players are in).</summary>
-        public static bool QuickFound => Quick && State == Phase.Lobby && Members.Count >= 2;
-        static int RoomCap => Quick ? 2 : Capacity(Mode);
-        const float QuickStartDelay = 2f, MergeEvery = 3f;
+        public static bool QuickFound { get { if (!Quick || State != Phase.Lobby) return false; foreach (var m in Members) if (m.Side == 1) return true; return false; } }
+        /// <summary>ONLINE MATCH: how many are searching together on this phone's side (1 alone).</summary>
+        public static int PartySize => partySize;
+        /// <summary>The side (0 or 1) this phone is on in an ONLINE MATCH lobby.</summary>
+        public static int MySide { get { var me = Me; return me != null ? me.Side : 0; } }
+        static int RoomCap => Quick ? MpRelay.MaxPlayers : Capacity(Mode);
+        public const int MaxGroup = 3;
+        const float QuickStartDelay = 2f, MergeEvery = 3f, PartyWait = 10f;
+        static string myParty = "", otherParty; static int partySize = 1, otherSize; static float claimT;
         static int quickTok, quickTries; static float startT = -1, mergeT;
         static readonly HashSet<string> tried = new HashSet<string>();
         public static int TeamOf(int index, int mode) => mode == Together ? Teams.Player : index % 2;
@@ -102,7 +113,7 @@ namespace BAM.Online.Mp
         public static void Leave()
         {
             CloseRelay();
-            Quick = false; ++quickTok; startT = -1;
+            Quick = false; ++quickTok; startT = -1; myParty = ""; partySize = 1; otherParty = null;
             State = Phase.Off; Status = ""; WantPage = false;
             Changed?.Invoke();
         }
@@ -123,10 +134,74 @@ namespace BAM.Online.Mp
         /// <summary>ONLINE MATCH: into the queue. Joins someone who is already waiting, or waits for the next one who searches.</summary>
         public static void QuickMatch()
         {
+            if (Quick && State != Phase.Off) return; // already looking
+            if (!IsHost && State == Phase.Lobby) { Status = "The one who invited you starts ONLINE MATCH for the group."; Changed?.Invoke(); return; }
+            if (IsHost && State == Phase.Lobby && Members.Count > 1)
+            {
+                if (Members.Count > MaxGroup) { Status = "A group for ONLINE MATCH is at most " + MaxGroup + " players."; Changed?.Invoke(); return; }
+                GroupMatch(); return;
+            }
             Leave();
             Quick = true; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
+            myParty = MyPlayerId; partySize = 1;
             MpRunner.Ensure();
             QuickFind();
+        }
+
+        /// <summary>CANCEL while looking: a group searching from its own room goes back to that room; anyone else leaves.</summary>
+        public static void CancelSearch()
+        {
+            if (IsHost && Quick && partySize > 1 && myParty == MyPlayerId && otherParty == null && relay != null && State == Phase.Lobby)
+            {
+                ++quickTok; Quick = false; myParty = ""; partySize = 1; startT = -1;
+                relay.Quick = false; relay.SetOpen(false); Status = ""; SendRoom();
+                return;
+            }
+            Leave();
+        }
+
+        // the host of a room with friends in it: the whole group looks for another group (or a single player)
+        static async void GroupMatch()
+        {
+            Quick = true; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
+            myParty = MyPlayerId; partySize = Members.Count; otherParty = null; startT = -1;
+            foreach (var m in Members) { m.Party = myParty; m.Side = 0; }
+            Status = ""; SendRoom();
+            int tok = ++quickTok; var mine = relay;
+            try
+            {
+                var open = await MpRelay.FindOpen(mine?.LobbyId, partySize);
+                if (tok != quickTok || relay != mine || relay == null || State != Phase.Lobby) return;
+                open.RemoveAll(o => tried.Contains(o.Id));
+                if (open.Count > 0) { MoveGroup(open[0].Id); return; }
+                // nobody is waiting: our room is the one the next searcher finds
+                relay.Quick = true; relay.SetOpen(true); mergeT = MergeEvery;
+            }
+            catch (Exception e)
+            {
+                if (tok != quickTok) return;
+                Debug.LogWarning("[BAM.Online] queue: " + e);
+                Quick = false; myParty = ""; partySize = 1; Status = MpRelay.Explain(e); SendRoom();
+            }
+        }
+
+        // the group goes over to a waiting lobby: every phone of it joins that lobby by id
+        static void MoveGroup(string lobbyId)
+        {
+            w.Begin(MpMsg.Move); w.Str(lobbyId); w.Str(myParty); w.U8(partySize);
+            Broadcast(w, false);
+            relay?.Update(); // out before the room closes
+            ++quickTok; CloseRelay(); State = Phase.Connecting; Status = "Joining…";
+            QuickJoin(lobbyId); Changed?.Invoke();
+        }
+
+        static int CountSide(int side) { int n = 0; foreach (var m in Members) if (m.Side == side) n++; return n; }
+
+        // the group that claimed our lobby is gone before the match: open it to the queue again
+        static void Reopen()
+        {
+            otherParty = null; startT = -1; mergeT = MergeEvery;
+            relay?.SetOpen(true); SendRoom();
         }
 
         static async void QuickFind()
@@ -136,7 +211,7 @@ namespace BAM.Online.Mp
             State = Phase.Connecting; Status = "Looking for an opponent…"; Changed?.Invoke();
             try
             {
-                var open = await MpRelay.FindOpen(null);
+                var open = await MpRelay.FindOpen(null, partySize);
                 if (tok != quickTok) return;
                 open.RemoveAll(o => tried.Contains(o.Id));
                 if (open.Count > 0) QuickJoin(open[0].Id); else QuickHost();
@@ -151,8 +226,8 @@ namespace BAM.Online.Mp
 
         static void QuickHost()
         {
-            IsHost = true; MyId = 0; nextId = 1; mergeT = MergeEvery;
-            Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell });
+            IsHost = true; MyId = 0; nextId = 1; mergeT = MergeEvery; otherParty = null;
+            Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell, Party = myParty });
             relay = new MpRelay(true, null) { Quick = true };
             Wire();
             relay.Start();
@@ -174,11 +249,12 @@ namespace BAM.Online.Mp
             int tok = quickTok;
             try
             {
-                var open = await MpRelay.FindOpen(mine.LobbyId);
-                if (tok != quickTok || relay != mine || Members.Count != 1 || State != Phase.Lobby) return;
+                var open = await MpRelay.FindOpen(mine.LobbyId, partySize);
+                if (tok != quickTok || relay != mine || otherParty != null || !Quick || State != Phase.Lobby) return;
                 foreach (var o in open)
                     if (!tried.Contains(o.Id) && MpQueue.Older(o.Created, o.Id, mine.Created, mine.LobbyId))
                     {
+                        if (partySize > 1) { MoveGroup(o.Id); return; }
                         ++quickTok; CloseRelay(); State = Phase.Connecting; QuickJoin(o.Id); Changed?.Invoke();
                         return;
                     }
@@ -190,6 +266,7 @@ namespace BAM.Online.Mp
         static bool QuickRetry(string why)
         {
             if (!Quick || State == Phase.Match || quickTries++ >= 3) return false;
+            if (partySize > 1 && myParty != MyPlayerId) return false; // one of a group that moved: alone it would split the group
             Debug.Log("[BAM.Online] queue: " + why + ", looking again");
             QuickFind();
             return true;
@@ -222,7 +299,7 @@ namespace BAM.Online.Mp
             {
                 var m = Members[i];
                 m.Seat = i; m.InMatch = true; m.Loaded = m.Conn < 0;
-                seats[i] = new SeatConfig { Hero = m.Hero, Team = TeamOf(i, Mode), Spell = m.Spell };
+                seats[i] = new SeatConfig { Hero = m.Hero, Team = Quick ? TeamOf(m.Side, Versus) : TeamOf(i, Mode), Spell = m.Spell };
             }
             for (int i = 1; i < Members.Count; i++)
             {
@@ -280,9 +357,15 @@ namespace BAM.Online.Mp
                 w.Begin(MpMsg.Ping); w.F32(Time.realtimeSinceStartup);
                 if (IsHost) Broadcast(w, false); else relay.Send(w);
             }
-            if (Quick && IsHost && State == Phase.Lobby)
+            if (Quick && IsHost && State == Phase.Lobby && relay.Quick)
             {
-                if (Members.Count >= 2) { if (startT < 0) startT = QuickStartDelay; else if ((startT -= dt) <= 0) { startT = -1; StartMatch(); } }
+                if (otherParty != null)
+                {
+                    // the other group is in (or most of it after PartyWait): start
+                    claimT += dt; int them = CountSide(1);
+                    if (them == 0) { if (claimT > PartyWait) Reopen(); }
+                    else if (them >= otherSize || claimT > PartyWait) { if (startT < 0) startT = QuickStartDelay; else if ((startT -= dt) <= 0) { startT = -1; StartMatch(); } }
+                }
                 else { startT = -1; if ((mergeT -= dt) <= 0) { mergeT = MergeEvery; CheckMerge(); } }
             }
             if (IsHost && net != null && !net.Lockstep.Started)
@@ -316,6 +399,7 @@ namespace BAM.Online.Mp
             {
                 if (IsHost) return;
                 w.Begin(MpMsg.Hello); w.I32(MpMsg.Protocol); w.Str(Application.version); w.Str(MyPlayerId); w.Str(MyName); w.U8((int)MyHero); w.U8((int)BamSettings.Spell);
+                w.Str(Quick ? myParty : ""); w.U8(Quick ? partySize : 1);
                 relay.Send(w);
             };
             relay.OnDisconnect = OnDisconnect;
@@ -334,13 +418,14 @@ namespace BAM.Online.Mp
                     if (m.InMatch && net != null) net.Lockstep.SeatLeft(m.Seat);
                     relay?.Unseat(m.PlayerId);
                     Members.RemoveAt(i);
+                    if (Quick && otherParty != null && State == Phase.Lobby && CountSide(1) == 0) { Reopen(); return; }
                     SendRoom();
                     return;
                 }
                 return;
             }
             // the host is gone
-            if (Quick && State != Phase.Match && net == null) { if (!QuickRetry("the other player left")) { Leave(); Status = "The other player left."; Changed?.Invoke(); } return; }
+            if (Quick && State != Phase.Match && net == null) { if (!QuickRetry("the other player left")) { Leave(); Status = partySize > 1 ? "The match fell through. Invite your friends again." : "The other player left."; Changed?.Invoke(); } return; }
             if (net != null) net.Lockstep.GoSolo("The host left, bots play on");
             relay?.Close(); relay = null;
             if (State != Phase.Match) { State = Phase.Off; Members.Clear(); Status = "The room has closed."; }
@@ -365,11 +450,25 @@ namespace BAM.Online.Mp
                 case MpMsg.Hello:
                 {
                     int proto = r.I32(); string version = r.Str(), pid = r.Str(), name = r.Str(); int hero = r.U8(), spell = r.U8();
+                    string party = r.Str(); int psize = Math.Max(1, r.U8());
+                    if (string.IsNullOrEmpty(party)) party = pid;
                     string no = proto != MpMsg.Protocol || version != Application.version ? "Your game and your friend's are different versions. Update both from Google Play."
                         : State == Phase.Match ? "A match is being played in that room. Try again when it is over."
-                        : (m == null && Members.Count >= RoomCap) || Quick && QuickFound && m == null ? "That room is full." : null;
+                        : m == null && Members.Count >= RoomCap ? "That room is full." : null;
+                    int side = 0;
+                    if (no == null && Quick && m == null && party != myParty)
+                    {
+                        // ONLINE MATCH: the first group to come claims this lobby, later ones look elsewhere
+                        if (otherParty == null)
+                        {
+                            if (psize > MaxGroup || CountSide(0) + psize > MpRelay.MaxPlayers) no = "That match is full.";
+                            else { otherParty = party; otherSize = psize; claimT = 0; startT = -1; relay.SetOpen(false); }
+                        }
+                        else if (party != otherParty || CountSide(1) >= otherSize) no = "That match is full.";
+                        side = 1;
+                    }
                     if (no != null) { w.Begin(MpMsg.Busy); w.Str(no); relay.SendTo(conn, w); relay.Kick(conn); return; }
-                    if (m == null) { m = new Member { Id = nextId++, Conn = conn }; Members.Add(m); }
+                    if (m == null) { m = new Member { Id = nextId++, Conn = conn, Party = party, Side = side }; Members.Add(m); }
                     m.PlayerId = pid; m.Name = MpPresence.CleanName(name); m.Hero = (HeroId)Mathf.Clamp(hero, 0, HeroCatalog.Count - 1); m.Spell = (SpellId)spell;
                     w.Begin(MpMsg.Welcome); w.U8(m.Id); relay.SendTo(conn, w);
                     SendRoom();
@@ -406,7 +505,10 @@ namespace BAM.Online.Mp
                     Mode = r.U8(); int n = r.U8();
                     Members.Clear();
                     for (int i = 0; i < n; i++)
-                        Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = (HeroId)r.U8(), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16() });
+                        Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = (HeroId)r.U8(), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
+                    bool q = r.U8() == 1; int ps = r.U8();
+                    if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
+                    Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
                     Changed?.Invoke();
                     return;
                 }
@@ -425,6 +527,16 @@ namespace BAM.Online.Mp
                 case MpMsg.MatchOver: net?.Lockstep.GoSolo("The host left the match, bots play on"); return;
                 case MpMsg.Pong: { var me = Me; if (me != null) me.Ping = (Time.realtimeSinceStartup - r.F32()) * 1000f; return; }
                 case MpMsg.Bye: OnDisconnect(0); return;
+                case MpMsg.Move:
+                {
+                    // our group's host found a waiting lobby: follow it there
+                    string id = r.Str(), party = r.Str(); int size = Math.Max(1, r.U8());
+                    ++quickTok; CloseRelay();
+                    Quick = true; Mode = Versus; myParty = party; partySize = size; quickTries = 0; tried.Clear();
+                    State = Phase.Connecting; Status = "Joining…";
+                    QuickJoin(id); Changed?.Invoke();
+                    return;
+                }
             }
         }
 
@@ -432,7 +544,8 @@ namespace BAM.Online.Mp
         {
             if (!IsHost) return;
             w.Begin(MpMsg.Room); w.U8(Mode); w.U8(Members.Count);
-            foreach (var m in Members) { w.U8(m.Id); w.Str(m.Name); w.U8((int)m.Hero); w.U8((int)m.Spell); w.U8(m.InMatch ? 1 : 0); w.U16(Mathf.Clamp((int)m.Ping, 0, 65535)); }
+            foreach (var m in Members) { w.U8(m.Id); w.Str(m.Name); w.U8((int)m.Hero); w.U8((int)m.Spell); w.U8(m.InMatch ? 1 : 0); w.U16(Mathf.Clamp((int)m.Ping, 0, 65535)); w.U8(m.Side); }
+            w.U8(Quick ? 1 : 0); w.U8(partySize);
             Broadcast(w, false);
             Changed?.Invoke();
         }

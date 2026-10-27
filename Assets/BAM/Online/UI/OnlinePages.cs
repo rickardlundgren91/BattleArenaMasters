@@ -74,7 +74,7 @@ namespace BAM.Online.UI
             float tx = acx + ar + cw(4), tw = x + w - cw(4) - tx;
             Text("PLAYER PROFILE", tx, y + cw(6), Treb(cw(2.6f), true), HUB_DIM);
             float ns = cw(8.4f); string shown = noName ? "No name yet" : nm; ctx.font = Lil(ns); while (ns > cw(5) && ctx.measureText(shown) > tw) { ns -= cw(0.4f); ctx.font = Lil(ns); }
-            Text(shown, tx, y + cw(13), Lil(ns), noName ? HUB_DIM : HUB_TEXT);
+            Text(shown, tx, y + cw(13), Lil(ns), noName ? "rgba(243,244,255,0.8)" : HUB_TEXT);
             bool online = Account.State == Account.Status.Ready || Account.State == Account.Status.NeedsName;
             string nl = noName ? "Choose a name" : "Change name";
             ctx.font = Treb(cw(3), true); float pw = ctx.measureText(nl) + cw(10), ph = cw(7), ppx = tx, ppy = y + cw(19) + (Down("hubProfName") ? cw(0.4f) : 0);

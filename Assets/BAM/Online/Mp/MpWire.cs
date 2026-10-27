@@ -8,11 +8,11 @@ namespace BAM.Online.Mp
     static class MpMsg
     {
         // room
-        public const byte Hello = 1, Welcome = 2, Busy = 3, Room = 4, Pick = 5, Start = 6, Bye = 7, Ping = 8, Pong = 9;
+        public const byte Hello = 1, Welcome = 2, Busy = 3, Room = 4, Pick = 5, Start = 6, Bye = 7, Ping = 8, Pong = 9, Move = 10;
         // match
         public const byte Loaded = 20, In = 21, Frames = 22, Hash = 23, Desync = 24, LeftMatch = 25, MatchOver = 26;
         /// <summary>Phones with another protocol never meet (bump it whenever a message or the rules' input changes).</summary>
-        public const int Protocol = 1;
+        public const int Protocol = 2; // 2: groups in ONLINE MATCH (party in Hello, side in Room, Move)
     }
 
     static class MpQueue

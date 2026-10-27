@@ -6,7 +6,7 @@ using UnityEngine;
 
 // The online list and invites as the game uses them (2026-10-27, Rickard: "online lista, möjligheten att bjuda in en vän och köra
 // mot bottar"). The old game's NetLobby.InviteTo / AcceptInvite (Speltest ABC2/Game/NetLobby.cs): INVITE makes a room if we are
-// not hosting one (TOGETHER, so the friends play side by side against bots), then writes the invite into our sign (MpPresence);
+// not hosting one (in the mode picked on the page: TOGETHER or AGAINST EACH OTHER), then writes the invite into our sign (MpPresence);
 // the friend's ACCEPT joins the room with its code. The host picks the mode and presses START as in any room; bots fill.
 namespace BAM.Online.Mp
 {
@@ -81,16 +81,17 @@ namespace BAM.Online.Mp
         public static bool IsInvited(string playerId) => MpPresence.Invited.Contains(playerId) || pending.Contains(playerId);
 
         /// <summary>INVITE: into our room (made now if we have none). Answers null when sent, else why not.</summary>
-        public static string Invite(string playerId, string name)
+        public static string Invite(string playerId, string name, int mode = MpRoom.Together)
         {
             if (!SignedIn) return "Sign in to play online first.";
             if (!ShowMe) return "Turn on \"Show me as online\" to invite.";
             var r = MpPresence.Find(playerId);
             if (r == null) return (name ?? "They") + " does not have the game open right now.";
             if (!r.Free) return r.Name + " is busy (" + PresenceState.Text(r.State).ToLowerInvariant() + ").";
+            if (MpRoom.Quick && MpRoom.State != MpRoom.Phase.Off) return "You are looking for a match. Cancel first to invite.";
             names[playerId] = r.Name;
             bool hosting = MpRoom.IsHost && !MpRoom.Quick && (MpRoom.State == MpRoom.Phase.Lobby || MpRoom.State == MpRoom.Phase.Connecting);
-            if (!hosting) MpRoom.Host(MpRoom.Together);
+            if (!hosting) MpRoom.Host(mode);
             else if (MpRoom.Members.Count + MpPresence.Invited.Count + pending.Count >= MpRelay.MaxPlayers) return "Your room is full.";
             if (MpRoom.State == MpRoom.Phase.Lobby && MpRoom.Code.Length > 0) MpPresence.AddInvite(playerId, MpRoom.Code, MpRoom.Mode);
             else if (!pending.Contains(playerId)) pending.Add(playerId);

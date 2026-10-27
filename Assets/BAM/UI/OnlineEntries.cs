@@ -126,7 +126,7 @@ namespace BAM.UI
         {
             var list = new System.Collections.Generic.List<RectTransform>();
             if (OnlineHooks.OnlineMatch != null) list.Add(OnlineRow("ONLINE MATCH", "Quick match against another player", true, OnlineHooks.OnlineMatch));
-            if (OnlineHooks.OpenPlayFriends != null) list.Add(OnlineRow("PLAY WITH FRIENDS", "Together or against each other, with a code", false, OnlineHooks.OpenPlayFriends));
+            if (OnlineHooks.OpenPlayFriends != null) list.Add(OnlineRow("PLAY WITH FRIENDS", "Invite friends: together or against each other", false, OnlineHooks.OpenPlayFriends));
             onlineRows = list.ToArray();
         }
 

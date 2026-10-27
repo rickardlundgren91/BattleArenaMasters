@@ -15,7 +15,6 @@ namespace BAM.Online.UI
     {
         static string codeDraft = "";
         static int createMode = MpRoom.Together;
-        static float copiedT;
 
         // the old Menu.Panel (ONE_PLAY look)
         static void Panel(float x, float y, float w, float h, float r = 12)
@@ -121,7 +120,7 @@ namespace BAM.Online.UI
                 MpOnline(x + 12, y + 6, w - 24);
                 y += h + 10;
             }
-            const string help = "Both phones need internet. Pick TOGETHER (you and your friends against bots) or AGAINST EACH OTHER, then create a room and send the code. Your friends type it under JOIN. The code keeps working if you switch apps to send it. Everyone plays the hero they pick here.";
+            const string help = "Both phones need internet and the game open. Pick TOGETHER (you and your friends against bots) or AGAINST EACH OTHER, then press INVITE next to a friend. They get a card to accept, and when they are in you press START. Everyone plays the hero they pick here.";
             var hl = Wrap(help, w - 4, Treb(11)); for (int i = 0; i < hl.Count; i++) Text(hl[i], x + 2, y + 8 + i * 15, Treb(11), "#a9a7c7");
             return y + hl.Count * 15 + 14;
         }
@@ -144,15 +143,25 @@ namespace BAM.Online.UI
             }
             if (MpRoom.Quick && st != MpRoom.Phase.Match)
             {
-                // ONLINE MATCH: in the queue (the old Menu.DrawMatchmaking in short)
-                var other = MpRoom.Members.Count >= 2 ? MpRoom.Members[MpRoom.Members[0].Id == MpRoom.MyId ? 1 : 0] : null;
-                string line = MpRoom.QuickFound && other != null ? "Opponent found: " + other.Name + "!" : "Looking for an opponent… " + Mathf.FloorToInt(Now - MpRoom.SearchSince) + " s";
-                if (draw) Text(line, ix, y + 10, Treb(14, true), MpRoom.QuickFound ? "#8fffb0" : "#f4f1ff");
-                y += 24;
-                var ql = Wrap(MpRoom.QuickFound ? "You on blue, " + (other != null ? other.Name : "them") + " on red, bots fill the rest. Starting…" : "Anyone who presses ONLINE MATCH now plays you. One of you on each team, bots fill the rest.", iw, Treb(12));
+                // ONLINE MATCH: in the queue (the old Menu.DrawMatchmaking in short), alone or as a group of up to three
+                int mySide = MpRoom.MySide; string mates = null, them = null;
+                foreach (var m in MpRoom.Members)
+                {
+                    if (m.Id == MpRoom.MyId) continue;
+                    if (m.Side == mySide) mates = mates == null ? m.Name : mates + ", " + m.Name;
+                    else them = them == null ? m.Name : them + ", " + m.Name;
+                }
+                bool found = MpRoom.QuickFound && them != null;
+                string line = found ? "Opponents found: " + them + "!" : (MpRoom.PartySize > 1 ? "Your group is looking… " : "Looking for opponents… ") + Mathf.FloorToInt(Now - MpRoom.SearchSince) + " s";
+                var ll = Wrap(line, iw, Treb(14, true));
+                if (draw) for (int i = 0; i < ll.Count; i++) Text(ll[i], ix, y + 10 + i * 18, Treb(14, true), found ? "#8fffb0" : "#f4f1ff");
+                y += 6 + ll.Count * 18;
+                string info = found ? "Your team: you" + (mates != null ? ", " + mates : "") + ". Bots fill the empty places. Starting…"
+                    : (mates != null ? "With you: " + mates + ". " : "") + "Anyone who presses ONLINE MATCH now plays you, alone or in a group of up to 3. Bots fill the empty places.";
+                var ql = Wrap(info, iw, Treb(12));
                 TextLines(ql, ix, y, "#a9a7c7", draw); y += ql.Count * 16 + 6;
-                if (draw && !MpRoom.QuickFound) MpBtn("mpCancel", "CANCEL", ix, y, iw, rowH, "#39407a", MpRoom.Leave);
-                if (!MpRoom.QuickFound) y += rowH + 6;
+                if (draw && !found) MpBtn("mpCancel", "CANCEL", ix, y, iw, rowH, "#39407a", MpRoom.CancelSearch);
+                if (!found) y += rowH + 6;
                 return y - y0 + 6;
             }
             if (st == MpRoom.Phase.Off)
@@ -161,17 +170,14 @@ namespace BAM.Online.UI
                 y += rowH + 14;
                 var qh = Wrap("Play someone who is searching right now, or wait for the next one. Bots fill the empty places.", iw, Treb(12));
                 TextLines(qh, ix, y, "#a9a7c7", draw); y += qh.Count * 16 + 10;
+                // with friends: pick the mode, then INVITE someone (Rickard 2026-10-27: no codes to type, invite and start).
+                // The room and its code are made by the first INVITE and only carried inside the invite.
                 if (draw) Text("Or with friends:", ix, y + 8, Treb(13, true), "#ffb43a");
                 y += 22;
                 ModeButtons(ix, y, iw, createMode, m => createMode = m, draw); y += 36;
                 var ml = Wrap(ModeLine(createMode, 2), iw, Treb(12)); TextLines(ml, ix, y, "#a9a7c7", draw); y += ml.Count * 16 + 4;
-                float bw = (iw - 96 - 12) / 2;
-                if (draw)
-                {
-                    MpBtn("mpHost", "CREATE ROOM", ix, y, bw, rowH, "#3a6cff", () => MpRoom.Host(createMode));
-                    Field("code", ix + bw + 6, y, 96, rowH, codeDraft, "CODE");
-                    MpBtn("mpJoin", "JOIN", ix + bw + 108, y, bw, rowH, "#3a6cff", () => { EndInput(); MpRoom.Join(codeDraft); });
-                }
+                var il = Wrap("Press INVITE next to a friend below. When they accept, you press START.", iw, Treb(12)); TextLines(il, ix, y, "#f4f1ff", draw); y += il.Count * 16 + 6;
+                if (draw) MpBtn("mpFriends", "INVITE FROM FRIENDS", ix, y, iw, rowH, "#3a6cff", () => Go("friends"));
                 y += rowH + 6;
             }
             else if (st == MpRoom.Phase.Connecting)
@@ -182,11 +188,12 @@ namespace BAM.Online.UI
             else
             {
                 // the room
-                if (MpRoom.IsHost && MpRoom.Code.Length > 0)
+                if (MpRoom.IsHost)
                 {
-                    if (draw) { Text("Room code:", ix, y + 10, Treb(12), "#a9a7c7"); Text(MpRoom.Code, ix, y + 36, "bold 26px monospace", "#f4f1ff"); }
-                    if (draw) MpBtn("mpShare", Now < copiedT ? "COPIED!" : "COPY CODE", ix + iw - 120, y + 8, 120, 34, "#3a6cff", () => { GUIUtility.systemCopyBuffer = MpRoom.Code; copiedT = Now + 1.5f; });
-                    y += 54;
+                    // no code on screen: more friends are invited from the list below or from Friends
+                    if (draw) Text("Your room", ix, y + 10, Treb(13, true), "#f4f1ff");
+                    if (draw) MpBtn("mpFriends", "INVITE MORE", ix + iw - 120, y, 120, 30, "#3a6cff", () => Go("friends"));
+                    y += 36;
                 }
                 var members = MpRoom.Members; int mode = MpRoom.Mode;
                 for (int i = 0; i < members.Count; i++)
@@ -213,6 +220,12 @@ namespace BAM.Online.UI
                     if (draw) StartButton("mpStart", ix, y, iw - 106, rowH + 8, "START", MpRoom.StartMatch, off);
                     if (draw) MpBtn("mpLeave", "LEAVE", ix + iw - 100, y + 4, 100, rowH, "#39407a", MpRoom.Leave);
                     y += rowH + 14;
+                    if (members.Count >= 2 && members.Count <= MpRoom.MaxGroup && MpRoom.State == MpRoom.Phase.Lobby)
+                    {
+                        // the group against another group (or a single player) from the queue
+                        if (draw) MpBtn("mpGroupQuick", "ONLINE MATCH: PLAY ANOTHER GROUP", ix, y, iw, rowH, "#2fae5b", MpRoom.QuickMatch);
+                        y += rowH + 6;
+                    }
                 }
                 else
                 {
@@ -301,7 +314,7 @@ namespace BAM.Online.UI
 
         internal static void InviteSomeone(string playerId, string name)
         {
-            var why = MpSocial.Invite(playerId, name);
+            var why = MpSocial.Invite(playerId, name, createMode);
             Toast(why ?? "Invite sent to " + name);
             if (why == null && page != "mp") Go("mp");
         }

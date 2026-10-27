@@ -57,7 +57,7 @@ namespace BAM.Online.Mp
         public string Code = "";
         public bool IsHost => host;
         public bool Busy => busy;
-        /// <summary>ONLINE MATCH: the host's lobby is public, tagged, for two players (MpRoom.QuickMatch); a quick guest joins by id.</summary>
+        /// <summary>ONLINE MATCH: the host's lobby is public and tagged while it waits (MpRoom.QuickMatch); a quick guest joins by id.</summary>
         public bool Quick; public string JoinId; public DateTime Created; public string LobbyId => lobbyId;
 
         public MpRelay(bool host, string code) { this.host = host; Code = host ? "" : (code ?? "").Trim().ToUpperInvariant(); reach = Application.internetReachability; }
@@ -86,7 +86,7 @@ namespace BAM.Online.Mp
                     await NewAllocation(); if (closed) return;
                     var data = new Dictionary<string, DataObject> { { RelayKey, new DataObject(DataObject.VisibilityOptions.Member, relayCode) } };
                     if (Quick) data[TagKey] = new DataObject(DataObject.VisibilityOptions.Public, QuickTag, DataObject.IndexOptions.S1);
-                    var lobby = await LobbyService.Instance.CreateLobbyAsync(Quick ? "bam-quick" : "bam-room", Quick ? 2 : MaxPlayers, new CreateLobbyOptions { IsPrivate = !Quick, Data = data });
+                    var lobby = await LobbyService.Instance.CreateLobbyAsync(Quick ? "bam-quick" : "bam-room", MaxPlayers, new CreateLobbyOptions { IsPrivate = !Quick, Data = data });
                     lobbyId = lobby.Id; Code = lobby.LobbyCode ?? ""; Created = lobby.Created; if (closed) { LeaveLobby(); return; }
                     OnStatus?.Invoke("");
                 }
@@ -103,18 +103,30 @@ namespace BAM.Online.Mp
             finally { busy = false; }
         }
 
-        /// <summary>Open ONLINE MATCH lobbies of this version, oldest first (not the one with id mine).</summary>
-        public static async Task<List<Lobby>> FindOpen(string mine)
+        /// <summary>Open ONLINE MATCH lobbies of this version with room for a group of size, oldest first (not the one with id mine).</summary>
+        public static async Task<List<Lobby>> FindOpen(string mine, int size = 1)
         {
             var filters = new List<QueryFilter>
             {
-                new QueryFilter(QueryFilter.FieldOptions.AvailableSlots, "0", QueryFilter.OpOptions.GT),
+                new QueryFilter(QueryFilter.FieldOptions.AvailableSlots, (Math.Max(1, size) - 1).ToString(), QueryFilter.OpOptions.GT),
                 new QueryFilter(QueryFilter.FieldOptions.S1, QuickTag, QueryFilter.OpOptions.EQ),
             };
             var r = await LobbyService.Instance.QueryLobbiesAsync(new QueryLobbiesOptions { Count = 10, Filters = filters, Order = new List<QueryOrder> { new QueryOrder(true, QueryOrder.FieldOptions.Created) } });
             var res = new List<Lobby>();
             if (r != null && r.Results != null) foreach (var l in r.Results) if (l.Id != mine) res.Add(l);
             return res;
+        }
+
+        /// <summary>Host, ONLINE MATCH: open the lobby to the queue (public, tagged) or close it again (private: claimed, or the search stopped).</summary>
+        public async void SetOpen(bool open)
+        {
+            if (!host || lobbyId == null || closed) return;
+            try
+            {
+                var data = new Dictionary<string, DataObject> { { TagKey, new DataObject(DataObject.VisibilityOptions.Public, QuickTag, DataObject.IndexOptions.S1) } };
+                await LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { IsPrivate = !open, Data = data });
+            }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] queue: " + e.Message); }
         }
 
         /// <summary>Host: a guest left, so its lobby place is free again (a quick lobby is found by its free places).</summary>
