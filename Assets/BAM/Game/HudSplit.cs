@@ -12,9 +12,9 @@ namespace BAM.Game
     /// icon, both halves are grey until the special is ready, a faint line parts them and TAP / DRAG sit under each half.
     /// With its own pictures (Resources/BAM/Menu/special_&lt;hero&gt;_tap and _drag) the tap picture fills the left half and the drag
     /// picture the right; without them the hero's one special icon covers the disc as before.
-    /// Like the old WoW wheel's painted split icon (Rickard's screenshot 2026-10-27 "här är hur det gjordes i wowläget") each
-    /// picture fills its whole half edge to edge, cut at the middle line, over the grey and the gold level (Rickard 2026-10-27
-    /// "svårt att se skill ikonen vad det är": small and under the grey they read as dark grey blobs).
+    /// The pictures are flat white silhouettes like the old ABC2 icons (Rickard 2026-10-27: "dina egengjorda ... är ju rätt
+    /// stilrena", bam-work/art/special-icons/clean-white/tapdrag-icons.js), at the old wheel's size, each in its own half and over
+    /// the grey and the gold level so they always read (Rickard 2026-10-27 "svårt att se skill ikonen vad det är").
     /// </summary>
     sealed partial class Hud
     {
@@ -87,11 +87,11 @@ namespace BAM.Game
             half.anchorMax = new Vector2(side < 0f ? 0.5f : 1f, 1f);
             half.offsetMin = half.offsetMax = Vector2.zero;
             half.gameObject.AddComponent<RectMask2D>();
-            // the picture a bit wider than the half, centred in it, so the subject fills the half and the cut hides the rest
+            // the picture centred in its half (old wheel: 0.7 R across, 0.44 R off the middle, 0.12 R up; a bit larger here so it reads)
             var rt = UiKit.NewRect(name + "Icon", half);
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = Vector2.one * 1.25f * R;
-            rt.anchoredPosition = new Vector2(0f, R * 0.08f);
+            rt.sizeDelta = Vector2.one * 0.82f * R;
+            rt.anchoredPosition = new Vector2(side * R * 0.005f, R * 0.12f);
             var img = rt.gameObject.AddComponent<Image>();
             img.preserveAspect = true;
             img.raycastTarget = false;
