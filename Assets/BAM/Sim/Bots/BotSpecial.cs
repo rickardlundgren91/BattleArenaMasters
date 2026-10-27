@@ -100,7 +100,7 @@ namespace BAM.Sim
             for (int i = 0; i < us.Count; i++)
             {
                 var u = us[i];
-                if (u == t || !u.Alive || u.Team == h.Team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable)) continue;
+                if (u == t || !u.Alive || u.Team == h.Team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable) || !Sees(u)) continue; // only what the team sees
                 float dx = u.X - h.X, dy = u.Y - h.Y, along = dx * cx + dy * cy, perp = Math.Abs(-dx * cy + dy * cx);
                 if (along > 0 && along < L && perp < w + u.R) return false;
             }
@@ -114,7 +114,7 @@ namespace BAM.Sim
             for (int i = 0; i < us.Count; i++)
             {
                 var u = us[i];
-                if (!u.Alive || u.Team == h.Team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable) || SimMath.PtSeg(u.X, u.Y, h.X, h.Y, ex, ey) > hw + u.R) continue;
+                if (!u.Alive || u.Team == h.Team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable) || !Sees(u) || SimMath.PtSeg(u.X, u.Y, h.X, h.Y, ex, ey) > hw + u.R) continue;
                 n++;
             }
             return n;

@@ -51,16 +51,17 @@ namespace BAM.Sim
         internal void InterruptSpecial(Unit u)
         {
             if (u.Kind != UnitKind.Hero || !u.Alive) return;
-            bool any = false;
+            bool any = false, cut = false;
             if (u.Needles > 0) { u.Needles = 0; any = true; }
             for (int i = 0; i < Projs.Count; i++)
             {
                 var p = Projs[i];
                 if (p.Src != u || p.Done) continue;
-                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam)) { p.Done = true; any = true; } // still in the hand
+                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam)) { p.Done = true; any = cut = true; } // still in the hand
                 else if (p.Mode == ProjMode.Hook && p.Out && p.Caught == null) { p.Out = false; any = true; }          // the anchor comes back
-                else if (p.IsWarning) p.Done = true;                                                                    // its red warning goes with it
             }
+            // the red warning goes with a shot that never left the hand; a shot already flying keeps its warning
+            if (cut) for (int i = 0; i < Projs.Count; i++) { var p = Projs[i]; if (p.Src == u && !p.Done && p.IsWarning) p.Done = true; }
             if (!any) { u.RemoveAll(St.Channel); return; }
             u.RemoveAll(St.Casting); u.RemoveAll(St.Channel);
             Emit(EventType.Interrupt, u, null);
@@ -76,7 +77,7 @@ namespace BAM.Sim
             if (tgt.Has(St.Invulnerable) || tgt.Has(St.Untargetable)) return 0;
             var att = src != null ? (src.Owner ?? src) : null;
             if (tgt.Kind == UnitKind.Hero) tgt.LastHurt = Time;
-            if (att != null) att.RevealT = Rules.RevealTime;
+            if (att != null && !tgt.IsClone) att.RevealT = Rules.RevealTime; // hitting Fenn's decoy reveals nobody
             tgt.RevealT = Rules.RevealTime;
             bool burning = (flags & DmgFlags.Burning) != 0;
             if (!burning)
@@ -85,16 +86,20 @@ namespace BAM.Sim
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
-                if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy)) amount = TutDamage(src, tgt, amount, kind);
+                if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy))
+                {
+                    amount = TutDamage(src, tgt, amount, kind);
+                    if (amount <= 0) return 0; // a hit the tutorial zeroes is no fight: it neither stops regen nor counts as combat
+                }
             }
             if (tgt.IsClone) amount = Math.Max(amount, tgt.Hp); // Fenn's decoy is gone at the first damage of any kind (the old illusion took double)
             tgt.LastCombat = Time;
-            if (src != null)
+            if (src != null && !tgt.IsClone)
             {
                 src.LastCombat = Time;
                 if (src.Kind == UnitKind.Hero && att.HeroIndex >= 0) tgt.LastHitBy[att.HeroIndex] = Time;
             }
-            if (src != null && src.Kind == UnitKind.Hero && tgt.Kind == UnitKind.Hero)
+            if (src != null && src.Kind == UnitKind.Hero && tgt.Kind == UnitKind.Hero && !tgt.IsClone)
             {
                 var t = Towers[tgt.Team]; // a hero hitting a hero under its tower draws the tower's fire
                 if (t != null && t.Alive && SimMath.Dist(t, src) <= t.UDef.Range + src.R) t.Target = src;
@@ -142,6 +147,7 @@ namespace BAM.Sim
             // a hero
             u.Deaths++; u.RespawnT = RespawnTime(u); u.DiedAt = Time;
             u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0;
+            u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
             int kt = Teams.Other(u.Team);
             Kills[kt]++;
@@ -182,6 +188,7 @@ namespace BAM.Sim
             u.Alive = true; u.Hp = u.MaxHp; u.X = u.PX = u.SpawnX; u.Y = u.PY = u.SpawnY;
             if (!Config.HeroTest) AddStatus(u, St.Invulnerable, Rules.RespawnInvulnerable); // HERO TEST: hittable at once (old herotestTick)
             u.AtkTimer = 0; u.RespawnT = 0; u.MoInit = false; u.SpellChanEnd = -1;
+            if (u.Bot != null) u.Bot.Reset(true);
             Emit(EventType.Respawn, u, null);
         }
 
@@ -285,8 +292,7 @@ namespace BAM.Sim
             else
             {
                 var d = u.UDef; spawnDelay = d.SpawnDelay; projSpeed = d.ProjSpeed; projTime = d.ProjTime; kind = d.Attack; dmg = u.DefDmg;
-                if (u.Kind == UnitKind.Tower) coeff = TowerCoeff(u, tgt);
-                if (u.Kind == UnitKind.Minion && u.Minion == MinionKind.Siege && tgt.Kind == UnitKind.Tower) coeff *= Rules.SiegeVsTower;
+                coeff = UnitAutoCoeff(u, tgt);
             }
             u.Facing = SimMath.Atan2(tgt.Y - u.Y, tgt.X - u.X); u.AimT = Time + spawnDelay + 0.1f;
             float travel = projTime != 0 ? projTime : 0.1f;
@@ -295,6 +301,15 @@ namespace BAM.Sim
             var p = NewProj(ProjMode.Auto, u, u.X, u.Y);
             p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero;
             Emit(EventType.AttackStart, u, tgt, spawnDelay, (byte)kind, big);
+        }
+
+        /// <summary>What a tower's or minion's shot is worth against tgt (tower ramp and late bonus, a siege minion's x2 on towers).</summary>
+        float UnitAutoCoeff(Unit u, Unit tgt)
+        {
+            float coeff = 1;
+            if (u.Kind == UnitKind.Tower) coeff = TowerCoeff(u, tgt);
+            if (u.Kind == UnitKind.Minion && u.Minion == MinionKind.Siege && tgt.Kind == UnitKind.Tower) coeff *= Rules.SiegeVsTower;
+            return coeff;
         }
 
         bool AmbushReady(Unit u) => u.Kind == UnitKind.Hero && !u.IsClone && Tut == null && Map.InGrass(u.X, u.Y) && HiddenFromFoes(u);
@@ -311,7 +326,11 @@ namespace BAM.Sim
                 p.T += dt;
                 if (p.T < 0)
                 {
-                    if (p.IsShot && p.Src != null) { p.X = p.Src.X; p.Y = p.Src.Y; } // still in the shooter's hand
+                    if (p.IsShot && p.Src != null)
+                    {
+                        if (!p.Src.Alive) { p.Done = true; continue; } // a shot still in the hand dies with its shooter
+                        p.X = p.Src.X; p.Y = p.Src.Y; // still in the shooter's hand
+                    }
                     continue;
                 }
                 switch (p.Mode)
@@ -384,6 +403,7 @@ namespace BAM.Sim
             if (list.Count > 0)
             {
                 p.Tgt = u.Kind == UnitKind.Hero ? PickRandom(list) : Nearest(list, u.X, u.Y);
+                if (u.Kind != UnitKind.Hero) p.Dmg = u.DefDmg * UnitAutoCoeff(u, p.Tgt); // priced for the new target, not the dead one
                 u.Facing = SimMath.Atan2(p.Tgt.Y - u.Y, p.Tgt.X - u.X);
                 return;
             }
@@ -402,6 +422,7 @@ namespace BAM.Sim
 
         void OnHeroHit(Unit h, Unit t, Proj p, float dealt)
         {
+            if (t.IsClone) return; // Fenn's decoy gives no charge and no on-hit passives (old phantomHit)
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
             h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1);
             if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddStatus(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, 0, h);

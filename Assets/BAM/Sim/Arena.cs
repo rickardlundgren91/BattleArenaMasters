@@ -136,7 +136,16 @@ namespace BAM.Sim
 
         const float LosStep = 0.1f, LosHalf = 0.1f;
 
-        /// <summary>No wall tile on the line a-b, sampled every 0.1 tile on its centre and both edges (half wide). The ends are not tested.</summary>
+        /// <summary>Does a point stop a sight line or a shot? A wall tile does, but a boulder's tiles only inside its capsule
+        /// (the same shape bodies collide with), so a body standing in a tile corner next to a boulder can still be seen and shot.</summary>
+        public bool WallAt(float x, float y)
+        {
+            int tx = (int)Math.Floor(x), ty = (int)Math.Floor(y);
+            if (Tile(tx, ty) != Wall) return false;
+            return !rockTile[ty * W + tx] || HitsRock(x, y, 0);
+        }
+
+        /// <summary>No wall (see WallAt) on the line a-b, sampled every 0.1 tile on its centre and both edges (half wide). The ends are not tested.</summary>
         public bool LineClear(float ax, float ay, float bx, float by, float half = LosHalf)
         {
             float dx = bx - ax, dy = by - ay, d = (float)Math.Sqrt(dx * dx + dy * dy);
@@ -146,14 +155,14 @@ namespace BAM.Sim
             for (int i = 1; i < n; i++)
             {
                 float k = (float)i / n, x = ax + dx * k, y = ay + dy * k;
-                if (TileAt(x, y) == Wall || TileAt(x + px, y + py) == Wall || TileAt(x - px, y - py) == Wall) return false;
+                if (WallAt(x, y) || WallAt(x + px, y + py) || WallAt(x - px, y - py)) return false;
             }
             return true;
         }
         public bool LosClear(float ax, float ay, float bx, float by) => LineClear(ax, ay, bx, by, LosHalf);
         public bool LosClear(Unit a, Unit b) => LineClear(a.X, a.Y, b.X, b.Y, LosHalf);
         /// <summary>A shot moving from a to b this tick hits a wall (on the way, or b is in a wall tile).</summary>
-        public bool ShotBlocked(float ax, float ay, float bx, float by) => !LineClear(ax, ay, bx, by, LosHalf) || TileAt(bx, by) == Wall;
+        public bool ShotBlocked(float ax, float ay, float bx, float by) => !LineClear(ax, ay, bx, by, LosHalf) || WallAt(bx, by);
 
         /// <summary>How far a strip from (x, y) along ang reaches before a wall cuts the sight line, in 0.3 tile steps (Inferno Lane).</summary>
         public float LaneReach(float x, float y, float ang, float reach)

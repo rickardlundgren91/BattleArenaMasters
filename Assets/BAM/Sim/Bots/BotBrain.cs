@@ -25,7 +25,7 @@ namespace BAM.Sim
         readonly float[] react;
 
         // ---------- the old AI object ----------
-        float t, afk = float.NaN, bold = float.NaN, spT = float.NaN;
+        float t, afk = float.NaN, bold = float.NaN, spT = float.NaN, decideIv, lastThinkT = -99;
         bool retreat, danger, panicked, misjudge, overchase, urgent, chip, following;
         float retreatT = -99, ttk = 99, mistakeT = -1, lateRetreat, commitT, commitHp, strafeT, strafe;
         float mdx, mdy, mT = -99;
@@ -76,12 +76,21 @@ namespace BAM.Sim
             return SimMath.Clamp(bold + SimMath.Clamp((H.Kills - H.Deaths) * 0.1f, -0.5f, 0.5f), -1, 1);
         }
 
+        /// <summary>After a respawn or a recall the bot starts over at its base: no old path, goal, kite or stuck spot.</summary>
+        public void Reset(bool died)
+        {
+            path.Clear(); hasGoal = false; gFollow = null; gHasF = false; kite = null;
+            hasStuck = false; hasBlocked = false; t = 0;
+            if (died) { retreat = false; danger = false; focus = null; }
+        }
+
         void SetGoal(float x, float y, float stop = 0, Unit follow = null) { hasGoal = true; gX = x; gY = y; gStop = stop; gFollow = follow; gHasF = false; }
 
         // ---------- the think tick (old aiHero) ----------
         public void Think(float dt)
         {
             var h = H; t -= dt;
+            bool resumed = Now - lastThinkT > 2.5f * dt; lastThinkT = Now; // the last ticks were skipped (stun, cast, recall, death)
             if (float.IsNaN(afk)) afk = BotTables.AfkMax * (float)Math.Pow(Srnd(), BotTables.AfkExp);
             if (Now < afk) return;
             var myTower = TowerOf(h.Team); var enemyTower = TowerOf(Teams.Other(h.Team));
@@ -130,7 +139,9 @@ namespace BAM.Sim
                     M.Map.FindPath(h.X, h.Y, gX, gY, Now, path);
                 }
             }
-            if (!hasStuck) { hasStuck = true; stuckX = h.X; stuckY = h.Y; stuckT = Now; }
+            // a bot that could not think (stunned, casting, recalling, dead) was not stuck. A root still counts as stuck for now:
+            // bots then stand still a while after Fenn's wolf, and Fenn's balance leans on it (Rickard decides, 2026-10-27)
+            if (!hasStuck || resumed) { hasStuck = true; stuckX = h.X; stuckY = h.Y; stuckT = Now; }
             if (!path.Has || Hyp(h.X - stuckX, h.Y - stuckY) > Math.Max(0.1f, SpeedOf(h) * 0.2f)) { stuckX = h.X; stuckY = h.Y; stuckT = Now; }
             else if (Now - stuckT > 0.6f)
             {
@@ -166,6 +177,7 @@ namespace BAM.Sim
             var h = H; float now = Now;
             bool calm = !h.InCombat(now) && !AnyFoeHeroSeenWithin(h, 8);
             t = Math.Max(0.1f, (PickReact() + Srand(-BotTables.ReactionOffset, BotTables.ReactionOffset)) * (calm ? 1.4f : h.InCombat(now) ? 0.75f : 1) * (1 - 0.15f * Skill)) * (v3 ? TK3(0) : 1) * HumanReaction();
+            decideIv = t;
             Temperament();
             if (!(mistakeT > now))
             {
@@ -217,14 +229,14 @@ namespace BAM.Sim
                     if (killT < 1.2f && ttk > killT * 2 && (hpR > 0.35f ? helpers <= 1 : helpers == 0 && Unaccounted(h, u) == 0)) { retreat = false; break; }
                 }
             if (retreat && !locked && safety && hpR > 0.6f && !h.InCombat(now))
-                for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a != h && a.Team == h.Team && now - a.LastCombat < 1 && Dist(a, h) < 8) { retreat = false; break; } }
+                for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a != h && a.Team == h.Team && !a.IsClone && now - a.LastCombat < 1 && Dist(a, h) < 8) { retreat = false; break; } }
             bool finish = TowerFinish(enemyTower, hpR, myDps); if (finish) retreat = false;
             TeamStay(hpR); // don't leave the human alone in a fight
             danger = !retreat && !finish && !(v3 && TK3(33) > 0 && InvulT(h) > 1.5f) && ttk < Tier.TtkDanger * TK(5) && !(commitT > now && ttk > 1.2f);
             var target = retreat ? null : PickHeroTarget(enemyTower, myDps);
             bool towerUp = enemyTower != null && enemyTower.Alive;
             var pushers = bufPushers; pushers.Clear();
-            if (towerUp) for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a.Team == h.Team && (a == h || Dist(a, enemyTower) < enemyTower.UDef.Range + 2.5f) && HpR(a) > 0.4f) pushers.Add(a); }
+            if (towerUp) for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a.Team == h.Team && !a.IsClone && (a == h || Dist(a, enemyTower) < enemyTower.UDef.Range + 2.5f) && HpR(a) > 0.4f) pushers.Add(a); }
             float guardDps = 0;
             if (towerUp)
             {
@@ -442,7 +454,7 @@ namespace BAM.Sim
             {
                 int numbers = 0; bool foeClose = false;
                 for (int i = 0; i < us.Count; i++) { var u = us[i]; if (u.Kind == UnitKind.Hero && u.Alive && !u.IsClone) numbers += u.Team == h.Team ? 1 : -1; }
-                for (int i = 0; i < us.Count; i++) { var u = us[i]; if (u.Kind == UnitKind.Hero && u.Alive && u.Team != h.Team && !u.IsClone && Dist(u, myTower) < tr + 12) { foeClose = true; break; } }
+                for (int i = 0; i < us.Count; i++) { var u = us[i]; if (u.Kind == UnitKind.Hero && u.Alive && u.Team != h.Team && !u.IsClone && (Sees(u) ? Dist(u, myTower) < tr + 12 : RemNear(u, h.Team, myTower.X, myTower.Y, tr + 12))) { foeClose = true; break; } }
                 if (foeClose && numbers < 0 && numbers * TK3(7) <= -1 && TeamLeader() == null) // with a human leader the bot follows instead
                 {
                     float x = myTower.X + Srand(-1, 1), y = myTower.Y + fwd * (tr - 1);

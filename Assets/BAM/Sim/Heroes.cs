@@ -595,7 +595,7 @@ namespace BAM.Sim
             if (Aimed(h, out ang, out _)) { castX = h.X + SimMath.Cos(ang) * KnutS.HookDistance; castY = h.Y + SimMath.Sin(ang) * KnutS.HookDistance; }
             else
             {
-                var t = PickInReach(h, KnutS.TapReach, Pick.HeroOrMinion, true);
+                var t = PickInReach(h, KnutS.TapReach, Pick.Heroes, true); // the anchor only catches heroes, so a tap with none in reach spends nothing
                 if (t == null) return false;
                 LeadAim(h, t, Flight.Hook, KnutS.OutTime, KnutS.OutSpeed * KnutS.OutTime / 2, out float ax, out float ay);
                 ang = SimMath.Atan2(ay - h.Y, ax - h.X);
@@ -636,17 +636,17 @@ namespace BAM.Sim
                         if (hit.Alive) AddStatus(hit, St.Stun, Math.Max(0, p.D - back) / KnutS.PullSpeed + KnutS.StunAfter, 0, 0, h);
                     }
                 }
-                else if (p.D >= KnutS.HookDistance || k >= 1 || Map.TileAt(p.X, p.Y) == Arena.Wall)
+                else if (p.D >= KnutS.HookDistance || k >= 1 || Map.WallAt(p.X, p.Y))
                 {
                     p.Out = false; h.RemoveAll(St.Channel);
-                    if (Map.TileAt(p.X, p.Y) == Arena.Wall) Blocked(p, p.X, p.Y);
+                    if (Map.WallAt(p.X, p.Y)) Blocked(p, p.X, p.Y);
                 }
             }
             else
             {
                 p.D -= KnutS.PullSpeed * dt;
                 var c = p.Caught;
-                if (c != null && c.Alive) { float cd = Math.Max(back, p.D); c.X = h.X + ca * cd; c.Y = h.Y + sa * cd; }
+                if (c != null && c.Alive) { float cd = Math.Max(back, p.D); c.X = h.X + ca * cd; c.Y = h.Y + sa * cd; c.MovedAt = Time; }
                 p.X = h.X + ca * Math.Max(0, p.D); p.Y = h.Y + sa * Math.Max(0, p.D);
                 if (p.D <= back)
                 {

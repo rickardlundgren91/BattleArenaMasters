@@ -143,7 +143,7 @@ namespace BAM.Sim
         {
             float t = Math.Min(dt, u.KnockT); u.KnockT -= dt;
             float nx = u.X + u.KnockVX * t, ny = u.Y + u.KnockVY * t;
-            if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; }
+            if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; u.MovedAt = Time; }
             else u.KnockT = 0;
         }
     }

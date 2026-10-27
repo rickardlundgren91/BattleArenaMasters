@@ -71,18 +71,20 @@ namespace BAM.Sim
         {
             var h = H;
             if (e == dropU && now < dropT) return true;
-            if (e != chaseU || now - chaseLastT > 0.6f) return false;
+            if (e != chaseU || now - chaseLastT > ChaseGap) return false;
             bool held = e.Has(St.Stun) || e.Has(St.SlowPct) || e.Has(St.SlowFlat) || e.Has(St.Root);
             float t = now - chaseT, closing = t > 0 ? (chaseGap - d) / t : 0, left = d - (h.Range + e.R + 0.3f);
             bool giveUp = Hyp(h.X - chaseX, h.Y - chaseY) > BotTables.ChaseLeash || !held && t > BotTables.ChaseLookT && left > closing * BotTables.ChaseCatchT;
             if (giveUp) { dropU = e; dropT = now + BotTables.ChaseDropT; chaseU = null; }
             return giveUp;
         }
+        /// <summary>How long between two looks still counts as one chase: 0.6 s, or a slow bot's own decision interval and a bit.</summary>
+        float ChaseGap => Math.Max(0.6f, decideIv + 0.15f);
         void ChaseTrack(Unit e)
         {
             var h = H; float now = Now, d = Dist(h, e);
             bool contact = d <= h.Range + e.R + 0.3f || HitAt(e, h) > chaseT;
-            if (e != chaseU || now - chaseLastT > 0.6f || contact) { chaseU = e; chaseX = h.X; chaseY = h.Y; chaseGap = d; chaseT = now; }
+            if (e != chaseU || now - chaseLastT > ChaseGap || contact) { chaseU = e; chaseX = h.X; chaseY = h.Y; chaseGap = d; chaseT = now; }
             chaseLastT = now;
         }
 
@@ -91,7 +93,7 @@ namespace BAM.Sim
         {
             var h = H; float now = Now; var us = M.Units;
             var allies = bufAllies; allies.Clear();
-            for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a.Team == h.Team && a != h) allies.Add(a); }
+            for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a.Team == h.Team && a != h && !a.IsClone) allies.Add(a); } // the bot knows its own Fenn's decoy deals nothing
             float tank = TowerTank(enemyTower, h.Team);
             Unit best = null; float bs = -1e9f; urgent = false; int sd = StarDiff; float bold = Temperament();
             bool safety = Safety; var lead = TeamLeader();
