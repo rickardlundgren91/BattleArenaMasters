@@ -257,6 +257,7 @@ namespace BAM.Art
             {
                 crackPs = Flat(MakeSystem("BAM Cracks", ArtMaterials.ParticleAdd, 0f, 0.9f, 1f, 40));
                 Retexture(crackPs, t, 1, 1, 0, false);
+                RickardFx.WeighByAlpha(crackPs.GetComponent<ParticleSystemRenderer>().sharedMaterial); // redone 2026-10-27 as white + alpha
             }
             if ((t = RickardFx.Load("tx_fx_ground_swirl")) != null)
             {
@@ -270,6 +271,7 @@ namespace BAM.Art
             {
                 pillar = MakeSystem("BAM Pillars", ArtMaterials.ParticleAdd, 0f, 1f, 1f, 40);
                 Retexture(pillar, t, 1, 1, 0, false);
+                RickardFx.WeighByAlpha(pillar.GetComponent<ParticleSystemRenderer>().sharedMaterial); // redone 2026-10-27 as white + alpha
                 var r = pillar.GetComponent<ParticleSystemRenderer>();
                 r.renderMode = ParticleSystemRenderMode.VerticalBillboard;
                 var main = pillar.main;
@@ -312,7 +314,8 @@ namespace BAM.Art
         static readonly string[] OwnPics =
         {
             "tx_fx_hit_star_a", "tx_fx_hit_star_b", "tx_fx_hit_star_c", "tx_fx_impact_ring", "tx_fx_fenn_claw", "tx_fx_bram_anvil",
-            "tx_fx_tyra_charge", "tx_fx_blast_explosion",
+            "tx_fx_tyra_release", "tx_fx_tyra_charge", "tx_fx_blast_explosion", "tx_fx_tikta_poison", "tx_fx_knut_splash", "tx_fx_moa_honey",
+            "tx_fx_blast_scorch",
         };
 
         // mode: 0 white on black (additive), 1 white + alpha (additive weighed by alpha), 2 a coloured picture (alpha blended)
@@ -340,9 +343,31 @@ namespace BAM.Art
                 if (n == "tx_fx_impact_ring") PicSystem(n, true, 1, 0.3f, 1f); // a sharp ring that races out, lying on the ground
                 else if (n == "tx_fx_blast_explosion") PicSystem(n, false, 2, 0.45f, 1.15f); // the fireball swells
                 else if (n == "tx_fx_hit_star_a" || n == "tx_fx_hit_star_b" || n == "tx_fx_hit_star_c") PicSystem(n, false, 1, 0.8f, 1.1f);
+                else if (n == "tx_fx_tyra_charge") PicSystem(n, false, 1, 1.3f, 0.25f); // the spiral pulls in to the bow
+                else if (n == "tx_fx_tikta_poison") PicSystem(n, false, 2, 0.6f, 1.15f); // a poison puff that swells
+                else if (n == "tx_fx_knut_splash") PicSystem(n, true, 2, 0.45f, 1.1f); // water thrown out on the ground
+                else if (n == "tx_fx_moa_honey") PicSystem(n, true, 2, 0.6f, 1f); // a honey puddle spreading
+                else if (n == "tx_fx_blast_scorch") PicSystem(n, true, 2, 0.95f, 1f); // a burn mark that stays a while
                 else PicSystem(n, false, 1);
             }
+            var t = RickardFx.Load("tx_fx_ember");
+            if (t != null)
+            {
+                // his glowing flake: embers that drift up off fire and burns, turning as they go
+                ember = MakeSystem("BAM Embers", ArtMaterials.ParticleAdd, -0.25f, 1f, 0.35f, 200);
+                Retexture(ember, t, 1, 1, 0, false);
+                RickardFx.WeighByAlpha(ember.GetComponent<ParticleSystemRenderer>().sharedMaterial);
+                var spin = ember.rotationOverLifetime;
+                spin.enabled = true;
+                spin.z = new ParticleSystem.MinMaxCurve(-5f, 5f);
+            }
         }
+
+        static ParticleSystem ember;
+
+        /// <summary>Rickard's ember flakes (tx_fx_ember) drifting up; plain sparks without the picture.</summary>
+        public static void Embers(Vector3 pos, int n, Color32 c, float size, float speed, float life, float up = 0f, float jitter = 0f)
+            => Burst(ember ?? spark, pos, n, c, ember != null ? size * 1.6f : size, speed, life, up, jitter);
 
         /// <summary>The hit star in the middle of the target (his tx_fx_hit_star_c, now and then one of the two others); false when
         /// it is missing.</summary>
@@ -882,6 +907,8 @@ namespace BAM.Art
                     Smoke(mid, 6, C(Pal.Ink, 170), 0.8f * size, 1.4f * size, 1.0f, 0.8f, 0.4f * size);
                     Chunks(mid, 8, C(Pal.Bomb), 0.16f * size, 5f, 0.7f, 3f);
                     Crack(p, 1.0f * size, 1.2f);
+                    Pic("tx_fx_blast_scorch", p, new Color(1f, 1f, 1f, 0.9f), 2.4f * size, 2f); // his burn mark stays a moment
+                    Embers(mid, 8, C(Pal.FireCore), 0.12f, 2.5f * size, 0.9f, 1.5f, 0.3f * size);
                     Nova(p, new Color(1f, 0.6f, 0.25f, 1f), 1.0f * size, 0.45f);
                     Ring(p, 0.3f * size, 0.8f * size, new Color(1f, 0.7f, 0.3f, 0.9f), 0.35f);
                     break;
@@ -1031,6 +1058,7 @@ namespace BAM.Art
                     break;
                 case FxKind.AnchorHit:
                     SpecialHit((int)HeroId.Knut, mid, 1.1f * size);
+                    Pic("tx_fx_knut_splash", p, Color.white, 2.4f * size, 0.5f); // his water splash on the ground
                     Drops(mid, 10, heroAccent[(int)HeroId.Knut], 0.15f * size, 3f, 0.5f, 1.5f, 0.2f);
                     Pow(mid, 1, C(Pal.Steel), 0.9f * size, 0.16f);
                     Sparks(mid, 12, C(Pal.Steel), 0.13f, 4f, 0.35f, 1.4f);
@@ -1081,7 +1109,11 @@ namespace BAM.Art
                 case HeroId.Tikta: Bubbles(p + Vector3.up * 0.4f, 3, a, 0.12f, 0.8f, 0.5f, 1f, 0.2f); break;
                 case HeroId.Fenn: Wisps(p + Vector3.up * 0.4f, 3, a, 0.5f, 0.6f, 0.6f, 0.8f, 0.3f); break;
                 case HeroId.Bram: Sparks(p + Vector3.up * 0.5f, 6, a, 0.1f, 3f, 0.3f, 1.2f); break;
-                case HeroId.Tyra: Pic("tx_fx_tyra_charge", p + Vector3.up * 0.8f, (Color)m, 1.7f, 0.2f); break; // his star flash as she lets go
+                case HeroId.Tyra:
+                    // his light spiral pulls in to the bow, then his star flashes as she lets go
+                    Pic("tx_fx_tyra_charge", p + Vector3.up * 0.9f, (Color)m, 1.8f, 0.22f);
+                    Pic("tx_fx_tyra_release", p + Vector3.up * 0.8f, (Color)m, 1.7f, 0.2f);
+                    break;
             }
         }
 
@@ -1141,6 +1173,7 @@ namespace BAM.Art
                     Glow(p, 2, heroAccent[(int)HeroId.Moa], 0.4f, 0.4f, 0.25f);
                     Bubbles(p, 2, heroAccent[(int)HeroId.Moa], 0.1f, 0.6f, 0.5f, 0.6f, 0.1f);
                     Ring(new Vector3(p.x, 0f, p.z), 0.1f, 0.45f, (Color)heroMain[(int)HeroId.Moa], 0.25f);
+                    Pic("tx_fx_moa_honey", p, new Color(1f, 1f, 1f, 0.85f), 0.8f, 0.7f); // his honey puddle
                     break;
                 case ProjKind.TiktaNeedle:
                     Bubbles(p, 3, C(Pal.Poison), 0.14f, 0.6f, 0.6f, 0.8f, 0.1f);
@@ -1152,6 +1185,7 @@ namespace BAM.Art
                     Flash(p, 0.08f, 0.3f, new Color(1f, 1f, 1f, 0.9f), 0.05f);
                     Sparks(p, 4, m, 0.1f, 3f, 0.2f, 0.6f);
                     Bubbles(p, 3, a, 0.14f, 0.8f, 0.6f, 0.8f, 0.1f);
+                    Pic("tx_fx_tikta_poison", p + Vector3.up * 0.2f, new Color(1f, 1f, 1f, 0.9f), 0.9f, 0.5f); // his poison puff
                     Ring(new Vector3(p.x, 0f, p.z), 0.1f, 0.5f, (Color)m, 0.25f);
                     break;
                 }
@@ -1166,6 +1200,8 @@ namespace BAM.Art
                     Flames(g + Vector3.up * 0.15f, 7, m, 0.5f, 0.8f, 0.55f, 1.4f, 0.25f);
                     Sparks(p, 8, a, 0.09f, 3.5f, 0.4f, 1.6f);
                     Smoke(p + Vector3.up * 0.3f, 2, C(Pal.Ink, 120), 0.5f, 0.5f, 0.8f, 0.6f, 0.15f);
+                    Pic("tx_fx_blast_scorch", g, new Color(1f, 1f, 1f, 0.8f), 1.1f, 1.4f);
+                    Embers(p, 4, a, 0.1f, 1.2f, 0.7f, 1.2f, 0.15f);
                     Ring(g, 0.1f, 0.6f, (Color)m, 0.25f);
                     break;
                 }

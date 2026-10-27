@@ -49,6 +49,25 @@ namespace BAM.Art
             return ringMats[slot] = m;
         }
 
+        static Material stunMat;
+        static bool stunLoaded;
+
+        static Material StunMat()
+        {
+            if (stunLoaded) return stunMat;
+            stunLoaded = true;
+            var tex = RickardFx.Load("tx_fx_stun_stars"); // Rickard's own, 2026-10-27, in colour
+            if (tex == null) return null;
+            stunMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+            stunMat.name = "BAM stun stars";
+            stunMat.SetTexture(ArtMaterials.BaseMap, tex);
+            stunMat.mainTexture = tex;
+            stunMat.renderQueue = 3020;
+            return stunMat;
+        }
+
+        float StunSize() => Mathf.Max(1.1f, radius * 2.8f);
+
         // Moa's honey shield (old View3DShields.cs): a slowly turning globe of honeycomb cells, additive honey over the hero
         static Mesh hexSphere;
         static Material hexMat;
@@ -155,6 +174,14 @@ namespace BAM.Art
             Material own = i == StunRing ? RingMat(0, Pal.Stun) : i == PoisonRing ? RingMat(1, Pal.Poison) : i == BurnRing ? RingMat(2, Pal.Burn)
                 : i == Slow ? RingMat(3, Pal.Slow) : null;
             if (own != null) { MakeOwnRing(i, own, i == Slow ? rr * RingQuad : rr * 1.05f * RingQuad); return; }
+            if (i == Stun && StunMat() != null)
+            {
+                // his ring of stars over the head, facing the camera (Tick turns it to the camera and sways it)
+                MakeOwnRing(i, stunMat, StunSize());
+                t[i].localPosition = new Vector3(0f, height + 0.3f, 0f);
+                t[i].localScale = Vector3.one * StunSize();
+                return;
+            }
             switch (i)
             {
                 case Stun: mesh = Shapes.StunStars(); mat = ArtMaterials.Unlit; pos = new Vector3(0f, height + 0.12f, 0f); s = Mathf.Max(1f, radius * 2.5f); break;
@@ -246,7 +273,11 @@ namespace BAM.Art
         {
             if (flags == StatusFlags.None || !visible) return;
             if (fire != null && fire.activeSelf) DrawFire(time);
-            if (r[Stun] != null && r[Stun].enabled) t[Stun].localRotation = Quaternion.Euler(0f, time * 240f, 0f);
+            if (r[Stun] != null && r[Stun].enabled)
+            {
+                if (stunMat != null) t[Stun].rotation = ArtDriver.CamRot * Quaternion.Euler(0f, 0f, Mathf.Sin(time * 5f) * 8f) * Quaternion.Euler(-90f, 0f, 0f);
+                else t[Stun].localRotation = Quaternion.Euler(0f, time * 240f, 0f);
+            }
             if (r[Burn] != null && r[Burn].enabled)
             {
                 float f = 0.85f + Mathf.Sin(time * 23f) * 0.1f + Mathf.Sin(time * 37f) * 0.06f;
@@ -288,7 +319,7 @@ namespace BAM.Art
                 // smoke now and then, as the old game (16 embers and 5 smoke puffs a second)
                 burnN++;
                 if (fire == null) Fx.Flames(p + new Vector3(0f, height * 0.25f, 0f), 2, Fx.HeroMain(HeroId.Blast), 0.42f, 0.25f, 0.45f, 1.5f, radius * 0.7f); // no atlas
-                Fx.Sparks(p + new Vector3(0f, height * 0.25f, 0f), 1, new Color32(255, 217, 89, 255), 0.11f, 0.3f, 0.45f, 1.7f, radius * 0.6f);
+                Fx.Embers(p + new Vector3(0f, height * 0.25f, 0f), 1, new Color32(255, 217, 89, 255), 0.11f, 0.3f, 0.45f, 1.7f, radius * 0.6f);
                 if (burnN % 2 == 0) Fx.Smoke(p + new Vector3(0f, height * 0.6f + 0.4f, 0f), 1, new Color32(51, 43, 41, 102), 0.55f, 0.15f, 0.8f, 0.7f, radius * 0.4f);
             }
             if (Has(flags, StatusFlags.Poisoned)) Fx.Bubbles(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.14f, 0.2f, 0.6f, 0.6f, radius * 0.5f);
