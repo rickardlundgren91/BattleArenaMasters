@@ -503,16 +503,16 @@ namespace BAM.UI
                 Step();
             }
 
-            void OnRectTransformDimensionsChange()
+            // resBody is the safe-area child, which can resize (late Android insets) without this root changing, so look each frame
+            void Update()
             {
-                if (resBody == null) return;
-                var size = resBody.rect.size;
-                if ((size - laidOut).sqrMagnitude < 0.25f) return;
-                laidOut = size;
-                LayoutResult();
+                if (resBody != null)
+                {
+                    var size = resBody.rect.size;
+                    if ((size - laidOut).sqrMagnitude >= 0.25f) { laidOut = size; LayoutResult(); }
+                }
+                Step();
             }
-
-            void Update() => Step();
 
             void Step()
             {

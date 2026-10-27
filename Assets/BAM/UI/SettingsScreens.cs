@@ -30,6 +30,7 @@ namespace BAM.UI
         static HubSwitch soundSwitch, musicSwitch, vibrationSwitch, leftSwitch, shareSwitch;
         static HubChoice quality, frameRate;
         static Text activeValue;
+        static GameObject tutorialRow; // hidden in a match: starting the tutorial there would drop the match unasked
         static bool licensesLoaded;
         static RectTransform licensesContent;
 
@@ -82,7 +83,7 @@ namespace BAM.UI
                 LinkRow(content, "Privacy policy", "Open", () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
 
             SetHead(content, "HELP");
-            LinkRow(content, "How to play", "Tutorial", () => StartTutorial());
+            tutorialRow = LinkRow(content, "How to play", "Tutorial", () => StartTutorial());
             LinkRow(content, "Licenses", "Open", () => Push(licenses));
             PlainRow(content, "Version", Application.version);
         }
@@ -126,7 +127,7 @@ namespace BAM.UI
         }
 
         // a row that opens something: the value in a mint pill with a small arrow
-        static void LinkRow(RectTransform list, string label, string value, Action onClick)
+        static GameObject LinkRow(RectTransform list, string label, string value, Action onClick)
         {
             float rh = 11 * Cw, vh = rh - 3.6f * Cw;
             var row = SetRow(list, label, rh);
@@ -147,6 +148,7 @@ namespace BAM.UI
             b.navigation = new Navigation { mode = Navigation.Mode.None };
             b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); onClick?.Invoke(); });
             row.gameObject.AddComponent<ButtonFx>().PressScale = false;
+            return row.gameObject;
         }
 
         // a row that only shows a value, dim on the right
@@ -173,11 +175,13 @@ namespace BAM.UI
             leftSwitch.Set(BamSettings.LeftHanded, true);
             shareSwitch.Set(BamSettings.AnalyticsConsent == Consent.Granted, true);
             RefreshActive();
+            tutorialRow.SetActive(Flow.Game == null || !Flow.Game.InMatch);
         }
 
         static void BuildLicenses()
         {
-            licensesContent = NewPage("Licenses", out licenses, out _);
+            licensesContent = NewPage("Licenses", out licenses, out var panel);
+            panel.offsetMin = new Vector2(panel.offsetMin.x, 24f); // never under the tab bar (as RefreshNav does for tab pages)
             VList(licensesContent, 0, new RectOffset(20, 20, 0, 40));
             licenses.AddComponent<OnEnableHook>().Enabled = LoadLicenses;
         }

@@ -124,6 +124,7 @@ namespace BAM.UI
             heroHeight = MeasureHeight(view, Spot.y);
             shownId = id;
             hasHero = true;
+            view.gameObject.SetActive(isActiveAndEnabled);
             Picture.enabled = true;
             cam.enabled = isActiveAndEnabled;
             Frame();
@@ -226,7 +227,17 @@ namespace BAM.UI
             if (hasHero) view.transform.rotation = Quaternion.Euler(0, Facing(), 0);
         }
 
-        void OnEnable() { if (cam != null) cam.enabled = hasHero; }
-        void OnDisable() { if (cam != null) cam.enabled = false; }
+        // a hidden stage also parks its hero: an active preview would keep animating and skinning through every match
+        void OnEnable()
+        {
+            if (hasHero) view.gameObject.SetActive(true);
+            if (cam != null) cam.enabled = hasHero;
+        }
+
+        void OnDisable()
+        {
+            if (hasHero && view != null) view.gameObject.SetActive(false);
+            if (cam != null) cam.enabled = false;
+        }
     }
 }
