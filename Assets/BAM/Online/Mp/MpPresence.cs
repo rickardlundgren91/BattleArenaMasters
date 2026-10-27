@@ -63,8 +63,8 @@ namespace BAM.Online.Mp
         public static string Status = "";
         /// <summary>The list has been fetched at least once.</summary>
         public static bool Looked;
-        public const float LookEvery = 4, LookIdle = 15, HeartbeatEvery = 15, InviteTtl = 60;
-        /// <summary>The list or the friends are on screen: look every LookEvery s, else every LookIdle s (fewer Lobby queries; an invite can then take up to 15 s to show).</summary>
+        public const float LookEvery = 4, LookIdle = 6, HeartbeatEvery = 15, InviteTtl = 60;
+        /// <summary>The list or the friends are on screen: look every LookEvery s, else every LookIdle s (fewer Lobby queries; was 15 s, Rickard 2026-10-27: an invite took very long to show).</summary>
         public static bool Watching;
         /// <summary>Also blocked (the Friends service's block list), asked by the game.</summary>
         public static Func<string, bool> IsBlocked;
