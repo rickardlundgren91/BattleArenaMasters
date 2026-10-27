@@ -150,7 +150,7 @@ namespace BAM.Art.Editor
         {
             public string Out; // null = Heroes
             public string Hero, Model, Idle, Run, Attack, Cast, Hit, Death, Walk;
-            public float Height, Release;
+            public float Height, Release, Start;
         }
 
         // The shared animation pool (Rickard 2026-10-25): every Mixamo clip retargets onto every humanoid model, so a hero or
@@ -167,9 +167,16 @@ namespace BAM.Art.Editor
         // Moa and Blast have their own Mixamo clips from Speltest (Resources/Mixamo/Anim/<hero>, HeroMixamoOwn.cs), since 2026-10-26
         static readonly Spec[] specs =
         {
-            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.45f },
+            // Rickard 2026-10-27: his own Attack1 is a spin (his back to the target at 20-30 %) and the hammer hung from a straight arm
+            // at rest, so the swing went "upp över huvudet, runt till andra sidan och sen svinga". Now the hammer rests on his shoulder
+            // (Weapons.cs) and he strikes straight down from overhead with Bonk's Standing Melee Attack Downward, from 12 % (before
+            // that the hammer swings out to the side first)
+            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.46f, Start = 0.12f },
             new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.45f },
-            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Tyra/Anim/IdleBow", Run = "Tyra/Anim/Run", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Walk = "Tyra/Anim/Walk", Height = 1.78f, Release = 0.55f },
+            // Tyra stands relaxed with the bow down (Moa's idle) in the menu and the match and raises it only to shoot (Rickard
+            // 2026-10-27: her drawn-bow IdleBow in the menu "precis samma som när hon är i spelet"; old Speltest's Home had her in a
+            // relaxed idle too)
+            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Moa/Anim/Idle", Run = "Tyra/Anim/Run", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Walk = "Tyra/Anim/Walk", Height = 1.78f, Release = 0.55f },
             new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Moa/Anim/Idle", Run = "Moa/Anim/Run", Attack = "Moa/Anim/Attack1", Cast = "Moa/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.73f, Release = 0.4f },
             new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.85f, Release = 0.45f },
             new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.94f, Release = 0.4f },
@@ -266,6 +273,7 @@ namespace BAM.Art.Editor
                 art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
                 art.Height = s.Height;
                 art.AttackRelease = s.Release;
+                art.AttackStart = s.Start;
                 if (isNew) AssetDatabase.CreateAsset(art, path);
                 else EditorUtility.SetDirty(art);
                 ok++;

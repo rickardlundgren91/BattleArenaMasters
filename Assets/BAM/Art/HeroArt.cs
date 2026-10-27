@@ -20,5 +20,8 @@ namespace BAM.Art
         public float Height = 1f;
         /// <summary>Where in the attack clip (0..1) the blow lands or the shot leaves; PlayAttack's windup is lined up with it.</summary>
         public float AttackRelease = 0.45f;
+        /// <summary>Where in the attack clip (0..1) the swing starts; the frames before it are skipped (a clip whose wind-up first
+        /// dips away from the resting pose).</summary>
+        public float AttackStart;
     }
 }

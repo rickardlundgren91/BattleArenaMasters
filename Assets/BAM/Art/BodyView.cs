@@ -60,7 +60,7 @@ namespace BAM.Art
         AnimationMixerPlayable upper;
         AnimationClipPlayable upAtk, upCast;
         // the attack in Speltest's four phases (HeroAttack.cs, HeroMixamo.PoseMx): the coil, the slash, the hold on the blow, the recovery
-        float atkRel, atkSlash, atkHold, atkRec;
+        float atkRel, atkSlash, atkHold, atkRec, atkStart;
         bool imported;
         HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
         PreviewBreath breath;     // the menu hero's living idle on top of its clip (Preview only)
@@ -452,11 +452,12 @@ namespace BAM.Art
                 // of hero's hit-stop (impact), then plays out (recovery), never dragging on
                 float len = clipLen[CAttack];
                 atkRel = def.Art.AttackRelease * len;
-                atkSpeed = Mathf.Clamp(atkRel / windup, 0.6f, 4f);
+                atkStart = Mathf.Min(def.Art.AttackStart * len, atkRel * 0.8f);
+                atkSpeed = Mathf.Clamp((atkRel - atkStart) / windup, 0.6f, 4f);
                 atkSlash = Mathf.Min(0.12f, windup * 0.35f);
                 atkHold = Phased(HeroIndex) ? AttackHold(HeroIndex) : 0f;
                 atkRec = Mathf.Min((len - atkRel) / atkSpeed, 0.45f);
-                atkTotal = Phased(HeroIndex) ? windup + atkHold + atkRec : Mathf.Min(len / atkSpeed, windup + 0.45f);
+                atkTotal = Phased(HeroIndex) ? windup + atkHold + atkRec : Mathf.Min((len - atkStart) / atkSpeed, windup + 0.45f);
             }
             if (gear != null) gear.Throw(windup);
         }
@@ -931,7 +932,9 @@ namespace BAM.Art
         // where the attack clip stands atkT s into the swing (the four phases, see PlayAttack)
         double AttackTime(float t)
         {
-            if (!Phased(HeroIndex)) return Mathf.Min(clipLen[CAttack], t * atkSpeed); // as before 2026-10-27: the clip at its own pace
+            // as before 2026-10-27: the clip at its own pace, from AttackStart (Bram skips the hammer's dip to the side, so it rises
+            // straight off his shoulder)
+            if (!Phased(HeroIndex)) return Mathf.Min(clipLen[CAttack], atkStart + t * atkSpeed);
             float coil = windup - atkSlash;
             if (t < coil) { float w = t / Mathf.Max(1e-4f, coil); return atkRel * 0.7f * (1f - (1f - w) * (1f - w) * (1f - w)); }
             if (t < windup) { float w = (t - coil) / Mathf.Max(1e-4f, atkSlash); return atkRel * (0.7f + 0.3f * w * w); }

@@ -83,13 +83,14 @@ namespace BAM.Art
                 Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f } },
                 Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f },
             };
-            // arms out as in the old game (MX_ARM_SPREAD 22) and the hammer leaning up and back over his right shoulder, so it never
-            // covers his face (Rickard 2026-10-26: "bram täcker sig själv"); leaning out only 30 it still stood in front of his face
-            // from the menu stage's angle (turned 20 degrees, swaying 14)
+            // arms out as in the old game (MX_ARM_SPREAD 22) and, at rest, the hammer on his right shoulder as Bonk carries his club
+            // (Rickard 2026-10-27: hanging from a straight arm "inte så naturlig pose", and it flipped round into the swing); his
+            // overhead strike (HeroArtImport) lifts it straight off the shoulder
             g[(int)HeroId.Bram] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 50f, HoldOut = 130f } },
+                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 36f, HoldOut = 170f } },
                 ArmSpread = 22f,
+                Shoulder = true,
             };
             // held by the shank just under the ring, so it hangs from the fist with the flukes down (Rickard 2026-10-16/19)
             g[(int)HeroId.Knut] = new GearDef { Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f } } };
@@ -105,7 +106,9 @@ namespace BAM.Art
             // gripped at the middle in the left fist like any weapon: the limbs leave the fist on the thumb side, so in her bow
             // clips (arm out, thumb up) it stands upright with the belly away from her. Along the forearm (as Moa's staff) it lay
             // flat along her outstretched arm (Rickard 2026-10-26: "håller konstigt i vapen"; checked in a Blender render of IdleBow)
-            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true } } };
+            // at rest (her relaxed idle and walk, Rickard 2026-10-27) the bow hangs upright beside her left leg; her shot plays
+            // the grip untouched
+            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -60f, HoldOut = -30f } } };
             // her old needle daggers, one in each fist out of the thumb side (old View3DOwnHeroFx.cs MxNeedles before the Needle
             // Wing: NeedleMesh/NeedleTex as Props tikta_needle, NEEDLE_LEN 0.36, NEEDLE_GRIP 0.14; Rickard 2026-10-26: "tikta ska
             // ha sina gamla vapen, typ två daggers"); at rest the blades point down along her forearms, since her guard idle holds
