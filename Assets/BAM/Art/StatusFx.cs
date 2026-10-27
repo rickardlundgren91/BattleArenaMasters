@@ -20,6 +20,12 @@ namespace BAM.Art
         int burnN, hasteN;
         Vector3 lastP;
         float shieldT = -1f, ripple; // time since the shield came (for its pop-in), and a hit's wobble
+        // Blast's burn as the old game drew it (View3D.cs): four flickering flame tongues up the body, each with a hot core, a glow on
+        // the body and a warm glow on the ground (FireLook). Made the first time this unit burns, then only switched on and off.
+        GameObject fire;
+        MeshRenderer fireBody, fireFloor;
+        readonly MeshRenderer[] tongue = new MeshRenderer[4], tongueCore = new MeshRenderer[4];
+        readonly float fireSeed;
 
         // Moa's honey shield (old View3DShields.cs): a slowly turning globe of honeycomb cells, additive honey over the hero
         static Mesh hexSphere;
@@ -30,6 +36,7 @@ namespace BAM.Art
             this.parent = parent;
             this.radius = radius;
             this.height = height;
+            fireSeed = Random.Range(0, 7) * 0.9f; // each unit's flames flicker out of step with the next one's
         }
 
         public bool Visible
@@ -75,6 +82,37 @@ namespace BAM.Art
             Show(StunRing, Has(flags, StatusFlags.Stunned));
             Show(PoisonRing, Has(flags, StatusFlags.Poisoned));
             Show(BurnRing, Has(flags, StatusFlags.Burning) && !Has(flags, StatusFlags.Poisoned));
+            bool burn = visible && Has(flags, StatusFlags.Burning) && FireLook.Ready;
+            if (burn && fire == null) MakeFire();
+            if (fire != null && fire.activeSelf != burn) fire.SetActive(burn);
+        }
+
+        void MakeFire()
+        {
+            fire = new GameObject("Burn");
+            fire.transform.SetParent(parent, false);
+            fireFloor = FireLook.Piece(fire.transform, true);
+            fireBody = FireLook.Piece(fire.transform, true);
+            for (int i = 0; i < tongue.Length; i++) { tongue[i] = FireLook.Piece(fire.transform, false); tongueCore[i] = FireLook.Piece(fire.transform, false); }
+        }
+
+        // the old burn, frame by frame (View3D.cs, Rickard 2026-10-14 "bad burn effect": real flames licking up the body)
+        void DrawFire(float time)
+        {
+            float sz = Mathf.Clamp(Mathf.Sqrt(height / 1.8f), 0.6f, 1.8f), hh = Mathf.Max(0.35f, height * 0.55f);
+            float inv = 1f / Mathf.Max(0.01f, parent.lossyScale.x);
+            Vector3 p = parent.position, right = ArtDriver.CamRot * Vector3.right;
+            FireLook.Glow(fireBody, p + new Vector3(0f, hh * 0.6f, 0f), 0.9f * sz, FireLook.BurnOuter, 0.45f + 0.2f * Mathf.Sin(time * 17f), inv);
+            FireLook.Floor(fireFloor, p + new Vector3(0f, 0.05f, 0f), Vector3.forward, 1.6f * sz, 1.6f * sz, FireLook.BurnGlow, 0.35f + 0.1f * Mathf.Sin(time * 13f + fireSeed), inv);
+            for (int i = 0; i < tongue.Length; i++)
+            {
+                float ph = time * (9f + i * 1.7f) + fireSeed + i * 2.1f, fl = 0.75f + 0.25f * Mathf.Sin(ph) + 0.1f * Mathf.Sin(ph * 2.7f);
+                float ox = (i - 1.5f) * 0.22f * sz + 0.05f * Mathf.Sin(ph * 0.7f), fh = (0.9f + (i % 2) * 0.35f) * fl * sz, fy = hh * (0.25f + 0.18f * (i % 3));
+                float lean = 0.18f * Mathf.Sin(ph * 0.5f);
+                Vector3 foot = p + right * ox + new Vector3(0f, fy - fh * 0.1f, 0f);
+                FireLook.Tongue(tongue[i], foot, fh, 0.55f * sz, lean, FireLook.BurnOuter, 0.8f, inv);
+                FireLook.Tongue(tongueCore[i], foot, fh * 0.55f, 0.28f * sz, lean, FireLook.BurnCore, 0.9f, inv);
+            }
         }
 
         void Show(int i, bool on)
@@ -168,6 +206,7 @@ namespace BAM.Art
         public void Tick(float dt, float time)
         {
             if (flags == StatusFlags.None || !visible) return;
+            if (fire != null && fire.activeSelf) DrawFire(time);
             if (r[Stun] != null && r[Stun].enabled) t[Stun].localRotation = Quaternion.Euler(0f, time * 240f, 0f);
             if (r[Burn] != null && r[Burn].enabled)
             {
@@ -206,12 +245,12 @@ namespace BAM.Art
             Vector3 p = parent.position;
             if (Has(flags, StatusFlags.Burning))
             {
-                // Rickard's flame picture licking up the body, embers rising, a warm glow and now and then a wisp of smoke
+                // the flames themselves are drawn every frame (DrawFire); here the embers rising off the body and a wisp of dark
+                // smoke now and then, as the old game (16 embers and 5 smoke puffs a second)
                 burnN++;
-                Fx.Flames(p + new Vector3(0f, height * 0.25f, 0f), 2, Fx.HeroMain(HeroId.Blast), 0.42f, 0.25f, 0.45f, 1.5f, radius * 0.7f);
-                Fx.Sparks(p + new Vector3(0f, height * 0.4f, 0f), 1, Fx.HeroAccent(HeroId.Blast), 0.06f, 0.6f, 0.6f, 1.8f, radius * 0.6f);
-                if ((burnN & 1) == 0) Fx.Glow(p + new Vector3(0f, height * 0.45f, 0f), 1, new Color32(255, 120, 40, 150), 0.9f, 0f, 0.25f);
-                if (burnN % 4 == 0) Fx.Smoke(p + new Vector3(0f, height * 0.8f, 0f), 1, new Color32(40, 32, 30, 110), 0.35f, 0.2f, 0.8f, 0.7f, radius * 0.4f);
+                if (fire == null) Fx.Flames(p + new Vector3(0f, height * 0.25f, 0f), 2, Fx.HeroMain(HeroId.Blast), 0.42f, 0.25f, 0.45f, 1.5f, radius * 0.7f); // no atlas
+                Fx.Sparks(p + new Vector3(0f, height * 0.25f, 0f), 1, new Color32(255, 217, 89, 255), 0.11f, 0.3f, 0.45f, 1.7f, radius * 0.6f);
+                if (burnN % 2 == 0) Fx.Smoke(p + new Vector3(0f, height * 0.6f + 0.4f, 0f), 1, new Color32(51, 43, 41, 102), 0.55f, 0.15f, 0.8f, 0.7f, radius * 0.4f);
             }
             if (Has(flags, StatusFlags.Poisoned)) Fx.Bubbles(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.14f, 0.2f, 0.6f, 0.6f, radius * 0.5f);
             if (Has(flags, StatusFlags.Hasted))

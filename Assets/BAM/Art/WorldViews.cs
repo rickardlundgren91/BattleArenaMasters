@@ -361,6 +361,13 @@ namespace BAM.Art
         float length, radius, duration, age, emitT;
         Color baseColor;
         bool warn;
+        // Blast's Inferno Lane as the old game drew it (View3DStudioBlast.cs "Ässans vrede"): from the first burn two burning strips
+        // along the lane's edges and a glow down its middle, segment by segment so each piece flickers on its own, and a row of flame
+        // tongues inside it that leap on every burn, which also throws embers (FireLook)
+        const int LaneSegs = 10, LaneTongues = 10;
+        MeshRenderer[] laneFloor, laneTongue, laneCore;
+        GameObject laneFire;
+        int laneTicks;
 
         public void Build(ZoneKind k, int t)
         {
@@ -438,6 +445,9 @@ namespace BAM.Art
             // MLBB analysis 4: Blast's lane gets a glowing cracked floor, Moa's field a honey swirl and a ring as it opens
             if (kind == ZoneKind.FireLane && length > 0f)
             {
+                laneTicks = 0;
+                if (laneFire == null && FireLook.Ready) MakeLaneFire();
+                if (laneFire != null) laneFire.SetActive(false); // lights with the first burn, as the old game
                 int n = Mathf.Clamp(Mathf.RoundToInt(length / 1.5f), 1, 6);
                 for (int i = 0; i < n; i++) Fx.Crack(center + dir * (length * (i + 0.5f) / n), radius * 1.1f, duration, 0.55f);
             }
@@ -498,12 +508,17 @@ namespace BAM.Art
                 if (on) rimMat.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r * a, baseColor.g * a, baseColor.b * a, 1f));
             }
             if (warn) return;
+            if (kind == ZoneKind.FireLane && length > 0f && laneFire != null) LaneFire();
 
             emitT -= dt;
             if (emitT > 0f || dt <= 0f) return;
             emitT = ArtKit.High ? (kind == ZoneKind.FireLane ? 0.045f : 0.07f) : 0.15f;
             Vector3 p = RandomPoint();
-            if (kind == ZoneKind.FireLane)
+            if (kind == ZoneKind.FireLane && laneFire != null)
+            {
+                if (Random.value < 0.06f) Fx.Smoke(p + Vector3.up * 0.6f, 1, new Color32(40, 32, 30, 90), 0.4f, 0.2f, 0.9f, 0.6f); // the tongues and burns carry the rest
+            }
+            else if (kind == ZoneKind.FireLane)
             {
                 Fx.Flames(p, 1, Pal.Get(Pal.Fire), 0.55f, 0.2f, 0.5f, 1.4f);
                 Fx.Glow(p, 1, Pal.Get(Pal.FireCore), 0.25f, 0.2f, 0.3f, 1.2f);
@@ -523,6 +538,75 @@ namespace BAM.Art
                 if (Random.value < 0.15f) Fx.Drops(p + Vector3.up * 0.6f, 1, Pal.Get(Pal.Honey), 0.12f, 0.1f, 0.6f, -0.4f); // slow honey drips
             }
             else Fx.Sparks(center + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.08f, 1.5f, 0.2f, 1f);
+        }
+
+        void MakeLaneFire()
+        {
+            laneFire = new GameObject("Inferno");
+            laneFire.transform.SetParent(transform, false);
+            laneFloor = new MeshRenderer[LaneSegs * 3];
+            for (int i = 0; i < laneFloor.Length; i++) laneFloor[i] = FireLook.Piece(laneFire.transform, true);
+            laneTongue = new MeshRenderer[LaneTongues];
+            laneCore = new MeshRenderer[LaneTongues];
+            for (int i = 0; i < LaneTongues; i++) { laneTongue[i] = FireLook.Piece(laneFire.transform, false); laneCore[i] = FireLook.Piece(laneFire.transform, false); }
+        }
+
+        // the old BlastInfernoStrips / BlastLaneBody / BlastLaneTick, on the zone's own clock (the sim burns every LaneTick s)
+        void LaneFire()
+        {
+            const float tick = BlastS.LaneTick;
+            int ticks = Mathf.Min(Mathf.RoundToInt(duration / tick), Mathf.FloorToInt((age + 1e-4f) / tick));
+            if (ticks > laneTicks)
+            {
+                laneTicks = ticks;
+                // one burn: embers thrown up all along the strip, inside it
+                int n = Mathf.Max(4, Mathf.RoundToInt(length * 1.6f));
+                Vector3 side = new Vector3(dir.z, 0f, -dir.x);
+                for (int i = 0; i < n; i++)
+                    Fx.Sparks(center + dir * ((i + Random.value) / n * length) + side * ((Random.value * 2f - 1f) * radius * 0.8f) + Vector3.up * 0.15f,
+                        1, new Color32(255, 217, 115, 255), 0.15f, 0.3f, 0.4f, 1.85f);
+            }
+            if (age < tick) { if (laneFire.activeSelf) laneFire.SetActive(false); return; }
+            if (!laneFire.activeSelf) laneFire.SetActive(true);
+            float now = age, since = age - laneTicks * tick, pulse = Mathf.Clamp01(1f - since / 0.2f); pulse *= pulse;
+            float fin = Mathf.Clamp01((duration - age) / 0.15f) * 0.6f + 0.4f, intro = Mathf.Clamp01((age - tick) / 0.12f);
+            float a = fin * Mathf.Max(intro, pulse);
+            Vector3 nrm = new Vector3(-dir.z, 0f, dir.x);
+            float hw = radius, edge = Mathf.Min(0.2f, hw * 0.45f);
+            int segs = Mathf.Clamp(Mathf.CeilToInt(length / 0.6f), 1, LaneSegs);
+            float seg = length / segs, lx = center.x * 3f;
+            Color ec = team == Teams.Player ? FireLook.Forge : FireLook.ForgeFoe;
+            int k = 0;
+            for (int i = 0; i < LaneSegs; i++)
+            {
+                bool on = i < segs;
+                for (int j = 0; j < 3; j++, k++)
+                {
+                    var fr = laneFloor[k];
+                    if (fr.enabled != on) fr.enabled = on;
+                    if (!on) continue;
+                    float fl = 0.7f + 0.3f * Mathf.Sin(now * 21f + i * 1.9f + lx);
+                    Vector3 mid = center + dir * ((i + 0.5f) * seg) + new Vector3(0f, 0.03f, 0f);
+                    if (j < 2)
+                    {
+                        float o = (j == 0 ? -1f : 1f) * (hw - edge * 0.5f);
+                        FireLook.Floor(fr, mid + nrm * o, dir, edge, seg, Color.Lerp(ec, FireLook.ForgeHot, pulse * 0.7f), (0.6f + 0.4f * pulse) * fl * a, 1f);
+                    }
+                    else FireLook.Floor(fr, mid - new Vector3(0f, 0.005f, 0f), dir, hw * 1.6f, seg, FireLook.Forge, (0.22f + 0.3f * pulse) * fl * a, 1f);
+                }
+            }
+            int m = Mathf.Clamp(Mathf.RoundToInt(length / 0.5f), 2, LaneTongues);
+            for (int i = 0; i < LaneTongues; i++)
+            {
+                bool on = i < m;
+                if (laneTongue[i].enabled != on) { laneTongue[i].enabled = on; laneCore[i].enabled = on; }
+                if (!on) continue;
+                float dd = (i + 0.5f) * length / m, o = ((i & 1) == 0 ? -0.35f : 0.35f) * hw, fl = 0.8f + 0.2f * Mathf.Sin(now * 17f + i * 2.3f);
+                float hgt = (0.45f + 0.25f * ((i * 7) % 3) / 2f + 0.65f * pulse) * fl, w = 0.38f + 0.1f * pulse;
+                Vector3 foot = center + dir * dd + nrm * o + new Vector3(0f, -0.04f, 0f);
+                FireLook.Tongue(laneTongue[i], foot, hgt, w, 0f, Color.Lerp(FireLook.Forge, FireLook.ForgeHot, 0.25f + 0.5f * pulse), 0.75f * a, 1f);
+                FireLook.Tongue(laneCore[i], foot, hgt * 0.6f, w * 0.45f, 0f, FireLook.ForgeHot, 0.5f * a, 1f);
+            }
         }
 
         Vector3 RandomPoint()
