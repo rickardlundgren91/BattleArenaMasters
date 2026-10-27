@@ -29,6 +29,8 @@ namespace BAM.Art
                     // streak of sparks along the jump so the eye follows it
                     Fx.Ring(from, 0.2f, 0.8f, c, 0.3f);
                     Fx.Flash(from + up, 0.2f, 0.7f, new Color(c.r, c.g, c.b, 0.8f), 0.12f);
+                    Fx.Pic("tx_wow_mage_blink", from + up, c, 1.6f, 0.25f);
+                    Fx.Pic("tx_wow_mage_blink", at + up, Color.white, 1.8f, 0.3f); // Rickard's WoW-mode blink star at both ends
                     Fx.Wisps(from + up, 3, c32, 0.45f, 0.5f, 0.4f, 0.6f, 0.2f);
                     Fx.Ring(at, 0.2f, 0.8f, c, 0.3f);
                     Fx.Flash(at + up, 0.3f, 0.9f, new Color(1f, 1f, 1f, 0.9f), 0.08f);
@@ -45,10 +47,12 @@ namespace BAM.Art
                     // the beam switches on: a quick white-cored pillar and a swirl (the channel keeps it going, BodyView.SpellLooks)
                     Fx.Pillar(at, 1.0f, 5.5f, c, 0.3f);
                     Fx.Swirl(at, 1.3f, c, 0.6f);
+                    Fx.Pic("tx_wow_magic_circle", at, c, 2.6f, 0.8f);
                     Fx.Ring(at, 0.3f, 1.2f, c, 0.4f);
                     Fx.Glow(at + Vector3.up * 0.1f, 6, c32, 0.2f, 0.8f, 0.5f, 1.2f, 0.4f);
                     break;
                 case SpellId.Shield:
+                    Fx.Pic("tx_wow_priest_shield", at + up, c, 1.9f, 0.45f);
                     Fx.Ring(at, 0.2f, 0.8f, c, 0.4f);
                     Fx.Flash(at + up, 0.3f, 1.0f, new Color(c.r, c.g, c.b, 0.85f), 0.12f);
                     Fx.Stars(at + up, 4, c32, 0.3f, 1.2f, 0.45f, 0.8f, 0.3f);
@@ -112,6 +116,7 @@ namespace BAM.Art
             Fx.Flash(to + Vector3.up * 0.8f, 0.4f, 1.6f, new Color(1f, 1f, 1f, 0.95f), 0.12f);
             Fx.Ring(to, 0.3f, 1.6f, c, 0.5f);
             Fx.Nova(to, c, 1.4f, 0.45f);
+            Fx.Pic("tx_wow_warrior_whirl", to, c, 3f, 0.6f);
             Fx.Glow(to + Vector3.up * 0.2f, 14, c32, 0.22f, 1.4f, 0.6f, 1.6f, 0.3f);
         }
     }

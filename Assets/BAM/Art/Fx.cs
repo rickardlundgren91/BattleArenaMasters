@@ -190,6 +190,8 @@ namespace BAM.Art
             }
             RickardSystems();
             BonkSystems();
+            pics.Clear();
+            for (int i = 0; i < WowPics.Length; i++) PicSystem(WowPics[i], WowFlat[i]);
             var shardMat = ArtMaterials.Instance(ArtMaterials.ParticleAlpha);
             shardMat.SetTexture(ArtMaterials.BaseMap, Texture2D.whiteTexture);
             shardMat.mainTexture = Texture2D.whiteTexture;
@@ -270,6 +272,39 @@ namespace BAM.Art
                 nova = Flat(MakeSystem("BAM Novas", ArtMaterials.ParticleAdd, 0f, 0.35f, 1.1f, 30));
                 Retexture(nova, t, 1, 1, 0, false);
             }
+        }
+
+        // Rickard's WoW-mode effect pictures from Speltest (tx_wow_*, white on black, approved for BAM 2026-10-27: "effektbilderna
+        // från wowläget kan jag använda"): one additive system per picture, made at Init so the first use never hitches
+        static readonly string[] WowPics =
+        {
+            "tx_wow_warrior_impact", "tx_wow_sword_slash", "tx_wow_spark_cross", "tx_wow_mage_blink", "tx_wow_priest_shield", "tx_wow_mage_shatter",
+            "tx_wow_warrior_whirl", "tx_wow_magic_circle", "tx_wow_priest_runes",
+        };
+        static readonly bool[] WowFlat = { false, false, false, false, false, false, true, true, true }; // the last three lie on the ground
+        static readonly Dictionary<string, ParticleSystem> pics = new Dictionary<string, ParticleSystem>(16);
+
+        static ParticleSystem PicSystem(string name, bool flat)
+        {
+            if (pics.TryGetValue(name, out var ps)) return ps;
+            var t = RickardFx.Load(name);
+            if (t != null)
+            {
+                ps = MakeSystem("BAM " + name, ArtMaterials.ParticleAdd, 0f, 0.75f, 1.1f, 40);
+                Retexture(ps, t, 1, 1, 0, false);
+                if (flat) Flat(ps);
+            }
+            pics[name] = ps;
+            return ps;
+        }
+
+        /// <summary>One of Rickard's WoW-mode pictures at pos, tinted c, size in units, turned at random; false when it is missing.</summary>
+        public static bool Pic(string name, Vector3 pos, Color c, float size, float life)
+        {
+            if (!pics.TryGetValue(name, out var ps) || ps == null) return false;
+            bool flat = ps.GetComponent<ParticleSystemRenderer>().renderMode == ParticleSystemRenderMode.HorizontalBillboard;
+            Emit1(ps, flat ? new Vector3(pos.x, 0.06f, pos.z) : pos, c, size, life, Random.value * 360f);
+            return true;
         }
 
         static void BonkSystems()
@@ -682,11 +717,14 @@ namespace BAM.Art
             {
                 case FxKind.Hit when hero >= 0:
                     Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
+                    if (hero == (int)HeroId.Fenn) Pic("tx_wow_sword_slash", mid, (Color)heroMain[hero], 1.2f * size, 0.14f); // his sword cuts
                     Sparks(mid, 6, heroMain[hero], 0.12f * size, 3f, 0.25f, 1f);
                     Stars(mid, 1, heroAccent[hero], 0.35f * size, 0.5f, 0.2f);
                     break;
                 case FxKind.HitBig when hero >= 0:
                     Pow(mid, 1, C(Pal.Cream), 0.9f * size, 0.18f);
+                    Pic("tx_wow_spark_cross", mid, Color.white, 1.1f * size, 0.16f);
+                    if (heavy || hero == (int)HeroId.Bonk) Pic("tx_wow_warrior_impact", mid, (Color)heroAccent[hero], 1.8f * size, 0.22f);
                     Rays(mid, (Color)heroMain[hero], 1.3f * size, 0.2f);
                     Sparks(mid, 12, heroMain[hero], 0.16f * size, 4.5f, 0.35f, 1.5f);
                     Stars(mid, 2, heroAccent[hero], 0.45f * size, 1.5f, 0.25f, 1f);
@@ -703,6 +741,7 @@ namespace BAM.Art
                     break;
                 case FxKind.HitBig:
                     Pow(mid, 1, C(Pal.FireCore), 0.9f * size, 0.18f);
+                    Pic("tx_wow_warrior_impact", mid, new Color(1f, 0.85f, 0.55f, 1f), 1.6f * size, 0.22f);
                     Rays(mid, new Color(1f, 0.9f, 0.6f, 1f), 1.3f * size, 0.2f);
                     Sparks(mid, 12, C(Pal.Fire), 0.16f * size, 4.5f, 0.35f, 1.5f);
                     Stars(mid, 2, C(Pal.White), 0.45f * size, 1.5f, 0.25f, 1f);
@@ -711,6 +750,7 @@ namespace BAM.Art
                     break;
                 case FxKind.Death:
                     Pow(mid, 1, C(Pal.White, 200), 0.8f * size, 0.16f);
+                    Pic("tx_wow_mage_shatter", mid, (Color)teamL, 1.8f * size, 0.3f);
                     Smoke(mid, 10, C(Pal.Cloth, 200), 0.45f * size, 1.2f, 0.8f, 0.6f, 0.2f);
                     Wisps(mid, 3, teamL, 0.6f * size, 0.4f, 0.9f, 1.4f, 0.2f);
                     Shards(mid, 10, teamC, 0.1f * size, 3f, 0.8f, 2.5f);
@@ -718,6 +758,7 @@ namespace BAM.Art
                     break;
                 case FxKind.Respawn:
                     Pillar(p, 1.2f * size, 3f * size, (Color)teamL, 0.7f);
+                    Pic("tx_wow_magic_circle", p, (Color)teamL, 2.2f * size, 0.9f);
                     Glow(p + Vector3.up * 0.1f, 18, teamL, 0.22f * size, 0.6f, 0.8f, 2.4f, 0.35f);
                     Stars(p + Vector3.up * 0.6f, 6, C(Pal.White), 0.3f * size, 0.8f, 0.6f, 1.6f, 0.4f);
                     Ring(p, 0.2f * size, 1.2f * size, (Color)teamL, 0.5f);
@@ -725,6 +766,7 @@ namespace BAM.Art
                     break;
                 case FxKind.LevelUp:
                     Pillar(p, 1.1f * size, 2.6f * size, new Color(1f, 0.85f, 0.3f, 1f), 0.8f);
+                    Pic("tx_wow_priest_runes", p, new Color(1f, 0.85f, 0.35f, 1f), 2.2f * size, 0.9f);
                     Glow(p + Vector3.up * 0.2f, 16, C(Pal.Gold), 0.2f * size, 0.8f, 0.9f, 2.2f, 0.4f);
                     Stars(p + Vector3.up * 0.8f, 8, C(Pal.Gold), 0.35f * size, 1.2f, 0.8f, 1.8f, 0.4f);
                     Ring(p, 0.3f * size, 1.3f * size, new Color(1f, 0.85f, 0.25f, 0.9f), 0.5f);
@@ -732,6 +774,7 @@ namespace BAM.Art
                     break;
                 case FxKind.Explosion:
                     Flash(mid, 0.4f * size, 1.2f * size, new Color(1f, 1f, 1f, 0.95f), 0.08f); // the white core first; rings end on the real radius
+                    Pic("tx_wow_warrior_impact", mid, new Color(1f, 0.6f, 0.25f, 1f), 2.2f * size, 0.25f);
                     Ring(p, 0.3f * size, 1.0f * size, (Color)heroAccent[(int)HeroId.Blast], 0.4f, 0.6f);
                     Pow(mid, 1, C(Pal.FireCore), 1.8f * size, 0.22f);
                     Flash(mid, 0.4f * size, 1.0f * size, new Color(1f, 0.6f, 0.2f, 1f), 0.25f);
@@ -808,6 +851,7 @@ namespace BAM.Art
                 }
                 case FxKind.TowerDestroyed:
                     Pow(p + Vector3.up * 1.5f, 1, C(Pal.Cream), 3f * size, 0.3f);
+                    Pic("tx_wow_warrior_impact", p + Vector3.up * 1.5f, new Color(1f, 0.9f, 0.7f, 1f), 4.5f * size, 0.4f);
                     Flash(p + Vector3.up * 1.5f, 0.5f * size, 2.4f * size, new Color(1f, 0.9f, 0.7f, 1f), 0.4f);
                     Shards(p + Vector3.up * 1.4f, 20, C(Pal.Stone), 0.22f * size, 5f, 1.4f, 4f, 0.8f);
                     Chunks(p + Vector3.up * 1.4f, 14, C(Pal.Stone), 0.35f * size, 5f, 1.3f, 4f, 0.8f);
@@ -822,6 +866,7 @@ namespace BAM.Art
                     break;
                 case FxKind.ShieldPop:
                     Pow(mid, 1, C(Pal.Honey), 0.9f * size, 0.16f);
+                    Pic("tx_wow_priest_shield", mid, (Color)C(Pal.Honey), 1.7f * size, 0.2f); // the bubble bursts
                     Drops(mid, 10, C(Pal.Honey), 0.16f * size, 3f, 0.6f, 1.8f, 0.3f);
                     Shards(mid, 6, C(Pal.Honey), 0.09f * size, 3.5f, 0.5f, 1.5f, 0.3f);
                     Ring(p, 0.4f * size, 1.1f * size, new Color(1f, 0.85f, 0.3f, 0.8f), 0.3f);
@@ -860,6 +905,7 @@ namespace BAM.Art
                     Flash(mid, 0.2f * size, 0.8f * size, new Color(1f, 1f, 1f, 0.9f), 0.08f);
                     Pillar(p, 1.2f * size, 2.4f * size, (Color)m, 0.6f);
                     Swirl(p, 1.2f * size, (Color)m, 0.6f);
+                    Pic("tx_wow_warrior_whirl", p, (Color)a, 2.6f * size, 0.6f);
                     Wisps(p + Vector3.up * 0.3f, 6, a, 0.7f * size, 1.2f, 0.8f, 1f, 0.3f);
                     Glow(p + Vector3.up * 0.3f, 12, m, 0.25f * size, 1.6f, 0.7f, 0.8f, 0.3f);
                     Stars(p + Vector3.up * 0.6f, 4, a, 0.3f * size, 1.2f, 0.6f, 1f, 0.4f);
@@ -982,6 +1028,7 @@ namespace BAM.Art
                     SpecialHit((int)HeroId.Tyra, p, 1f);
                     Pow(p, 1, new Color32(180, 240, 255, 255), 0.9f, 0.16f);
                     Rays(p, new Color(0.7f, 0.95f, 1f, 1f), 1.1f, 0.18f);
+                    Pic("tx_wow_spark_cross", p, Color.white, 1.2f, 0.18f);
                     Stars(p, 3, new Color32(200, 245, 255, 255), 0.45f, 1.5f, 0.3f, 0.6f);
                     Sparks(p, 8, new Color32(180, 240, 255, 255), 0.12f, 4f, 0.3f, 0.8f);
                     break;
