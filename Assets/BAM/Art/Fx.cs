@@ -124,6 +124,16 @@ namespace BAM.Art
             m.mainTexture = tex;
             return m;
         }
+
+        static readonly int SrcBlend = Shader.PropertyToID("_SrcBlend");
+
+        /// <summary>Additive weighed by alpha, for his white + alpha pictures (2026-10-27 Gemini set): without it each one shows as a
+        /// white square. Works on any additive material (DstBlend One).</summary>
+        public static Material WeighByAlpha(Material m)
+        {
+            if (m.HasProperty(SrcBlend)) m.SetFloat(SrcBlend, (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            return m;
+        }
     }
 
     /// <summary>Particles (a few shared systems, so all sparks of the match cost four draw calls) and pooled rings/flashes.</summary>
@@ -134,6 +144,7 @@ namespace BAM.Art
         static ParticleSystem star, flame, burst, wisp, dust, drop, bubble, leaf, chunk;
         // Rickard's pictures: ground-flat rings, cracks and swirls, the light pillar, shard rays and the nova (null when missing)
         static ParticleSystem shock, crackPs, swirl, pillar, rays, nova;
+        static bool ownWisp;
         // Bonk's own pictures (Rickard 2026-10-26, coloured with alpha, drawn alpha-blended): cracks and a dust ring flat on the
         // ground, dust puffs and a 4x4 sheet of stone chips (null when missing: GroundSmash then uses the shared helpers)
         static ParticleSystem bCrack, bShock, bDust, bRocks;
@@ -150,7 +161,8 @@ namespace BAM.Art
             public float Age, Life, S0, S1, A0;
             public Color Col;
             public bool Flat, Linear; // Linear: grows at an even pace (a fuse), not easing out
-            public Material TeleMat;
+            public Material TeleMat, SpikeMat;
+            public float Aspect = 1f; // width over height of a standing picture (his 2:1 hit spikes)
         }
 
         static readonly List<Blob> live = new List<Blob>(32);
@@ -192,6 +204,7 @@ namespace BAM.Art
             BonkSystems();
             pics.Clear();
             for (int i = 0; i < WowPics.Length; i++) PicSystem(WowPics[i], WowFlat[i]);
+            OwnSystems();
             var shardMat = ArtMaterials.Instance(ArtMaterials.ParticleAlpha);
             shardMat.SetTexture(ArtMaterials.BaseMap, Texture2D.whiteTexture);
             shardMat.mainTexture = Texture2D.whiteTexture;
@@ -267,6 +280,16 @@ namespace BAM.Art
                 rays = MakeSystem("BAM Rays", ArtMaterials.ParticleAdd, 0f, 0.6f, 1.2f, 60);
                 Retexture(rays, t, 1, 1, 0, false);
             }
+            if ((t = RickardFx.Load("tx_fx_wisp")) != null)
+            {
+                // his will-o'-wisp (2026-10-27) over atlas cell 9: its tail trails up behind it as it rises, so it does not spin
+                if (wisp == null) wisp = MakeSystem("BAM Wisps", ArtMaterials.ParticleAdd, -0.2f, 0.6f, 1.2f, 200);
+                Retexture(wisp, t, 1, 1, 0, false);
+                RickardFx.WeighByAlpha(wisp.GetComponent<ParticleSystemRenderer>().sharedMaterial);
+                var rot = wisp.rotationOverLifetime;
+                rot.enabled = false;
+                ownWisp = true;
+            }
             if ((t = RickardFx.Load("tx_fx_nova")) != null)
             {
                 nova = Flat(MakeSystem("BAM Novas", ArtMaterials.ParticleAdd, 0f, 0.35f, 1.1f, 30));
@@ -278,24 +301,64 @@ namespace BAM.Art
         // från wowläget kan jag använda"): one additive system per picture, made at Init so the first use never hitches
         static readonly string[] WowPics =
         {
-            "tx_wow_warrior_impact", "tx_wow_sword_slash", "tx_wow_spark_cross", "tx_wow_mage_blink", "tx_wow_priest_shield", "tx_wow_mage_shatter",
+            "tx_wow_warrior_impact", "tx_wow_sword_slash", "tx_wow_mage_blink", "tx_wow_priest_shield", "tx_wow_mage_shatter",
             "tx_wow_warrior_whirl", "tx_wow_magic_circle", "tx_wow_priest_runes",
         };
-        static readonly bool[] WowFlat = { false, false, false, false, false, false, true, true, true }; // the last three lie on the ground
-        static readonly Dictionary<string, ParticleSystem> pics = new Dictionary<string, ParticleSystem>(16);
+        static readonly bool[] WowFlat = { false, false, false, false, false, true, true, true }; // the last three lie on the ground
+        static readonly Dictionary<string, ParticleSystem> pics = new Dictionary<string, ParticleSystem>(32);
 
-        static ParticleSystem PicSystem(string name, bool flat)
+        // Rickard's own Gemini set (2026-10-27, from the list "Texturer att göra för BAM"): white + alpha, so drawn additive weighed
+        // by alpha; the Blast explosion is in colour and drawn see-through. They win over the WoW-mode pictures where both fit.
+        static readonly string[] OwnPics =
+        {
+            "tx_fx_hit_star_a", "tx_fx_hit_star_b", "tx_fx_hit_star_c", "tx_fx_impact_ring", "tx_fx_fenn_claw", "tx_fx_bram_anvil",
+            "tx_fx_tyra_charge", "tx_fx_blast_explosion",
+        };
+
+        // mode: 0 white on black (additive), 1 white + alpha (additive weighed by alpha), 2 a coloured picture (alpha blended)
+        static ParticleSystem PicSystem(string name, bool flat, int mode = 0, float s0 = 0.75f, float s1 = 1.1f)
         {
             if (pics.TryGetValue(name, out var ps)) return ps;
             var t = RickardFx.Load(name);
             if (t != null)
             {
-                ps = MakeSystem("BAM " + name, ArtMaterials.ParticleAdd, 0f, 0.75f, 1.1f, 40);
-                Retexture(ps, t, 1, 1, 0, false);
+                ps = MakeSystem("BAM " + name, mode == 2 ? ArtMaterials.ParticleAlpha : ArtMaterials.ParticleAdd, 0f, s0, s1, 40);
+                if (mode == 2) RetextureAlpha(ps, t, false);
+                else Retexture(ps, t, 1, 1, 0, false);
+                if (mode == 1) RickardFx.WeighByAlpha(ps.GetComponent<ParticleSystemRenderer>().sharedMaterial);
                 if (flat) Flat(ps);
             }
             pics[name] = ps;
             return ps;
+        }
+
+        static void OwnSystems()
+        {
+            for (int i = 0; i < OwnPics.Length; i++)
+            {
+                string n = OwnPics[i];
+                if (n == "tx_fx_impact_ring") PicSystem(n, true, 1, 0.3f, 1f); // a sharp ring that races out, lying on the ground
+                else if (n == "tx_fx_blast_explosion") PicSystem(n, false, 2, 0.45f, 1.15f); // the fireball swells
+                else if (n == "tx_fx_hit_star_a" || n == "tx_fx_hit_star_b" || n == "tx_fx_hit_star_c") PicSystem(n, false, 1, 0.8f, 1.1f);
+                else PicSystem(n, false, 1);
+            }
+        }
+
+        /// <summary>The hit star in the middle of the target (his tx_fx_hit_star_c, now and then one of the two others); false when
+        /// it is missing.</summary>
+        public static bool HitStar(Vector3 pos, Color c, float size, float life)
+        {
+            float r = Random.value;
+            string n = r < 0.6f ? "tx_fx_hit_star_c" : r < 0.8f ? "tx_fx_hit_star_a" : "tx_fx_hit_star_b";
+            return Pic(n, pos, c, size, life) || Pic("tx_fx_hit_star_c", pos, c, size, life);
+        }
+
+        /// <summary>One of his pictures standing upright at pos, unturned (the anvil's spark fan rises from its foot).</summary>
+        public static bool PicUpright(string name, Vector3 pos, Color c, float size, float life)
+        {
+            if (!pics.TryGetValue(name, out var ps) || ps == null) return false;
+            Emit1(ps, pos, c, size, life, 0f);
+            return true;
         }
 
         /// <summary>One of Rickard's WoW-mode pictures at pos, tinted c, size in units, turned at random; false when it is missing.</summary>
@@ -459,7 +522,7 @@ namespace BAM.Art
                 ep.startSize = size * Random.Range(0.7f, 1.3f);
                 ep.startLifetime = life * Random.Range(0.75f, 1.25f);
                 if (ps == shard) ep.rotation3D = new Vector3(Random.value * 360f, Random.value * 360f, Random.value * 360f);
-                else ep.rotation = ps == spark || ps == drop || ps == bubble ? 0f : Random.value * 360f;
+                else ep.rotation = ps == spark || ps == drop || ps == bubble || (ps == wisp && ownWisp) ? 0f : Random.value * 360f;
                 ps.Emit(ep, 1);
             }
             ep.rotation3D = Vector3.zero;
@@ -535,6 +598,13 @@ namespace BAM.Art
             else Spawn(Shapes.RingMesh(thickness, Pal.White), pos, r0, r1, c, life, true, 0);
         }
 
+        /// <summary>Rickard's sharp impact ring (tx_fx_impact_ring) racing out to radius r on the ground; his shockwave flipbook
+        /// (Ring) when it is missing. The ring sits at 0.70 of the picture's half width.</summary>
+        public static void ImpactRing(Vector3 pos, float r, Color c, float life)
+        {
+            if (!Pic("tx_fx_impact_ring", pos, c, r * 2f / 0.7f, life)) Ring(pos, 0.2f * r, r, c, life);
+        }
+
         static Texture2D teleTex;
         static bool teleLoaded;
 
@@ -566,6 +636,25 @@ namespace BAM.Art
         }
 
         public static void Flash(Vector3 pos, float r0, float r1, Color c, float life) => Spawn(Shapes.Ball(), pos, r0, r1, c, life, false, 0);
+
+        static Texture2D spikesTex;
+        static bool spikesLoaded;
+
+        /// <summary>Rickard's hit spikes (tx_fx_hit_spikes, 2026-10-27): a fan of light shooting out behind the target the way the
+        /// blow went, facing the camera. The fan's root (the picture's left edge) sits on the target; dir is the blow's direction.</summary>
+        public static void Spikes(Vector3 at, Vector3 dir, Color c, float size, float life)
+        {
+            if (!spikesLoaded) { spikesLoaded = true; spikesTex = RickardFx.Load("tx_fx_hit_spikes"); }
+            if (spikesTex == null) return;
+            Spawn(FxAtlas.FullQuad(), at, size * 0.85f, size * 1.1f, c, life, false, 4);
+            Blob bu = live[live.Count - 1];
+            bu.Aspect = 2f; // 1024 x 508
+            Apply(bu, 0f);
+            Quaternion cam = ArtDriver.CamRot;
+            float ang = Mathf.Atan2(Vector3.Dot(dir, cam * Vector3.up), Vector3.Dot(dir, cam * Vector3.right)) * Mathf.Rad2Deg;
+            bu.T.rotation = cam * Quaternion.Euler(0f, 0f, ang) * Quaternion.Euler(-90f, 0f, 0f); // as the boulder's dust trail
+            bu.T.position = at + bu.T.right * (size * 0.85f);
+        }
 
         /// <summary>Cracks in the ground that fade (heavy landings, explosions). Radius in units.</summary>
         public static void Crack(Vector3 pos, float radius, float life, float alpha = 0.7f) => Crack(pos, radius, life, new Color(1f, 0.75f, 0.45f, alpha));
@@ -640,8 +729,16 @@ namespace BAM.Art
                 bu.TeleMat.SetTexture(ArtMaterials.BaseMap, teleTex);
                 bu.TeleMat.mainTexture = teleTex;
             }
-            bu.Mat = matKind == 1 && bu.AddMat != null ? bu.AddMat : matKind == 2 && bu.FadeMat != null ? bu.FadeMat : matKind == 3 && bu.TeleMat != null ? bu.TeleMat : bu.PalMat;
+            if (matKind == 4 && bu.SpikeMat == null && spikesTex != null)
+            {
+                bu.SpikeMat = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.UnlitAdd));
+                bu.SpikeMat.SetTexture(ArtMaterials.BaseMap, spikesTex);
+                bu.SpikeMat.mainTexture = spikesTex;
+            }
+            bu.Mat = matKind == 1 && bu.AddMat != null ? bu.AddMat : matKind == 2 && bu.FadeMat != null ? bu.FadeMat : matKind == 3 && bu.TeleMat != null ? bu.TeleMat
+                : matKind == 4 && bu.SpikeMat != null ? bu.SpikeMat : bu.PalMat;
             bu.Linear = false;
+            bu.Aspect = 1f;
             bu.R.sharedMaterial = bu.Mat;
             bu.T.rotation = Quaternion.identity;
             bu.F.sharedMesh = mesh;
@@ -656,7 +753,7 @@ namespace BAM.Art
         {
             float e = bu.Linear ? t : 1f - (1f - t) * (1f - t);
             float s = Mathf.Lerp(bu.S0, bu.S1, e);
-            bu.T.localScale = bu.Flat ? new Vector3(s, 1f, s) : new Vector3(s, s, s);
+            bu.T.localScale = bu.Flat ? new Vector3(s, 1f, s) : new Vector3(s * bu.Aspect, s, s);
             Color c = bu.Col;
             c.a = bu.A0 * (1f - t);
             if (bu.Mat == bu.TeleMat) { float k = bu.Linear ? 0.55f + 0.45f * t : 0.8f + 0.2f * Mathf.Sin(bu.Age * 40f); c = new Color(bu.Col.r * k, bu.Col.g * k, bu.Col.b * k, 1f); } // additive: brightness is strength
@@ -716,14 +813,14 @@ namespace BAM.Art
             switch (kind)
             {
                 case FxKind.Hit when hero >= 0:
-                    Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
+                    if (!HitStar(mid, Color.white, 0.8f * size, 0.14f)) Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
                     if (hero == (int)HeroId.Fenn) Pic("tx_wow_sword_slash", mid, (Color)heroMain[hero], 1.2f * size, 0.14f); // his sword cuts
                     Sparks(mid, 6, heroMain[hero], 0.12f * size, 3f, 0.25f, 1f);
                     Stars(mid, 1, heroAccent[hero], 0.35f * size, 0.5f, 0.2f);
                     break;
                 case FxKind.HitBig when hero >= 0:
                     Pow(mid, 1, C(Pal.Cream), 0.9f * size, 0.18f);
-                    Pic("tx_wow_spark_cross", mid, Color.white, 1.1f * size, 0.16f);
+                    HitStar(mid, Color.white, 1.3f * size, 0.18f);
                     if (heavy || hero == (int)HeroId.Bonk) Pic("tx_wow_warrior_impact", mid, (Color)heroAccent[hero], 1.8f * size, 0.22f);
                     Rays(mid, (Color)heroMain[hero], 1.3f * size, 0.2f);
                     Sparks(mid, 12, heroMain[hero], 0.16f * size, 4.5f, 0.35f, 1.5f);
@@ -731,22 +828,23 @@ namespace BAM.Art
                     if (heavy)
                     {
                         Chunks(p + Vector3.up * 0.2f, 3, C(Pal.Rock), 0.14f * size, 2.5f, 0.6f, 2f);
-                        Ring(p, 0.2f * size, 0.9f * size, (Color)heroMain[hero], 0.25f);
+                        ImpactRing(p, 0.9f * size, (Color)heroMain[hero], 0.25f);
                     }
                     break;
                 case FxKind.Hit:
-                    Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
+                    if (!HitStar(mid, Color.white, 0.8f * size, 0.14f)) Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
                     Sparks(mid, 6, C(Pal.FireCore), 0.12f * size, 3f, 0.25f, 1f);
                     Stars(mid, 1, C(Pal.White), 0.35f * size, 0.5f, 0.2f);
                     break;
                 case FxKind.HitBig:
                     Pow(mid, 1, C(Pal.FireCore), 0.9f * size, 0.18f);
-                    Pic("tx_wow_warrior_impact", mid, new Color(1f, 0.85f, 0.55f, 1f), 1.6f * size, 0.22f);
+                    if (!HitStar(mid, new Color(1f, 0.92f, 0.75f, 1f), 1.3f * size, 0.18f))
+                        Pic("tx_wow_warrior_impact", mid, new Color(1f, 0.85f, 0.55f, 1f), 1.6f * size, 0.22f);
                     Rays(mid, new Color(1f, 0.9f, 0.6f, 1f), 1.3f * size, 0.2f);
                     Sparks(mid, 12, C(Pal.Fire), 0.16f * size, 4.5f, 0.35f, 1.5f);
                     Stars(mid, 2, C(Pal.White), 0.45f * size, 1.5f, 0.25f, 1f);
                     Chunks(p + Vector3.up * 0.2f, 3, C(Pal.Rock), 0.14f * size, 2.5f, 0.6f, 2f);
-                    Ring(p, 0.2f * size, 0.9f * size, new Color(1f, 0.8f, 0.4f, 0.8f), 0.25f);
+                    ImpactRing(p, 0.9f * size, new Color(1f, 0.8f, 0.4f, 0.8f), 0.25f);
                     break;
                 case FxKind.Death:
                     Pow(mid, 1, C(Pal.White, 200), 0.8f * size, 0.16f);
@@ -774,7 +872,8 @@ namespace BAM.Art
                     break;
                 case FxKind.Explosion:
                     Flash(mid, 0.4f * size, 1.2f * size, new Color(1f, 1f, 1f, 0.95f), 0.08f); // the white core first; rings end on the real radius
-                    Pic("tx_wow_warrior_impact", mid, new Color(1f, 0.6f, 0.25f, 1f), 2.2f * size, 0.25f);
+                    if (!Pic("tx_fx_blast_explosion", mid, Color.white, 2.6f * size, 0.45f)) // his own fireball (2026-10-27)
+                        Pic("tx_wow_warrior_impact", mid, new Color(1f, 0.6f, 0.25f, 1f), 2.2f * size, 0.25f);
                     Ring(p, 0.3f * size, 1.0f * size, (Color)heroAccent[(int)HeroId.Blast], 0.4f, 0.6f);
                     Pow(mid, 1, C(Pal.FireCore), 1.8f * size, 0.22f);
                     Flash(mid, 0.4f * size, 1.0f * size, new Color(1f, 0.6f, 0.2f, 1f), 0.25f);
@@ -791,7 +890,8 @@ namespace BAM.Art
                     // Bram's passive (every 4th hammer): the recipe's heavy anvil blow in his forge colours, ring on the real radius
                     Color32 m = heroMain[(int)HeroId.Bram], a = heroAccent[(int)HeroId.Bram];
                     Flash(mid, 0.25f * size, 0.8f * size, new Color(1f, 1f, 1f, 0.9f), 0.07f);
-                    Ring(p, 0.2f * size, size, (Color)m, 0.3f);
+                    PicUpright("tx_fx_bram_anvil", p + Vector3.up * (0.15f + 0.6f * size), (Color)a, 1.8f * size, 0.3f); // his spark fan, rising from the blow
+                    ImpactRing(p, size, (Color)m, 0.3f);
                     Sparks(mid, 10, a, 0.12f, 4f, 0.3f, 1.2f);
                     Chunks(p + Vector3.up * 0.2f, 5, C(Pal.Rock), 0.13f, 3f, 0.6f, 2.2f);
                     Dust(p + Vector3.up * 0.1f, 4, C(Pal.Ground, 200), 0.5f, 1.2f, 0.5f, 0.3f, 0.2f);
@@ -894,6 +994,7 @@ namespace BAM.Art
                     // each bounce an anvil clink in Bram's forge colours
                     Flash(mid, 0.15f, 0.55f, new Color(1f, 1f, 1f, 0.9f), 0.06f);
                     Pow(mid, 1, heroAccent[(int)HeroId.Bram], 0.6f * size, 0.14f);
+                    PicUpright("tx_fx_bram_anvil", mid + Vector3.up * 0.3f * size, (Color)heroAccent[(int)HeroId.Bram], 1.1f * size, 0.22f);
                     Sparks(mid, 8, heroMain[(int)HeroId.Bram], 0.12f, 3.5f, 0.3f, 1.2f);
                     Crack(p, 0.4f, 0.7f);
                     Ring(p, 0.2f * size, 0.8f * size, (Color)heroMain[(int)HeroId.Bram], 0.22f);
@@ -980,6 +1081,7 @@ namespace BAM.Art
                 case HeroId.Tikta: Bubbles(p + Vector3.up * 0.4f, 3, a, 0.12f, 0.8f, 0.5f, 1f, 0.2f); break;
                 case HeroId.Fenn: Wisps(p + Vector3.up * 0.4f, 3, a, 0.5f, 0.6f, 0.6f, 0.8f, 0.3f); break;
                 case HeroId.Bram: Sparks(p + Vector3.up * 0.5f, 6, a, 0.1f, 3f, 0.3f, 1.2f); break;
+                case HeroId.Tyra: Pic("tx_fx_tyra_charge", p + Vector3.up * 0.8f, (Color)m, 1.7f, 0.2f); break; // his star flash as she lets go
             }
         }
 
@@ -1028,7 +1130,7 @@ namespace BAM.Art
                     SpecialHit((int)HeroId.Tyra, p, 1f);
                     Pow(p, 1, new Color32(180, 240, 255, 255), 0.9f, 0.16f);
                     Rays(p, new Color(0.7f, 0.95f, 1f, 1f), 1.1f, 0.18f);
-                    Pic("tx_wow_spark_cross", p, Color.white, 1.2f, 0.18f);
+                    HitStar(p, Color.white, 1.3f, 0.18f);
                     Stars(p, 3, new Color32(200, 245, 255, 255), 0.45f, 1.5f, 0.3f, 0.6f);
                     Sparks(p, 8, new Color32(180, 240, 255, 255), 0.12f, 4f, 0.3f, 0.8f);
                     break;
@@ -1059,7 +1161,7 @@ namespace BAM.Art
                     Color32 m = heroMain[(int)HeroId.Blast], a = heroAccent[(int)HeroId.Blast];
                     Vector3 g = new Vector3(p.x, 0f, p.z);
                     Flash(p, 0.12f, 0.5f, new Color(1f, 1f, 1f, 0.9f), 0.06f);
-                    Pow(p, 1, a, 0.7f, 0.14f);
+                    if (!Pic("tx_fx_blast_explosion", p, Color.white, 1.2f, 0.35f)) Pow(p, 1, a, 0.7f, 0.14f);
                     Glow(p, 2, m, 0.7f, 0.2f, 0.3f);
                     Flames(g + Vector3.up * 0.15f, 7, m, 0.5f, 0.8f, 0.55f, 1.4f, 0.25f);
                     Sparks(p, 8, a, 0.09f, 3.5f, 0.4f, 1.6f);

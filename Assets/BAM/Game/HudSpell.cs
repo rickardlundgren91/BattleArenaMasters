@@ -196,7 +196,13 @@ namespace BAM.Game
             if (spellShownId != p.Spell)
             {
                 spellShownId = p.Spell;
-                spellGlyph.sprite = SpellGlyphSprite(p.Spell);
+                spellGlyph.sprite = SpellGlyphSprite(p.Spell, out bool own);
+                // Rickard's icons fill their picture: inset to the size the code glyphs had (half the button)
+                float inset = own ? 0.21f : 0f;
+                var gr = spellGlyph.rectTransform;
+                gr.anchorMin = new Vector2(inset, inset);
+                gr.anchorMax = new Vector2(1f - inset, 1f - inset);
+                gr.offsetMin = gr.offsetMax = Vector2.zero;
             }
 
             bool chan = Match.SpellChanneling(p);
@@ -293,10 +299,22 @@ namespace BAM.Game
 
         // SpellGlyph: Blink two chevrons, Recall a house, Shield a shield, Haste a lightning bolt; Sprint (new) an arrow with speed
         // lines. White, tinted by the button; drawn in the old canvas's y-down space with k = half the button's radius.
+        // Rickard's own icons (2026-10-27, UI/Resources/BAM/Menu/spell_*.png, white to tint) win; the code glyphs stay as the fallback.
         static readonly Dictionary<SpellId, Sprite> glyphs = new Dictionary<SpellId, Sprite>();
-        static Sprite SpellGlyphSprite(SpellId s)
+        static readonly HashSet<SpellId> ownGlyph = new HashSet<SpellId>();
+        static Sprite SpellGlyphSprite(SpellId s, out bool own)
         {
+            own = ownGlyph.Contains(s);
             if (glyphs.TryGetValue(s, out Sprite sp)) return sp;
+            var pic = Resources.Load<Texture2D>("BAM/Menu/spell_" + s.ToString().ToLowerInvariant());
+            if (pic != null)
+            {
+                sp = Sprite.Create(pic, new Rect(0, 0, pic.width, pic.height), new Vector2(0.5f, 0.5f), 100f);
+                glyphs[s] = sp;
+                ownGlyph.Add(s);
+                own = true;
+                return sp;
+            }
             const int n = 96;
             float k = n * 0.25f, cx = n / 2f, cy = n / 2f, lw = k * 0.28f;
             var fills = new List<List<Vector2>>();

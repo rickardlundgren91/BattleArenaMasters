@@ -14,11 +14,18 @@ namespace BAM.Game
     /// The outlines are ribbons of a fixed width on the ground (rebuilt each frame), so they stay sharp whatever the size.
     /// Cancelling dims it all to a quiet grey (old HudAim AIM_CANCEL); a special that is not ready shows red.
     /// The material is a copy of the art's own aim material, so its transparent shader variant is the one already in the build.
+    /// Rickard's own pictures (2026-10-27, Resources/BAMArt/Fx/tx_aim_*: white + alpha) take over where they exist: the reach ring
+    /// (tx_aim_range), the arrow (tx_aim_arrow: its head keeps its shape, the shaft stretches to the length) and the area's disc with
+    /// its rim, four ticks and middle dot (tx_aim_area, its fill turned down to a whisper). The code-drawn shapes stay as the fallback.
     /// </summary>
     sealed class AimIndicator
     {
         static readonly int BaseColor = Shader.PropertyToID("_BaseColor"), BaseMap = Shader.PropertyToID("_BaseMap");
         static Texture2D strokeTex, guideTex, fillTex, bandTex, rangeTex, areaTex, dotTex;
+        static Texture2D ownRange, ownArrow, ownArea; // Rickard's pictures, null when missing
+        // where his pictures draw: the reach ring at 0.735 of tx_aim_range's half width, the area's rim at 0.79 of tx_aim_area's;
+        // tx_aim_arrow (508 x 1024, v up): tail 0.04, head's base 0.707, tip 0.941, picture's top 0.97; head 0.414 of the width
+        const float RangeAt = 0.735f, AreaAt = 0.79f, ArrowTail = 0.04f, ArrowBase = 0.707f, ArrowTip = 0.941f, ArrowTop = 0.97f, ArrowHeadU = 0.414f;
         static Mesh quadZ, quadC;
 
         // the outline ribbons, in world units: the crisp edge and its dark rim reach EdgeOut outside the shape, the glow EdgeIn inside
@@ -56,11 +63,11 @@ namespace BAM.Game
             var rs = source.GetComponentsInChildren<MeshRenderer>(true);
             if (rs.Length > 0) src = rs[0].sharedMaterial;
             root = new GameObject("BAM.AimIndicator");
-            rangeFill = MakePart("RangeFill", quadC, rangeTex, src, 3004);
+            rangeFill = MakePart("RangeFill", quadC, ownRange ?? rangeTex, src, 3004);
             rangeRim = MakeRibbon("RangeRim", strokeTex, src, 3005, 64);
             guide = MakePart("Guide", quadZ, guideTex, src, 3006);
-            areaFill = MakePart("AreaFill", quadC, areaTex, src, 3007);
-            arrowFill = MakeRibbon("ArrowFill", fillTex, src, 3007, 8);
+            areaFill = MakePart("AreaFill", quadC, ownArea ?? areaTex, src, 3007);
+            arrowFill = MakeRibbon("ArrowFill", ownArrow ?? fillTex, src, 3007, 8);
             sweep = MakePart("Sweep", quadZ, bandTex, src, 3008);
             pulse = MakeRibbon("Pulse", strokeTex, src, 3008, 48);
             arrowRim = MakeRibbon("ArrowRim", strokeTex, src, 3009, 8);
@@ -126,6 +133,14 @@ namespace BAM.Game
         /// <summary>The reach of the special: a thin crisp ring round the hero with only a faint fill (MLBB, old HudAim AIM_RANGE).</summary>
         public void Range(Vector3 hero, float reach, bool ready, bool cancel)
         {
+            if (ownRange != null)
+            {
+                // his thin glowing ring is the whole reach
+                float d = reach * 2f / RangeAt;
+                Place(rangeFill, hero, Quaternion.identity, new Vector3(d, 1f, d), 0.04f);
+                rangeFill.SetColor(Edge(ready, cancel, 0.75f));
+                return;
+            }
             Place(rangeFill, hero, Quaternion.identity, new Vector3(reach * 2f, 1f, reach * 2f), 0.04f);
             rangeFill.SetColor(Fill(ready, cancel, 0.11f));
             CirclePath(reach, 64);
@@ -156,13 +171,27 @@ namespace BAM.Game
             pts[6] = new Vector2(-half, 0f);
             var q = Quaternion.LookRotation(dir);
 
-            arrowFill.Rib.Arrow(half, wing, bodyLen, length);
-            Place(arrowFill, from, q, Vector3.one, 0.06f);
-            arrowFill.SetColor(Fill(ready, cancel, 0.5f));
+            if (ownArrow != null)
+            {
+                // his arrow: the head as wide as the old wings and kept in its own shape, the shaft stretched to the reach
+                float pictureW = wing * 2f / ArrowHeadU, head = Mathf.Min(length * 0.45f, wing * 2f * 1.14f);
+                arrowFill.Rib.PictureArrow(pictureW, length - head, length);
+                Place(arrowFill, from, q, Vector3.one, 0.06f);
+                arrowFill.SetColor(Edge(ready, cancel, 0.95f));
+                arrowRim.R.enabled = false;
+                bodyLen = length - head;
+                width = pictureW * 0.17f; // the light runs inside his shaft
+            }
+            else
+            {
+                arrowFill.Rib.Arrow(half, wing, bodyLen, length);
+                Place(arrowFill, from, q, Vector3.one, 0.06f);
+                arrowFill.SetColor(Fill(ready, cancel, 0.5f));
 
-            arrowRim.Rib.Build(pts, 7, false, EdgeOut, EdgeIn);
-            Place(arrowRim, from, q, Vector3.one, 0.062f);
-            arrowRim.SetColor(Edge(ready, cancel, 0.95f));
+                arrowRim.Rib.Build(pts, 7, false, EdgeOut, EdgeIn);
+                Place(arrowRim, from, q, Vector3.one, 0.062f);
+                arrowRim.SetColor(Edge(ready, cancel, 0.95f));
+            }
 
             // a soft light runs from the hero to the head every 0.9 s (old HudAim: "a slow light running along it")
             sweepT = cancel ? 0f : (sweepT + dt / 0.9f) % 1f;
@@ -179,13 +208,26 @@ namespace BAM.Game
         public void Circle(Vector3 hero, Vector3 center, float radius, bool ready, bool cancel, float dt)
         {
             radius = Mathf.Max(0.3f, radius);
-            Place(areaFill, center, Quaternion.identity, new Vector3(radius * 2f, 1f, radius * 2f), 0.06f);
-            areaFill.SetColor(Fill(ready, cancel, 0.34f));
-
-            CirclePath(radius, 64);
-            areaRim.Rib.Build(pts, 64, true, EdgeOut, EdgeIn);
-            Place(areaRim, center, Quaternion.identity, Vector3.one, 0.063f);
-            areaRim.SetColor(Edge(ready, cancel, 0.95f));
+            if (ownArea != null)
+            {
+                // his disc carries the fill, rim, ticks and the middle dot itself
+                float across = radius * 2f / AreaAt;
+                Place(areaFill, center, Quaternion.identity, new Vector3(across, 1f, across), 0.06f);
+                areaFill.SetColor(Edge(ready, cancel, 0.95f));
+                areaRim.R.enabled = false;
+                dot.R.enabled = false;
+            }
+            else
+            {
+                Place(areaFill, center, Quaternion.identity, new Vector3(radius * 2f, 1f, radius * 2f), 0.06f);
+                areaFill.SetColor(Fill(ready, cancel, 0.34f));
+                CirclePath(radius, 64);
+                areaRim.Rib.Build(pts, 64, true, EdgeOut, EdgeIn);
+                Place(areaRim, center, Quaternion.identity, Vector3.one, 0.063f);
+                areaRim.SetColor(Edge(ready, cancel, 0.95f));
+                Place(dot, center, Quaternion.identity, new Vector3(0.2f, 1f, 0.2f), 0.064f);
+                dot.SetColor(Edge(ready, cancel, 0.9f));
+            }
 
             sweepT = cancel ? 0f : (sweepT + dt / 1.1f) % 1f;
             float pr = radius * (0.3f + 0.62f * sweepT);
@@ -194,9 +236,6 @@ namespace BAM.Game
             Place(pulse, center, Quaternion.identity, Vector3.one, 0.062f);
             pulse.SetColor(Edge(ready, cancel, 0.45f * (1f - sweepT)));
             pulse.R.enabled = !cancel;
-
-            Place(dot, center, Quaternion.identity, new Vector3(0.2f, 1f, 0.2f), 0.064f);
-            dot.SetColor(Edge(ready, cancel, 0.9f));
 
             // the guide: from the hero's feet to the rim, faint
             Vector3 d = center - hero;
@@ -288,6 +327,19 @@ namespace BAM.Game
                 Apply();
             }
 
+            /// <summary>Rickard's arrow picture on two quads, w wide: the shaft from the hero (v tail to the head's base) stretched to
+            /// bodyLen, the head (v base to the picture's top) kept in shape from bodyLen to the tip at length.</summary>
+            public void PictureArrow(float w, float bodyLen, float length)
+            {
+                nv = nt = 0;
+                float h = w * 0.5f, top = bodyLen + (length - bodyLen) * (ArrowTop - ArrowBase) / (ArrowTip - ArrowBase);
+                Put(-h, 0f, 0f, ArrowTail); Put(h, 0f, 1f, ArrowTail); Put(h, bodyLen, 1f, ArrowBase); Put(-h, bodyLen, 0f, ArrowBase);
+                Tri(0, 1, 2); Tri(0, 2, 3);
+                Put(-h, bodyLen, 0f, ArrowBase); Put(h, bodyLen, 1f, ArrowBase); Put(h, top, 1f, ArrowTop); Put(-h, top, 0f, ArrowTop);
+                Tri(4, 5, 6); Tri(4, 6, 7);
+                Apply();
+            }
+
             void Put(float x, float z, float u, float vv)
             {
                 v[nv] = new Vector3(x, 0f, z);
@@ -324,6 +376,9 @@ namespace BAM.Game
         static void MakeAssets()
         {
             if (strokeTex != null) return;
+            ownRange = Own("tx_aim_range");
+            ownArrow = Own("tx_aim_arrow");
+            ownArea = Own("tx_aim_area");
             const float total = EdgeOut + EdgeIn;
             // the outline, across from outside (u = 0) to inside (u = 1): a thin dark rim, a crisp bright edge, then a soft glow that
             // fades into the shape. The rim's colour is in the texture, so tinting the material keeps it dark.
@@ -377,6 +432,13 @@ namespace BAM.Game
 
             quadZ = Quad("BAM.Aim.QuadZ", -0.5f, 0.5f, 0f, 1f);
             quadC = Quad("BAM.Aim.QuadC", -0.5f, 0.5f, -0.5f, 0.5f);
+        }
+
+        static Texture2D Own(string name)
+        {
+            var t = Resources.Load<Texture2D>("BAMArt/Fx/" + name);
+            if (t != null) t.wrapMode = TextureWrapMode.Clamp;
+            return t;
         }
 
         // a strip w wide and 2 high whose colour runs across u

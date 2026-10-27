@@ -27,6 +27,28 @@ namespace BAM.Art
         readonly MeshRenderer[] tongue = new MeshRenderer[4], tongueCore = new MeshRenderer[4];
         readonly float fireSeed;
 
+        // Rickard's status ring (tx_fx_status_ring, 2026-10-27, white + alpha) under stun, poison, burn and slow, one material per
+        // colour; its outer edge sits at 0.87 of the picture's half width. Without it the code rings stay.
+        static Texture2D ringTex;
+        static bool ringLoaded;
+        static readonly Material[] ringMats = new Material[4];
+        const float RingQuad = 2f / 0.87f;
+
+        static Material RingMat(int slot, byte pal)
+        {
+            if (!ringLoaded) { ringLoaded = true; ringTex = RickardFx.Load("tx_fx_status_ring"); }
+            if (ringTex == null) return null;
+            if (ringMats[slot] != null) return ringMats[slot];
+            var m = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.UnlitAdd));
+            m.name = "BAM status ring " + slot;
+            m.SetTexture(ArtMaterials.BaseMap, ringTex);
+            m.mainTexture = ringTex;
+            Color c = Pal.Get(pal);
+            c.a = 0.9f;
+            m.SetColor(ArtMaterials.BaseColor, c);
+            return ringMats[slot] = m;
+        }
+
         // Moa's honey shield (old View3DShields.cs): a slowly turning globe of honeycomb cells, additive honey over the hero
         static Mesh hexSphere;
         static Material hexMat;
@@ -130,6 +152,9 @@ namespace BAM.Art
         {
             Mesh mesh; Material mat; Vector3 pos; float s;
             float rr = Mathf.Max(radius, 0.25f) * 1.3f;
+            Material own = i == StunRing ? RingMat(0, Pal.Stun) : i == PoisonRing ? RingMat(1, Pal.Poison) : i == BurnRing ? RingMat(2, Pal.Burn)
+                : i == Slow ? RingMat(3, Pal.Slow) : null;
+            if (own != null) { MakeOwnRing(i, own, i == Slow ? rr * RingQuad : rr * 1.05f * RingQuad); return; }
             switch (i)
             {
                 case Stun: mesh = Shapes.StunStars(); mat = ArtMaterials.Unlit; pos = new Vector3(0f, height + 0.12f, 0f); s = Mathf.Max(1f, radius * 2.5f); break;
@@ -150,6 +175,20 @@ namespace BAM.Art
             t[i].localPosition = pos;
             t[i].localScale = new Vector3(s, s, s);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            r[i] = go.AddComponent<MeshRenderer>();
+            r[i].sharedMaterial = mat;
+            r[i].shadowCastingMode = ShadowCastingMode.Off;
+            r[i].receiveShadows = false;
+        }
+
+        void MakeOwnRing(int i, Material mat, float s)
+        {
+            var go = new GameObject("Status" + i);
+            t[i] = go.transform;
+            t[i].SetParent(parent, false);
+            t[i].localPosition = new Vector3(0f, i == Slow ? 0.03f : 0.035f, 0f);
+            t[i].localScale = new Vector3(s, 1f, s);
+            go.AddComponent<MeshFilter>().sharedMesh = FxAtlas.FullQuad();
             r[i] = go.AddComponent<MeshRenderer>();
             r[i].sharedMaterial = mat;
             r[i].shadowCastingMode = ShadowCastingMode.Off;
@@ -232,7 +271,7 @@ namespace BAM.Art
                 t[Shield].localScale = new Vector3(b, b, b);
                 t[Shield].localRotation = Quaternion.Euler(0f, time * 20f, 0f);
             }
-            float ringK = Mathf.Max(radius, 0.25f) * 1.3f * 1.05f * (1f + Mathf.Sin(time * 6f) * 0.06f);
+            float ringK = Mathf.Max(radius, 0.25f) * 1.3f * 1.05f * (1f + Mathf.Sin(time * 6f) * 0.06f) * (ringTex != null ? RingQuad : 1f);
             for (int i = StunRing; i <= BurnRing; i++)
                 if (r[i] != null && r[i].enabled) t[i].localScale = new Vector3(ringK, 1f, ringK);
             if (r[Illusion] != null && r[Illusion].enabled) t[Illusion].localRotation = Quaternion.Euler(0f, time * 60f, 0f);

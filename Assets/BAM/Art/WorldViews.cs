@@ -27,7 +27,9 @@ namespace BAM.Art
         static Texture2D arcTex, boulderTex, dustTrailTex;
         Transform dustT; // Bonk's boulder: Rickard's dust trail picture (tx_fx_bonk_trail) streaming out behind it
         Material dustMat;
-        static bool arcLoaded, boulderLoaded;
+        static bool arcLoaded, boulderLoaded, arcAlpha;
+        static Material texTrail; // Rickard's comet trail picture (tx_fx_trail), shared by every shot that leaves one
+        static bool texTrailLoaded;
         MeshFilter visF;
         Transform bombT;
         float bombTop = 0.27f;
@@ -45,8 +47,15 @@ namespace BAM.Art
             var go = new GameObject("Look");
             vis = go.transform;
             vis.SetParent(transform, false);
-            if (!arcLoaded) { arcLoaded = true; arcTex = RickardFx.Load("tx_fx_slash_arc"); }
-            arc = melee && arcTex != null; // Rickard's own slash arc (2026-10-26), white on black: drawn additive
+            if (!arcLoaded)
+            {
+                arcLoaded = true;
+                // his wide hot slash (2026-10-27, white + alpha) over the thin tx_fx_slash_arc (2026-10-26, white on black)
+                arcTex = RickardFx.Load("tx_fx_slash_hot");
+                arcAlpha = arcTex != null;
+                if (arcTex == null) arcTex = RickardFx.Load("tx_fx_slash_arc");
+            }
+            arc = melee && arcTex != null; // Rickard's own slash arc: drawn additive
             bool painted = melee && !arc && FxAtlas.Texture != null; // else the painted sword arc from the effect atlas
             visF = go.AddComponent<MeshFilter>();
             // Blast throws his own skull bomb from the old game (Props/blast_bomb), not a fireball: the bomb sits on a child,
@@ -81,7 +90,12 @@ namespace BAM.Art
             if (melee)
             {
                 visR.sharedMaterial = painted ? FxAtlas.Material(ArtMaterials.UnlitAdd) : ArtMaterials.Instance(ArtMaterials.UnlitAdd);
-                if (arc) { visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, arcTex); visR.sharedMaterial.mainTexture = arcTex; }
+                if (arc)
+                {
+                    visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, arcTex);
+                    visR.sharedMaterial.mainTexture = arcTex;
+                    if (arcAlpha) RickardFx.WeighByAlpha(visR.sharedMaterial);
+                }
                 // the heroes' own swing colours (MLBB analysis 8): Fenn silver-cyan, Knut steel blue; the wolf ghost blue, minions the team's
                 Color c = k == ProjKind.WolfBite ? (Color)Fx.HeroMain(HeroId.Fenn) : k == ProjKind.KnutHit ? (Color)Fx.HeroMain(HeroId.Knut)
                     : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : (Color)Pal.Get(Pal.TeamLight(t)) * 0.6f; // minions' arcs dimmer
@@ -123,11 +137,20 @@ namespace BAM.Art
             if (TrailColor(k, t, out trailColor))
             {
                 trail = go.AddComponent<TrailRenderer>();
-                trail.sharedMaterial = ArtKit.TrailMaterial;
+                Material tm = TexTrail();
+                trail.sharedMaterial = tm ?? ArtKit.TrailMaterial;
                 trail.time = k == ProjKind.TowerShot || k == ProjKind.TyraBolt ? 0.22f : 0.16f;
                 trail.minVertexDistance = 0.08f;
                 trail.widthMultiplier = k == ProjKind.TyraBolt || k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : 0.14f;
                 trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+                if (tm != null)
+                {
+                    // the picture is the comet itself (head, soft streaks, fading tail) stretched once along the trail, so the width
+                    // stays and the picture's own glow is the edge
+                    trail.textureMode = LineTextureMode.Stretch;
+                    trail.widthMultiplier *= 2.2f;
+                    trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0.6f);
+                }
                 var g = new Gradient();
                 Color end = trailColor; end.a = 0f;
                 g.SetKeys(new[] { new GradientColorKey(trailColor, 0f), new GradientColorKey(trailColor, 1f) },
@@ -149,6 +172,19 @@ namespace BAM.Art
                 chainR.shadowCastingMode = ShadowCastingMode.Off;
                 chainR.enabled = false;
             }
+        }
+
+        static Material TexTrail()
+        {
+            if (texTrailLoaded) return texTrail;
+            texTrailLoaded = true;
+            var t = RickardFx.Load("tx_fx_trail"); // turned so its head is on the left: a trail's u = 0 is its newest point
+            if (t == null) return null;
+            t.wrapMode = TextureWrapMode.Clamp;
+            texTrail = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.ParticleAdd));
+            texTrail.SetTexture(ArtMaterials.BaseMap, t);
+            texTrail.mainTexture = t;
+            return texTrail;
         }
 
         static bool TrailColor(ProjKind k, int team, out Color c)
@@ -289,6 +325,9 @@ namespace BAM.Art
                     Color32 sc = kind == ProjKind.KnutHit ? Fx.HeroAccent(HeroId.Knut) : kind == ProjKind.FennSlash || kind == ProjKind.WolfBite ? Fx.HeroMain(HeroId.Fenn) : new Color32(255, 220, 160, 255);
                     Fx.Flash(at, 0.1f, 0.4f, new Color(1f, 1f, 1f, 0.9f), 0.05f);
                     Fx.SparksAlong(at, to - from, kind == ProjKind.MeleeMinionHit ? 3 : 7, sc, 0.11f, 4.5f, 0.2f);
+                    // Rickard's spikes fly out behind a hero's blow; the wolf leaves his three claw marks
+                    if (kind != ProjKind.MeleeMinionHit) Fx.Spikes(at, to - from, (Color)sc, kind == ProjKind.WolfBite ? 0.8f : 1.1f, 0.16f);
+                    if (kind == ProjKind.WolfBite) Fx.PicUpright("tx_fx_fenn_claw", at, (Color)Fx.HeroMain(HeroId.Fenn), 1.1f, 0.25f);
                     if (kind == ProjKind.KnutHit) Fx.Drops(at, 5, Fx.HeroAccent(HeroId.Knut), 0.12f, 2.2f, 0.4f, 1.2f, 0.1f);
                 }
                 Material m = visR.sharedMaterial;

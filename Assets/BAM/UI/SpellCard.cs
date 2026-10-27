@@ -107,6 +107,9 @@ namespace BAM.UI
         public static Sprite Glyph(SpellId id)
         {
             if (glyphs.TryGetValue(id, out var s)) return s;
+            // Rickard's own icon (2026-10-27, Resources/BAM/Menu/spell_*.png, white to tint) when there is one
+            var pic = Resources.Load<Texture2D>("BAM/Menu/spell_" + id.ToString().ToLowerInvariant());
+            if (pic != null) return glyphs[id] = Sprite.Create(pic, new Rect(0, 0, pic.width, pic.height), new Vector2(0.5f, 0.5f), 100f);
             const int N = 96;
             const float Scale = N / 2.4f, Line = 0.28f;
             Vector2[] poly = id == SpellId.Recall ? RecallShape : id == SpellId.Shield ? ShieldShape : id == SpellId.Haste ? BoltShape : null;
