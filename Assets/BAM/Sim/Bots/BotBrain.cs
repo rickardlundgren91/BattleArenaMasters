@@ -139,9 +139,9 @@ namespace BAM.Sim
                     M.Map.FindPath(h.X, h.Y, gX, gY, Now, path);
                 }
             }
-            // a bot that could not think (stunned, casting, recalling, dead) was not stuck. A root still counts as stuck for now:
-            // bots then stand still a while after Fenn's wolf, and Fenn's balance leans on it (Rickard decides, 2026-10-27)
-            if (!hasStuck || resumed) { hasStuck = true; stuckX = h.X; stuckY = h.Y; stuckT = Now; }
+            // a bot that could not think (stunned, casting, recalling, dead) or is rooted could not move: that is not being stuck
+            // (Rickard 2026-10-27: bots no longer stand still after Fenn's root)
+            if (!hasStuck || resumed || h.Has(St.Root)) { hasStuck = true; stuckX = h.X; stuckY = h.Y; stuckT = Now; }
             if (!path.Has || Hyp(h.X - stuckX, h.Y - stuckY) > Math.Max(0.1f, SpeedOf(h) * 0.2f)) { stuckX = h.X; stuckY = h.Y; stuckT = Now; }
             else if (Now - stuckT > 0.6f)
             {
