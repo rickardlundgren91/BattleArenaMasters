@@ -353,6 +353,7 @@ namespace BAM.Game
             s.V = v;
             s.LaunchFrame = Time.frameCount;
             Vector3 from = Coords.World(p.PX, p.PY), to;
+            if (p.Kind == ProjKind.HildeShell) from = FromMuzzle(s.SrcSerial, from);
             float flight;
             if (p.Mode == ProjMode.Auto && p.Tgt != null)
             {
@@ -666,12 +667,19 @@ namespace BAM.Game
             }
         }
 
+        // Hilde's shell and kegs leave her cannon's mouth (Speltest CannonMouthOf), on the ground under it as every shot starts
+        Vector3 FromMuzzle(int srcSerial, Vector3 from)
+        {
+            if (unitBySerial.TryGetValue(srcSerial, out UnitRec r) && r.V != null && r.V.Muzzle(out Vector3 at)) { from.x = at.x; from.z = at.z; }
+            return from;
+        }
+
         void LobGhost(Unit src, Vector3 to, ProjKind kind, float flight)
         {
             var s = shotRecPool.Count > 0 ? shotRecPool.Pop() : new ShotRec();
             Init(s, null, 0, kind, src.Team, src.Serial);
             shots.Add(s);
-            StartGhost(s, DrawnAt(src), to, flight, 0f);
+            StartGhost(s, FromMuzzle(src.Serial, DrawnAt(src)), to, flight, 0f);
         }
 
         // Speltest HeroJuice.cs hit confirm: the player's hit (or its wolf's) landing on an enemy hero gives a short tick, a dull thud for

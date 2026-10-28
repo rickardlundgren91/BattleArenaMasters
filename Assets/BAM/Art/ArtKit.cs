@@ -76,6 +76,8 @@ namespace BAM.Art
         public virtual void SetChainSpark(bool on) { }
         /// <summary>The player's own Blast: Chain Reaction cooldown 0..1 as a violet arc at the feet that fills, below 0 = off.</summary>
         public virtual void SetChainCooldown(float frac) { }
+        /// <summary>Where a held gun's mouth is now (Hilde's cannon), for her shots and kegs to leave from; false for the rest.</summary>
+        public virtual bool Muzzle(out Vector3 at) { at = Vector3.zero; return false; }
     }
 
     public abstract class ProjectileView : MonoBehaviour

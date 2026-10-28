@@ -406,6 +406,8 @@ namespace BAM.Art
         internal float ShownHeight => def != null ? def.Height * transform.lossyScale.y : 1.8f;
 
         /// <summary>Where Hilde's cannon mouth is now (HeldGear), for her shot to leave from; false for every other view.</summary>
+        public override bool Muzzle(out Vector3 at) => CannonMouth(out at);
+
         internal bool CannonMouth(out Vector3 at)
         {
             at = Vector3.zero;
