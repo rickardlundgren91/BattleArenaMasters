@@ -445,7 +445,8 @@ namespace BAM.Art
             decalR.shadowCastingMode = ShadowCastingMode.Off;
             decalR.receiveShadows = false;
 
-            bar = new HealthBar(transform, d.BarWidth, d.Height + 0.28f, d.Kind == RigKind.Humanoid && d.BarWidth > 0.9f);
+            // no level badge by the hero bars (Rickard 2026-10-28 "Lvl siffran behövs inte bredvid namnet"); the HUD top still shows it
+            bar = new HealthBar(transform, d.BarWidth, d.Height + 0.28f, false);
             status = new StatusFx(transform, d.Radius, d.Height);
             ResetState();
         }
