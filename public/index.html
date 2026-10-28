@@ -284,11 +284,11 @@ footer a:hover{color:var(--gold-hi)}
         <ol>
           <li data-when="group" hidden><span>Join the tester group with the Gmail you use on your Android phone.<a class="btn btn-gold pt-btn" href="#playtest" data-link="group">Join the tester group</a></span></li>
           <li data-when="manual" hidden><span>Wait while we add you to the test. It usually takes less than a day.</span></li>
-          <li><span>Open the test link on your Android phone and tap "Become a tester". Then install Battle Arena Masters from Google Play.<a class="btn btn-gold pt-btn" href="#playtest" data-link="play" data-when="play" hidden>Open the test link</a></span></li>
+          <li><span>Open the test link on your Android phone and tap "Become a tester". Then install Battle Arena Masters from Google Play.<a class="btn btn-gold pt-btn" href="#playtest" data-link="play" data-when="play" hidden>Open the test link</a><a class="btn btn-ghost pt-btn" href="#playtest" data-link="store" data-when="store" hidden>Install from Google Play</a></span></li>
         </ol>
         <span class="pt-wait" data-when="no-play">Test link coming soon</span>
         <a class="btn btn-ghost" href="https://discord.gg/geJVGJtuXx" data-link="discord" data-when="no-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Get the link on Discord</a>
-        <small>Use the same Google account in every step. If the test link says the app isn't available, we haven't added you yet. Try again a little later. Please stay in the test for at least two weeks. You can leave any time after that.</small>
+        <small>Use the same Google account in every step. If the test link says the app isn't available, check that you joined the tester group with the same Google account, wait a few minutes and try again. Please stay in the test for at least two weeks. You can leave any time after that.</small>
       </div>
     </div>
   </section>
@@ -324,10 +324,11 @@ footer a:hover{color:var(--gold-hi)}
 <script>
 // Fill in these links. Empty play = the page points to Discord for the test link. Empty group = no tester-group step.
 var LINKS = {
-  play: "https://play.google.com/apps/internaltest/4701491481232907787",     // Google Play test link, e.g. https://play.google.com/apps/testing/...
+  play: "https://play.google.com/apps/testing/com.battlearenamasters.game",     // Google Play test link (closed test opt-in page)
+  store: "https://play.google.com/store/apps/details?id=com.battlearenamasters.game",   // Google Play store page, works once you are a tester
   group: "https://groups.google.com/g/bam-playtesters",    // Google Group for testers, e.g. https://groups.google.com/g/...
   discord: "https://discord.gg/geJVGJtuXx",   // Discord invite, e.g. https://discord.gg/...
-  manual: true  // true = testers are added to the Play test by hand (internal test), so show the "wait" step
+  manual: false  // true = testers are added to the Play test by hand (internal test), so show the "wait" step
 };
 document.querySelectorAll("[data-when]").forEach(function (el) {
   var w = el.dataset.when, on = w === "no-play" ? !LINKS.play : !!LINKS[w];
