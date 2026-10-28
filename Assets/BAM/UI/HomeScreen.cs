@@ -231,9 +231,7 @@ namespace BAM.UI
 
             void BuildStage()
             {
-                // HubSpot3: a warm spotlight from above, and the gold rune circle on the ground
-                var spot = Img(low, "Spot", HomeArt.Spot, Color.white);
-                At(spot, 540, FeetY, 2 * 0.55f * HeroH, 1.35f * HeroH, 0.5f, 0);
+                // The gold rune circle on the ground. HubSpot3's spotlight cone is left out: Rickard found the light triangle ugly (2026-10-28).
                 rune = UiKit.NewRect("Rune", low).gameObject.AddComponent<CanvasGroup>();
                 rune.blocksRaycasts = false;
                 var runeRt = (RectTransform)rune.transform;
