@@ -17,7 +17,7 @@ namespace BAM.Sim
         public const float KnockDist = 1.5f, KnockTime = 0.2f, KnockStun = 0.4f;
         /// <summary>The slam auto attack: the wind-up (the HeroDef's SpawnDelay), the circle's centre this far in front of him
         /// toward the target, and its radius. Towers are hit only as the picked target.</summary>
-        public const float SmashAhead = 1.2f, SmashRadius = 1.3f;
+        public const float SmashAhead = 1.2f, SmashRadius = 1.3f, SmashFollow = 0.5f; // the club follows its target at most this far (Rickard 2026-10-28)
         public const int PowerEvery = 4;
         public const float PowerBonus = 0.6f;
     }
@@ -46,8 +46,8 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>Bonk's auto attack starts: the circle is fixed now, in front of him toward tgt (closer when tgt is closer),
-        /// and lands after the wind-up.</summary>
+        /// <summary>Bonk's auto attack starts: a circle in front of him toward tgt (closer when tgt is closer), landing after the
+        /// wind-up; BonkSmash moves it onto tgt where it is then.</summary>
         void BonkSwing(Unit u, Unit tgt, float dmg, bool big)
         {
             float d = SimMath.Dist(u, tgt), ahead = Math.Min(BonkS.SmashAhead, d), ca = SimMath.Cos(u.Facing), sa = SimMath.Sin(u.Facing);
@@ -63,6 +63,21 @@ namespace BAM.Sim
         {
             var h = p.Src;
             if (h == null || !h.Alive) return;
+            // the club follows its target through the wind-up, at most SmashFollow tiles (closed-test feedback; Rickard chose 0.5 on
+            // a card 2026-10-28): a target that barely moved is hit, one that ran away can still dodge the giant's slow swing
+            var t = p.Tgt;
+            if (t != null && t.Alive && !t.Has(St.Untargetable))
+            {
+                float d = SimMath.Dist(h, t);
+                if (d <= h.Range + t.R && d > 1e-4f && Map.LosClear(h.X, h.Y, t.X, t.Y))
+                {
+                    float ahead = Math.Min(BonkS.SmashAhead, d);
+                    float nx = h.X + (t.X - h.X) / d * ahead, ny = h.Y + (t.Y - h.Y) / d * ahead, mv = SimMath.Hypot(nx - p.X, ny - p.Y);
+                    if (mv > BonkS.SmashFollow) { nx = p.X + (nx - p.X) / mv * BonkS.SmashFollow; ny = p.Y + (ny - p.Y) / mv * BonkS.SmashFollow; }
+                    p.X = nx; p.Y = ny;
+                    p.Ang = h.Facing = SimMath.Atan2(t.Y - h.Y, t.X - h.X);
+                }
+            }
             areaBuf.Clear();
             for (int i = 0; i < Units.Count; i++)
             {
