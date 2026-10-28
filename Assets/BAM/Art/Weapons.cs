@@ -112,9 +112,12 @@ namespace BAM.Art
         static GearDef[] Make()
         {
             var g = new GearDef[(int)HeroId.Oaken + 1];
+            // at rest the sword lowered and out from the body, the blade forward on the run (Rickard's pick B 2026-10-28, after a
+            // tester found his upright hold beside the helmet odd on the menu stage); Len, Grip, Turn and Offset are his Weapon Tuner
+            // numbers, so Reset Fenn gives this hold and not the bind grip across the shield
             g[(int)HeroId.Fenn] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f } },
+                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 0.98f, Grip = 0.18f, HoldUp = -15f, HoldOut = 45f, Turn = new Vector3(-4f, -7f, -4f), Offset = new Vector3(-0.01f, 0f, 0.02f) } },
                 Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f },
             };
             // arms out as in the old game (MX_ARM_SPREAD 22) and, at rest, the hammer on his right shoulder as Bonk carries his club
