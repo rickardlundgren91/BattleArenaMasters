@@ -65,10 +65,10 @@ namespace BAM.Sim
         {
             H(HeroId.Bram, 0.3f, 2.56f, 8, false, 160, 30, 18, 4.5f, 1.4f, -0.018f, 3.55f, 0.195f, 0, 0.25f, ProjKind.BramHammer, BramS.Reach, AimShape.Circle, BramS.Reach, BramS.DropRadius), // drag: Anvil Drop (2026-10-28)
             H(HeroId.Fenn, 0.4f, 2.5f, 6, false, 200, 33, 20, 4.5f, 1.45f, -0.036f, 3.0f, 0.2f, 0, 0.08f, ProjKind.FennSlash, 0, AimShape.Circle, FennS.ThrowReach, FennS.PounceRadius),
-            H(HeroId.Tyra, 0.25f, 2.19f, 6, false, 190, 26, 38, 6, 1.7f, -0.036f, 4.0f, 0.195f, 0, 0.25f, ProjKind.TyraArrow, 4.0f, AimShape.Line, TyraS.Length, TyraS.Hitbox), // tap: Arrow Volley within her range 4 (2026-10-28)
+            H(HeroId.Tyra, 0.25f, 2.19f, 6, false, 190, 26, 38, 6, 1.85f, -0.036f, 4.0f, 0.195f, 0, 0.25f, ProjKind.TyraArrow, 4.0f, AimShape.Line, TyraS.Length, TyraS.Hitbox), // tap: Arrow Volley within her range 4 (2026-10-28); attack 1.7 -> 1.85 s (balance 2026-10-28: 69 % vs Hard bots)
             H(HeroId.Moa, 0.215f, 2.5f, 6, false, 195, 28, 23, 4, 1.35f, -0.036f, 3.4f, 0.2f, 0, 0.25f, ProjKind.MoaBolt, MoaS.Range, AimShape.Circle, MoaS.Range, MoaS.AreaRadius),
-            H(HeroId.Knut, 0.4f, 2.5f, 7, true, 315, 54, 26, 4.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.075f, ProjKind.KnutHit, KnutS.SlamRadius, AimShape.Line, KnutS.HookDistance, KnutS.HookRadius),
-            H(HeroId.Tikta, 0.225f, 2.66f, 10, false, 195, 33, 25, 4.5f, 1.3f, -0.036f, 2.35f, 0.15f, 0, 0.1f, ProjKind.TiktaNeedle, TiktaS.Reach, AimShape.Line, TiktaS.LineReach, 0.2f),
+            H(HeroId.Knut, 0.4f, 2.5f, 7, true, 300, 51, 26, 4.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.075f, ProjKind.KnutHit, KnutS.SlamRadius, AimShape.Line, KnutS.HookDistance, KnutS.HookRadius), // hp 315/54 -> 300/51 (balance 2026-10-28, with Anchor Slam)
+            H(HeroId.Tikta, 0.225f, 2.66f, 10, false, 210, 35, 25, 4.5f, 1.3f, -0.036f, 2.35f, 0.15f, 0, 0.1f, ProjKind.TiktaNeedle, TiktaS.Reach, AimShape.Line, TiktaS.LineReach, 0.2f), // hp 195/33 -> 210/35 (balance 2026-10-28: 41-43 %)
             H(HeroId.Blast, 0.25f, 2.25f, 10, false, 190, 26, 16, 3.5f, 1.4f, -0.036f, 3.8f, 0.2f, 7, 0, ProjKind.BlastFire, BlastS.Reach, AimShape.Line, BlastS.LaneLength, BlastS.LaneHalfWidth),
             // Bonk (BAM's own, 2026-10-26): a melee bruiser between Fenn and Knut; balanced with bot matches (Hero3.cs)
             H(HeroId.Bonk, 0.4f, 2.5f, 3, false, 300, 50, 56, 9, 2.6f, -0.03f, 2.4f, 0.7f, 0, 0.075f, ProjKind.BonkClub, BonkS.SlamRadius, AimShape.Line, BonkS.BoulderReach, BonkS.BoulderHitbox),
