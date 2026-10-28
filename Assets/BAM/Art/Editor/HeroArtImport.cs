@@ -194,6 +194,13 @@ namespace BAM.Art.Editor
             // airborne for longer than a cast lasts. Idle is Knut's: on Bonk the Orc Idle bent his feet and lifted him off the ground
             // (Rickard 2026-10-26: "fötterna böjer sig")
             new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Knut/Anim/Idle", Run = "Bonk/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 2.0f, Release = 0.46f },
+            // Hilde (hero 9) and Oaken (hero 10), 2026-10-28: Speltest's current bodies (Mixamo/Looks/Hilde with Hilde2.jpg, Looks/Oaken
+            // with OaknN.jpg) and clips (Resources/Mixamo/Anim/Hilde|Oaken). Hilde's shot is a 0.27 s rifle clip for the shoulder cannon,
+            // her cast the keg throw. Oaken walks and runs with the heavy Mutant clips; his attack is a hook punch (the fist is furthest
+            // out at 0.49 of the clip) and his cast a two-arm overhead smash (fists on the ground at 0.44). Heights: Speltest HeroScale
+            // visible ratios (Hilde 1.01, Oaken 1.10) x 1.62 as the others.
+            new Spec { Hero = "Hilde", Model = "Hilde/Hilde", Idle = "Hilde/Anim/Idle", Run = "Hilde/Anim/Run", Attack = "Hilde/Anim/Attack1", Cast = "Hilde/Anim/Cast", Hit = "Hilde/Anim/Hit", Death = "Hilde/Anim/Dying", Walk = "Hilde/Anim/Walk", Height = 1.64f, Release = 0.3f },
+            new Spec { Hero = "Oaken", Model = "Oaken/Oaken", Idle = "Oaken/Anim/Idle", Run = "Oaken/Anim/Run", Attack = "Oaken/Anim/Attack1", Cast = "Oaken/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.49f },
         };
 
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because

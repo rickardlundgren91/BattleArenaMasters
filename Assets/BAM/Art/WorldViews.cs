@@ -43,7 +43,7 @@ namespace BAM.Art
         {
             kind = k;
             team = t;
-            melee = k == ProjKind.FennSlash || k == ProjKind.KnutHit || k == ProjKind.WolfBite || k == ProjKind.MeleeMinionHit;
+            melee = k == ProjKind.FennSlash || k == ProjKind.KnutHit || k == ProjKind.WolfBite || k == ProjKind.MeleeMinionHit || k == ProjKind.OakenFist;
             var go = new GameObject("Look");
             vis = go.transform;
             vis.SetParent(transform, false);
@@ -60,20 +60,23 @@ namespace BAM.Art
             visF = go.AddComponent<MeshFilter>();
             // Blast throws his own skull bomb from the old game (Props/blast_bomb), not a fireball: the bomb sits on a child,
             // centred on the look so it spins round its middle
-            Mesh bombMesh = k == ProjKind.BlastFire || k == ProjKind.BlastBomb ? Props.Mesh("blast_bomb") : null;
+            // Hilde's powder keg is Speltest's own (AbcModels hilde_bomb, Props/hilde_keg), the big one for the drag, a small one for the tap
+            bool keg = k == ProjKind.HildeKeg || k == ProjKind.HildeBurst;
+            string bombName = keg ? "hilde_keg" : "blast_bomb";
+            Mesh bombMesh = k == ProjKind.BlastFire || k == ProjKind.BlastBomb || keg ? Props.Mesh(bombName) : null;
             if (bombMesh != null)
             {
                 var bg = new GameObject("Bomb");
                 bombT = bg.transform;
                 bombT.SetParent(vis, false);
-                float bs = (k == ProjKind.BlastBomb ? 0.62f : 0.42f) / Mathf.Max(0.01f, bombMesh.bounds.size.y); // tall in tiles
+                float bs = (k == ProjKind.BlastBomb || k == ProjKind.HildeKeg ? 0.62f : k == ProjKind.HildeBurst ? 0.45f : 0.42f) / Mathf.Max(0.01f, bombMesh.bounds.size.y); // tall in tiles
                 bombT.localScale = new Vector3(bs, bs, bs);
                 bombT.localPosition = new Vector3(0f, -bombMesh.bounds.center.y * bs, 0f);
                 bombTop = bombMesh.bounds.extents.y * bs;
                 bg.AddComponent<MeshFilter>().sharedMesh = bombMesh;
                 var br = bg.AddComponent<MeshRenderer>();
                 var bm = ArtMaterials.Instance(ArtMaterials.Lit);
-                Texture2D btex = Props.Texture("blast_bomb");
+                Texture2D btex = Props.Texture(bombName);
                 if (btex != null) { bm.SetTexture(ArtMaterials.BaseMap, btex); bm.mainTexture = btex; }
                 br.sharedMaterial = bm;
                 br.shadowCastingMode = ShadowCastingMode.Off;
@@ -98,7 +101,7 @@ namespace BAM.Art
                 }
                 // the heroes' own swing colours (MLBB analysis 8): Fenn silver-cyan, Knut steel blue; the wolf ghost blue, minions the team's
                 Color c = k == ProjKind.WolfBite ? (Color)Fx.HeroMain(HeroId.Fenn) : k == ProjKind.KnutHit ? (Color)Fx.HeroMain(HeroId.Knut)
-                    : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : (Color)Pal.Get(Pal.TeamLight(t)) * 0.6f; // minions' arcs dimmer
+                    : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : k == ProjKind.OakenFist ? (Color)Fx.HeroAccent(HeroId.Oaken) : (Color)Pal.Get(Pal.TeamLight(t)) * 0.6f; // minions' arcs dimmer
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, c);
                 arcColor = c;
             }
@@ -212,7 +215,7 @@ namespace BAM.Art
             Vector3 d = b - a; d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : transform.forward;
             float dist = d.magnitude;
-            lob = kind == ProjKind.BlastBomb || kind == ProjKind.SiegeShell ? Mathf.Clamp(dist * 0.3f, 0.6f, 2.2f)
+            lob = kind == ProjKind.BlastBomb || kind == ProjKind.SiegeShell || kind == ProjKind.HildeKeg || kind == ProjKind.HildeBurst || kind == ProjKind.HildeShell ? Mathf.Clamp(dist * 0.3f, 0.6f, 2.2f)
                 : kind == ProjKind.BlastFire && bombT != null ? Mathf.Clamp(dist * 0.15f, 0.25f, 0.9f) : 0f; // a thrown bomb arcs a little
             lastPos = transform.position;
             vis.localScale = Vector3.one;
@@ -257,6 +260,9 @@ namespace BAM.Art
                 case ProjKind.BlastBomb:
                 case ProjKind.BlastFire when bombT != null:
                 case ProjKind.SiegeShell:
+                case ProjKind.HildeShell:
+                case ProjKind.HildeKeg:
+                case ProjKind.HildeBurst:
                     vis.rotation = look * Quaternion.Euler(spin * 0.5f, 0f, 0f);
                     break;
                 case ProjKind.MoaBolt when honey:
@@ -334,7 +340,7 @@ namespace BAM.Art
                 if (arc) m.SetColor(ArtMaterials.BaseColor, new Color(arcColor.r * (1f - k), arcColor.g * (1f - k), arcColor.b * (1f - k), 1f)); // additive on black: dim to fade
                 else m.SetColor(ArtMaterials.BaseColor, WithAlpha(m.GetColor(ArtMaterials.BaseColor), 1f - k));
             }
-            if (kind == ProjKind.BlastBomb || kind == ProjKind.BlastFire)
+            if (kind == ProjKind.BlastBomb || kind == ProjKind.BlastFire || kind == ProjKind.HildeKeg || kind == ProjKind.HildeBurst)
             {
                 sparkT -= dt;
                 if (sparkT <= 0f)
@@ -370,7 +376,7 @@ namespace BAM.Art
         {
             // the shot's own splash where it ended (bombs and the anchor have their own effects from the game layer); also when
             // the shot came and went inside one hitch frame and was never drawn, so every attack still shows its hit
-            if (launched && !melee && kind != ProjKind.BlastBomb && kind != ProjKind.KnutAnchor)
+            if (launched && !melee && kind != ProjKind.BlastBomb && kind != ProjKind.HildeKeg && kind != ProjKind.HildeBurst && kind != ProjKind.KnutAnchor)
             {
                 if (CanMiss(kind) && !hit) Fx.Fizzle(kind, vis.position, team);
                 else Fx.Impact(kind, vis.position, team);

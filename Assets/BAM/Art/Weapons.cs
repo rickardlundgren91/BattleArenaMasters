@@ -94,7 +94,7 @@ namespace BAM.Art
 
         static GearDef[] Make()
         {
-            var g = new GearDef[8];
+            var g = new GearDef[(int)HeroId.Oaken + 1];
             g[(int)HeroId.Fenn] = new GearDef
             {
                 Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f } },

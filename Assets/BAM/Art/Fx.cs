@@ -1071,7 +1071,7 @@ namespace BAM.Art
         }
 
         // Each hero's two special colours (main, accent) from the MLBB clip analysis (bam-work/art/mlbb-miya/skill-fx-analys.md),
-        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk. Tyra keeps the cyan her bolt already has.
+        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk, Hilde, Oaken. Tyra keeps the cyan her bolt already has.
         static Vector3 lastBounce;
         static float lastBounceT = -10f;
 
@@ -1083,12 +1083,16 @@ namespace BAM.Art
             new Color32(255, 138, 42, 255), new Color32(191, 239, 255, 255), new Color32(180, 240, 255, 255), new Color32(255, 179, 0, 255),
             new Color32(47, 140, 255, 255), new Color32(124, 255, 79, 255), new Color32(255, 90, 31, 255),
             new Color32(196, 140, 72, 255), // Bonk: club wood and dust
+            new Color32(255, 150, 50, 255), // Hilde: powder flash
+            new Color32(150, 140, 125, 255), // Oaken: stone
         };
         static readonly Color32[] heroAccent =
         {
             new Color32(255, 227, 107, 255), new Color32(140, 123, 255, 255), new Color32(255, 255, 255, 255), new Color32(255, 246, 214, 255),
             new Color32(127, 255, 224, 255), new Color32(176, 76, 255, 255), new Color32(255, 242, 160, 255),
             new Color32(240, 230, 205, 255), // Bonk: bone spikes
+            new Color32(200, 160, 90, 255), // Hilde: brass
+            new Color32(255, 200, 70, 255), // Oaken: the gold glow in his cracks (Speltest recoloured it from cyan)
         };
 
         /// <summary>The caster's own "release" when a hero fires the special, in that hero's colours, so you see who cast it even
@@ -1209,6 +1213,7 @@ namespace BAM.Art
                     Pow(p, 1, C(Pal.Cream, 200), 0.35f, 0.1f);
                     break;
                 case ProjKind.SiegeShell:
+                case ProjKind.HildeShell: // her cannon shell: the siege shell's burst until she has her own
                     Pow(p, 1, C(Pal.FireCore), 0.8f, 0.15f);
                     Dust(p, 4, C(Pal.Ground, 210), 0.6f, 1.5f, 0.5f, 0.3f, 0.2f);
                     Chunks(p, 3, C(Pal.Rock), 0.12f, 2.5f, 0.5f, 2f);

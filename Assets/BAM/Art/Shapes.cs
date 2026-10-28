@@ -318,6 +318,8 @@ namespace BAM.Art
                     b.Color(Pal.Fire).Sphere(new Vector3(0f, 0f, -0.1f), new Vector3(0.12f, 0.12f, 0.2f), 10, 6);
                     break;
                 case ProjKind.BlastBomb:
+                case ProjKind.HildeKeg: // her keg's fallback without the model
+                case ProjKind.HildeBurst:
                     b.Color(Pal.Bomb).Sphere(Vector3.zero, 0.17f, 12, 8);
                     b.Color(Pal.Cream).Sphere(new Vector3(-0.05f, 0.03f, 0.15f), 0.035f, 6, 4);
                     b.Sphere(new Vector3(0.05f, 0.03f, 0.15f), 0.035f, 6, 4);
@@ -326,6 +328,7 @@ namespace BAM.Art
                     b.Color(Pal.Fuse).Beam(new Vector3(0f, 0.2f, 0f), new Vector3(0.03f, 0.28f, -0.03f), 0.025f, 0.025f);
                     break;
                 case ProjKind.SiegeShell:
+                case ProjKind.HildeShell: // her cannon's shell
                     b.Color(Pal.Bomb).Sphere(Vector3.zero, 0.12f, 10, 6);
                     b.Color(Pal.Team(team)).Torus(Vector3.zero, 0.12f, 0.018f, 12, 4);
                     break;

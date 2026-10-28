@@ -338,7 +338,7 @@ namespace BAM.Game
         {
             s.P = p; s.Serial = serial; s.Kind = kind; s.Team = team; s.SrcSerial = src; s.V = null; s.Ghost = false;
             s.Melee = kind == ProjKind.FennSlash || kind == ProjKind.KnutHit || kind == ProjKind.WolfBite || kind == ProjKind.MeleeMinionHit
-                || kind == ProjKind.BonkClub;
+                || kind == ProjKind.BonkClub || kind == ProjKind.OakenFist;
             s.Age = 0f; s.Flight = 0f; s.Linger = 0f; s.LastT = -1f; s.Hit = false;
         }
 
@@ -547,6 +547,8 @@ namespace BAM.Game
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
                     // Blast's tap bomb is a ground fuse in the rules; draw the lob onto it so the throw is seen
                     if ((HeroId)e.Kind == HeroId.Blast && !e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
+                    // so are Hilde's kegs: the big one (drag) and the small quick one (tap)
+                    if ((HeroId)e.Kind == HeroId.Hilde) LobGhost(a, Coords.World(e.X, e.Y), e.Big ? ProjKind.HildeKeg : ProjKind.HildeBurst, e.Big ? 0.4f : 0.3f);
                     break;
                 }
                 case EventType.Interrupt:
@@ -591,12 +593,12 @@ namespace BAM.Game
                     float size = Mathf.Max(0.5f, e.V);
                     var pk = (ProjKind)e.Kind;
                     // Bram's passive (every 4th hammer) is the heavy anvil blow, Blast's Chain Reaction its own crack, not a bomb
-                    bool bonk = pk == ProjKind.BonkSlam || pk == ProjKind.BonkClub;
+                    bool bonk = pk == ProjKind.BonkSlam || pk == ProjKind.BonkClub || pk == ProjKind.OakenSlam; // Oaken's fists into the ground borrow Bonk's cracks and dust until he has his own
                     FxKind ek = pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : FxKind.Explosion;
                     // Bonk: his auto slam (a power swing a size bigger) and Ground Slam, both the club into the ground
                     float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
-                    SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
+                    SfxId boom = pk == ProjKind.BlastBomb || pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.BlastExplosion : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
                         : pk == ProjKind.BramHammer ? SfxId.BramAnvil : SfxId.None; // Bram's Anvil Strike: Speltest's anvil (bramsmash)
                     if (boom != SfxId.None) BamAudio.PlayAt(boom, at);
@@ -621,6 +623,29 @@ namespace BAM.Game
                     break;
                 case EventType.Pull:
                     if (e.B != null) BamAudio.PlayAt(SfxId.KnutAnchorHook, Coords.Of(e.B));
+                    break;
+                // Hilde's keg slid a hero into a wall (and Oaken's quake, which hurts but never stuns): a thud and dust at the wall
+                case EventType.WallCrash:
+                    if (e.B != null && m.IsVisibleTo(e.B, Mine))
+                    {
+                        BamAudio.PlayAt(SfxId.BonkKnock, Coords.World(e.X, e.Y));
+                        ArtKit.PlayFx(FxKind.GroundSmash, Coords.World(e.X, e.Y), 0.5f, Side(e.B.Team));
+                    }
+                    break;
+                // Oaken's quake: dust and cracks along the line from where he stood (e.V long) to its end (e.X, e.Y), seen by everyone
+                // as the warning was; Bonk's ground look until Oaken has his own
+                case EventType.Quake:
+                    if (e.A != null)
+                    {
+                        Vector3 qa = Coords.Of(e.A), qb = Coords.World(e.X, e.Y);
+                        int n = Mathf.Max(2, Mathf.CeilToInt(e.V / 0.8f));
+                        for (int i = 0; i <= n; i++) ArtKit.PlayFx(FxKind.GroundSmash, Vector3.Lerp(qa, qb, i / (float)n), 0.5f, Side(e.A.Team), (int)HeroId.Oaken);
+                        BamAudio.PlayAt(SfxId.BonkSlam, Vector3.Lerp(qa, qb, 0.5f));
+                    }
+                    break;
+                // Oaken's Stored Impact took part of a hit: a shield flash on him
+                case EventType.OakenGuard:
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.ShieldPop, Coords.Of(e.A), 0.8f, Side(e.A.Team), (int)HeroId.Oaken);
                     break;
                 // battle spells (the art's port of View3DSpellLooks.cs): a blink from where it started, the others on the caster
                 case EventType.SpellCast:
@@ -691,7 +716,7 @@ namespace BAM.Game
         {
             switch (a.Kind)
             {
-                case UnitKind.Hero: return a.Hero == HeroId.Bonk ? SfxId.AttackBonk : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven
+                case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackBlast : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Hilde and Oaken borrow until they have their own
                 case UnitKind.Tower: return SfxId.TowerShot;
                 case UnitKind.Wolf: return SfxId.WolfBite;
                 default: return SfxId.None; // minions are silent (Rickard 2026-10-26)
@@ -710,6 +735,8 @@ namespace BAM.Game
                 case HeroId.Tikta: return SfxId.TiktaNeedles;
                 case HeroId.Blast: return dragged ? SfxId.BlastFireLane : SfxId.BlastBombThrow;
                 case HeroId.Bonk: return dragged ? SfxId.BonkBoulderThrow : SfxId.BonkSlamWindup; // the slam's landing sounds on its Explosion
+                case HeroId.Hilde: return SfxId.BlastBombThrow; // borrowed until she has her own
+                case HeroId.Oaken: return SfxId.BonkSlamWindup; // borrowed until he has his own
                 default: return SfxId.None;
             }
         }
