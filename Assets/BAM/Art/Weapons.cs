@@ -99,10 +99,12 @@ namespace BAM.Art
             };
             // arms out as in the old game (MX_ARM_SPREAD 22) and, at rest, the hammer on his right shoulder as Bonk carries his club
             // (Rickard 2026-10-27: hanging from a straight arm "inte så naturlig pose", and it flipped round into the swing); his
-            // overhead strike (HeroArtImport) lifts it straight off the shoulder
+            // overhead strike (HeroArtImport) lifts it straight off the shoulder. Held at the end of the shaft, standing steep behind
+            // his head (Rickard's pick 2026-10-28, option C of bam-work/art/rigg-anim/vila/bram-hammare-val.png: held a third of the
+            // way up, the shaft's end stuck down between his legs, "heltokig")
             g[(int)HeroId.Bram] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f } },
+                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.7f, Grip = 0.08f, HoldUp = 65f, HoldOut = 170f, Follow = 0.1f } },
                 ArmSpread = 22f,
                 Shoulder = true,
             };
@@ -287,7 +289,7 @@ namespace BAM.Art
         // flips half a turn as the fist turns (Tikta's needles turned up to 178 degrees in her fists every step), and where each
         // hand turned in the hero's own space; again when the tuner changes a number the idle aim depends on
         int[] laxSign, votes;
-        Quaternion[] handRef, lastRel;
+        Quaternion[] handRef;
         Vector4[] refSum;
         bool rested;
         int restKey;
@@ -306,8 +308,6 @@ namespace BAM.Art
             h.palmL = new Vector3[nw]; h.handleV = new Vector3[nw]; h.shaftC = new Vector3[nw];
             h.meshH = new float[nw]; h.handS = new float[nw]; h.placedLen = new float[nw]; h.placedGrip = new float[nw];
             h.laxSign = new int[nw]; h.votes = new int[nw]; h.handRef = new Quaternion[nw]; h.refSum = new Vector4[nw];
-            h.lastRel = new Quaternion[nw];
-            for (int i = 0; i < nw; i++) h.lastRel[i] = Quaternion.identity;
             h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
             h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             h.elbR = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
@@ -415,7 +415,7 @@ namespace BAM.Art
         public void Reset()
         {
             hideIn = -1f; backIn = -1f;
-            for (int i = 0; i < wT.Length; i++) { if (wT[i] != null) wT[i].localScale = bindS[i]; lastRel[i] = Quaternion.identity; }
+            for (int i = 0; i < wT.Length; i++) if (wT[i] != null) wT[i].localScale = bindS[i];
         }
 
         /// <summary>A thrown weapon leaves the hand after <paramref name="delay"/> seconds (the release).</summary>
@@ -563,7 +563,6 @@ namespace BAM.Art
                 float m = s.magnitude;
                 handRef[i] = m > 1e-6f ? new Quaternion(s.x / m, s.y / m, s.z / m, s.w / m) : Quaternion.identity;
                 laxSign[i] = votes[i] > 0 ? 1 : votes[i] < 0 ? -1 : 0;
-                lastRel[i] = Quaternion.identity;
             }
             rested = true;
             restKey = RestKey();
@@ -605,24 +604,25 @@ namespace BAM.Art
             HoldAngle(i, W, 1f, rested ? laxSign[i] : 0);
             Quaternion rR = t.rotation;
             float follow = keep ? Mathf.Lerp(W.SwingFollow, W.Follow, rest) : W.Follow;
-            if (rested) rR = Share(i, hand[i].rotation * Quaternion.Inverse(root.rotation * handRef[i]), follow) * rR;
+            if (rested) rR = Share(hand[i].rotation * Quaternion.Inverse(root.rotation * handRef[i]), follow) * rR;
             float w = keep ? 1f : rest;
             Vector3 g = Vector3.Lerp(gB, t.TransformPoint(gl), w);
             t.rotation = Quaternion.Slerp(rB, rR, w);
             t.position += g - t.TransformPoint(gl);
         }
 
-        // a share of the hand's turn from its rest, along the way it went: the shortest way (Slerp) jumps to the other side as the
-        // turn passes half a circle (Tikta's right hand turns 164 degrees in her swing), half a turn of a needle following half of it
-        Quaternion Share(int i, Quaternion q, float f)
+        // a share of the hand's turn from its rest, the shortest way, all of it up to a quarter turn and fading out towards half a
+        // turn, where the shortest way goes over to the other side. Followed along the way it went (until 2026-10-28) the turn could
+        // wind past half a circle and stay there: Tikta's fists turn up to 175 degrees from her guard in her run and swing, and her
+        // needles swung over and pointed at her face (Rickard's video 2026-10-28, "buggade vapen som snurrar")
+        static Quaternion Share(Quaternion q, float f)
         {
-            Quaternion p = lastRel[i];
-            if (p.x * q.x + p.y * q.y + p.z * q.z + p.w * q.w < 0f) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
-            lastRel[i] = q;
             if (f <= 0f) return Quaternion.identity;
-            float w = Mathf.Clamp(q.w, -1f, 1f), s = Mathf.Sqrt(1f - w * w);
+            if (q.w < 0f) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+            float w = Mathf.Min(q.w, 1f), s = Mathf.Sqrt(1f - w * w);
             if (s < 1e-5f) return Quaternion.identity;
-            return Quaternion.AngleAxis(2f * Mathf.Acos(w) * Mathf.Rad2Deg * f, new Vector3(q.x / s, q.y / s, q.z / s));
+            float deg = 2f * Mathf.Acos(w) * Mathf.Rad2Deg, k = deg <= 90f ? 1f : Mathf.SmoothStep(0f, 1f, (180f - deg) / 90f);
+            return Quaternion.AngleAxis(deg * f * k, new Vector3(q.x / s, q.y / s, q.z / s));
         }
 
         // MxHoldAngle: the grip is set in the T-pose, so with the arm hanging a hammer would point straight ahead, flat; turned
