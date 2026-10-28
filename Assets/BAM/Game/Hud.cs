@@ -526,6 +526,11 @@ namespace BAM.Game
             // the old game's pictures, at its sizes (base 2.5 R across, stick 1.2 R)
             joy.Base = Picture(look, "Base", 2.5f * JoystickZone.Radius, "ui_ingameView_joystick_base", Color.white).rectTransform;
             joy.Knob = Picture(look, "Knob", 1.2f * JoystickZone.Radius, "ui_ingameView_joystick", Color.white).rectTransform;
+            // the pictures are see-through, so on stone and dark grass the stick got lost (a tester, 2026-10-28): a thin dark
+            // edge round the base, and a dark and a light ring round the stick
+            Edge(joy.Base, 2.53f * JoystickZone.Radius, 5f, new Color(0f, 0f, 0f, 0.6f));
+            Edge(joy.Knob, 1.18f * JoystickZone.Radius, 4f, new Color(0f, 0f, 0f, 0.6f));
+            Edge(joy.Knob, 1.12f * JoystickZone.Radius, 4f, new Color(1f, 1f, 1f, 0.8f));
 
             // special button
             specialRoot = UiKit.NewRect("Special", safe);
@@ -678,6 +683,12 @@ namespace BAM.Game
             if (tex != null) img.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
             else Debug.LogError("[BAM.Game] HUD picture missing: Resources/BAM/Hud/" + file);
             return img;
+        }
+
+        static void Edge(Transform parent, float size, float width, Color color)
+        {
+            var img = Circle(parent, "Edge", size, color).GetComponent<Image>();
+            RoundRing(img, 0.5f * size, width);
         }
 
         static RectTransform Circle(Transform parent, string name, float size, Color color)

@@ -45,7 +45,7 @@ namespace BAM.Game
             Base.anchoredPosition = origin;
             Knob.anchoredPosition = origin;
             Value = Vector2.zero;
-            Look.alpha = 0.85f; // the old game: 0.85 in use, 0.45 resting
+            Look.alpha = 0.85f; // the old game: 0.85
         }
 
         public void OnDrag(PointerEventData e)
@@ -77,7 +77,9 @@ namespace BAM.Game
             Vector2 p = RestPosition(RightSide);
             Base.anchoredPosition = p;
             Knob.anchoredPosition = p;
-            Look.alpha = 0.45f;
+            // Speltest draws its default (fixed) stick at 0.85 at rest too; 0.45 is only its floating stick, and that was
+            // too faint to find (a tester, 2026-10-28)
+            Look.alpha = 0.85f;
         }
 
         Vector2 Local(Vector2 screen)
