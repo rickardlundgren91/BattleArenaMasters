@@ -405,6 +405,13 @@ namespace BAM.Art
         /// <summary>The model's height in world units as it was fitted (the hero's height in tiles), for the menu stages.</summary>
         internal float ShownHeight => def != null ? def.Height * transform.lossyScale.y : 1.8f;
 
+        /// <summary>Where Hilde's cannon mouth is now (HeldGear), for her shot to leave from; false for every other view.</summary>
+        internal bool CannonMouth(out Vector3 at)
+        {
+            at = Vector3.zero;
+            return gear != null && gear.Mouth(out at);
+        }
+
         // the weapons go on in the bind pose, before the clips play (HeldGear), and join the body's renderers and materials
         void AddGear(HeroArt art)
         {
@@ -504,7 +511,7 @@ namespace BAM.Art
                 atkTotal = Phased(HeroIndex) ? windup + atkHold + atkRec : Mathf.Min((len - atkStart) / atkSpeed, windup + 0.45f);
                 if (AnimFix.BlowTiming && !Phased(HeroIndex)) BlowSegment(len);
             }
-            if (gear != null) gear.Throw(windup);
+            if (gear != null) { gear.Throw(windup); gear.Fire(windup); }
         }
 
         // AnimFix.BlowTiming: the part of the clip round its measured blow (old Speltest's own attacks: from, hit, to). The windup

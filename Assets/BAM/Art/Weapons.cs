@@ -61,10 +61,27 @@ namespace BAM.Art
         public float Turn, Off;
     }
 
+    /// <summary>A cannon riding the right shoulder like a bazooka, barrel forward, the right fist on its rear grip (old
+    /// View3DHilde.cs MxCannon, MxCannonArms).</summary>
+    sealed class CannonDef
+    {
+        public string Model;
+        /// <summary>Length (the model's x) as a share of the figure's height.</summary>
+        public float Len;
+        /// <summary>Points in the model's own units (y = 0 at the bottom, the mouth at +x): on the barrel's axis above the rear
+        /// grip (it rests on the shoulder there), the rear grip, the mouth.</summary>
+        public Vector3 Seat, Grip, Mouth;
+        /// <summary>Where the seat sits from the right shoulder joint, as shares of the figure's height (up, out, forward).</summary>
+        public Vector3 At;
+        /// <summary>The recoil of a shot: how far back (share of the figure's height) and how long it takes to come back.</summary>
+        public float Kick = 0.05f, KickTime = 0.25f;
+    }
+
     sealed class GearDef
     {
         public WeaponDef[] Weapons;
         public ShieldDef Shield;
+        public CannonDef Cannon;
         /// <summary>Degrees both upper arms are turned out from the sides after the clips, so a broad body's arms do not cut through it (old MX_ARM_SPREAD).</summary>
         public float ArmSpread;
         /// <summary>At rest the right arm bends so the fist sits in front of the shoulder and the weapon lies back over it (Bonk);
@@ -155,6 +172,18 @@ namespace BAM.Art
             {
                 Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f } },
                 Shoulder = true,
+            };
+            // her cannon (Rickard's Meshy model) on her right shoulder like a bazooka, barrel forward, her right fist on its rear grip,
+            // kicking back at every shot: old View3DHilde.cs with its numbers for her current body (stocky, short neck: the barrel
+            // rides out on the shoulder beside her head). Her left arm plays the clip: her short arms could not reach the front grip
+            // across her chest, the stretched arm twisted round behind her back (Rickard 2026-10-24: "hilde är armarna inte bra")
+            g[(int)HeroId.Hilde] = new GearDef
+            {
+                Cannon = new CannonDef
+                {
+                    Model = "hilde_cannon", Len = 0.42f, At = new Vector3(0.045f, 0.10f, 0.08f),
+                    Seat = new Vector3(-0.47f, 0.59f, 0f), Grip = new Vector3(-0.47f, 0.12f, 0f), Mouth = new Vector3(0.95f, 0.59f, 0f),
+                },
             };
             return g;
         }
@@ -256,10 +285,10 @@ namespace BAM.Art
     }
 
     /// <summary>
-    /// One view's held weapons and shield. Built once in the bind pose and parented to the hand bones, so they follow every
-    /// clip; <see cref="Tick"/> runs after the animation each frame (shield facing, Bram's hold angle, Blast's thrown bomb)
-    /// and only writes transforms. The renderers and materials are handed to BodyView, so fades, hit flash and death go
-    /// with the body. Weapons cast no shadows (as in the old game).
+    /// One view's held weapons, shield and cannon. Built once in the bind pose and parented to the hand bones (the cannon to the
+    /// chest), so they follow every clip; <see cref="Tick"/> runs after the animation each frame (shield facing, Bram's hold
+    /// angle, Blast's thrown bomb, Hilde's fist on her cannon) and only writes transforms. The renderers and materials are handed
+    /// to BodyView, so fades, hit flash and death go with the body. Weapons cast no shadows (as in the old game).
     /// </summary>
     sealed class HeldGear
     {
@@ -285,6 +314,11 @@ namespace BAM.Art
         Transform armR, armL, elbR, elbL;
         // the right arm bent to carry the weapon on the shoulder
         Transform carryUp, carryLo, carryHand;
+        // the cannon on the chest, where it sits and which way it kicks (chest space), the right arm that holds it
+        CannonDef cDef;
+        Transform cT, cUp, cLo, cHand, cIndex, cOther;
+        Vector3 cAt, cBack;
+        float kickIn = -1f, kickT = -1f, deadT;
         float figH;
         // thrown
         float hideIn = -1f, backIn = -1f;
@@ -324,6 +358,7 @@ namespace BAM.Art
             }
             for (int i = 0; i < nw; i++) h.AddWeapon(i, g.Weapons[i], an, figH, rends, op, fd);
             if (g.Shield != null) h.AddShield(g.Shield, an, figH, rends, op, fd);
+            if (g.Cannon != null) h.AddCannon(g.Cannon, an, figH, rends, op, fd);
             if (rends.Count == 0) return null;
             h.Rends = rends.ToArray();
             h.Opaque = op.ToArray();
@@ -415,11 +450,51 @@ namespace BAM.Art
             sModel.localPosition = -mesh.bounds.center * k; // the model's bottom is at y = 0: centre it on the anchor
         }
 
+        // as MxCannon: on the chest bone, laid along the chest's own axes in the bind pose (up from the hips to the head, right
+        // across the shoulders, forward from those), its seat that far from the right shoulder joint; then slid back towards the
+        // shoulder until the rear grip is within 0.9 of the arm's length (a short-armed body could not get its fist to it)
+        void AddCannon(CannonDef C, Animator an, float H, List<Renderer> rends, List<Material> op, List<Material> fd)
+        {
+            Mesh mesh = Props.Mesh(C.Model);
+            Transform chest = an.GetBoneTransform(HumanBodyBones.UpperChest) ?? an.GetBoneTransform(HumanBodyBones.Chest) ?? an.GetBoneTransform(HumanBodyBones.Spine),
+                sh = an.GetBoneTransform(HumanBodyBones.RightUpperArm), lsh = an.GetBoneTransform(HumanBodyBones.LeftUpperArm),
+                hips = an.GetBoneTransform(HumanBodyBones.Hips), head = an.GetBoneTransform(HumanBodyBones.Head),
+                ra = an.GetBoneTransform(HumanBodyBones.RightLowerArm), rh = an.GetBoneTransform(HumanBodyBones.RightHand);
+            if (mesh == null || chest == null || sh == null || lsh == null || hips == null || head == null || ra == null || rh == null) return;
+            Vector3 up = (head.position - hips.position).normalized, right = sh.position - lsh.position;
+            right = (right - up * Vector3.Dot(right, up)).normalized;
+            Vector3 fwd = Vector3.Cross(right, up).normalized;
+            float k = C.Len * H / Mathf.Max(1e-4f, mesh.bounds.size.x);
+            var go = new GameObject("Cannon " + C.Model);
+            MakeRenderer(go, mesh, C.Model, rends, op, fd);
+            Transform t = go.transform;
+            t.rotation = Quaternion.LookRotation(Vector3.Cross(fwd, up), up); // the model's +x (the mouth) forward, +y up
+            t.localScale = new Vector3(k, k, k);
+            Vector3 seat = sh.position + up * (C.At.x * H) + right * (C.At.y * H) + fwd * (C.At.z * H);
+            t.position = seat - t.rotation * (C.Seat * k);
+            float reach = 0.9f * ((ra.position - sh.position).magnitude + (rh.position - ra.position).magnitude);
+            for (int i = 0; i < 16; i++)
+            {
+                Vector3 rg = t.TransformPoint(C.Grip);
+                float over = (rg - sh.position).magnitude - reach;
+                if (over <= 0f) break;
+                t.position += (sh.position - rg).normalized * Mathf.Min(over, 0.04f * H);
+            }
+            t.SetParent(chest, true);
+            cDef = C; cT = t;
+            cAt = t.localPosition;
+            cBack = t.localRotation * Vector3.left * (C.Kick * H / Mathf.Max(1e-6f, chest.lossyScale.y));
+            cUp = sh; cLo = ra; cHand = rh; cOther = lsh;
+            cIndex = an.GetBoneTransform(HumanBodyBones.RightIndexProximal);
+        }
+
         /// <summary>Back in the hand, for a fresh life out of the pool.</summary>
         public void Reset()
         {
             hideIn = -1f; backIn = -1f;
             for (int i = 0; i < wT.Length; i++) if (wT[i] != null) wT[i].localScale = bindS[i];
+            kickIn = -1f; kickT = -1f; deadT = 0f;
+            if (cT != null) cT.localPosition = cAt;
         }
 
         /// <summary>A thrown weapon leaves the hand after <paramref name="delay"/> seconds (the release).</summary>
@@ -427,6 +502,19 @@ namespace BAM.Art
         {
             hideIn = Mathf.Max(0f, delay);
             backIn = -1f;
+        }
+
+        /// <summary>A cannon kicks back as its shot leaves, after <paramref name="delay"/> seconds (the blow).</summary>
+        public void Fire(float delay)
+        {
+            if (cT != null) kickIn = Mathf.Max(0f, delay);
+        }
+
+        /// <summary>Where the cannon's mouth is now, for a shot to leave from; false without a cannon.</summary>
+        public bool Mouth(out Vector3 at)
+        {
+            at = cT != null ? cT.TransformPoint(cDef.Mouth) : Vector3.zero;
+            return cT != null;
         }
 
         /// <param name="moveW">0 standing .. 1 on the move.</param>
@@ -467,6 +555,46 @@ namespace BAM.Art
                 if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
             }
             if (sAnchor != null) ShieldFace(moveW);
+            if (cT != null) CannonTick(dt, dead);
+        }
+
+        // as MxCannonArms: the recoil (back fast, forward slowly), then the right fist on the rear grip; in death the fist lets go
+        // over a quarter of a second
+        void CannonTick(float dt, bool dead)
+        {
+            if (kickIn >= 0f)
+            {
+                kickIn -= dt;
+                if (kickIn < 0f) { kickIn = -1f; kickT = 0f; }
+            }
+            float kick = 0f;
+            if (kickT >= 0f)
+            {
+                float kt = kickT / cDef.KickTime;
+                kick = kt < 0.15f ? kt / 0.15f : 1f - (kt - 0.15f) / 0.85f;
+                kickT += dt;
+                if (kickT >= cDef.KickTime) kickT = -1f;
+            }
+            cT.localPosition = cAt + cBack * kick;
+            deadT = dead ? deadT + dt : 0f;
+            float w = dead ? Mathf.Clamp01(1f - deadT / 0.25f) : 1f;
+            if (w > 0.001f) CannonFist(w);
+        }
+
+        // as CannonFist: the palm, not the wrist, on the grip; then the arm swung about the shoulder-to-fist line until the elbow
+        // points out from the body and a little down, not into the chest (Rickard 2026-10-19: her arm cut through her body)
+        void CannonFist(float w)
+        {
+            Vector3 toPalm = cIndex != null ? (cIndex.position - cHand.position) * 0.6f : Vector3.zero;
+            Vector3 goal = cT.TransformPoint(cDef.Grip) - toPalm;
+            TwoBone(cUp, cLo, cHand, Vector3.Lerp(cHand.position, goal, w), cLo.position);
+            Vector3 axis = cHand.position - cUp.position;
+            if (axis.sqrMagnitude < 1e-8f) return;
+            axis.Normalize();
+            Vector3 pole = (cUp.position - cOther.position).normalized - root.up * 0.35f;
+            Vector3 elbow = Vector3.ProjectOnPlane(cLo.position - cUp.position, axis), want = Vector3.ProjectOnPlane(pole, axis);
+            if (elbow.sqrMagnitude < 1e-8f || want.sqrMagnitude < 1e-8f) return;
+            cUp.rotation = Quaternion.AngleAxis(Vector3.SignedAngle(elbow, want, axis) * w, axis) * cUp.rotation;
         }
 
         // turned by a rotation in the weapon's own axes, about its grip
@@ -501,25 +629,31 @@ namespace BAM.Art
         {
             if (w <= 0.001f) return;
             Vector3 fwd = root.forward, upW = root.up, rt = root.right;
-            Vector3 a = carryUp.position, b = carryLo.position, c = carryHand.position;
+            Vector3 a = carryUp.position;
             float H = figH;
             Vector3 ca = gdef.CarryAt, el = gdef.Elbow;
             Vector3 goal = a + fwd * (ca.x * H) - upW * (ca.y * H) - rt * (ca.z * H);
             Vector3 hint = a - upW * (el.x * H) + fwd * (el.y * H) + rt * (el.z * H);
-            goal = Vector3.Lerp(c, goal, w);
-            hint = Vector3.Lerp(b, hint, w);
+            TwoBone(carryUp, carryLo, carryHand, Vector3.Lerp(carryHand.position, goal, w), Vector3.Lerp(carryLo.position, hint, w));
+        }
+
+        // two-bone IK: the upper arm and forearm turned so the wrist reaches the goal (as near as the arm's length allows), the
+        // elbow bent towards the hint
+        void TwoBone(Transform upper, Transform lower, Transform hd, Vector3 goal, Vector3 hint)
+        {
+            Vector3 a = upper.position, b = lower.position, c = hd.position;
             float la = (b - a).magnitude, lb = (c - b).magnitude;
             if (la < 1e-5f || lb < 1e-5f) return;
             Vector3 at = goal - a;
             float d = Mathf.Clamp(at.magnitude, Mathf.Abs(la - lb) + 1e-4f, la + lb - 1e-4f);
-            Vector3 dir = at.sqrMagnitude > 1e-10f ? at.normalized : fwd;
+            Vector3 dir = at.sqrMagnitude > 1e-10f ? at.normalized : root.forward;
             float x = (la * la - lb * lb + d * d) / (2f * d), hg = Mathf.Sqrt(Mathf.Max(0f, la * la - x * x));
             Vector3 pole = Vector3.ProjectOnPlane(hint - a, dir);
-            pole = pole.sqrMagnitude > 1e-10f ? pole.normalized : Vector3.ProjectOnPlane(-upW, dir).normalized;
+            pole = pole.sqrMagnitude > 1e-10f ? pole.normalized : Vector3.ProjectOnPlane(-root.up, dir).normalized;
             Vector3 elbow = a + dir * x + pole * hg;
-            carryUp.rotation = Quaternion.FromToRotation(b - a, elbow - a) * carryUp.rotation;
-            Vector3 lo = carryLo.position;
-            carryLo.rotation = Quaternion.FromToRotation(carryHand.position - lo, a + dir * d - lo) * carryLo.rotation;
+            upper.rotation = Quaternion.FromToRotation(b - a, elbow - a) * upper.rotation;
+            Vector3 lo = lower.position;
+            lower.rotation = Quaternion.FromToRotation(hd.position - lo, a + dir * d - lo) * lower.rotation;
         }
 
         /// <summary>AnimFix.FixedGrip wants the idle measured: the first time, or after the tuner changed a number the rest aim
