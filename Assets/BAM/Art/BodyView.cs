@@ -67,7 +67,12 @@ namespace BAM.Art
         // the menu hero's feet kept on the stage (Rickard 2026-10-27: Bram and Fenn floated above the ring on Home): each idle stands
         // the model at its own height over the root, so the lowest foot bone is held where it was in the bind pose, standing on the ground
         Transform instT, footL, footR, toeL, toeR;
-        float footRef = float.NaN, groundOff;
+        float footRef = float.NaN, groundY;
+        bool groundSet;
+#if UNITY_EDITOR
+        float soleGap, instY0, groundLogT; // what the grounding found, logged once a second into a menu stage
+        bool groundLogged;
+#endif
         bool breathTried;
         float gearAct, gearAtk;   // how much the attack and cast clips play (and the attack alone), for the gear's rest pose
         int shadowRends;          // rends[0..shadowRends) may cast shadows; the gear after them never does
@@ -300,8 +305,16 @@ namespace BAM.Art
             for (int i = 0; i < rends.Length; i++) { if (i == 0) bb = rends[i].bounds; else bb.Encapsulate(rends[i].bounds); }
             float h = bb.size.y > 0.01f ? bb.size.y : 1f;
             float k = art.Height / h;
+            // the soles go on the ground by the meshes' own bottom in the pose they were made in (BindBottom), not by these bounds:
+            // a fresh skinned renderer's bounds may reach below the feet, and the model then stood that much over the ground
+            // (Benny and Rickard 2026-10-28: the heroes floated about a tenth of their height over the ring on Home)
+            float sole = BindBottom(rends, bb.min.y);
+            if (Mathf.Abs(sole - bb.min.y) > 0.25f * h) sole = bb.min.y; // a mesh whose stored bounds make no sense: as before
+#if UNITY_EDITOR
+            soleGap = (sole - bb.min.y) * k;
+#endif
             it.localScale = it.localScale * k;
-            it.localPosition = new Vector3(0f, (transform.position.y - bb.min.y) * k, 0f);
+            it.localPosition = new Vector3(0f, (transform.position.y - sole) * k, 0f);
 
             opaqueSets = new Material[rends.Length][];
             fadeSets = new Material[rends.Length][];
@@ -332,6 +345,9 @@ namespace BAM.Art
             anim = inst.GetComponent<Animator>();
             if (anim == null) anim = inst.AddComponent<Animator>();
             instT = it;
+#if UNITY_EDITOR
+            instY0 = it.localPosition.y;
+#endif
             if (anim.isHuman)
             {
                 footL = anim.GetBoneTransform(HumanBodyBones.LeftFoot); footR = anim.GetBoneTransform(HumanBodyBones.RightFoot);
@@ -1344,18 +1360,54 @@ namespace BAM.Art
         }
 
         // moves the model so its lowest foot bone stays at its bind-pose height over the stage (smoothed, so a step or a swing does
-        // not make it bob); only on the menu stages
+        // not make it bob); only on the menu stages. The lift is worked out fresh each frame from where the feet are with `model`
+        // level and goes on `model`, which only this view moves: on the Animator's own transform (2026-10-27) it never took, and
+        // Rickard's Home still had Bonk a tenth of his height over the ring the next day
         void GroundFeet(float dt)
         {
-            if (float.IsNaN(footRef) || instT == null) return;
+            if (float.IsNaN(footRef)) return;
             float low = LowestFoot();
             if (float.IsNaN(low)) return;
-            float err = low - transform.position.y - footRef; // world units above where the foot should be
-            float step = -err * Mathf.Min(1f, Mathf.Max(dt, 1f / 60f) * 8f);
-            groundOff += step;
-            Transform par = instT.parent;
-            float k = par != null ? Mathf.Max(1e-4f, par.lossyScale.y) : 1f;
-            instT.localPosition += new Vector3(0f, step / k, 0f);
+            float s = Mathf.Max(1e-4f, transform.lossyScale.y);
+            Vector3 mp = model.localPosition;
+            float want = (transform.position.y + footRef - (low - mp.y * s)) / s; // the lift that puts the foot on its mark
+            groundY = groundSet ? Mathf.Lerp(groundY, want, Mathf.Min(1f, Mathf.Max(dt, 1f / 60f) * 8f)) : want;
+            groundSet = true;
+            mp.y = groundY;
+            model.localPosition = mp;
+#if UNITY_EDITOR
+            // one line per menu hero, so a hero that still floats tells why: bounds reaching under the soles (now ignored), the
+            // foot mark, the lift the stage needed and whether anything moved the Animator's own transform
+            if (!groundLogged && (groundLogT += dt) > 1f && instT != null)
+            {
+                groundLogged = true;
+                float hh = Mathf.Max(0.01f, def.Height * s);
+                Debug.Log("[BAM.Art] " + (def.Art != null ? def.Art.name : name) + " on its stage: renderer bounds under the soles " + (soleGap * s / hh).ToString("P1") + ", foot mark " +
+                    (footRef / hh).ToString("P1") + ", lift " + (groundY * s / hh).ToString("P1") + ", Animator root moved " +
+                    ((instT.localPosition.y - instY0) * s / hh).ToString("P1") + " of its height");
+            }
+#endif
+        }
+
+        // the lowest point of the meshes in the pose the model was made in: each mesh's stored bounds through its own node (no CPU
+        // read, so fine on a phone), or a renderer's bounds where it has no mesh. All the heroes and minions stand with their soles
+        // on their origin there (Blender 2026-10-28)
+        static float BindBottom(Renderer[] rs, float fallback)
+        {
+            float y = float.MaxValue;
+            foreach (Renderer r in rs)
+            {
+                Mesh m = r is SkinnedMeshRenderer sk ? sk.sharedMesh : r.TryGetComponent(out MeshFilter mf) ? mf.sharedMesh : null;
+                if (m == null) { y = Mathf.Min(y, r.bounds.min.y); continue; }
+                Bounds b = m.bounds;
+                Matrix4x4 w = r.transform.localToWorldMatrix;
+                for (int c = 0; c < 8; c++)
+                {
+                    var p = new Vector3((c & 1) == 0 ? b.min.x : b.max.x, (c & 2) == 0 ? b.min.y : b.max.y, (c & 4) == 0 ? b.min.z : b.max.z);
+                    y = Mathf.Min(y, w.MultiplyPoint3x4(p).y);
+                }
+            }
+            return y == float.MaxValue ? fallback : y;
         }
 
         // standing (and in the menu) the graph is the plain mixer as before the layers came; a swing on the move routes it through
