@@ -41,6 +41,9 @@ namespace BAM.Art
         /// (Tyra's bow stands up for the shot; in the fist's own grip it lay flat). Not in a cast: Tyra's cast is a held draw, made for
         /// a bow, upright in the fist's own grip.</summary>
         public Vector3 SwingTurn;
+        /// <summary>AnimFix.FixedGrip: degrees turned about the grip in the weapon's own x/y/z at rest, with the rest weight, before
+        /// Rickard's Turn (Tyra's bow lies level at her hip with the string up, as his pictures of 2026-10-28).</summary>
+        public Vector3 RestTurn;
         /// <summary>Rickard's own touch-up (Weapon Tuner): a shift in the hero's right/up/forward as a share of the figure's height,
         /// and degrees turned about the grip in the weapon's own x/y/z, on top of everything else, every frame.</summary>
         public Vector3 Offset, Turn;
@@ -123,10 +126,11 @@ namespace BAM.Art
             // gripped at the middle in the left fist like any weapon: the limbs leave the fist on the thumb side, so in her bow
             // clips (arm out, thumb up) it stands upright with the belly away from her. Along the forearm (as Moa's staff) it lay
             // flat along her outstretched arm (Rickard 2026-10-26: "håller konstigt i vapen"; checked in a Blender render of IdleBow)
-            // at rest (her relaxed idle and walk, Rickard 2026-10-27) the bow hangs upright beside her left leg; her shot plays
-            // the grip untouched
+            // at rest (her relaxed idle and walk) it lies level at her left hip, gripped at the middle, one limb forward and one
+            // back, the string up (Rickard's three pictures 2026-10-28, after hanging it beside her leg cut into it and none of four
+            // other holds looked right; render bam-work/art/rigg-anim/vila/tyra-bage-ny.png); her shot plays the fist's grip
             // (2026-10-28) for the shot the bow is turned a quarter about the fingers, so it stands up with its belly to the target
-            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -60f, HoldOut = -30f, Follow = 0.15f, SwingTurn = new Vector3(0f, 0f, -90f) } } };
+            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f), SwingTurn = new Vector3(0f, 0f, -90f) } } };
             // her old needle daggers, one in each fist out of the thumb side (old View3DOwnHeroFx.cs MxNeedles before the Needle
             // Wing: NeedleMesh/NeedleTex as Props tikta_needle, NEEDLE_LEN 0.36, NEEDLE_GRIP 0.14; Rickard 2026-10-26: "tikta ska
             // ha sina gamla vapen, typ två daggers"); at rest the blades point down along her forearms, since her guard idle holds
@@ -454,6 +458,8 @@ namespace BAM.Art
                 if (W.HoldUp == 0f || dead) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
                 else if (AnimFix.FixedGrip) Steady(i, W, rest);
                 else HoldAngle(i, W, rest, 0);
+                if (AnimFix.FixedGrip && W.RestTurn != Vector3.zero && W.HoldUp != 0f && rest > 0.001f)
+                    TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.RestTurn), rest));
                 if (W.Turn != Vector3.zero) TurnAbout(i, Quaternion.Euler(W.Turn));
                 float sw = dead ? 0f : Mathf.Clamp01(atkW);
                 if (AnimFix.FixedGrip && W.SwingTurn != Vector3.zero && sw > 0.001f)

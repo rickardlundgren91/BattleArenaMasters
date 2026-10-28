@@ -78,6 +78,13 @@ namespace BAM.Art
         float atkCarry, castCarry, lastAtkW, lastCastW;
         bool atkSeg, castSeg, clipsInfo;
         float atkFrom, atkBlow, atkTo, castFrom, castBlowAt, castTo;
+        // (2026-10-28, after Rickard's test) the recovery's pace and fade-out, the special's fade-out, the time between the last two
+        // swings, and how far Tyra turns so her arrow points at the target; her archer's stance between shots (a second copy of her
+        // shot clip, see Stance) and how much it shows
+        float recRate = RecoverRate, atkFade = 0.25f, castFade = 0.25f, atkGap = 1.4f, lastAtkAt = -10f, aimYaw;
+        AnimationClipPlayable stance;
+        bool bowHero;
+        float stanceW;
         float drAtk, drCast, drHit, drAtkFrom, drCastFrom;
         bool squared;
         Transform hipsT, spineT, chestT;
@@ -85,7 +92,7 @@ namespace BAM.Art
         float legW, legYaw, leanP, leanR, lastYaw, lastSpd;
         int legDir = 1;
         const float RecoverRate = 1.2f, CastRate = 1.15f;
-        const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5, CWalk = 6;
+        const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5, CWalk = 6, CStance = 7;
         // the walk and the run with the feet on the ground (old Speltest's HeroMixamoGait): each clip's own speed over the ground in
         // hip heights a second, measured once from its planted foot; the hips' height above the model's root; one stride phase for both
         float walkSpd = 2.2f, runSpd = 5f, hipsH, gaitPh, gSpd;
@@ -347,7 +354,8 @@ namespace BAM.Art
             graph = PlayableGraph.Create("BAM " + art.name);
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             var output = AnimationPlayableOutput.Create(graph, "Anim", anim);
-            mixer = AnimationMixerPlayable.Create(graph, src2.Length);
+            bowHero = def.Gear != null && def.Gear == Weapons.For(HeroId.Tyra);
+            mixer = AnimationMixerPlayable.Create(graph, src2.Length + (bowHero ? 1 : 0));
             animOut = output;
             output.SetSourcePlayable(mixer);
             layers = AnimationLayerMixerPlayable.Create(graph, 2);
@@ -374,6 +382,15 @@ namespace BAM.Art
             graph.Connect(upper, 0, layers, 1);
             layers.SetLayerMaskFromAvatarMask(1, UpperMask());
             layers.SetInputWeight(1, 0f);
+            if (bowHero)
+            {
+                // Tyra's stance between shots: her shot clip once more, the whole body, posed by hand as the attack (Stance)
+                stance = AnimationClipPlayable.Create(graph, src2[CAttack] != null ? src2[CAttack] : idle);
+                stance.SetApplyFootIK(false);
+                stance.Pause();
+                graph.Connect(stance, 0, mixer, CStance);
+                mixer.SetInputWeight(CStance, 0f);
+            }
             // walk and run are posed by hand each frame (AnimateImported): their time is the stride phase, not the clock; so are the
             // attack (its four phases) and the cast (so the upper-body copies stay on the same frame)
             clips[CWalk].Pause(); clips[CRun].Pause();
@@ -438,6 +455,7 @@ namespace BAM.Art
         {
             moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
             atkCarry = castCarry = lastAtkW = lastCastW = 0f; drAtk = drCast = drHit = 0f;
+            recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             model.localPosition = Vector3.zero;
@@ -464,6 +482,9 @@ namespace BAM.Art
         public override void PlayAttack(float w)
         {
             windup = Mathf.Max(0.05f, w);
+            float now = Time.time;
+            if (now - lastAtkAt < 4f) atkGap = now - lastAtkAt; // a fight's swings: how long the recovery may take (BlowSegment)
+            lastAtkAt = now;
             atkT = 0f;
             atkCarry = lastAtkW;
             atkSeg = false;
@@ -488,24 +509,40 @@ namespace BAM.Art
         // AnimFix.BlowTiming: the part of the clip round its measured blow (old Speltest's own attacks: from, hit, to). The windup
         // plays the last stretch before the blow, about 1.8 times its own pace instead of the whole clip at the 4x cap (at most 0.45 s
         // of it: Bonk's long windup plays his heavy swing slowly instead of starting on a frame with the club held out level), so the
-        // blow lands exactly as the rules' windup runs out; the recovery plays half a second of the clip after it at 1.2x, and at
-        // least a quarter of a second passes after the blow (the clip holding its last frame), so the eased fade-out never starts
-        // before it. Blast's throw (5.4 s into a 7.7 s clip) was never shown at all.
+        // blow lands exactly as the rules' windup runs out. Blast's throw (5.4 s into a 7.7 s clip) was never shown at all.
+        // The recovery plays on until the body is back up (the clip's Settle), at 1.2x or as fast as it takes to be done before the
+        // next swing (at most 2.5x), and fades out over its last part as Speltest's did (weight 1 to 60 % of it): cut half a second
+        // after the blow, Bonk's slam (Bram's too) was still bent double and blended up to the idle in a quarter of a second, a hop
+        // (Rickard 2026-10-28: "som ett hopp i slutet av attacken"). Tyra's arrow leaves at full draw, not at her hand's fastest
+        // moment, which in her shot is the reach for the arrow (the bow rose only after the arrow had flown).
         void BlowSegment(float len)
         {
             ClipInfo ci = Info(clips[CAttack].GetAnimationClip());
             float start0 = def.Art.AttackStart * len;
             float blow = ci != null && ci.Blow > 0f ? ci.Blow : def.Art.AttackRelease * len;
+            if (Bow && ci != null && ci.Draw > 0f) blow = ci.Draw;
             blow = Mathf.Clamp(blow, Mathf.Min(start0 + 0.05f, len), len);
             float pre = Mathf.Min(blow - start0, Mathf.Clamp(windup * 1.8f, 0.25f, 0.45f));
             if (pre < 0.02f) return;
             atkFrom = blow - pre;
             atkBlow = blow;
-            atkTo = Mathf.Min(len, blow + 0.5f);
+            float to = Mathf.Min(len, Mathf.Min(ci != null && ci.Settle > blow ? ci.Settle : blow + 0.5f, blow + 1.6f));
+            float budget = Mathf.Max(0.3f, atkGap - windup - 0.1f);
+            recRate = Mathf.Clamp((to - blow) / budget, RecoverRate, 2.5f);
+            atkTo = Mathf.Min(to, blow + budget * recRate);
             atkSpeed = pre / windup;
-            atkTotal = windup + Mathf.Max(0.25f, (atkTo - blow) / RecoverRate);
+            float play = (atkTo - blow) / recRate, rec = Mathf.Max(0.35f, play);
+            atkTotal = windup + rec;
+            // a clip that ends on its blow (Tyra's draw) holds it and lowers in the time left; Tyra holds the release a moment and
+            // hands over to her stance (Stance)
+            atkFade = Mathf.Clamp(Mathf.Max(rec * 0.4f, rec - play), 0.12f, 0.35f);
+            if (Bow) atkFade = Mathf.Max(0.12f, rec - play - 0.06f);
             atkSeg = true;
         }
+
+        // Tyra's bow (AnimFix.BlowTiming): her arrow leaves at full draw, she turns the few degrees her clip's arrow points aside
+        // (aimYaw) and stays in her archer's stance between shots (Stance)
+        bool Bow => IsHero && bowHero && AnimFix.BlowTiming;
 
         public override void PlayCast()
         {
@@ -533,10 +570,13 @@ namespace BAM.Art
             float blow = ci != null && ci.Blow > 0f ? ci.Blow : 0.4f * len;
             float lead = HeroIndex == (int)HeroId.Bonk ? 0.25f : 0.12f;
             castFrom = Mathf.Max(0f, blow - lead * CastRate);
-            castTo = Mathf.Min(len, blow + 0.6f);
+            // played on until the body is back up, as the attack (at most 1.2 s of the clip after its peak)
+            castTo = Mathf.Min(len, ci != null && ci.Settle > blow ? Mathf.Min(ci.Settle, blow + 1.2f) : blow + 0.6f);
             if (castTo - castFrom < 0.1f) return;
             castBlowAt = (blow - castFrom) / CastRate;
-            castLen = Mathf.Max((castTo - castFrom) / CastRate, castBlowAt + 0.25f);
+            float play = (castTo - castFrom) / CastRate;
+            castLen = Mathf.Max(play, castBlowAt + 0.35f);
+            castFade = Mathf.Clamp(Mathf.Max((castLen - castBlowAt) * 0.4f, castLen - play), 0.12f, 0.35f);
             castSeg = true;
         }
 
@@ -749,7 +789,7 @@ namespace BAM.Art
                         if (!breathTried) { breathTried = true; breath = PreviewBreath.For(anim, HeroIndex); }
                         breath?.ApplyMatch(Time.time, 0.6f * (1f - moveW) * (1f - Mathf.Clamp01(gearAct)));
                     }
-                    else model.localRotation = Quaternion.identity;
+                    else model.localRotation = Quaternion.Euler(0f, aimYaw, 0f);
                 }
             }
             if (gear != null && clips != null && gear.NeedsRest) MeasureRest();
@@ -836,8 +876,12 @@ namespace BAM.Art
                     if (life)
                     {
                         // eased in (from where a swing still fading out left it) and out over a quarter of a second, never before
-                        // the blow; the linear 0.06-0.16 s in and the 0.18 s out of a clip cut short read as a snap
-                        float blendIn = Mathf.Clamp(windup * 0.6f, 0.08f, 0.2f), fadeOut = Mathf.Clamp(atkTotal - windup, 0.05f, 0.25f);
+                        // the blow; the linear 0.06-0.16 s in and the 0.18 s out of a clip cut short read as a snap. Tyra steps into
+                        // her stance over the whole windup.
+                        float blendIn = Bow ? windup : Mathf.Clamp(windup * 0.6f, 0.08f, 0.2f), fadeOut = atkSeg ? atkFade : Mathf.Clamp(atkTotal - windup, 0.05f, 0.25f);
+                        // on the move the recovery hands over to the stride within its fade-out instead of playing out bent over
+                        // the running legs
+                        if (atkSeg && atkT > windup && moveW > 0.3f && atkTotal - atkT > fadeOut) atkTotal = atkT + fadeOut;
                         wAtk = Mathf.Min(Mathf.Lerp(atkCarry, 1f, Smooth(atkT / blendIn)), Smooth((atkTotal - atkT) / fadeOut));
                     }
                     else
@@ -854,7 +898,7 @@ namespace BAM.Art
                 if (castT >= 0f)
                 {
                     castT += dt;
-                    float castOut = Mathf.Clamp(castLen - castBlowAt, 0.05f, 0.25f);
+                    float castOut = castSeg ? castFade : Mathf.Clamp(castLen - castBlowAt, 0.05f, 0.25f);
                     wCast = life ? Mathf.Min(Mathf.Lerp(castCarry, 1f, Smooth(castT / 0.1f)), Smooth((castLen - castT) / castOut))
                         : Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
                     double ct = castSeg ? Mathf.Min(castTo, castFrom + castT * CastRate) : castT * 1.2f;
@@ -869,22 +913,27 @@ namespace BAM.Art
                 }
             }
             lastAtkW = wAtk; lastCastW = wCast;
-            gearAct = wAtk + wCast; gearAtk = wAtk;
+            if (bowHero) Stance(dt);
+            float wStance = stanceW * (1f - moveW); // about how much of the stance shows (the clips over it take their share below)
+            gearAct = wAtk + wCast + wStance; gearAtk = wAtk + wStance;
+            aimYaw = Bow ? -(AimOf(CAttack) * Mathf.Min(1f, wAtk + wStance) + AimOf(CCast) * wCast) : 0f;
             // on the move the swing (with UpperSwing also the cast and the flinch) goes to the upper-body layer and the legs keep their
             // stride, as Speltest's layers 1 and 2; standing, the whole body plays it
             bool up = AnimFix.UpperSwing || Phased(HeroIndex);
-            float uHit = AnimFix.UpperSwing ? wHit : 0f, sum = wAtk + wCast + uHit;
-            float upW = dead || !up ? 0f : Mathf.Min(1f, sum) * moveW;
-            if (sum > 1e-4f) { upper.SetInputWeight(0, wAtk / sum); upper.SetInputWeight(1, wCast / sum); upper.SetInputWeight(2, uHit / sum); }
+            float uHit = AnimFix.UpperSwing ? wHit : 0f;
+            float uA = wAtk * moveW, uC = wCast * moveW, uH = uHit * moveW, uSum = uA + uC + uH;
+            float upW = dead || !up ? 0f : Mathf.Min(1f, uSum);
+            if (uSum > 1e-4f) { upper.SetInputWeight(0, uA / uSum); upper.SetInputWeight(1, uC / uSum); upper.SetInputWeight(2, uH / uSum); }
             SetLayered(upW > 1e-4f);
             if (layered) layers.SetInputWeight(1, upW);
             drAtk = wAtk; drCast = wCast; drHit = wHit; drAtkFrom = atkSeg ? atkFrom : atkStart; drCastFrom = castSeg ? castFrom : 0f;
-            if (upW > 0f) { wAtk *= 1f - moveW; wCast *= 1f - moveW; wHit -= uHit * moveW; }
+            if (upW > 0f) { wAtk -= uA; wCast -= uC; wHit -= uH; }
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
             float rest = 1f - over;
             float runK = Stride(dt);
-            mixer.SetInputWeight(CIdle, rest * (1f - moveW));
+            mixer.SetInputWeight(CIdle, rest * (1f - moveW) * (1f - stanceW));
+            if (bowHero) mixer.SetInputWeight(CStance, rest * (1f - moveW) * stanceW);
             mixer.SetInputWeight(CWalk, rest * moveW * (1f - runK));
             mixer.SetInputWeight(CRun, rest * moveW * runK);
             mixer.SetInputWeight(CAttack, wAtk);
@@ -893,6 +942,23 @@ namespace BAM.Art
             mixer.SetInputWeight(CDeath, wDeath);
             // idle always loops here, even when a clip was imported without Loop Time (it would play once and freeze)
             Wrap(CIdle);
+        }
+
+        // Tyra's archer stance (Bow): from her first shot until a shot is overdue she stays in her shot clip's stance, feet apart and
+        // side on, instead of stepping into it and out again at every shot (Rickard 2026-10-28: one leg kicked out at each shot).
+        // Between shots her arms lower the bow after the release (the clip's first frame) and, timed by the fight's pace, reach for
+        // an arrow and nock it (the clip from its start) just in time for the next windup, which draws from the very frame she holds.
+        // On the move, when the shots stop or with BlowTiming off she eases back to her idle.
+        void Stance(float dt)
+        {
+            float now = Time.time, next = lastAtkAt + atkGap; // when the next windup is due at the fight's pace
+            bool on = Bow && !dead && moveW < 0.3f && now < next + 0.6f;
+            stanceW = Mathf.MoveTowards(stanceW, on ? 1f : 0f, dt / (on ? 0.2f : 0.45f));
+            if (stanceW <= 0f) return;
+            float ready = atkSeg ? atkFrom : 0f;
+            // under a windup it holds the frame the draw starts from (a shot that came early blends from wherever the nock was)
+            float t = atkT >= 0f && atkT <= windup ? ready : Mathf.Max(0f, ready - Mathf.Max(0f, next - now));
+            stance.SetTime(t);
         }
 
         // AnimFix.BlowTiming: a clip that walks the body away (Fenn's attack lunges 1.2 hip heights, Bram's Attack2 and Blast's and
@@ -907,7 +973,7 @@ namespace BAM.Art
             if (drCast > 1e-3f) d += Drift(CCast, drCastFrom) * drCast;
             if (drHit > 1e-3f) d += Drift(CHit, 0f) * drHit;
             Vector3 k = instT.localScale;
-            model.localPosition = new Vector3(-d.x * k.x, 0f, -d.y * k.z);
+            model.localPosition = Quaternion.Euler(0f, aimYaw, 0f) * new Vector3(-d.x * k.x, 0f, -d.y * k.z);
         }
 
         // the track is kept in hip heights, so a clip measured on one rig holds another in place by that rig's own size
@@ -916,6 +982,13 @@ namespace BAM.Art
             AnimationClip clip = clips[c].GetAnimationClip();
             if (clip == null || !clipInfo.TryGetValue(clip, out ClipInfo ci) || ci.Hips == null) return Vector2.zero;
             return (HipsAt(ci, (float)clips[c].GetTime()) - HipsAt(ci, from)) * (hipsH > 1e-4f ? hipsH : 1f);
+        }
+
+        // which way the arrow points at the full draw of clip c (degrees, left negative), 0 if not measured
+        float AimOf(int c)
+        {
+            AnimationClip clip = clips[c].GetAnimationClip();
+            return clip != null && clipInfo.TryGetValue(clip, out ClipInfo ci) ? ci.AimL : 0f;
         }
 
         static Vector2 HipsAt(ClipInfo ci, float t)
@@ -930,8 +1003,11 @@ namespace BAM.Art
         // AnimFix.BlowTiming: a clip's blow (its fastest hand between 10 and 85 % of it, as the Blender measure of 2026-10-28,
         // bam-work/art/rigg-anim/matning: where the weapon meets a target standing in front; the hand stops 0.1 s later, Bonk's club
         // on the ground) and its hips' track over the ground in hip heights, 30 times a second; measured once per clip, on a manual
-        // graph as GroundSpeed, the bones put back after
-        sealed class ClipInfo { public float Blow = -1f, Step = 1f / 30f; public Vector2[] Hips; }
+        // graph as GroundSpeed, the bones put back after. (2026-10-28, after Rickard's test) Also where the body is back up after the
+        // blow (Settle: head, hands and feet round the hips and the hips' height within 0.3 hip heights of the first frame; Bonk's
+        // slam 1.9 s, Knut's 2.1, Tikta's 1.5; -1 if never, Tyra's shot ends drawn), and for a bow the full draw (Draw: the bow hand
+        // at its highest from 10 % on) with which way the arrow points there (AimL: degrees from straight ahead, left negative)
+        sealed class ClipInfo { public float Blow = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public Vector2[] Hips; }
         static readonly Dictionary<AnimationClip, ClipInfo> clipInfo = new Dictionary<AnimationClip, ClipInfo>();
         static readonly List<AnimationClip> measureList = new List<AnimationClip>();
 
@@ -965,6 +1041,8 @@ namespace BAM.Art
             Transform root = an.transform, hips = an.GetBoneTransform(HumanBodyBones.Hips);
             Transform lh = an.GetBoneTransform(HumanBodyBones.LeftHand), rh = an.GetBoneTransform(HumanBodyBones.RightHand);
             if (hips == null || lh == null || rh == null) return;
+            Transform head = an.GetBoneTransform(HumanBodyBones.Head);
+            Transform lf = an.GetBoneTransform(HumanBodyBones.LeftFoot), rf = an.GetBoneTransform(HumanBodyBones.RightFoot);
             float hs = hipsH > 1e-4f ? hipsH : 1f;
             Transform[] bones = SaveBones(root, out Vector3[] lp, out Quaternion[] lr);
             PlayableGraph g = PlayableGraph.Create("BAM clip info");
@@ -985,12 +1063,19 @@ namespace BAM.Art
                     var track = new Vector2[n];
                     var L = new Vector3[n];
                     var R = new Vector3[n];
+                    var pose = new float[n * 16];
                     for (int i = 0; i < n; i++)
                     {
                         cp.SetTime(step * i); g.Evaluate(0f);
                         Vector3 h = root.InverseTransformPoint(hips.position);
                         track[i] = new Vector2(h.x, h.z) / hs;
                         L[i] = root.InverseTransformPoint(lh.position); R[i] = root.InverseTransformPoint(rh.position);
+                        int o = i * 16;
+                        PoseOf(pose, o, L[i] - h, hs); PoseOf(pose, o + 3, R[i] - h, hs);
+                        PoseOf(pose, o + 6, head != null ? root.InverseTransformPoint(head.position) - h : Vector3.zero, hs);
+                        PoseOf(pose, o + 9, lf != null ? root.InverseTransformPoint(lf.position) - h : Vector3.zero, hs);
+                        PoseOf(pose, o + 12, rf != null ? root.InverseTransformPoint(rf.position) - h : Vector3.zero, hs);
+                        pose[o + 15] = h.y / hs;
                     }
                     ci.Step = step;
                     ci.Hips = track;
@@ -1002,6 +1087,24 @@ namespace BAM.Art
                         float sp = Mathf.Max((L[i + 1] - L[i - 1]).sqrMagnitude, (R[i + 1] - R[i - 1]).sqrMagnitude);
                         if (sp > best) { best = sp; ci.Blow = step * i; }
                     }
+                    if (ci.Blow >= 0f)
+                        for (int i = 0; i < n; i++)
+                        {
+                            if (step * i < ci.Blow + 0.1f) continue;
+                            float d2 = 0f;
+                            for (int k = 0; k < 16; k++) { float e = pose[i * 16 + k] - pose[k]; d2 += e * e; }
+                            if (d2 <= 0.09f) { ci.Settle = step * i; break; }
+                        }
+                    int top = -1;
+                    for (int i = 0; i < n; i++)
+                        if ((float)i / (n - 1) >= 0.1f && (top < 0 || L[i].y > L[top].y)) top = i;
+                    if (top >= 0)
+                    {
+                        ci.Draw = step * top;
+                        Vector3 a = L[top] - R[top];
+                        a.y = 0f;
+                        ci.AimL = a.sqrMagnitude > 1e-8f ? Vector3.SignedAngle(Vector3.forward, a, Vector3.up) : 0f;
+                    }
                 }
             }
             finally
@@ -1010,6 +1113,8 @@ namespace BAM.Art
                 RestoreBones(bones, lp, lr);
             }
         }
+
+        static void PoseOf(float[] p, int o, Vector3 v, float hs) { p[o] = v.x / hs; p[o + 1] = v.y / hs; p[o + 2] = v.z / hs; }
 
         static Transform[] SaveBones(Transform root, out Vector3[] lp, out Quaternion[] lr)
         {
@@ -1111,7 +1216,7 @@ namespace BAM.Art
             float roll = Mathf.Clamp(-yawRate * 0.012f, -7f, 7f) * moveW, pitch = Mathf.Clamp(acc * 0.25f, -4f, 5f) * moveW;
             leanR += (roll - leanR) * K60(8f, dt);
             leanP += (pitch - leanP) * K60(6f, dt);
-            model.localRotation = Quaternion.Euler(leanP, 0f, leanR);
+            model.localRotation = Quaternion.Euler(leanP, aimYaw, leanR);
         }
 
         // Old Speltest's stride (HeroMixamoGait.MxStride, Rickard 2026-10-26: Tikta and Tyra "hukar och går snabbt"): BAM played only
@@ -1267,7 +1372,7 @@ namespace BAM.Art
         {
             // as before 2026-10-27: the clip at its own pace, from AttackStart (Bram skips the hammer's dip to the side, so it rises
             // straight off his shoulder)
-            if (atkSeg) return t < windup ? atkFrom + t * atkSpeed : Mathf.Min(atkTo, atkBlow + (t - windup) * RecoverRate);
+            if (atkSeg) return t < windup ? atkFrom + t * atkSpeed : Mathf.Min(atkTo, atkBlow + (t - windup) * recRate);
             if (!Phased(HeroIndex)) return Mathf.Min(clipLen[CAttack], atkStart + t * atkSpeed);
             float coil = windup - atkSlash;
             if (t < coil) { float w = t / Mathf.Max(1e-4f, coil); return atkRel * 0.7f * (1f - (1f - w) * (1f - w) * (1f - w)); }

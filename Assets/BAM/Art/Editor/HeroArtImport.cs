@@ -172,7 +172,10 @@ namespace BAM.Art.Editor
             // (Weapons.cs) and he strikes straight down from overhead with Bonk's Standing Melee Attack Downward, from 12 % (before
             // that the hammer swings out to the side first)
             new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.46f, Start = 0.12f },
-            new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.45f },
+            // Rickard 2026-10-28: Fenn "vänder sig bakåt och sparkar ut i luften för varje attack": his own Attack1 (Speltest's Power
+            // Slash) is a jump with a whole turn (the hips turn 386 degrees and rise half a hip height); he slashes with Knut's level
+            // swing, his shield staying in front, until a Mixamo sword-and-shield slash is downloaded for him
+            new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.45f },
             // Tyra stands relaxed with the bow down (Moa's idle) in the menu and the match and raises it only to shoot (Rickard
             // 2026-10-27: her drawn-bow IdleBow in the menu "precis samma som när hon är i spelet"; old Speltest's Home had her in a
             // relaxed idle too)
