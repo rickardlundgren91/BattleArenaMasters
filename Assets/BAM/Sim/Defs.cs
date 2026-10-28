@@ -64,7 +64,7 @@ namespace BAM.Sim
         public static readonly HeroDef[] Heroes =
         {
             H(HeroId.Bram, 0.3f, 2.56f, 8, false, 160, 30, 18, 4.5f, 1.4f, -0.018f, 3.55f, 0.195f, 0, 0.25f, ProjKind.BramHammer, BramS.Reach, AimShape.Circle, BramS.Reach, BramS.DropRadius), // drag: Anvil Drop (2026-10-28)
-            H(HeroId.Fenn, 0.4f, 2.5f, 6, false, 200, 33, 20, 4.5f, 1.45f, -0.036f, 3.0f, 0.2f, 0, 0.08f, ProjKind.FennSlash, 0, AimShape.Circle, FennS.ThrowReach, FennS.PounceRadius),
+            H(HeroId.Fenn, 0.4f, 2.5f, 6, false, 215, 35, 20, 4.5f, 1.45f, -0.036f, 3.0f, 0.2f, 0, 0.08f, ProjKind.FennSlash, 0, AimShape.Circle, FennS.ThrowReach, FennS.PounceRadius), // hp 200/33 -> 215/35 (balance 2026-10-28, Rickard OK)
             H(HeroId.Tyra, 0.25f, 2.19f, 6, false, 190, 26, 38, 6, 1.85f, -0.036f, 4.0f, 0.195f, 0, 0.25f, ProjKind.TyraArrow, 4.0f, AimShape.Line, TyraS.Length, TyraS.Hitbox), // tap: Arrow Volley within her range 4 (2026-10-28); attack 1.7 -> 1.85 s (balance 2026-10-28: 69 % vs Hard bots)
             H(HeroId.Moa, 0.215f, 2.5f, 6, false, 195, 28, 23, 4, 1.35f, -0.036f, 3.4f, 0.2f, 0, 0.25f, ProjKind.MoaBolt, MoaS.Range, AimShape.Circle, MoaS.Range, MoaS.AreaRadius),
             H(HeroId.Knut, 0.4f, 2.5f, 7, true, 300, 51, 26, 4.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.075f, ProjKind.KnutHit, KnutS.SlamRadius, AimShape.Line, KnutS.HookDistance, KnutS.HookRadius), // hp 315/54 -> 300/51 (balance 2026-10-28, with Anchor Slam)
