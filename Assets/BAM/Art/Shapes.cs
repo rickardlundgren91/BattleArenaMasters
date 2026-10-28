@@ -274,11 +274,12 @@ namespace BAM.Art
                     break;
                 }
                 case ProjKind.TyraArrow:
+                case ProjKind.TyraVolley:
                 case ProjKind.RangedMinionShot:
                 {
-                    float s = kind == ProjKind.TyraArrow ? 1f : 0.75f;
+                    float s = kind == ProjKind.TyraVolley ? 1.15f : kind == ProjKind.TyraArrow ? 1f : 0.75f;
                     b.Color(Pal.Wood).Beam(new Vector3(0f, 0f, -0.3f * s), new Vector3(0f, 0f, 0.22f * s), 0.025f, 0.025f);
-                    b.Color(Pal.Metal).At(new Vector3(0f, 0f, 0.2f * s), new Vector3(90f, 0f, 0f)).Cylinder(Vector3.zero, 0.04f, 0f, 0.1f, 5);
+                    b.Color(kind == ProjKind.TyraVolley ? Pal.Gold : Pal.Metal).At(new Vector3(0f, 0f, 0.2f * s), new Vector3(90f, 0f, 0f)).Cylinder(Vector3.zero, 0.04f, 0f, 0.1f, 5);
                     b.Reset();
                     b.Color(Pal.TeamLight(team)).Box(new Vector3(0f, 0.025f, -0.26f * s), new Vector3(0.01f, 0.05f, 0.1f));
                     b.Box(new Vector3(0.025f, 0f, -0.26f * s), new Vector3(0.05f, 0.01f, 0.1f));

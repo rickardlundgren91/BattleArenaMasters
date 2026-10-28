@@ -1158,6 +1158,15 @@ namespace BAM.Art
                     if (bCrack != null) Emit1(bCrack, new Vector3(p.x, 0.03f, p.z), new Color(1f, 1f, 1f, 0.8f), 1.3f, 1.4f, Random.value * 360f);
                     break;
                 }
+                case ProjKind.TyraVolley:
+                {
+                    // a volley arrow lands: Speltest's tyravolley gold, his hit star and a small ring (#fff6a8)
+                    Color gold = new Color(1f, 0.965f, 0.66f, 1f);
+                    HitStar(p, gold, 0.9f, 0.15f);
+                    ImpactRing(new Vector3(p.x, 0f, p.z), 0.45f, gold, 0.22f);
+                    Sparks(p, 5, new Color32(255, 214, 110, 255), 0.09f, 3f, 0.25f, 0.7f);
+                    break;
+                }
                 case ProjKind.TyraArrow:
                     Stars(p, 1, C(Pal.White), 0.3f, 0f, 0.15f);
                     Sparks(p, 3, C(Pal.Cream), 0.08f, 2.5f, 0.2f, 0.6f);
@@ -1228,7 +1237,7 @@ namespace BAM.Art
         /// <summary>A skillshot that hit nothing: a small puff in its colour, no flash, so a miss never reads as a hit.</summary>
         public static void Fizzle(ProjKind k, Vector3 p, int team)
         {
-            Color32 c = k == ProjKind.TyraBolt ? heroMain[(int)HeroId.Tyra] : k == ProjKind.TiktaNeedleSpecial ? heroMain[(int)HeroId.Tikta]
+            Color32 c = k == ProjKind.TyraVolley ? new Color32(255, 230, 140, 255) : k == ProjKind.TyraBolt ? heroMain[(int)HeroId.Tyra] : k == ProjKind.TiktaNeedleSpecial ? heroMain[(int)HeroId.Tikta]
                 : k == ProjKind.BramHammerSpecial ? heroMain[(int)HeroId.Bram] : C(Pal.TeamLight(team));
             Glow(p, 3, c, 0.2f, 0.6f, 0.25f, 0.3f);
             Dust(p, 2, C(Pal.Ground, 180), 0.35f, 0.6f, 0.4f, 0.2f, 0.1f);
@@ -1244,6 +1253,7 @@ namespace BAM.Art
                 case ProjKind.TiktaNeedleSpecial: Bubbles(p, 1, C(Pal.Poison), 0.12f, 0.2f, 0.45f, 0.4f, 0.05f); break;
                 case ProjKind.BlastFire: Smoke(p, 1, C(Pal.Ink, 90), 0.18f, 0.1f, 0.35f, 0.3f, 0.03f); break; // fuse smoke behind the thrown bomb
                 case ProjKind.TyraBolt: Stars(p, 1, new Color32(200, 245, 255, 255), 0.25f, 0.2f, 0.25f, 0f, 0.05f); break;
+                case ProjKind.TyraVolley: Glow(p, 1, new Color32(255, 230, 140, 220), 0.3f, 0.05f, 0.15f); if (Random.value < 0.35f) Embers(p, 1, new Color32(255, 214, 110, 255), 0.07f, 0.4f, 0.35f, 0.3f); break;
                 case ProjKind.BramHammerSpecial: Sparks(p, 1, heroAccent[(int)HeroId.Bram], 0.1f, 1.5f, 0.25f, 0.3f); break; // a forge tail
                 case ProjKind.TowerShot: Glow(p, 1, C(Pal.TeamLight(team)), 0.35f, 0.1f, 0.2f); break;
                 case ProjKind.BonkBoulder:

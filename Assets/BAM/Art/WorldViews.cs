@@ -89,7 +89,7 @@ namespace BAM.Art
             visF.sharedMesh = boulder ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
-            bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot;
+            bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot || k == ProjKind.TyraVolley;
             if (melee)
             {
                 visR.sharedMaterial = painted ? FxAtlas.Material(ArtMaterials.UnlitAdd) : ArtMaterials.Instance(ArtMaterials.UnlitAdd);
@@ -142,7 +142,7 @@ namespace BAM.Art
                 trail = go.AddComponent<TrailRenderer>();
                 Material tm = TexTrail();
                 trail.sharedMaterial = tm ?? ArtKit.TrailMaterial;
-                trail.time = k == ProjKind.TowerShot || k == ProjKind.TyraBolt ? 0.22f : 0.16f;
+                trail.time = k == ProjKind.TowerShot || k == ProjKind.TyraBolt || k == ProjKind.TyraVolley ? 0.22f : 0.16f;
                 trail.minVertexDistance = 0.08f;
                 trail.widthMultiplier = k == ProjKind.TyraBolt || k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : 0.14f;
                 trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
@@ -201,6 +201,7 @@ namespace BAM.Art
                 case ProjKind.BramHammerSpecial: c = Fx.HeroMain(HeroId.Bram); c.a = 0.8f; return true; // his forge orange, not the team's
                 case ProjKind.TowerShot: c = Pal.Get(Pal.TeamLight(team)); c.a = 0.9f; return true;
                 case ProjKind.TyraArrow: c = new Color(1f, 1f, 1f, 0.45f); return true;
+                case ProjKind.TyraVolley: c = new Color(1f, 0.92f, 0.5f, 0.95f); return true; // the volley's warm gold (Speltest tyravolley)
                 default: c = Color.clear; return false;
             }
         }
@@ -234,7 +235,7 @@ namespace BAM.Art
         static float ArcScale(ProjKind k) => k == ProjKind.FennSlash || k == ProjKind.KnutHit ? 1.6f : k == ProjKind.WolfBite ? 1.0f : 0.8f;
 
         // skillshots can miss: their big splash only plays when the game says they hit
-        static bool CanMiss(ProjKind k) => k == ProjKind.TyraBolt || k == ProjKind.TiktaNeedleSpecial || k == ProjKind.BramHammerSpecial;
+        static bool CanMiss(ProjKind k) => k == ProjKind.TyraBolt || k == ProjKind.TyraVolley || k == ProjKind.TiktaNeedleSpecial || k == ProjKind.BramHammerSpecial;
 
         public override void MarkHit() => hit = true;
 

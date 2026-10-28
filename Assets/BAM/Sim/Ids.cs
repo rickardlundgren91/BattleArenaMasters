@@ -50,6 +50,7 @@ namespace BAM.Sim
         OakenFist = 25,         // Oaken's auto attack, a stone punch, near-instant (also his Stored Impact's extra hit)
         OakenSlam = 26,         // Oaken's slam (tap): both fists into the ground, a ring of hits round him
         OakenQuake = 27,        // Oaken's quake (drag): a crack running along a line, knocks heroes along it
+        TyraVolley = 28,        // view only: Tyra's Arrow Volley arrows (the rules fly them as TyraArrow in ProjMode.Volley)
     }
 
     /// <summary>Ground areas that last a while.</summary>

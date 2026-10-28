@@ -99,7 +99,8 @@ namespace BAM.Game
         // its splash (ProjectileView.MarkHit); a shot dropped without one fizzles as a miss
         readonly HashSet<int> hitKeys = new HashSet<int>();
         readonly Dictionary<int, Vector3> hitAt = new Dictionary<int, Vector3>(); // where this tick's hits landed, by HitKey
-        static int HitKey(int srcSerial, ProjKind kind) => srcSerial * 64 + (int)kind;
+        // the volley's arrows are TyraArrow in the rules (their Hit events say so): key them as that
+        static int HitKey(int srcSerial, ProjKind kind) => srcSerial * 64 + (int)(kind == ProjKind.TyraVolley ? ProjKind.TyraArrow : kind);
         readonly Stack<ZoneRec> zoneRecPool = new Stack<ZoneRec>(16);
         int step;
         int lastWave;
@@ -324,7 +325,7 @@ namespace BAM.Game
         ShotRec AddShot(Proj p)
         {
             var s = shotRecPool.Count > 0 ? shotRecPool.Pop() : new ShotRec();
-            Init(s, p, p.Serial, p.Kind, p.Team, p.Src != null ? p.Src.Serial : 0);
+            Init(s, p, p.Serial, p.Mode == ProjMode.Volley && p.Kind == ProjKind.TyraArrow ? ProjKind.TyraVolley : p.Kind, p.Team, p.Src != null ? p.Src.Serial : 0);
             shots.Add(s);
             shotBySerial[p.Serial] = s;
             // pair it with the AttackStart of this tick, so that attack is not drawn twice (any mode: Tikta's storm needles too)
@@ -349,7 +350,7 @@ namespace BAM.Game
 
         void LaunchView(ShotRec s, Proj p)
         {
-            var v = ArtKit.CreateProjectile(p.Kind, Side(p.Team));
+            var v = ArtKit.CreateProjectile(s.Kind, Side(p.Team)); // s.Kind: the volley's arrows wear their own look
             s.V = v;
             s.LaunchFrame = Time.frameCount;
             Vector3 from = Coords.World(p.PX, p.PY), to;
@@ -546,6 +547,12 @@ namespace BAM.Game
                     ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, Side(a.Team), e.Kind);
                     if (a == m.Player) BamAudio.Duck(0.8f);
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
+                    // Tyra's tap is the Arrow Volley: a gold cone through the draw and the big bow draw (Speltest tyravolley)
+                    if ((HeroId)e.Kind == HeroId.Tyra && !e.Big)
+                    {
+                        ArtKit.PlayVolleyDraw(Coords.Of(a), Coords.World(e.X, e.Y) - Coords.Of(a), a.Range, TyraS.VolleyWindup);
+                        Sound(SfxId.TyraDraw, a, 1f);
+                    }
                     // Blast's tap bomb is a ground fuse in the rules; draw the lob onto it so the throw is seen
                     if ((HeroId)e.Kind == HeroId.Blast && !e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
                     // so are Hilde's kegs: the big one (drag) and the small quick one (tap)
@@ -595,7 +602,9 @@ namespace BAM.Game
                     var pk = (ProjKind)e.Kind;
                     // Bram's passive (every 4th hammer) is the heavy anvil blow, Blast's Chain Reaction its own crack, not a bomb
                     bool bonk = pk == ProjKind.BonkSlam || pk == ProjKind.BonkClub || pk == ProjKind.OakenSlam; // Oaken's fists into the ground borrow Bonk's cracks and dust until he has his own
-                    FxKind ek = pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : FxKind.Explosion;
+                    // Bram's Anvil Drop and Knut's Anchor Slam (Simon's reworks) get their own heroes' blows, not Blast's fireball
+                    FxKind ek = pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? FxKind.AnvilStrike : pk == ProjKind.KnutSlam ? FxKind.AnchorHit
+                        : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : FxKind.Explosion;
                     // Bonk: his auto slam (a power swing a size bigger) and Ground Slam, both the club into the ground
                     float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));

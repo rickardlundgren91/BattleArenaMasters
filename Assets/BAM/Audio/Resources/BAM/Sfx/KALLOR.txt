@@ -1,13 +1,13 @@
 Rickard's AI clips from Speltest ABC2/Resources/Sfx (copied 2026-10-26). File here <- Speltest file:
 UiTap/UiBack/UiConfirm/UiToggle <- click | Countdown <- tick | CountdownGo <- go | Victory <- victory | Defeat <- defeat
 Attack<Hero> <- atk_<hero> (Bram Fenn Tyra Moa Knut Tikta Blast)
-BramHammerThrow <- hammer | BramHammerBounce <- clank | FennWolfCall/FennWolfThrow <- sp_fenn | TyraRelease <- sp_tyra
+BramHammerThrow <- hammer | BramHammerBounce <- clank | FennWolfCall/FennWolfThrow <- sp_fenn | TyraRelease <- sp_tyra | TyraDraw <- bow (the Arrow Volley draw, 2026-10-28)
 MoaShield/MoaField <- sp_moa | KnutAnchorThrow <- sp_knut | KnutAnchorHook <- clink | TiktaNeedles <- sp_tikta
 BlastBombThrow/BlastFireLane <- sp_blast | BlastExplosion/BlastChainBoom <- boom
 HitLight/HitHeavy <- hit (only when a hero hits you) | CloneAppear <- blink | TowerShot <- tower (only when aimed at you)
 TowerDestroyed <- towerdown | HeroDeath/AllyDeath <- herodeath | Respawn <- respawn | LevelUp <- levelUp | LowHealth <- heartbeat
 Bonk: Rickard's own AI clips made for him 2026-10-26 (AttackBonk, BonkSlamWindup, BonkSlam, BonkBoulderThrow, BonkKnock, BonkStun); before that he borrowed warrior_swing, rockcrack, sp_oaken, wallcrash
-Silent (no file, synth muted): TyraDraw, ShieldBlock, Stunned, WolfBite, CloneVanish, MinionMelee, MinionRanged, SiegeShot, MinionDeath, WaveSpawn, GrassEnter, SpecialReady
+Silent (no file, synth muted): ShieldBlock, Stunned, WolfBite, CloneVanish, MinionMelee, MinionRanged, SiegeShot, MinionDeath, WaveSpawn, GrassEnter, SpecialReady
 Match feel 2026-10-27 (Speltest HeroJuice.cs + Sound.cs sound mix v2): HitConfirmLight <- hitLight | HitConfirmHeavy <- hitHeavy (your hit landing on an enemy hero; others' Tyra bolt / Tikta needle hits)
 LastHit <- lasthit | MultiKill <- streak | TowerHot <- towerHot | TowerUnderAttack <- towerHit | BramAnvil <- anvil | MoaHoney <- honey | Emote <- emote
 SpellRecall <- teleport | SpellBlink <- blink, SpellShield <- shield (both cut to 1.2 s with a 0.3 s fade, as Speltest's MAXLEN cuts blink)
