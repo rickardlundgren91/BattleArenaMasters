@@ -131,6 +131,7 @@ namespace BAM.Sim
                 case HeroId.Blast: used = CastBlast(h, dmg); break;
                 case HeroId.Bonk: used = CastBonk(h, dmg); break;
                 case HeroId.Hilde: used = CastHilde(h, dmg); break;
+                case HeroId.Oaken: used = CastOaken(h, dmg); break;
                 default: used = false; break;
             }
             h.AimAng = float.NaN;

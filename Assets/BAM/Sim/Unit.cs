@@ -99,6 +99,8 @@ namespace BAM.Sim
         public float CloneReadyAt;                                  // Fenn: his passive is ready again at this time
         internal bool ClonePending;
         public float QueenReadyAt;                                  // Moa: Queen's Instinct is ready again at this time
+        internal float OakenLastLoss, OakenReadyAt;                 // Oaken: when he last lost health, when Stored Impact is ready again
+        public float OakenStored, OakenStoredUntil;                 // Oaken: the damage stored for his next attack, and until when
         internal float AimAng = float.NaN, AimK;                    // the aim of the cast being made (NaN = a tap)
         // the battle spell (Spells.cs): which, when it is ready again, the recall channel (end -1 = none) and where it started
         public SpellId Spell; public float SpellAt, SpellChanEnd = -1, SpellChanStart; internal float SpellChanX, SpellChanY;

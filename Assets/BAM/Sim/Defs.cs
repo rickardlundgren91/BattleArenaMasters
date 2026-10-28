@@ -75,6 +75,9 @@ namespace BAM.Sim
             // Hilde (XYZ main 2026-10-28, SimHeroes6.cs: 225/42 hp, 21/5 dmg, 1.5 s, range 3.2, speed 2.0 x HERO_SPEED 1.25, 7 charges;
             // her own radius and wind-up from HeroLooks.OWN_STATS, the shell's 0.2 s flight from the 2026-10-18 combat feel pass)
             H(HeroId.Hilde, 0.4f, 2.5f, 7, false, 225, 42, 21, 5, 1.5f, -0.036f, 3.2f, 0.175f, 0, 0.2f, ProjKind.HildeShell, HildeS.Reach, AimShape.Circle, HildeS.Reach, HildeS.KegRadius),
+            // Oaken 3.0 (Speltest SimHeroes6.cs 2026-10-28: 330/56 hp, 34/5.5 dmg, 1.5 s, range 2.3, speed 1.85 x HERO_SPEED 1.25, 6 charges;
+            // radius and the punch's timing from HeroLooks.OWN_STATS: 0.275, wind-up 0.15 s, 0.09 s to land)
+            H(HeroId.Oaken, 0.275f, 2.3125f, 6, true, 330, 56, 34, 5.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.09f, ProjKind.OakenFist, OakenS.SlamRadius, AimShape.Line, OakenS.QuakeRange, OakenS.QuakeHalfWidth),
         };
 
         public static HeroDef Hero(HeroId id) => Heroes[(int)id];

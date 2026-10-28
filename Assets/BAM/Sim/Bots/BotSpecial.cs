@@ -24,7 +24,7 @@ namespace BAM.Sim
         }
 
         /// <summary>Bram, Knut, Tikta and Tyra's specials fly or strike: bots want them only for a hero they have a clear line to.</summary>
-        static bool SpecialIsShot(HeroId id) => id == HeroId.Bram || id == HeroId.Knut || id == HeroId.Tikta || id == HeroId.Tyra || id == HeroId.Bonk;
+        static bool SpecialIsShot(HeroId id) => id == HeroId.Bram || id == HeroId.Knut || id == HeroId.Tikta || id == HeroId.Tyra || id == HeroId.Bonk || id == HeroId.Oaken;
 
         /// <summary>Skillshots fire at once in every tier (the old V2 wait for a still target is off: knob 20 is 0 or less).</summary>
         bool SureShot(List<Unit> hs, bool dz)
@@ -60,6 +60,8 @@ namespace BAM.Sim
                     }
                 case HeroId.Bonk: // the slam when an enemy hero stands well inside it (it has a short wind-up), or a minion pack
                     return Foes(BonkS.SlamRadius - 0.4f, true, los, l) > 0 || Foes(BonkS.SlamRadius - 0.3f, false, true, l) >= 3;
+                case HeroId.Oaken: // Speltest SimHeroes6.cs: the slam with an enemy hero in its reach; Gold and Platinum also quake one further off (DragPlan)
+                    return Foes(OakenS.Reach, true, los, l) > 0 || DragTier && Foes(OakenS.QuakeRange - 0.2f, true, los, l) > 0;
                 case HeroId.Fenn:
                     {
                         if (Foes(4, true, los, l) > 0) return true;
@@ -225,6 +227,23 @@ namespace BAM.Sim
                         if (t == null) return false;
                         M.LeadAim(h, t, Match.Flight.Linear, BonkS.BoulderWindup, BonkS.BoulderSpeed, out float ax, out float ay);
                         ang = AngTo(ax, ay); return true;
+                    }
+                case HeroId.Oaken:
+                    {   // Speltest SimBotDrag.cs (Oaken 3.0): the quake when its line covers more enemies than one, or when no enemy hero is
+                        // close enough for the slam (then at the lowest one in the quake's reach)
+                        float len = OakenS.QuakeRange, hw = OakenS.QuakeHalfWidth; int best = 1; Unit far = null;
+                        bool slamHits = FoeHeroes(h, OakenS.SlamRadius).Count > 0;
+                        var hs = FoeHeroes(h, len - 0.2f);
+                        for (int i = 0; i < hs.Count; i++)
+                        {
+                            var e = hs[i];
+                            if (M.Map.ShotBlocked(h.X, h.Y, e.X, e.Y)) continue;
+                            float a = AngTo(e.X, e.Y); int n = LaneCount(a, M.Map.LaneReach(h.X, h.Y, a, len), hw);
+                            if (n > best) { best = n; ang = a; }
+                            if (far == null || e.Hp < far.Hp) far = e;
+                        }
+                        if (float.IsNaN(ang) && !slamHits && far != null) ang = AngTo(far.X, far.Y);
+                        return !float.IsNaN(ang);
                     }
                 case HeroId.Blast:
                     {   // Inferno Lane through an enemy hero when the strip also covers two more enemies

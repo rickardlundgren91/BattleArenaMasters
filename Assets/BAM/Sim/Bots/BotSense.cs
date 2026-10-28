@@ -155,6 +155,7 @@ namespace BAM.Sim
                 case HeroId.Blast: return BlastS.Reach;
                 case HeroId.Bonk: return BonkS.BoulderReach;
                 case HeroId.Hilde: return HildeS.Reach;
+                case HeroId.Oaken: return OakenS.Reach; // Speltest SimAI: the slam's reach
                 default: return e.Range;
             }
         }

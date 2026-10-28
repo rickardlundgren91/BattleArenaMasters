@@ -12,7 +12,8 @@ namespace BAM.Sim
 
     public static class HeroCatalog
     {
-        /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in.</summary>
+        /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in; Hilde and Oaken
+        /// (heroes 9 and 10) wait in Coming for theirs.</summary>
         public const int Count = 8;
 
         public static HeroInfo Get(HeroId id) => (int)id < All.Length ? All[(int)id] : Coming[(int)id - All.Length];
@@ -25,6 +26,11 @@ namespace BAM.Sim
                 SpecialName = "Powder Keg", SpecialDesc = "Tap: tosses a small, quick keg at a random enemy that knocks it back a little. Drag: places the big keg that hits towers hardest and knocks every hero it hits the way you aimed, into walls if you like.",
                 PassiveName = "Wall Crash", PassiveDesc = "When her Powder Keg knocks an enemy hero into a wall, that hero is stunned for 0.4 s. One hero per keg.",
                 Health = 2, Damage = 2, Speed = 1, Difficulty = 1 },
+            // Oaken 3.0 (Speltest, Simon's Worldbreaker; Rickard 2026-10-28: hero 10), hidden until his model and views are in
+            new HeroInfo { Id = HeroId.Oaken, Name = "Oaken", Title = "The Worldbreaker", Role = "Tank", Ranged = false,
+                SpecialName = "Earth Judgement", SpecialDesc = "Tap: after a short moment he slams the ground, hurting every enemy around him. Drag: a quake runs along a line, hurting every enemy in it and knocking enemy heroes back. Walls stop it.",
+                PassiveName = "Stored Impact", PassiveDesc = "After 4 s without losing health, the next hit from an enemy hero is cut by 30%, and part of it is added to his next attack. Every 16 s.",
+                Health = 3, Damage = 2, Speed = 1, Difficulty = 2 },
         };
 
         // Texts follow the old game's shipped heroes plus Rickard's 2026-10-25 changes (Fenn's thrown wolf and decoy clone).

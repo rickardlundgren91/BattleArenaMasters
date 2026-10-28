@@ -57,7 +57,7 @@ namespace BAM.Sim
             {
                 var p = Projs[i];
                 if (p.Src != u || p.Done) continue;
-                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam || p.Mode == ProjMode.Volley || p.Mode == ProjMode.AnchorSlam)) { p.Done = true; any = cut = true; } // still in the hand
+                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam || p.Mode == ProjMode.Volley || p.Mode == ProjMode.AnchorSlam || p.Mode == ProjMode.Worldbreaker || p.Mode == ProjMode.Quake)) { p.Done = true; any = cut = true; } // still in the hand
                 else if (p.Mode == ProjMode.Hook && p.Out && p.Caught == null) { p.Out = false; any = true; }          // the anchor comes back
             }
             // the red warning goes with a shot that never left the hand; a shot already flying keeps its warning
@@ -111,10 +111,12 @@ namespace BAM.Sim
                 float a = Math.Min(s.Amount, amount); s.Amount -= a; amount -= a;
             }
             if (amount <= 0) return 0;
+            if (tgt.Kind == UnitKind.Hero && tgt.Hero == HeroId.Oaken) amount = StoredImpact(src, tgt, amount, kind, flags); // Hero6.cs
             amount = QueenInstinct(src, tgt, amount, kind, flags);
             if (amount <= 0) return 0;
             float taken = Math.Min(amount, tgt.Hp);
             tgt.Hp -= amount;
+            if (taken > 0 && tgt.Kind == UnitKind.Hero && tgt.Hero == HeroId.Oaken) tgt.OakenLastLoss = Time;
             Emit(EventType.Damage, att, tgt, taken, 0, false, 0, 0, kind);
             if (src != null && src.Kind == UnitKind.Hero && !src.IsClone && src.Hero == HeroId.Blast && !burning && (flags & DmgFlags.NoIgnite) == 0) Ignite(src, tgt, amount);
             if (tgt.Hp <= 0) Kill(tgt, src);
@@ -353,6 +355,8 @@ namespace BAM.Sim
                     case ProjMode.Keg: p.Done = true; KegBlast(p); break;
                     case ProjMode.Drop: p.Done = true; AnvilDrop(p); break;
                     case ProjMode.AnchorSlam: p.Done = true; AnchorSlam(p); break;
+                    case ProjMode.Worldbreaker: p.Done = true; OakenSlam(p); break;
+                    case ProjMode.Quake: p.Done = true; OakenQuake(p); break;
                     case ProjMode.Volley: VolleyUpdate(p, dt); break;
                     case ProjMode.Echo: EchoUpdate(p, dt); break;
                 }
@@ -433,6 +437,7 @@ namespace BAM.Sim
             if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddStatus(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, 0, h);
             if (h.Hero == HeroId.Bram) BramBacklash(h, t);
             if (h.Hero == HeroId.Tyra) Featherstep(h, t, dealt); // Hero5.cs
+            if (h.Hero == HeroId.Oaken) OakenRelease(h, t); // Hero6.cs
         }
 
         // ---------- what the bots know ----------

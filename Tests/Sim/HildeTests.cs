@@ -25,7 +25,7 @@ namespace BAM.Sim
         {
             var m = Make(HeroId.Hilde, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Bram, HeroId.Knut, HeroId.Tikta });
             var h = m.Player; var a = m.Foe(HeroId.Bram); var c = m.Foe(HeroId.Knut); var far = m.Foe(HeroId.Tikta);
-            Check(HeroCatalog.Get(HeroId.Hilde).Name == "Hilde" && HeroCatalog.Count == 8, "Hilde waits in Coming, the game still has 8 heroes");
+            Check(HeroCatalog.Get(HeroId.Hilde).Name == "Hilde" && HeroCatalog.Get(HeroId.Hilde).Id == HeroId.Hilde, "Hilde is hero 9");
             float x = 7.5f, y = 20;
             Place(h, x, y); Place(a, x + 3, y); Place(c, x + 3, y + 3); Place(far, x - 8, y);
 

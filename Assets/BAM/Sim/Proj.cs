@@ -23,6 +23,8 @@ namespace BAM.Sim
         Volley,      // Tyra tap, Arrow Volley: one arrow of five, straight through enemies; the volley hurts each enemy once
         Echo,        // Bram's Backlash: flies from his target back towards him and hits the first other enemy
         Keg,         // Hilde: a keg on the ground, a fuse circle for -T s, then the blast (Kind HildeKeg = the drag, HildeBurst = the tap)
+        Worldbreaker, // Oaken tap: winds up -T s where he stands, then hits everyone round him (Radius)
+        Quake,       // Oaken drag: winds up -T s, then hits everyone along the line Ang, D long, Radius half wide, and knocks heroes along it
     }
 
     /// <summary>

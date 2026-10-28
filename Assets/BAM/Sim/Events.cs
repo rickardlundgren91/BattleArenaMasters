@@ -35,6 +35,8 @@ namespace BAM.Sim
         ChainSet,      // Blast A's Supernova set off Chain Reaction on burning hero B: X/Y = the frozen spot, V = its radius (it blasts 0.25 s later)
         Knock,         // A's boulder (or Hilde's keg, Kind) knocked B back: X/Y = where B would land, V = the slide time
         WallCrash,     // Hilde A's keg knocked hero B into a wall and stunned it (Wall Crash): X/Y = the wall side, V = the stun
+        Quake,         // Oaken A's quake went off from where he stands to X/Y (V = its length); its hits and knocks are their own events
+        OakenGuard,    // Oaken A's Stored Impact took V off B's hit and stored part of it for his next attack
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>
