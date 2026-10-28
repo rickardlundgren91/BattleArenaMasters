@@ -63,15 +63,18 @@ namespace BAM.Sim
         /// <summary>In HeroId order.</summary>
         public static readonly HeroDef[] Heroes =
         {
-            H(HeroId.Bram, 0.3f, 2.56f, 8, false, 160, 30, 18, 4.5f, 1.4f, -0.018f, 3.55f, 0.195f, 0, 0.25f, ProjKind.BramHammer, BramS.Reach, AimShape.Line, BramS.LineReach, 0.2f),
+            H(HeroId.Bram, 0.3f, 2.56f, 8, false, 160, 30, 18, 4.5f, 1.4f, -0.018f, 3.55f, 0.195f, 0, 0.25f, ProjKind.BramHammer, BramS.Reach, AimShape.Circle, BramS.Reach, BramS.DropRadius), // drag: Anvil Drop (2026-10-28)
             H(HeroId.Fenn, 0.4f, 2.5f, 6, false, 200, 33, 20, 4.5f, 1.45f, -0.036f, 3.0f, 0.2f, 0, 0.08f, ProjKind.FennSlash, 0, AimShape.Circle, FennS.ThrowReach, FennS.PounceRadius),
-            H(HeroId.Tyra, 0.25f, 2.19f, 6, false, 190, 26, 38, 6, 1.7f, -0.036f, 4.0f, 0.195f, 0, 0.25f, ProjKind.TyraArrow, TyraS.Length, AimShape.Line, TyraS.Length, TyraS.Hitbox),
+            H(HeroId.Tyra, 0.25f, 2.19f, 6, false, 190, 26, 38, 6, 1.7f, -0.036f, 4.0f, 0.195f, 0, 0.25f, ProjKind.TyraArrow, 4.0f, AimShape.Line, TyraS.Length, TyraS.Hitbox), // tap: Arrow Volley within her range 4 (2026-10-28)
             H(HeroId.Moa, 0.215f, 2.5f, 6, false, 195, 28, 23, 4, 1.35f, -0.036f, 3.4f, 0.2f, 0, 0.25f, ProjKind.MoaBolt, MoaS.Range, AimShape.Circle, MoaS.Range, MoaS.AreaRadius),
-            H(HeroId.Knut, 0.4f, 2.5f, 7, true, 315, 54, 26, 4.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.075f, ProjKind.KnutHit, KnutS.TapReach, AimShape.Line, KnutS.HookDistance, KnutS.HookRadius),
+            H(HeroId.Knut, 0.4f, 2.5f, 7, true, 315, 54, 26, 4.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.075f, ProjKind.KnutHit, KnutS.SlamRadius, AimShape.Line, KnutS.HookDistance, KnutS.HookRadius),
             H(HeroId.Tikta, 0.225f, 2.66f, 10, false, 195, 33, 25, 4.5f, 1.3f, -0.036f, 2.35f, 0.15f, 0, 0.1f, ProjKind.TiktaNeedle, TiktaS.Reach, AimShape.Line, TiktaS.LineReach, 0.2f),
             H(HeroId.Blast, 0.25f, 2.25f, 10, false, 190, 26, 16, 3.5f, 1.4f, -0.036f, 3.8f, 0.2f, 7, 0, ProjKind.BlastFire, BlastS.Reach, AimShape.Line, BlastS.LaneLength, BlastS.LaneHalfWidth),
             // Bonk (BAM's own, 2026-10-26): a melee bruiser between Fenn and Knut; balanced with bot matches (Hero3.cs)
             H(HeroId.Bonk, 0.4f, 2.5f, 3, false, 300, 50, 56, 9, 2.6f, -0.03f, 2.4f, 0.7f, 0, 0.075f, ProjKind.BonkClub, BonkS.SlamRadius, AimShape.Line, BonkS.BoulderReach, BonkS.BoulderHitbox),
+            // Hilde (XYZ main 2026-10-28, SimHeroes6.cs: 225/42 hp, 21/5 dmg, 1.5 s, range 3.2, speed 2.0 x HERO_SPEED 1.25, 7 charges;
+            // her own radius and wind-up from HeroLooks.OWN_STATS, the shell's 0.2 s flight from the 2026-10-18 combat feel pass)
+            H(HeroId.Hilde, 0.4f, 2.5f, 7, false, 225, 42, 21, 5, 1.5f, -0.036f, 3.2f, 0.175f, 0, 0.2f, ProjKind.HildeShell, HildeS.Reach, AimShape.Circle, HildeS.Reach, HildeS.KegRadius),
         };
 
         public static HeroDef Hero(HeroId id) => Heroes[(int)id];

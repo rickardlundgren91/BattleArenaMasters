@@ -362,7 +362,7 @@ namespace BAM.Sim
                         if (u.RegenT >= Rules.RegenTick) { u.RegenT = 0; Heal(u, u.MaxHp * Rules.RegenAmount, u); }
                     }
                     else u.RegenT = 0;
-                    if (CanAct(u) && !u.Has(St.Casting))
+                    if (CanAct(u) && !u.Has(St.Casting) && !(u.KnockT > 0)) // a hero in a knockback slide (Hilde's keg) does nothing else till it ends
                     {
                         if (u.Bot != null) { if (u.SpellChanEnd < 0) u.Bot.Think(dt); } // a bot stands still while it recalls
                         else if (u.Seat >= 0) PlayerAct(u, dt);

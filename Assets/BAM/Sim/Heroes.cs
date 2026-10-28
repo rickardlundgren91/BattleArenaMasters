@@ -16,6 +16,13 @@ namespace BAM.Sim
         public const int Bounces = 2;
         public const int PassiveEvery = 4;
         public const float PassiveRadius = 1.5f, PassiveCoeff = 0.5f;
+        /// <summary>Anvil Drop (the drag since 2026-10-28, XYZ 2026-10-25): lands DropDelay s later on the aimed point within Reach,
+        /// hurts and stuns every enemy hero and minion within DropRadius with a clear line from it.</summary>
+        public const float DropDelay = 0.6f, DropRadius = 1.1f, DropCoeff = 1.0f, DropStun = 1.5f;
+        /// <summary>Backlash (Simon's Återslaget, the passive since 2026-10-28): every 4th auto attack an echo flies from the target
+        /// back towards Bram, up to 2.25 tiles, and hits the first other enemy hero or minion for 65 % of his damage.</summary>
+        public const int EchoEvery = 4;
+        public const float EchoDistance = 2.25f, EchoSpeed = 14, EchoHitbox = 0.35f, EchoCoeff = 0.65f;
     }
 
     /// <summary>Fenn, Call of the Pack. Tap: a wolf that follows him and bites enemies near him. Drag: the wolf is thrown up to
@@ -36,14 +43,21 @@ namespace BAM.Sim
         public const float CloneDamage = 0;
     }
 
-    /// <summary>Tyra, Pinpoint Bolt: a short draw, then a heavy bolt that stops in the first enemy it meets. Passive: standing
-    /// still for 1 s makes her auto attacks hit harder.</summary>
+    /// <summary>Tyra, Pinpoint Bolt (the drag): a short draw, then a heavy bolt that stops in the first enemy it meets. The tap is
+    /// Arrow Volley and the passive Featherstep (Hero5.cs).</summary>
     public static class TyraS
     {
         /// <summary>The bolt's length: 2 x (her attack range 4 + 0.5), as the old boltLen; also the tap's reach.</summary>
         public const float Length = 2 * (4f + 0.5f);
         public const float Windup = 0.35f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.35f;
-        public const float StillTime = 1, StillBonus = 0.15f;
+        /// <summary>Arrow Volley (the tap since 2026-10-28, XYZ 2026-10-25): after a short draw, five arrows fanned +-HalfAngle round a
+        /// random enemy hero or minion within her attack range; they fly as far as her range, through enemies, and the volley hurts
+        /// each enemy once (never towers).</summary>
+        public const int VolleyArrows = 5;
+        public const float VolleyWindup = 0.25f, VolleyHalfAngle = 0.35f, VolleyCoeff = 0.3f, VolleySpeed = 18, VolleyHitbox = 0.3f;
+        /// <summary>Featherstep (Simon, the passive since 2026-10-28): her auto attack hurting an enemy hero speeds her up 12 % for
+        /// 1.5 s, once every 10 s.</summary>
+        public const float FeatherBonus = 0.12f, FeatherTime = 1.5f, FeatherCooldown = 10;
     }
 
     /// <summary>Moa, Honey Rush. Tap: a shield on the ally hero with the lowest health share in reach (Moa included). Drag: a
@@ -64,6 +78,9 @@ namespace BAM.Sim
     {
         public const float HookRadius = 0.4f, HookDistance = 6.5f, TapReach = 3.5f, OutSpeed = 14, OutTime = 1.2f, Release = 0.5f;
         public const float PullSpeed = 15, StunAfter = 0.4f, DamageCoeff = 1, CastTime = 0.9f;
+        /// <summary>Anchor Slam (the tap since 2026-10-28, Rickard's idea "en slow aoe och den andra hooken"): after a short wind-up
+        /// where he stands, every enemy hero and minion round him with a clear line takes the hit and a 40 % slow.</summary>
+        public const float SlamRadius = 1.8f, SlamWindup = 0.3f, SlamCoeff = 1.0f, SlamSlow = 0.4f, SlamSlowTime = 1.5f;
     }
 
     /// <summary>Tikta, Needle Storm. Tap: four needles, one every 0.2 s, each at a random enemy in reach. Drag: all four along
@@ -113,6 +130,7 @@ namespace BAM.Sim
                 case HeroId.Tikta: used = CastTikta(h); break;
                 case HeroId.Blast: used = CastBlast(h, dmg); break;
                 case HeroId.Bonk: used = CastBonk(h, dmg); break;
+                case HeroId.Hilde: used = CastHilde(h, dmg); break;
                 default: used = false; break;
             }
             h.AimAng = float.NaN;
@@ -180,17 +198,8 @@ namespace BAM.Sim
         // ---------- Bram ----------
         bool CastBram(Unit h, float dmg)
         {
-            if (Aimed(h, out float aa, out _))
-            {
-                h.Facing = aa; h.AimT = Time + 0.6f;
-                var p = NewProj(ProjMode.HammerLine, h, h.X, h.Y);
-                p.Kind = ProjKind.BramHammerSpecial; p.Ang = aa; p.Speed = BramS.Speed; p.Dmg = dmg * BramS.DamageCoeff; p.Radius = BramS.LineHitbox;
-                WarnLine(h, aa, BramS.LineReach, 0.25f, BramS.LineReach / BramS.Speed);
-                AddStatus(h, St.Casting, 0.2f);
-                castX = h.X + SimMath.Cos(aa) * BramS.LineReach; castY = h.Y + SimMath.Sin(aa) * BramS.LineReach;
-                return true;
-            }
-            var l = EnemiesInRange(h, BramS.Reach, Pick.Heroes, true, spBuf);
+            if (Aimed(h, out float aa, out float ak)) return CastAnvilDrop(h, dmg, aa, ak); // Hero5.cs
+            var l = EnemiesInRange(h, BramS.Reach, Pick.HeroOrMinion, true, spBuf); // any enemy hero or minion, no hero first (Simon's tap rule)
             if (l.Count == 0) return false;
             var t = PickRandom(l);
             h.Facing = SimMath.Atan2(t.Y - h.Y, t.X - h.X);
@@ -228,7 +237,8 @@ namespace BAM.Sim
             p.Tgt = PickRandom(areaBuf); p.Dmg *= BramS.BounceCoeff; p.X = t.X; p.Y = t.Y;
         }
 
-        /// <summary>The dragged throw: straight, through every enemy on the line, stops at a wall or after LineReach.</summary>
+        /// <summary>The old dragged throw (until 2026-10-28, now Anvil Drop): straight, through every enemy on the line, stops at a
+        /// wall or after LineReach. Nothing casts it any more.</summary>
         void HammerLineUpdate(Proj p, float dt)
         {
             float ox = p.X, oy = p.Y, step = p.Speed * dt;
@@ -244,7 +254,8 @@ namespace BAM.Sim
             }
         }
 
-        /// <summary>Every 4th auto attack also hits everyone (not towers) around its target for half its damage.</summary>
+        /// <summary>The old passive Anvil Strike (until 2026-10-28, now Backlash, Hero5.cs): every 4th auto attack also hit everyone
+        /// (not towers) around its target for half its damage. Nothing calls it any more.</summary>
         void BramPassive(Unit h, Unit t, Proj p)
         {
             if (++h.PassHits < BramS.PassiveEvery) return;
@@ -459,16 +470,8 @@ namespace BAM.Sim
         // ---------- Tyra ----------
         bool CastTyra(Unit h, float dmg)
         {
-            float ang;
-            if (Aimed(h, out ang, out _)) { castX = h.X + SimMath.Cos(ang) * TyraS.Length; castY = h.Y + SimMath.Sin(ang) * TyraS.Length; }
-            else
-            {
-                var t = PickInReach(h, TyraS.Length, Pick.MinionLike, true);
-                if (t == null) return false;
-                LeadAim(h, t, Flight.Linear, TyraS.Windup, TyraS.Speed, out float ax, out float ay);
-                ang = SimMath.Atan2(ay - h.Y, ax - h.X);
-                castX = ax; castY = ay; castTgt = t;
-            }
+            if (!Aimed(h, out float ang, out _)) return CastVolley(h, dmg); // the tap: Arrow Volley (Hero5.cs)
+            castX = h.X + SimMath.Cos(ang) * TyraS.Length; castY = h.Y + SimMath.Sin(ang) * TyraS.Length;
             h.Facing = ang;
             var p = NewProj(ProjMode.Bolt, h, h.X, h.Y);
             p.Kind = ProjKind.TyraBolt; p.T = -TyraS.Windup; p.Ang = ang; p.Travel = TyraS.Length; p.Dmg = dmg * TyraS.DamageCoeff; p.Speed = TyraS.Speed; p.Radius = TyraS.Hitbox;
@@ -494,11 +497,10 @@ namespace BAM.Sim
             else if (p.D >= p.Travel) p.Done = true;
         }
 
-        /// <summary>Tyra standing still for 1 s hits harder, and Bonk's every 4th swing is a power hit (big = the hit is drawn bigger).
-        /// Tikta's Final Sting is gone: Deathmark (Hero2.cs).</summary>
+        /// <summary>Bonk's every 4th swing is a power hit (big = the hit is drawn bigger). Tikta's Final Sting is gone (Deathmark,
+        /// Hero2.cs), and Tyra's Steady Hand too (Featherstep, Hero5.cs).</summary>
         float HeroAttackCoeff(Unit u, Unit tgt, ref bool big)
         {
-            if (u.Hero == HeroId.Tyra && Time - u.MovedAt >= TyraS.StillTime) { big = true; return 1 + TyraS.StillBonus; }
             if (u.Hero == HeroId.Bonk && !u.IsClone && ++u.PassHits >= BonkS.PowerEvery) { u.PassHits = 0; big = true; return 1 + BonkS.PowerBonus; }
             return 1;
         }
@@ -592,18 +594,8 @@ namespace BAM.Sim
         // ---------- Knut ----------
         bool CastKnut(Unit h, float dmg)
         {
-            float ang;
-            if (Aimed(h, out ang, out _)) { castX = h.X + SimMath.Cos(ang) * KnutS.HookDistance; castY = h.Y + SimMath.Sin(ang) * KnutS.HookDistance; }
-            else
-            {
-                // any enemy in reach, like an auto attack's pick: no hero first (Rickard 2026-10-27); none in reach spends nothing
-                var l = EnemiesInRange(h, KnutS.TapReach, Pick.HeroOrMinion, true, spBuf);
-                if (l.Count == 0) return false;
-                var t = PickRandom(l);
-                LeadAim(h, t, Flight.Hook, KnutS.OutTime, KnutS.OutSpeed * KnutS.OutTime / 2, out float ax, out float ay);
-                ang = SimMath.Atan2(ay - h.Y, ax - h.X);
-                castX = ax; castY = ay; castTgt = t;
-            }
+            if (!Aimed(h, out float ang, out _)) return CastAnchorSlam(h, dmg); // the tap since 2026-10-28 (Hero5.cs); the hook is the drag
+            castX = h.X + SimMath.Cos(ang) * KnutS.HookDistance; castY = h.Y + SimMath.Sin(ang) * KnutS.HookDistance;
             var p = NewProj(ProjMode.Hook, h, h.X, h.Y);
             p.Kind = ProjKind.KnutAnchor; p.Ang = ang; p.Out = true; p.D = 0; p.Dmg = dmg * KnutS.DamageCoeff; p.Radius = KnutS.HookRadius;
             AddStatus(h, St.Casting, KnutS.CastTime); h.Facing = ang; Channel(h, KnutS.OutTime); // the cut window: until the anchor stops going out
@@ -767,9 +759,10 @@ namespace BAM.Sim
                 castX = h.X + SimMath.Cos(aa) * len; castY = h.Y + SimMath.Sin(aa) * len;
                 return true;
             }
-            // Supernova: thrown in an arc (no clear line needed) at a random enemy hero in reach, else a minion
-            var t = PickInReach(h, BlastS.Reach, Pick.MinionLike, false);
-            if (t == null) return false;
+            // Supernova: thrown in an arc (no clear line needed) at a random enemy hero or minion in reach, no hero first (Simon's tap rule)
+            var l = EnemiesInRange(h, BlastS.Reach, Pick.HeroOrMinion, false, spBuf);
+            if (l.Count == 0) return false;
+            var t = PickRandom(l);
             LeadAim(h, t, Flight.Const, BlastS.Delay * 0.5f, 0, out float ax, out float ay);
             h.Facing = SimMath.Atan2(ay - h.Y, ax - h.X); AddStatus(h, St.Casting, 0.25f); AddStatus(h, St.Disarm, 0.25f);
             var b = NewProj(ProjMode.Bomb, h, ax, ay);
@@ -789,7 +782,8 @@ namespace BAM.Sim
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                if (u.Alive && u.Team != p.Team && u.Kind != UnitKind.Tower && !u.Has(St.Untargetable) && SimMath.Dist(u, p.X, p.Y) <= BlastS.Radius + u.R) areaBuf.Add(u);
+                if (u.Alive && u.Team != p.Team && u.Kind != UnitKind.Tower && !u.Has(St.Untargetable) && SimMath.Dist(u, p.X, p.Y) <= BlastS.Radius + u.R
+                    && Map.LosClear(p.X, p.Y, u.X, u.Y)) areaBuf.Add(u); // thrown over walls, but the blast stops at them (Rickard 2026-10-28)
             }
             for (int i = 0; i < areaBuf.Count; i++) if (areaBuf[i].Alive) SpecialHit(h, areaBuf[i], p.Dmg, p.Kind, true, dk);
             Emit(EventType.Explosion, h, null, BlastS.Radius, (byte)p.Kind, true, p.X, p.Y, dk);

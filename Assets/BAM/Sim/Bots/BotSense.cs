@@ -154,6 +154,7 @@ namespace BAM.Sim
                 case HeroId.Tikta: return TiktaS.Reach;
                 case HeroId.Blast: return BlastS.Reach;
                 case HeroId.Bonk: return BonkS.BoulderReach;
+                case HeroId.Hilde: return HildeS.Reach;
                 default: return e.Range;
             }
         }

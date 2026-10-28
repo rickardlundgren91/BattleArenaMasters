@@ -120,7 +120,7 @@ namespace BAM.Sim
                 var f = gFollow != null && gFollow.Alive ? gFollow : null;
                 if (f != null && Dist(h, f) <= gStop)
                 {
-                    if (f.Kind == UnitKind.Hero && safety && h.Hero != HeroId.Tyra) // Tyra stands still to keep her passive (dodging comes first)
+                    if (f.Kind == UnitKind.Hero && safety) // (Tyra stood still for Steady Hand until 2026-10-28; Featherstep has no such need)
                     {
                         float sm = HmStrafe(); // uneven steps and short pauses (BotMove.cs)
                         strafeT -= dt;

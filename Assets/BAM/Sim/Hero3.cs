@@ -133,7 +133,7 @@ namespace BAM.Sim
         void Knock(Unit src, Unit u, float ang)
         {
             float sp = BonkS.KnockDist / BonkS.KnockTime;
-            u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime;
+            u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime; u.KnockKeg = null;
             AddStatus(u, St.Stun, BonkS.KnockStun, 0, 0, src);
             Emit(EventType.Knock, src, u, BonkS.KnockTime, (byte)ProjKind.BonkBoulder, true, u.X + u.KnockVX * BonkS.KnockTime, u.Y + u.KnockVY * BonkS.KnockTime);
         }
@@ -141,10 +141,12 @@ namespace BAM.Sim
         /// <summary>One tick of a knockback slide: it moves while the way is free and ends at the first wall.</summary>
         void KnockStep(Unit u, float dt)
         {
+            float left = u.KnockT * SimMath.Hypot(u.KnockVX, u.KnockVY); // tiles of the slide still to go (Hilde's Wall Crash)
             float t = Math.Min(dt, u.KnockT); u.KnockT -= dt;
             float nx = u.X + u.KnockVX * t, ny = u.Y + u.KnockVY * t;
             if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; u.MovedAt = Time; }
-            else u.KnockT = 0;
+            else { if (u.KnockKeg != null) KegWallHit(u, nx, ny, left); u.KnockT = 0; }
+            if (u.KnockT <= 0) u.KnockKeg = null;
         }
     }
 }

@@ -91,8 +91,11 @@ namespace BAM.Sim
         internal int Needles; internal float NeedleT, NeedleEnd;   // Tikta's Needle Storm
         internal int TiktaCastId, TiktaBonusCast;                   // Tikta 2.0: her casts counted, the cast that already had its Deathmark bonus
         public float BlastChainReadyAt;                             // Blast 2.0: Chain Reaction is ready again at this time
-        internal float KnockVX, KnockVY, KnockT;                    // a knockback slide (Bonk's boulder): velocity and time left
-        internal int PassHits;                                      // Bram: hits towards the next splash; Bonk: swings towards the next power hit
+        internal float KnockVX, KnockVY, KnockT;                    // a knockback slide (Bonk's boulder, Hilde's keg): velocity and time left
+        internal KegCrash KnockKeg;                                 // Hilde: the keg blast behind this slide (Wall Crash), null for any other
+        internal int PassHits;                                      // Bram: hits towards the next Backlash; Bonk: swings towards the next power hit
+        public float FeatherReadyAt;                                // Tyra: Featherstep is ready again at this time
+        internal int VolleyCast; internal readonly System.Collections.Generic.List<Unit> VolleyHit = new System.Collections.Generic.List<Unit>(8); // Tyra: her last Arrow Volley and whom it hurt
         public float CloneReadyAt;                                  // Fenn: his passive is ready again at this time
         internal bool ClonePending;
         public float QueenReadyAt;                                  // Moa: Queen's Instinct is ready again at this time

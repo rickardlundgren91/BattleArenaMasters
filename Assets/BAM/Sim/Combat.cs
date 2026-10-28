@@ -57,7 +57,7 @@ namespace BAM.Sim
             {
                 var p = Projs[i];
                 if (p.Src != u || p.Done) continue;
-                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam)) { p.Done = true; any = cut = true; } // still in the hand
+                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam || p.Mode == ProjMode.Volley || p.Mode == ProjMode.AnchorSlam)) { p.Done = true; any = cut = true; } // still in the hand
                 else if (p.Mode == ProjMode.Hook && p.Out && p.Caught == null) { p.Out = false; any = true; }          // the anchor comes back
             }
             // the red warning goes with a shot that never left the hand; a shot already flying keeps its warning
@@ -146,7 +146,7 @@ namespace BAM.Sim
 
             // a hero
             u.Deaths++; u.RespawnT = RespawnTime(u); u.DiedAt = Time;
-            u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0;
+            u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0; u.KnockKeg = null;
             u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
             int kt = Teams.Other(u.Team);
@@ -350,6 +350,11 @@ namespace BAM.Sim
                     case ProjMode.Slam: p.Done = true; BonkSlam(p); break;
                     case ProjMode.Boulder: BoulderUpdate(p, dt); break;
                     case ProjMode.Smash: p.Done = true; BonkSmash(p); break;
+                    case ProjMode.Keg: p.Done = true; KegBlast(p); break;
+                    case ProjMode.Drop: p.Done = true; AnvilDrop(p); break;
+                    case ProjMode.AnchorSlam: p.Done = true; AnchorSlam(p); break;
+                    case ProjMode.Volley: VolleyUpdate(p, dt); break;
+                    case ProjMode.Echo: EchoUpdate(p, dt); break;
                 }
             }
             int w = 0;
@@ -426,7 +431,8 @@ namespace BAM.Sim
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
             h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1);
             if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddStatus(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, 0, h);
-            if (h.Hero == HeroId.Bram) BramPassive(h, t, p);
+            if (h.Hero == HeroId.Bram) BramBacklash(h, t);
+            if (h.Hero == HeroId.Tyra) Featherstep(h, t, dealt); // Hero5.cs
         }
 
         // ---------- what the bots know ----------

@@ -45,12 +45,19 @@ namespace BAM.Sim
             var h = H; bool los = SpecialIsShot(h.Hero); var l = bufFoes; var us = M.Units;
             switch (h.Hero)
             {
-                case HeroId.Tyra: // Gold and Platinum aim the bolt past the minions (DragPlan); they still tap in danger
-                    return DragTier && !dz ? false : SureShot(FoeList(h.Range, true, los), dz);
+                case HeroId.Tyra: // the volley on an enemy hero in her range; Gold and Platinum may aim the bolt instead (DragPlan, tried first)
+                    return SureShot(FoeList(h.Range, true, los), dz);
                 case HeroId.Bram: return SureShot(FoeList(BramS.Reach, true, los), dz);
-                case HeroId.Knut: return SureShot(FoeList(KnutS.TapReach, true, los), dz);
+                case HeroId.Knut: // the slam with an enemy hero well inside it (it has a short wind-up), or a minion pack; the hook is DragPlan's
+                    return Foes(KnutS.SlamRadius - 0.4f, true, true, l) > 0 || Foes(KnutS.SlamRadius - 0.3f, false, true, l) >= 3;
                 case HeroId.Tikta: return Foes(TiktaS.Reach, true, los, l) > 0;
                 case HeroId.Blast: return Foes(BlastS.Reach, true, los, l) > 0 || Foes(BlastS.Reach, false, false, l) >= 4;
+                case HeroId.Hilde: // the tower gets the big keg (DragPlan); else the Powder Burst on an enemy hero close by, or any in reach in danger
+                    {
+                        var tw = TowerOf(Teams.Other(h.Team));
+                        if (tw != null && tw.Alive && Dist(h, tw) <= HildeS.Reach + tw.R) return true;
+                        return Foes(2, true, los, l) > 0 || dz && Foes(HildeS.Reach, true, los, l) > 0;
+                    }
                 case HeroId.Bonk: // the slam when an enemy hero stands well inside it (it has a short wind-up), or a minion pack
                     return Foes(BonkS.SlamRadius - 0.4f, true, los, l) > 0 || Foes(BonkS.SlamRadius - 0.3f, false, true, l) >= 3;
                 case HeroId.Fenn:
@@ -125,6 +132,22 @@ namespace BAM.Sim
         {
             ang = float.NaN; k = 1;
             var h = H;
+            if (h.Hero == HeroId.Hilde)
+            {   // every tier (XYZ SimBotDrag.cs, 2026-10-25): the big keg on the enemy tower in reach, the only form that hurts it
+                var tw = TowerOf(Teams.Other(h.Team));
+                if (tw != null && tw.Alive && Dist(h, tw) <= HildeS.Reach + tw.R) { ang = AngTo(tw.X, tw.Y); k = SimMath.Clamp(Dist(h, tw) / HildeS.Reach, 0, 1); return true; }
+                return false; // else the tap, as in XYZ (its bots never aim the push)
+            }
+            if (h.Hero == HeroId.Knut)
+            {   // every tier (the tap is no hook since 2026-10-28): pull a hurt enemy hero out of the slam's reach to him, with a clear
+                // line (XYZ SimBotDrag.cs, where the tap was Anchor Leap); with someone in slam reach the slam is better
+                if (dz || FoeHeroes(h, KnutS.SlamRadius - 0.4f).Count > 0) return false;
+                var hs = FoeHeroes(h, KnutS.HookDistance - 0.5f); Unit t = null;
+                for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (HpR(e) < 0.6f && LineFree(e, KnutS.HookRadius) && (t == null || e.Hp < t.Hp)) t = e; }
+                if (t == null) return false;
+                M.LeadAim(h, t, Match.Flight.Hook, KnutS.OutTime, KnutS.OutSpeed * KnutS.OutTime / 2, out float ax, out float ay);
+                ang = AngTo(ax, ay); return true;
+            }
             if (!DragTier) return false;
             switch (h.Hero)
             {
@@ -133,6 +156,13 @@ namespace BAM.Sim
                         var hs = FoeHeroes(h, TyraS.Length - 0.3f); Unit t = null;
                         for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (LineFree(e, TyraS.Hitbox) && (t == null || e.Hp < t.Hp)) t = e; }
                         if (t == null) return false;
+                        // a second enemy hero in the volley's cone round that one: the tap hits both, so tap instead (XYZ SimBotDrag.cs)
+                        float ta = AngTo(t.X, t.Y); var vs = FoeHeroes(h, h.Range);
+                        for (int i = 0; i < vs.Count; i++)
+                        {
+                            var e = vs[i]; float da = AngTo(e.X, e.Y) - ta;
+                            if (e != t && Math.Abs(SimMath.Atan2(SimMath.Sin(da), SimMath.Cos(da))) <= TyraS.VolleyHalfAngle) return false;
+                        }
                         M.LeadAim(h, t, Match.Flight.Linear, TyraS.Windup, TyraS.Speed, out float ax, out float ay);
                         ang = AngTo(ax, ay); return true;
                     }
@@ -163,6 +193,20 @@ namespace BAM.Sim
                         }
                         if (t == null) return false;
                         ang = AngTo(t.X, t.Y); k = SimMath.Clamp(Dist(h, t) / reach, 0, 1); return true;
+                    }
+                case HeroId.Bram:
+                    {   // Anvil Drop on an enemy hero in reach with another enemy hero next to it, so the stun lands on two (XYZ SimBotDrag.cs)
+                        float reach = BramS.Reach, r = BramS.DropRadius; var os = FoeHeroes(h, reach + r); // FoeHeroes refills one list: no second call below
+                        for (int i = 0; i < os.Count; i++)
+                        {
+                            var e = os[i]; if (Dist(h, e) > reach - 0.3f + e.R) continue;
+                            int n = 0;
+                            for (int j = 0; j < os.Count; j++) if (os[j] != e && Dist(os[j], e) <= r * 1.6f) n++;
+                            if (n == 0) continue;
+                            M.LeadAim(h, e, Match.Flight.Const, BramS.DropDelay, 0, out float ax, out float ay);
+                            ang = AngTo(ax, ay); k = SimMath.Clamp(Hyp(ax - h.X, ay - h.Y) / reach, 0, 1); return true;
+                        }
+                        return false;
                     }
                 case HeroId.Tikta:
                     {
@@ -236,7 +280,7 @@ namespace BAM.Sim
             {
                 var p = ps[i];
                 if (p.Done || p.Src == null || p.Team == h.Team) continue;
-                bool warn = p.IsWarning || p.Mode == ProjMode.Smash, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb;
+                bool warn = p.IsWarning || p.Mode == ProjMode.Smash, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb || p.Mode == ProjMode.Keg;
                 if (!warn && !line && !bomb) continue;
                 if (!DodgeRoll(p, chance, out var dg) || Now < dg.At || Now > dg.At + dg.Len) continue;
                 if (warn) { TelegraphDodge(p, ref vx, ref vy); continue; }

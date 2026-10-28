@@ -18,6 +18,11 @@ namespace BAM.Sim
         Slam,        // Bonk tap: winds up -T s where he stands, then hits everyone round him (Radius)
         Boulder,     // Bonk drag: straight after a short wind-up, stops in the first enemy and knocks it back
         Smash,       // Bonk's auto attack: a slow overhead club slam, -T s of wind-up, then a ground circle (Radius) in front of him
+        AnchorSlam,  // Knut tap: winds up -T s where he stands, then hits and slows everyone round him (Radius)
+        Drop,        // Bram drag, Anvil Drop: waits -T s at its point (a red warning circle shows it), then hits and stuns round it (Radius)
+        Volley,      // Tyra tap, Arrow Volley: one arrow of five, straight through enemies; the volley hurts each enemy once
+        Echo,        // Bram's Backlash: flies from his target back towards him and hits the first other enemy
+        Keg,         // Hilde: a keg on the ground, a fuse circle for -T s, then the blast (Kind HildeKeg = the drag, HildeBurst = the tap)
     }
 
     /// <summary>
@@ -45,20 +50,21 @@ namespace BAM.Sim
         public bool Big, OnHit, Launched, Out, Done, Tied;
         public int Ticks;
         internal int TiktaCast; // Tikta 2.0: the cast a needle belongs to (at most one Deathmark bonus per cast)
+        internal int VolleyCast; // Tyra: the Arrow Volley an arrow belongs to (its hits are shared through Unit.VolleyHit)
         internal Unit[] Hit = new Unit[16];
         internal int HitCount;
 
-        public bool IsShot => Mode <= ProjMode.NeedleLine || Mode == ProjMode.Boulder;
+        public bool IsShot => Mode <= ProjMode.NeedleLine || Mode == ProjMode.Boulder || Mode == ProjMode.Volley || Mode == ProjMode.Echo;
         /// <summary>A shot that has left the shooter's hand and should be drawn.</summary>
         public bool Flying => !Done && IsShot && T >= 0;
-        public bool IsZone => Mode == ProjMode.Bomb || Mode == ProjMode.FireLane || Mode == ProjMode.HoneyField;
+        public bool IsZone => Mode == ProjMode.Bomb || Mode == ProjMode.Keg || Mode == ProjMode.FireLane || Mode == ProjMode.HoneyField;
         public bool IsWarning => Mode == ProjMode.WarnLine || Mode == ProjMode.WarnCircle;
         /// <summary>The zone or warning shape: a circle when length is 0, else a strip from (X, Y) along Ang.</summary>
         public float ZoneLength => Mode == ProjMode.FireLane || Mode == ProjMode.WarnLine ? D : 0;
         /// <summary>Seconds a zone or warning has left.</summary>
-        public float TimeLeft => Mode == ProjMode.Bomb ? -T : Dur - T;
+        public float TimeLeft => Mode == ProjMode.Bomb || Mode == ProjMode.Keg ? -T : Dur - T;
         public ZoneKind Zone => Mode == ProjMode.HoneyField ? ZoneKind.HoneyField : Mode == ProjMode.FireLane ? ZoneKind.FireLane
-            : Mode == ProjMode.Bomb ? ZoneKind.BombFuse : Mode == ProjMode.WarnLine ? ZoneKind.WarnLine : ZoneKind.WarnCircle;
+            : Mode == ProjMode.Bomb || Mode == ProjMode.Keg ? ZoneKind.BombFuse : Mode == ProjMode.WarnLine ? ZoneKind.WarnLine : ZoneKind.WarnCircle;
 
         internal bool HasHit(Unit u)
         {
@@ -75,7 +81,7 @@ namespace BAM.Sim
         {
             Mode = ProjMode.Auto; Kind = ProjKind.TowerShot; Team = 0; Src = Tgt = Caught = null;
             X = Y = PX = PY = OX = OY = Ang = D = Travel = Speed = T = Dmg = Radius = Dur = 0;
-            Big = OnHit = Launched = Out = Done = Tied = false; Ticks = 0; TiktaCast = 0;
+            Big = OnHit = Launched = Out = Done = Tied = false; Ticks = 0; TiktaCast = 0; VolleyCast = 0;
             for (int i = 0; i < HitCount; i++) Hit[i] = null;
             HitCount = 0;
         }

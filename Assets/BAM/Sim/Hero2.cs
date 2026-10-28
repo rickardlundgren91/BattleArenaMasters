@@ -146,13 +146,13 @@ namespace BAM.Sim
 
         /// <summary>The first enemy (not a tower, not untargetable) whose circle (R + half) the segment from (ox, oy) along ang for len
         /// tiles touches; along = how far along it touches. Ties go to the earlier unit, the same on every machine.</summary>
-        Unit SweptHit(Unit src, int team, float ox, float oy, float ang, float len, float half, out float along)
+        Unit SweptHit(Unit src, int team, float ox, float oy, float ang, float len, float half, out float along, Unit skip = null)
         {
             along = 0; Unit best = null; float bestAt = float.MaxValue, ca = SimMath.Cos(ang), sa = SimMath.Sin(ang);
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                if (!Hurtable(src, u) || u.Team == team) continue;
+                if (!Hurtable(src, u) || u.Team == team || u == skip) continue;
                 float dx = u.X - ox, dy = u.Y - oy, a = dx * ca + dy * sa, perp2 = dx * dx + dy * dy - a * a, rr = u.R + half;
                 if (perp2 > rr * rr) continue;
                 float h = SimMath.Sqrt(Math.Max(0, rr * rr - perp2)), enter = a - h;

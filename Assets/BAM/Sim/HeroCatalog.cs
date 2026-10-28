@@ -20,29 +20,34 @@ namespace BAM.Sim
         /// <summary>Heroes in the rules that are not in the game yet, in HeroId order after All (a new hero waits here for its art).</summary>
         public static readonly HeroInfo[] Coming =
         {
+            // Hilde (Simon's Hilde 2.0 from XYZ, Rickard 2026-10-28: the rules now, hidden until her model and views are in)
+            new HeroInfo { Id = HeroId.Hilde, Name = "Hilde", Title = "Siege Support", Role = "Support", Ranged = true,
+                SpecialName = "Powder Keg", SpecialDesc = "Tap: tosses a small, quick keg at a random enemy that knocks it back a little. Drag: places the big keg that hits towers hardest and knocks every hero it hits the way you aimed, into walls if you like.",
+                PassiveName = "Wall Crash", PassiveDesc = "When her Powder Keg knocks an enemy hero into a wall, that hero is stunned for 0.4 s. One hero per keg.",
+                Health = 2, Damage = 2, Speed = 1, Difficulty = 1 },
         };
 
         // Texts follow the old game's shipped heroes plus Rickard's 2026-10-25 changes (Fenn's thrown wolf and decoy clone).
         public static readonly HeroInfo[] All =
         {
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
-                SpecialName = "Hammer Throw", SpecialDesc = "Hurls his hammer at a random enemy hero; it bounces on to up to two more enemies close by. Drag to send it through every enemy in a line.",
-                PassiveName = "Anvil Strike", PassiveDesc = "Every 4th attack also hits enemies next to the target.",
+                SpecialName = "Hammer Throw", SpecialDesc = "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
+                PassiveName = "Backlash", PassiveDesc = "Every 4th attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
                 Health = 2, Damage = 3, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = "Pack Runner", Role = "Fighter", Ranged = false,
                 SpecialName = "Call of the Pack", SpecialDesc = "Calls a wolf that follows Fenn and bites enemies for 4 s. Drag to throw it up to 6 tiles: it hunts an enemy hero, or bites minions when no hero is near. Walls stop it.",
                 PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit. Every 18 s.",
                 Health = 2, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tyra, Name = "Tyra", Title = "The Longshot", Role = "Marksman", Ranged = true,
-                SpecialName = "Pinpoint Bolt", SpecialDesc = "Fires a heavy bolt after a short draw that hits the first enemy in its path. Drag to aim it.",
-                PassiveName = "Steady Hand", PassiveDesc = "Attacks hit harder after she stands still for 1 s.",
+                SpecialName = "Pinpoint Bolt", SpecialDesc = "Tap: Arrow Volley, five arrows in a cone at a random enemy in her range; each enemy in it is hit once. Drag: a heavy bolt after a short draw that hits the first enemy in its path.",
+                PassiveName = "Featherstep", PassiveDesc = "When her attack hits an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,
                 SpecialName = "Honey Rush", SpecialDesc = "Tap: shields the ally hero with the lowest health. Drag: a honey field that gives each ally hero in it a smaller shield. Shielded heroes run faster for a moment, and the shield blocks stuns and slows.",
                 PassiveName = "Queen's Instinct", PassiveDesc = "When an enemy would drop an ally near her below 25% health, she shields that ally. Every 22 s.",
                 Health = 2, Damage = 1, Speed = 2, Difficulty = 1 },
             new HeroInfo { Id = HeroId.Knut, Name = "Knut", Title = "The Anchor", Role = "Tank", Ranged = false,
-                SpecialName = "Anchor Throw", SpecialDesc = "Throws an anchor at a nearby enemy that pulls the first enemy it hits to him and stuns it. Drag to aim.",
+                SpecialName = "Anchor Throw", SpecialDesc = "Tap: slams his anchor into the ground, hurting and slowing every enemy around him. Drag: throws the anchor where you aim; it pulls the first enemy it hits to him and stuns it.",
                 PassiveName = "Anchor Drag", PassiveDesc = "His attacks slow the target.",
                 Health = 3, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tikta, Name = "Tikta", Title = "The Needle Wing", Role = "Assassin", Ranged = false,
