@@ -76,6 +76,10 @@ namespace BAM.Art
         public virtual void SetChainSpark(bool on) { }
         /// <summary>The player's own Blast: Chain Reaction cooldown 0..1 as a violet arc at the feet that fills, below 0 = off.</summary>
         public virtual void SetChainCooldown(float frac) { }
+        /// <summary>Moa's shields on this hero, each as the share still left (0..1), below 0 = none: Honey Guard (the tap), the honey
+        /// field's shield and Queen's Instinct. A ring of hex cells at the feet that go dark as the shield is used. Call it only while
+        /// the player can see the unit.</summary>
+        public virtual void SetHoneyShields(float guard, float field, float queen) { }
         /// <summary>Where a held gun's mouth is now (Hilde's cannon), for her shots and kegs to leave from; false for the rest.</summary>
         public virtual bool Muzzle(out Vector3 at) { at = Vector3.zero; return false; }
     }

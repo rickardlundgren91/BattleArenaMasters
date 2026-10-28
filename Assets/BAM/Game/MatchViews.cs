@@ -47,6 +47,7 @@ namespace BAM.Game
             public bool Sprint;
             public bool Marked, Spark;     // Tikta's Deathmark and Blast's chain spark shown (Tikta 2.0 / Blast 2.0)
             public float ChainCd = -1f;    // the player's Blast: the chain cooldown arc shown, -1 none
+            public int Honey = HoneyOff;   // Moa's shield rings shown: lit cells per ring (HoneyKey)
             public Quaternion Rot;
             public bool Squared;           // the view was told it faces a target or an aim, not its path (AnimFix.LegsFollow)
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
@@ -230,7 +231,7 @@ namespace BAM.Game
             }
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
-            r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.Flags = (StatusFlags)0xFFFF;
+            r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff;
             r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
             r.Bar = null;
             foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
@@ -898,6 +899,32 @@ namespace BAM.Game
             float cd = -1f;
             if (u == me && blast) { float left = m.ChainLeft(me); if (left > 0f) cd = 1f - left / BlastChainS.Cooldown; }
             if (cd >= 0f || r.ChainCd >= 0f) { r.ChainCd = cd; v.SetChainCooldown(cd); }
+
+            // Moa 2.0's shield rings (Simon, XYZ #610): told only when a cell goes dark, one comes or one goes
+            float hg = -1f, hf = -1f, hq = -1f;
+            if (seen) HoneyLeft(u, ref hg, ref hf, ref hq);
+            int key = HoneyKey(hg, hf, hq);
+            if (key != r.Honey) { r.Honey = key; v.SetHoneyShields(hg, hf, hq); }
+        }
+
+        const int HoneyOff = 31 | 31 << 5 | 31 << 10;
+        static int Cells(float left, int n) => left < 0f ? 31 : Mathf.Clamp(Mathf.CeilToInt(left * n - 0.001f), 0, n);
+        static int HoneyKey(float g, float f, float q) => Cells(g, 12) | Cells(f, 12) << 5 | Cells(q, 6) << 10;
+
+        /// <summary>The share left of each of Moa's shields on u: Queen's Instinct by its flag, then Honey Guard and the field's
+        /// shield told apart by what they started with (18 % and 6 % of max health). -1 where there is none.</summary>
+        static void HoneyLeft(Unit u, ref float guard, ref float field, ref float queen)
+        {
+            float split = u.MaxHp * (MoaS.ShieldPercent + MoaS.AreaShieldPercent) * 0.5f;
+            for (int i = 0; i < u.StatusCount; i++)
+            {
+                var st = u.GetStatus(i);
+                if (st.Type != St.Shield || !(st.Amount > 0f) || !(st.T > 0f) || st.By == null || st.By.Kind != UnitKind.Hero || st.By.Hero != HeroId.Moa) continue;
+                float left = st.Amount0 > 0f ? Mathf.Clamp01(st.Amount / st.Amount0) : 1f;
+                if (st.Queen) queen = Mathf.Max(queen, left);
+                else if (st.Amount0 >= split) guard = Mathf.Max(guard, left);
+                else field = Mathf.Max(field, left);
+            }
         }
 
         static void HeroMarksOff(UnitRec r)
@@ -905,6 +932,7 @@ namespace BAM.Game
             if (r.Marked) { r.V.SetDeathmark(-1f); r.Marked = false; }
             if (r.Spark) { r.V.SetChainSpark(false); r.Spark = false; }
             if (r.ChainCd >= 0f) { r.V.SetChainCooldown(-1f); r.ChainCd = -1f; }
+            if (r.Honey != HoneyOff) { r.V.SetHoneyShields(-1f, -1f, -1f); r.Honey = HoneyOff; }
         }
 
         static float MarkLeft(Unit u)

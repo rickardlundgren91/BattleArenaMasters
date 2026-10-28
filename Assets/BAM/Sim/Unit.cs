@@ -21,6 +21,7 @@ namespace BAM.Sim
         public float T, V, Amount;
         public Unit By;
         public bool Queen; // Moa's Queen's Instinct shield: it never blocks control
+        public float Amount0; // what a shield started with: only the art reads it (Moa's hex ring goes dark as it is used)
     }
 
     /// <summary>How Fenn's wolf is behaving.</summary>
@@ -204,7 +205,7 @@ namespace BAM.Sim
         {
             if (StCount >= MaxStatus) return -1; // never in a real match: the oldest-ending one would be a fine victim, but none is needed
             ref var s = ref Sts[StCount];
-            s.Type = type; s.T = t; s.V = v; s.Amount = amount; s.By = by; s.Queen = queen;
+            s.Type = type; s.T = t; s.V = v; s.Amount = amount; s.By = by; s.Queen = queen; s.Amount0 = amount;
             return StCount++;
         }
         internal void RemoveAt(int i)

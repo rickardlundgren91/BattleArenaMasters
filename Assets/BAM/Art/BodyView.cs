@@ -495,6 +495,7 @@ namespace BAM.Art
             status.Visible = false; // silently: a view parked while shielded must not pop its shield where it last stood (ApplyLook shows it again)
             status.Set(StatusFlags.None);
             if (marks != null) marks.Reset();
+            if (honey != null) honey.Reset();
             SetMarker(Team == Teams.Player ? UnitMarker.Ally : UnitMarker.Enemy);
             SetFlash(Color.black);
             fading = true; // force ApplyLook to set the material
@@ -669,6 +670,13 @@ namespace BAM.Art
         public override void SetChainSpark(bool on) { if (on || marks != null) Marks().SetChainSpark(on); }
         public override void SetChainCooldown(float frac) { if (frac >= 0f || marks != null) Marks().SetChainCooldown(frac); }
 
+        public override void SetHoneyShields(float guard, float field, float queen)
+        {
+            if (honey == null && guard < 0f && field < 0f && queen < 0f) return;
+            (honey ?? (honey = new HoneyMarks(transform, def.Height, def.Radius))).Set(guard, field, queen);
+        }
+
+        HoneyMarks honey; // Moa's shield rings, made the first time one shows
         HeroMarks marks; // Tikta's Deathmark and Blast's chain marks, made the first time one shows
         HeroMarks Marks() => marks ?? (marks = new HeroMarks(transform, def.Height, def.Radius));
 
@@ -872,6 +880,11 @@ namespace BAM.Art
             {
                 marks.Visible = renderersOn && vis > 0.01f && !dead;
                 marks.Tick(dt, idleT, ArtDriver.CamRot);
+            }
+            if (honey != null && honey.Any)
+            {
+                honey.Visible = renderersOn && vis > 0.01f && !dead;
+                honey.Tick(dt, idleT);
             }
             if (renderersOn)
             {

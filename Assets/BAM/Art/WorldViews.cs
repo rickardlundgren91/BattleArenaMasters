@@ -408,6 +408,14 @@ namespace BAM.Art
         MeshRenderer shapeR, innerR;
         Material mat, innerMat, rimMat;
         Transform rim; // Rickard's telegraph ring round a circle warning or bomb fuse (tx_fx_telegraph_ring), when the picture exists
+        // Moa 2.0's honey field (Simon, XYZ #610): a faint honeycomb on the floor (Rickard's hex picture) and a sharper edge in
+        // three layers, a bright thin line outside two softer ones
+        Transform comb;
+        Material combMat;
+        readonly Transform[] edge = new Transform[3];
+        readonly Material[] edgeMat = new Material[3];
+        static readonly float[] EdgeInner = { 0.955f, 0.9f, 0.78f }, EdgeOuter = { 1f, 0.94f, 0.88f }, EdgeStrength = { 1f, 0.55f, 0.28f };
+        static Mesh combMesh;
         static Texture2D rimTex;
         static bool rimLoaded;
         Vector3 center, dir;
@@ -446,6 +454,7 @@ namespace BAM.Art
                 : warn ? (t == Teams.Player ? new Color(1f, 1f, 1f, 0.6f) : new Color(1f, 0.12f, 0.1f, 1f))
                 : (t == Teams.Player ? new Color(1f, 0.6f, 0.15f, 1f) : new Color(1f, 0.15f, 0.12f, 1f));
             if (warn) mat.renderQueue = 2995; // over honey and fire, under unit rings
+            if (k == ZoneKind.HoneyField) MakeComb();
             if (k == ZoneKind.BombFuse || warn)
             {
                 // the inner fill grows to the rim (or the end of the line) as the time runs out
@@ -497,6 +506,8 @@ namespace BAM.Art
                 shapeF.sharedMesh = Shapes.ZoneCircle();
                 shape.localScale = new Vector3(radius, 1f, radius);
                 if (rim != null) rim.localScale = new Vector3(radius * 2.255f, 1f, radius * 2.255f); // his ring peaks at 0.887 of the picture: edge exactly on the radius
+                if (comb != null) comb.localScale = new Vector3(radius, 1f, radius);
+                for (int i = 0; i < 3; i++) if (edge[i] != null) edge[i].localScale = new Vector3(radius, 1f, radius);
             }
             // MLBB analysis 4: Blast's lane gets a glowing cracked floor, Moa's field a honey swirl and a ring as it opens
             if (kind == ZoneKind.FireLane && length > 0f)
@@ -567,6 +578,18 @@ namespace BAM.Art
                 // additive: the colour's brightness is its strength
                 if (on) rimMat.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r * a, baseColor.g * a, baseColor.b * a, 1f));
             }
+            if (comb != null)
+            {
+                // additive: the colour's brightness is its strength; the comb drifts slowly so the floor looks alive
+                float cs = 0.32f * a;
+                combMat.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r * cs, baseColor.g * cs, baseColor.b * cs, 1f));
+                comb.localRotation = Quaternion.Euler(0f, age * 6f, 0f);
+                for (int i = 0; i < 3; i++)
+                {
+                    float es = EdgeStrength[i] * a * (i == 0 ? 0.9f + 0.1f * Mathf.Sin(age * 7f) : 1f);
+                    edgeMat[i].SetColor(ArtMaterials.BaseColor, new Color(1f * es, 0.82f * es, 0.35f * es, 1f));
+                }
+            }
             if (warn) return;
             if (kind == ZoneKind.FireLane && length > 0f) LaneIgnite();
             if (kind == ZoneKind.FireLane && length > 0f && laneFire != null) LaneFire();
@@ -599,6 +622,99 @@ namespace BAM.Art
                 if (Random.value < 0.15f) Fx.Drops(p + Vector3.up * 0.6f, 1, Pal.Get(Pal.Honey), 0.12f, 0.1f, 0.6f, -0.4f); // slow honey drips
             }
             else Fx.Sparks(center + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.08f, 1.5f, 0.2f, 1f);
+        }
+
+        void MakeComb()
+        {
+            var tex = Resources.Load<Texture2D>("BAMArt/Fx/T_BAM_HexShield");
+            if (tex != null)
+            {
+                tex.wrapMode = TextureWrapMode.Repeat;
+                combMat = FxAtlas.Material(ArtMaterials.UnlitAdd); // additive, weighed by the picture's alpha
+                combMat.name = "BAM honey comb";
+                combMat.SetTexture(ArtMaterials.BaseMap, tex);
+                combMat.mainTexture = tex;
+                combMat.renderQueue = 2991;
+                comb = Child("Comb", CombMesh(), combMat, 0.005f);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                edgeMat[i] = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                edgeMat[i].renderQueue = 2992 + i;
+                edge[i] = Child("Edge" + i, EdgeMesh(i), edgeMat[i], 0.007f + i * 0.001f);
+            }
+        }
+
+        Transform Child(string name, Mesh mesh, Material m, float y)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = new Vector3(0f, y, 0f);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = m;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            return go.transform;
+        }
+
+        static readonly Mesh[] edgeMeshes = new Mesh[3];
+
+        // a thin flat ring from EdgeInner to EdgeOuter of radius 1, both windings, palette white (the material tints it)
+        static Mesh EdgeMesh(int i)
+        {
+            if (edgeMeshes[i] != null) return edgeMeshes[i];
+            const int Seg = 64;
+            var v = new Vector3[(Seg + 1) * 2];
+            var uv = new Vector2[v.Length];
+            var tri = new int[Seg * 12];
+            Vector2 w = Pal.UV(Pal.White);
+            for (int k = 0; k <= Seg; k++)
+            {
+                float a = k * Mathf.PI * 2f / Seg, c = Mathf.Cos(a), s = Mathf.Sin(a);
+                v[k * 2] = new Vector3(c * EdgeInner[i], 0f, s * EdgeInner[i]);
+                v[k * 2 + 1] = new Vector3(c * EdgeOuter[i], 0f, s * EdgeOuter[i]);
+                uv[k * 2] = w; uv[k * 2 + 1] = w;
+            }
+            for (int k = 0; k < Seg; k++)
+            {
+                int a0 = k * 2, q = k * 6, r = Seg * 6 + q;
+                tri[q] = a0; tri[q + 1] = a0 + 1; tri[q + 2] = a0 + 3; tri[q + 3] = a0; tri[q + 4] = a0 + 3; tri[q + 5] = a0 + 2;
+                tri[r] = a0; tri[r + 1] = a0 + 3; tri[r + 2] = a0 + 1; tri[r + 3] = a0; tri[r + 4] = a0 + 2; tri[r + 5] = a0 + 3;
+            }
+            var m = new Mesh { name = "Honey edge " + i, vertices = v, uv = uv, triangles = tri };
+            m.RecalculateNormals();
+            m.RecalculateBounds();
+            m.UploadMeshData(true);
+            return edgeMeshes[i] = m;
+        }
+
+        // a disc of radius 0.95 with the hex picture laid flat across it: about 6 cells over the 1.8-tile field's radius
+        static Mesh CombMesh()
+        {
+            if (combMesh != null) return combMesh;
+            const int Seg = 48;
+            const float R = 0.95f, Tile = 0.85f;
+            var v = new Vector3[Seg + 1];
+            var uv = new Vector2[v.Length];
+            var tri = new int[Seg * 6];
+            v[0] = Vector3.zero; uv[0] = new Vector2(0.5f, 0.5f);
+            for (int k = 0; k < Seg; k++)
+            {
+                float a = k * Mathf.PI * 2f / Seg, c = Mathf.Cos(a) * R, s = Mathf.Sin(a) * R;
+                v[k + 1] = new Vector3(c, 0f, s);
+                uv[k + 1] = new Vector2(0.5f + c * Tile, 0.5f + s * Tile);
+            }
+            for (int k = 0; k < Seg; k++)
+            {
+                int a = k + 1, b = (k + 1) % Seg + 1, q = k * 6;
+                tri[q] = 0; tri[q + 1] = a; tri[q + 2] = b; tri[q + 3] = 0; tri[q + 4] = b; tri[q + 5] = a;
+            }
+            combMesh = new Mesh { name = "Honey comb", vertices = v, uv = uv, triangles = tri };
+            combMesh.RecalculateNormals();
+            combMesh.RecalculateBounds();
+            combMesh.UploadMeshData(true);
+            return combMesh;
         }
 
         // the fire runs down the lane: one fireball per step, an ember spray and a thump of light under it
