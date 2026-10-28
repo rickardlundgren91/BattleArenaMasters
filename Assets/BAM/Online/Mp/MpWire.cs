@@ -12,7 +12,7 @@ namespace BAM.Online.Mp
         // match
         public const byte Loaded = 20, In = 21, Frames = 22, Hash = 23, Desync = 24, LeftMatch = 25, MatchOver = 26;
         /// <summary>Phones with another protocol never meet (bump it whenever a message or the rules' input changes).</summary>
-        public const int Protocol = 5; // 2: groups in ONLINE MATCH (party in Hello, side in Room, Move); 3: Simon's reworks change the rules (8d996f0), so a 2 build would desync; 4: balance (Tyra, Tikta, Knut numbers); 5: Hilde and Oaken (heroes 9 and 10)
+        public const int Protocol = 6; // 2: groups in ONLINE MATCH (party in Hello, side in Room, Move); 3: Simon's reworks change the rules (8d996f0), so a 2 build would desync; 4: balance (Tyra, Tikta, Knut numbers); 5: Hilde and Oaken (heroes 9 and 10); 6: backdoor protection (half tower damage without a wave)
     }
 
     static class MpQueue

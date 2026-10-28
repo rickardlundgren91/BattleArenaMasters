@@ -217,17 +217,17 @@ namespace BAM.Sim
         }
         /// <summary>From level 8 towers take more damage, growing with the match clock (at most x5).</summary>
         internal float TowerLateTaken() => Math.Min(Rules.TowerTakenMax, 1 + Rules.TowerTakenPerMinute * Math.Max(0, Time - (Rules.TowerTakenLevel - 1) * Rules.SecondsPerLevel) / 60);
-        /// <summary>A hero hitting a tower without one of its own minions in the tower's range gets only half of the late bonus.</summary>
+        /// <summary>Backdoor protection (Rickard 2026-10-28, closed-test feedback): a hero hitting a tower without one of its own
+        /// minions in the tower's range deals half damage, the whole match (it was half of the late bonus only).</summary>
         float TowerNeedsWave(Unit att, Unit tw)
         {
             if (att == null || att.Kind != UnitKind.Hero) return 1;
-            float late = TowerLateTaken(); if (late <= 1) return 1;
             for (int i = 0; i < Units.Count; i++)
             {
                 var m = Units[i];
                 if (m.IsMinionLike && m.Alive && m.Team == att.Team && SimMath.Dist(m, tw) <= tw.UDef.Range + m.R) return 1;
             }
-            return (1 + (late - 1) * 0.5f) / late;
+            return 0.5f;
         }
         float TowerCoeff(Unit tw, Unit tgt) => tgt.Kind != UnitKind.Hero || Tut != null ? 1
             : TowerLateMult(tgt) * (tgt == tw.TowerFocus ? 1 + Math.Min(Rules.TowerRampMax, Rules.TowerRamp * tw.TowerStreak) : 1);
