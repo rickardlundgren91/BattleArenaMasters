@@ -48,6 +48,7 @@ namespace BAM.Game
             public bool Marked, Spark;     // Tikta's Deathmark and Blast's chain spark shown (Tikta 2.0 / Blast 2.0)
             public float ChainCd = -1f;    // the player's Blast: the chain cooldown arc shown, -1 none
             public Quaternion Rot;
+            public bool Squared;           // the view was told it faces a target or an aim, not its path (AnimFix.LegsFollow)
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
 
@@ -782,9 +783,17 @@ namespace BAM.Game
             // a respawn or a long pull jumps; drawing the jump between ticks would slide the hero across the map
             bool jump = (u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY) > 4f;
             Vector3 pos = jump ? Coords.Of(u) : Coords.Lerp(u.PX, u.PY, u.X, u.Y, alpha);
-            Quaternion want = Quaternion.LookRotation(Coords.Dir(u.Facing));
-            r.Rot = Quaternion.RotateTowards(r.Rot, want, 900f * dt);
+            bool hero = u.Kind == UnitKind.Hero, aim = u.AimT > m.Time;
+            // AnimFix.SquaredFacing (Speltest CombatFeel.Squared): in a fight a hero keeps facing its target between swings, its legs
+            // turned to the travel (BodyView), instead of the rules' snap to it for each windup and back to the path after; an aimed
+            // swing or special keeps its own direction; and it turns smoothly, not at 900 degrees a second
+            bool fight = AnimFix.SquaredFacing && hero && !aim && Fighting(u);
+            float face = fight ? SimMath.Atan2(u.Target.Y - u.Y, u.Target.X - u.X) : u.Facing;
+            Quaternion want = Quaternion.LookRotation(Coords.Dir(face));
+            if (AnimFix.SquaredFacing && hero) r.Rot = Quaternion.RotateTowards(Quaternion.Slerp(r.Rot, want, 1f - Mathf.Exp(-14f * dt)), want, 60f * dt);
+            else r.Rot = Quaternion.RotateTowards(r.Rot, want, 900f * dt);
             t.SetPositionAndRotation(pos, r.Rot);
+            if (hero && (aim || fight) != r.Squared) { r.Squared = aim || fight; v.SetSquared(r.Squared); }
 
             if (u.Alive == r.Dead) { r.Dead = !u.Alive; v.SetDead(r.Dead); if (!r.Dead) { r.Hp01 = -1f; r.Vis = -1f; } }
             if (r.Dead) { HeroMarksOff(r); return; }
@@ -817,6 +826,15 @@ namespace BAM.Game
             float vis = !m.IsVisibleTo(u, Mine) ? 0f : u.Team == Mine && u.Kind == UnitKind.Hero && m.HiddenFromFoes(u) ? 0.5f : 1f;
             if (Hidden != null && Hidden(u)) vis = 0f; // the match intro: not yet beamed in
             if (vis != r.Vis) { r.Vis = vis; v.SetVisibility(vis); }
+        }
+
+        // a hero in a fight: it swung at its target within about one swing's time, the target alive, seen by the player (facing it must
+        // not give a hider away) and still about in reach, and the hero can swing (not stunned)
+        bool Fighting(Unit u)
+        {
+            var tg = u.Target;
+            return u.Alive && tg != null && tg.Alive && m.Time - u.TargetT < u.AttackCd + 0.35f && !u.Has(St.Stun) && m.IsVisibleTo(tg, Mine)
+                && SimMath.Dist(u, tg) <= u.Range + tg.R + 0.6f;
         }
 
         // Tikta 2.0's Deathmark over a marked hero (every frame while seen: it blinks at the end), and the player's Blast 2.0

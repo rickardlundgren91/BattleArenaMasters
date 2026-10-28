@@ -69,8 +69,22 @@ namespace BAM.Art
         Transform instT, footL, footR, toeL, toeR;
         float footRef = float.NaN, groundOff;
         bool breathTried;
-        float gearAct;            // how much the attack and cast clips play, for the gear's rest pose
+        float gearAct, gearAtk;   // how much the attack and cast clips play (and the attack alone), for the gear's rest pose
         int shadowRends;          // rends[0..shadowRends) may cast shadows; the gear after them never does
+        // the rig and animation pass of 2026-10-28 (AnimFix): the flinch on the upper body on the move; where a new swing or cast
+        // eases in from when the last one is still fading out; the played part of the attack and cast clips round their measured
+        // blow; last frame's clip weights for holding a drifting clip in place; the legs turned to the travel; the lean
+        AnimationClipPlayable upHit;
+        float atkCarry, castCarry, lastAtkW, lastCastW;
+        bool atkSeg, castSeg, clipsInfo;
+        float atkFrom, atkBlow, atkTo, castFrom, castBlowAt, castTo;
+        float drAtk, drCast, drHit, drAtkFrom, drCastFrom;
+        bool squared;
+        Transform hipsT, spineT, chestT;
+        Vector3 travelV;
+        float legW, legYaw, leanP, leanR, lastYaw, lastSpd;
+        int legDir = 1;
+        const float RecoverRate = 1.2f, CastRate = 1.15f;
         const int CIdle = 0, CRun = 1, CAttack = 2, CCast = 3, CHit = 4, CDeath = 5, CWalk = 6;
         // the walk and the run with the feet on the ground (old Speltest's HeroMixamoGait): each clip's own speed over the ground in
         // hip heights a second, measured once from its planted foot; the hips' height above the model's root; one stride phase for both
@@ -315,6 +329,8 @@ namespace BAM.Art
             {
                 footL = anim.GetBoneTransform(HumanBodyBones.LeftFoot); footR = anim.GetBoneTransform(HumanBodyBones.RightFoot);
                 toeL = anim.GetBoneTransform(HumanBodyBones.LeftToes); toeR = anim.GetBoneTransform(HumanBodyBones.RightToes);
+                hipsT = anim.GetBoneTransform(HumanBodyBones.Hips); spineT = anim.GetBoneTransform(HumanBodyBones.Spine);
+                chestT = anim.GetBoneTransform(HumanBodyBones.Chest);
                 float f = LowestFoot();
                 if (!float.IsNaN(f)) footRef = f - transform.position.y; // the bind pose, its mesh's sole on the ground
             }
@@ -347,12 +363,14 @@ namespace BAM.Art
                 graph.Connect(clips[c], 0, mixer, c);
                 mixer.SetInputWeight(c, c == CIdle ? 1f : 0f);
             }
-            // the upper-body copies of the attack and the cast, for swinging on the move
-            upper = AnimationMixerPlayable.Create(graph, 2);
+            // the upper-body copies of the attack, the cast and the flinch, for swinging on the move
+            upper = AnimationMixerPlayable.Create(graph, 3);
             upAtk = AnimationClipPlayable.Create(graph, src2[CAttack] != null ? src2[CAttack] : idle);
             upCast = AnimationClipPlayable.Create(graph, src2[CCast] != null ? src2[CCast] : idle);
+            upHit = AnimationClipPlayable.Create(graph, src2[CHit] != null ? src2[CHit] : idle);
             graph.Connect(upAtk, 0, upper, 0);
             graph.Connect(upCast, 0, upper, 1);
+            graph.Connect(upHit, 0, upper, 2);
             graph.Connect(upper, 0, layers, 1);
             layers.SetLayerMaskFromAvatarMask(1, UpperMask());
             layers.SetInputWeight(1, 0f);
@@ -419,6 +437,8 @@ namespace BAM.Art
         public void ResetState()
         {
             moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
+            atkCarry = castCarry = lastAtkW = lastCastW = 0f; drAtk = drCast = drHit = 0f;
+            squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
@@ -445,6 +465,8 @@ namespace BAM.Art
         {
             windup = Mathf.Max(0.05f, w);
             atkT = 0f;
+            atkCarry = lastAtkW;
+            atkSeg = false;
             if (clips != null)
             {
                 // the blow lands on the clip's release frame exactly when the rules' windup runs out; the coil goes quickly to 70 % of
@@ -458,16 +480,64 @@ namespace BAM.Art
                 atkHold = Phased(HeroIndex) ? AttackHold(HeroIndex) : 0f;
                 atkRec = Mathf.Min((len - atkRel) / atkSpeed, 0.45f);
                 atkTotal = Phased(HeroIndex) ? windup + atkHold + atkRec : Mathf.Min((len - atkStart) / atkSpeed, windup + 0.45f);
+                if (AnimFix.BlowTiming && !Phased(HeroIndex)) BlowSegment(len);
             }
             if (gear != null) gear.Throw(windup);
+        }
+
+        // AnimFix.BlowTiming: the part of the clip round its measured blow (old Speltest's own attacks: from, hit, to). The windup
+        // plays the last stretch before the blow, about 1.8 times its own pace instead of the whole clip at the 4x cap (at most 0.45 s
+        // of it: Bonk's long windup plays his heavy swing slowly instead of starting on a frame with the club held out level), so the
+        // blow lands exactly as the rules' windup runs out; the recovery plays half a second of the clip after it at 1.2x, and at
+        // least a quarter of a second passes after the blow (the clip holding its last frame), so the eased fade-out never starts
+        // before it. Blast's throw (5.4 s into a 7.7 s clip) was never shown at all.
+        void BlowSegment(float len)
+        {
+            ClipInfo ci = Info(clips[CAttack].GetAnimationClip());
+            float start0 = def.Art.AttackStart * len;
+            float blow = ci != null && ci.Blow > 0f ? ci.Blow : def.Art.AttackRelease * len;
+            blow = Mathf.Clamp(blow, Mathf.Min(start0 + 0.05f, len), len);
+            float pre = Mathf.Min(blow - start0, Mathf.Clamp(windup * 1.8f, 0.25f, 0.45f));
+            if (pre < 0.02f) return;
+            atkFrom = blow - pre;
+            atkBlow = blow;
+            atkTo = Mathf.Min(len, blow + 0.5f);
+            atkSpeed = pre / windup;
+            atkTotal = windup + Mathf.Max(0.25f, (atkTo - blow) / RecoverRate);
+            atkSeg = true;
         }
 
         public override void PlayCast()
         {
             castT = 0f;
+            castCarry = lastCastW;
             if (IsHero && !dead && vis > 0.01f) Fx.HeroCast(HeroIndex, transform.position); // never gives a hider away
-            if (clips != null) { clips[CCast].SetTime(0.0); clips[CCast].SetTime(0.0); upCast.SetTime(0.0); upCast.SetTime(0.0); }
-            if (gear != null) gear.Throw(castLen * 0.35f);
+            castSeg = false;
+            if (clips != null)
+            {
+                if (AnimFix.BlowTiming) CastSegment();
+                if (!castSeg) { castLen = Mathf.Min(0.9f, clipLen[CCast] / 1.2f); castBlowAt = castLen * 0.35f; }
+                double c0 = castSeg ? castFrom : 0.0;
+                clips[CCast].SetTime(c0); clips[CCast].SetTime(c0); upCast.SetTime(c0); upCast.SetTime(c0);
+            }
+            if (gear != null) gear.Throw(clips != null ? castBlowAt : castLen * 0.35f);
+        }
+
+        // AnimFix.BlowTiming: the special takes effect when it is cast, so its clip starts just before its own measured peak (a
+        // tenth of a second of lead) instead of at 0, where Moa's, Blast's and Tyra's casts were cut off before their gesture; at
+        // least a quarter of a second passes after the peak (the clip holding its end), so the fade-out never starts before it
+        void CastSegment()
+        {
+            float len = clipLen[CCast];
+            ClipInfo ci = Info(clips[CCast].GetAnimationClip());
+            float blow = ci != null && ci.Blow > 0f ? ci.Blow : 0.4f * len;
+            float lead = HeroIndex == (int)HeroId.Bonk ? 0.25f : 0.12f;
+            castFrom = Mathf.Max(0f, blow - lead * CastRate);
+            castTo = Mathf.Min(len, blow + 0.6f);
+            if (castTo - castFrom < 0.1f) return;
+            castBlowAt = (blow - castFrom) / CastRate;
+            castLen = Mathf.Max((castTo - castFrom) / CastRate, castBlowAt + 0.25f);
+            castSeg = true;
         }
 
         public override void PlayHit(bool big)
@@ -475,7 +545,7 @@ namespace BAM.Art
             hitT = 0f;
             hitA = 0f;
             status.Ripple();
-            if (clips != null) { clips[CHit].SetTime(0.0); clips[CHit].SetTime(0.0); }
+            if (clips != null) { clips[CHit].SetTime(0.0); clips[CHit].SetTime(0.0); upHit.SetTime(0.0); upHit.SetTime(0.0); }
             hitLen = big ? 0.25f : 0.14f;
             recoil = big ? 1f : 0.6f;
             flashColor = big ? new Color(1f, 0.55f, 0.35f) : new Color(1f, 0.45f, 0.4f); // a short red blink on every hit (MLBB analysis 7)
@@ -500,6 +570,7 @@ namespace BAM.Art
                     deathFadeAt = 0f;
                 }
                 if (clips != null) { clips[CDeath].SetTime(0.0); clips[CDeath].SetTime(0.0); clips[CDeath].SetSpeed(1.0); }
+                if (imported) { leanP = leanR = 0f; model.localRotation = Quaternion.identity; } // no lean left in the fall (Life)
             }
             else
             {
@@ -527,6 +598,7 @@ namespace BAM.Art
 
         public override void SetChannel(float progress01) => channel = progress01;
         public override void SetSprint(bool on) => sprint = on;
+        public override void SetSquared(bool on) => squared = on;
         public override void SetDeathmark(float left) { if (left >= 0f || marks != null) Marks().SetDeathmark(left); }
         public override void SetChainSpark(bool on) { if (on || marks != null) Marks().SetChainSpark(on); }
         public override void SetChainCooldown(float frac) { if (frac >= 0f || marks != null) Marks().SetChainCooldown(frac); }
@@ -666,7 +738,22 @@ namespace BAM.Art
                 breath?.Apply(Time.unscaledTime, 1f - Mathf.Clamp01(gearAct));
                 GroundFeet(dt);
             }
-            if (gear != null) gear.Tick(dt, moveW, gearAct, dead);
+            if (!Preview && imported && clips != null && !dead)
+            {
+                if (AnimFix.LegsFollow) { LegYaw(dt); LegTwist(); }
+                if (IsHero)
+                {
+                    if (AnimFix.Life)
+                    {
+                        Lean(dt);
+                        if (!breathTried) { breathTried = true; breath = PreviewBreath.For(anim, HeroIndex); }
+                        breath?.ApplyMatch(Time.time, 0.6f * (1f - moveW) * (1f - Mathf.Clamp01(gearAct)));
+                    }
+                    else model.localRotation = Quaternion.identity;
+                }
+            }
+            if (gear != null && clips != null && gear.NeedsRest) MeasureRest();
+            if (gear != null) gear.Tick(dt, moveW, gearAct, gearAtk, dead);
             if (dead) AnimateDeath(dt);
             else
             {
@@ -730,6 +817,12 @@ namespace BAM.Art
         void AnimateImported(float dt)
         {
             if (clips == null) return;
+            // the swing, the cast and the flinch are measured the first frame the view is out (BlowTiming), heroes, minions and the
+            // menu's alike, on one graph, not at the first swing in the middle of a fight
+            if (!clipsInfo && AnimFix.BlowTiming && anim.isActiveAndEnabled) MeasureClips();
+            if (AnimFix.BlowTiming) InPlace();
+            else model.localPosition = Vector3.zero; // switched off live (Animation Check): nothing left held over
+            bool life = AnimFix.Life;
             float wAtk = 0f, wCast = 0f, wHit = 0f, wDeath = 0f;
             if (dead)
             {
@@ -740,10 +833,20 @@ namespace BAM.Art
                 if (atkT >= 0f)
                 {
                     atkT += dt;
-                    // the swing blends in over up to 0.16 s, not 0.06 (Rickard 2026-10-27: Bram's hammer hung low on the walk and
-                    // "teleporteras" up into the swing); still well inside the windup, so the blow lands on time
-                    float blendIn = Mathf.Clamp(windup * 0.45f, 0.06f, 0.16f);
-                    wAtk = Mathf.Min(Mathf.Clamp01(atkT / blendIn), Mathf.Clamp01((atkTotal - atkT) / 0.18f));
+                    if (life)
+                    {
+                        // eased in (from where a swing still fading out left it) and out over a quarter of a second, never before
+                        // the blow; the linear 0.06-0.16 s in and the 0.18 s out of a clip cut short read as a snap
+                        float blendIn = Mathf.Clamp(windup * 0.6f, 0.08f, 0.2f), fadeOut = Mathf.Clamp(atkTotal - windup, 0.05f, 0.25f);
+                        wAtk = Mathf.Min(Mathf.Lerp(atkCarry, 1f, Smooth(atkT / blendIn)), Smooth((atkTotal - atkT) / fadeOut));
+                    }
+                    else
+                    {
+                        // the swing blends in over up to 0.16 s, not 0.06 (Rickard 2026-10-27: Bram's hammer hung low on the walk and
+                        // "teleporteras" up into the swing); still well inside the windup, so the blow lands on time
+                        float blendIn = Mathf.Clamp(windup * 0.45f, 0.06f, 0.16f);
+                        wAtk = Mathf.Min(Mathf.Clamp01(atkT / blendIn), Mathf.Clamp01((atkTotal - atkT) / 0.18f));
+                    }
                     double at = AttackTime(atkT);
                     clips[CAttack].SetTime(at); upAtk.SetTime(at);
                     if (atkT >= atkTotal) atkT = -1f;
@@ -751,8 +854,10 @@ namespace BAM.Art
                 if (castT >= 0f)
                 {
                     castT += dt;
-                    wCast = Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
-                    double ct = castT * 1.2f;
+                    float castOut = Mathf.Clamp(castLen - castBlowAt, 0.05f, 0.25f);
+                    wCast = life ? Mathf.Min(Mathf.Lerp(castCarry, 1f, Smooth(castT / 0.1f)), Smooth((castLen - castT) / castOut))
+                        : Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
+                    double ct = castSeg ? Mathf.Min(castTo, castFrom + castT * CastRate) : castT * 1.2f;
                     clips[CCast].SetTime(ct); upCast.SetTime(ct);
                     if (castT >= castLen) castT = -1f;
                 }
@@ -763,13 +868,18 @@ namespace BAM.Art
                     if (hitA >= 0.3f) hitA = -1f;
                 }
             }
-            gearAct = wAtk + wCast;
-            // on the move the swing goes to the upper-body layer and the legs keep their stride
-            float act = Mathf.Min(1f, wAtk + wCast), upW = dead || !Phased(HeroIndex) ? 0f : act * moveW;
-            if (act > 1e-4f) { upper.SetInputWeight(0, wAtk / (wAtk + wCast)); upper.SetInputWeight(1, wCast / (wAtk + wCast)); }
+            lastAtkW = wAtk; lastCastW = wCast;
+            gearAct = wAtk + wCast; gearAtk = wAtk;
+            // on the move the swing (with UpperSwing also the cast and the flinch) goes to the upper-body layer and the legs keep their
+            // stride, as Speltest's layers 1 and 2; standing, the whole body plays it
+            bool up = AnimFix.UpperSwing || Phased(HeroIndex);
+            float uHit = AnimFix.UpperSwing ? wHit : 0f, sum = wAtk + wCast + uHit;
+            float upW = dead || !up ? 0f : Mathf.Min(1f, sum) * moveW;
+            if (sum > 1e-4f) { upper.SetInputWeight(0, wAtk / sum); upper.SetInputWeight(1, wCast / sum); upper.SetInputWeight(2, uHit / sum); }
             SetLayered(upW > 1e-4f);
             if (layered) layers.SetInputWeight(1, upW);
-            if (upW > 0f) { wAtk *= 1f - moveW; wCast *= 1f - moveW; }
+            drAtk = wAtk; drCast = wCast; drHit = wHit; drAtkFrom = atkSeg ? atkFrom : atkStart; drCastFrom = castSeg ? castFrom : 0f;
+            if (upW > 0f) { wAtk *= 1f - moveW; wCast *= 1f - moveW; wHit -= uHit * moveW; }
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
             float rest = 1f - over;
@@ -785,6 +895,225 @@ namespace BAM.Art
             Wrap(CIdle);
         }
 
+        // AnimFix.BlowTiming: a clip that walks the body away (Fenn's attack lunges 1.2 hip heights, Bram's Attack2 and Blast's and
+        // Moa's casts 0.5-0.8, Bram's flinch 0.4) is held over its spot: the hips' drift since its played part began, by how much it
+        // plays, comes off the model, so the body no longer slides out and snaps back. With the times, starts and weights the pose on
+        // screen was evaluated with (set last frame; a swing begun in this frame's Update has not been seen yet).
+        void InPlace()
+        {
+            if (instT == null) return;
+            Vector2 d = Vector2.zero;
+            if (drAtk > 1e-3f) d += Drift(CAttack, drAtkFrom) * drAtk;
+            if (drCast > 1e-3f) d += Drift(CCast, drCastFrom) * drCast;
+            if (drHit > 1e-3f) d += Drift(CHit, 0f) * drHit;
+            Vector3 k = instT.localScale;
+            model.localPosition = new Vector3(-d.x * k.x, 0f, -d.y * k.z);
+        }
+
+        // the track is kept in hip heights, so a clip measured on one rig holds another in place by that rig's own size
+        Vector2 Drift(int c, float from)
+        {
+            AnimationClip clip = clips[c].GetAnimationClip();
+            if (clip == null || !clipInfo.TryGetValue(clip, out ClipInfo ci) || ci.Hips == null) return Vector2.zero;
+            return (HipsAt(ci, (float)clips[c].GetTime()) - HipsAt(ci, from)) * (hipsH > 1e-4f ? hipsH : 1f);
+        }
+
+        static Vector2 HipsAt(ClipInfo ci, float t)
+        {
+            int n = ci.Hips.Length;
+            if (n < 2 || ci.Step <= 0f) return n > 0 ? ci.Hips[0] : Vector2.zero;
+            float f = Mathf.Clamp(t / ci.Step, 0f, n - 1);
+            int i = Mathf.Min((int)f, n - 2);
+            return Vector2.Lerp(ci.Hips[i], ci.Hips[i + 1], f - i);
+        }
+
+        // AnimFix.BlowTiming: a clip's blow (its fastest hand between 10 and 85 % of it, as the Blender measure of 2026-10-28,
+        // bam-work/art/rigg-anim/matning: where the weapon meets a target standing in front; the hand stops 0.1 s later, Bonk's club
+        // on the ground) and its hips' track over the ground in hip heights, 30 times a second; measured once per clip, on a manual
+        // graph as GroundSpeed, the bones put back after
+        sealed class ClipInfo { public float Blow = -1f, Step = 1f / 30f; public Vector2[] Hips; }
+        static readonly Dictionary<AnimationClip, ClipInfo> clipInfo = new Dictionary<AnimationClip, ClipInfo>();
+        static readonly List<AnimationClip> measureList = new List<AnimationClip>();
+
+        // the swing, the cast and the flinch not measured yet, all on one graph (a clip standing in for a missing one, the idle, not)
+        void MeasureClips()
+        {
+            clipsInfo = true;
+            measureList.Clear();
+            AnimationClip idle = clips[CIdle].GetAnimationClip();
+            for (int c = CAttack; c <= CHit; c++)
+            {
+                AnimationClip cl = clips[c].GetAnimationClip();
+                if (cl != null && cl != idle && !clipInfo.ContainsKey(cl) && !measureList.Contains(cl)) measureList.Add(cl);
+            }
+            Measure(anim, measureList, hipsH);
+        }
+
+        ClipInfo Info(AnimationClip c)
+        {
+            if (c == null) return null;
+            if (clipInfo.TryGetValue(c, out ClipInfo known)) return known;
+            measureList.Clear();
+            measureList.Add(c);
+            Measure(anim, measureList, hipsH);
+            return clipInfo.TryGetValue(c, out known) ? known : null;
+        }
+
+        static void Measure(Animator an, List<AnimationClip> list, float hipsH)
+        {
+            if (list.Count == 0 || an == null || !an.isHuman || !an.isActiveAndEnabled) return;
+            Transform root = an.transform, hips = an.GetBoneTransform(HumanBodyBones.Hips);
+            Transform lh = an.GetBoneTransform(HumanBodyBones.LeftHand), rh = an.GetBoneTransform(HumanBodyBones.RightHand);
+            if (hips == null || lh == null || rh == null) return;
+            float hs = hipsH > 1e-4f ? hipsH : 1f;
+            Transform[] bones = SaveBones(root, out Vector3[] lp, out Quaternion[] lr);
+            PlayableGraph g = PlayableGraph.Create("BAM clip info");
+            g.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            try
+            {
+                var output = AnimationPlayableOutput.Create(g, "info", an);
+                foreach (AnimationClip c in list)
+                {
+                    var ci = new ClipInfo();
+                    clipInfo[c] = ci; // measured once, even if it fails: the clip then plays as before 2026-10-28
+                    if (c.length < 1e-3f) continue; // a one-key pose: no blow, nothing to hold in place
+                    var cp = AnimationClipPlayable.Create(g, c);
+                    cp.Pause();
+                    output.SetSourcePlayable(cp);
+                    int n = Mathf.Max(2, Mathf.CeilToInt(c.length * 30f)) + 1;
+                    float step = c.length / (n - 1);
+                    var track = new Vector2[n];
+                    var L = new Vector3[n];
+                    var R = new Vector3[n];
+                    for (int i = 0; i < n; i++)
+                    {
+                        cp.SetTime(step * i); g.Evaluate(0f);
+                        Vector3 h = root.InverseTransformPoint(hips.position);
+                        track[i] = new Vector2(h.x, h.z) / hs;
+                        L[i] = root.InverseTransformPoint(lh.position); R[i] = root.InverseTransformPoint(rh.position);
+                    }
+                    ci.Step = step;
+                    ci.Hips = track;
+                    float best = 0f;
+                    for (int i = 1; i < n - 1; i++)
+                    {
+                        float f = (float)i / (n - 1);
+                        if (f < 0.1f || f > 0.85f) continue;
+                        float sp = Mathf.Max((L[i + 1] - L[i - 1]).sqrMagnitude, (R[i + 1] - R[i - 1]).sqrMagnitude);
+                        if (sp > best) { best = sp; ci.Blow = step * i; }
+                    }
+                }
+            }
+            finally
+            {
+                g.Destroy();
+                RestoreBones(bones, lp, lr);
+            }
+        }
+
+        static Transform[] SaveBones(Transform root, out Vector3[] lp, out Quaternion[] lr)
+        {
+            Transform[] bones = root.GetComponentsInChildren<Transform>(true);
+            lp = new Vector3[bones.Length];
+            lr = new Quaternion[bones.Length];
+            for (int i = 0; i < bones.Length; i++) { lp[i] = bones[i].localPosition; lr[i] = bones[i].localRotation; }
+            return bones;
+        }
+
+        static void RestoreBones(Transform[] bones, Vector3[] lp, Quaternion[] lr)
+        {
+            for (int i = 0; i < bones.Length; i++) if (bones[i] != null) { bones[i].localPosition = lp[i]; bones[i].localRotation = lr[i]; }
+        }
+
+        // AnimFix.FixedGrip: the weapons' rest aim from three frames of the idle (HeldGear.SampleRest), on a manual graph as above
+        void MeasureRest()
+        {
+            AnimationClip idle = clips[CIdle].GetAnimationClip();
+            if (idle == null || anim == null || !anim.isHuman || !anim.isActiveAndEnabled) return;
+            Transform[] bones = SaveBones(anim.transform, out Vector3[] lp, out Quaternion[] lr);
+            PlayableGraph g = PlayableGraph.Create("BAM rest");
+            g.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            try
+            {
+                var output = AnimationPlayableOutput.Create(g, "rest", anim);
+                var cp = AnimationClipPlayable.Create(g, idle);
+                cp.SetApplyFootIK(true);
+                cp.Pause();
+                output.SetSourcePlayable(cp);
+                gear.BeginRest();
+                for (int k = 0; k < 3; k++) { cp.SetTime(idle.length * (0.2f + 0.25f * k)); g.Evaluate(0f); gear.SampleRest(); }
+                gear.EndRest();
+            }
+            finally
+            {
+                g.Destroy();
+                RestoreBones(bones, lp, lr);
+            }
+        }
+
+        // AnimFix.LegsFollow (old Speltest MxLegYaw and MxLegTwist, Simon 2026-10-21): while the body faces a target or an aim
+        // (MatchViews, SetSquared) and moves, the hips and legs turn to the line of travel, the stride plays backwards when the travel
+        // is behind, and the spine turns the chest back to the target, a quarter of the turn left in it; the clips only step forward,
+        // so backing off the feet slid forward under a body going back
+        void LegYaw(float dt)
+        {
+            bool on = squared && !dead && moveW > 0.01f && travelV.sqrMagnitude > 0.04f;
+            legW += ((on ? 1f : 0f) - legW) * K60(12f, dt);
+            if (legW < 0.01f && !on) { legW = 0f; legDir = 1; legYaw = 0f; return; }
+            float want = 0f;
+            if (on) want = LegYawFor(Vector3.SignedAngle(transform.forward, new Vector3(travelV.x, 0f, travelV.z), Vector3.up) * Mathf.Deg2Rad, ref legDir);
+            // straight across the front, never round the back: both are angles off the body's front within 110 degrees, and the wrapped
+            // way round, at a flip of the stride, twisted the hips through the back and the chest after them
+            legYaw += (want - legYaw) * K60(14f, dt);
+        }
+
+        void LegTwist()
+        {
+            float deg = legYaw * legW * moveW * Mathf.Rad2Deg;
+            if (Mathf.Abs(deg) < 0.05f || hipsT == null || spineT == null) return;
+            Vector3 up = transform.up;
+            hipsT.rotation = Quaternion.AngleAxis(deg, up) * hipsT.rotation;
+            const float back = 1f - TorsoKeep;
+            if (chestT != null)
+            {
+                spineT.rotation = Quaternion.AngleAxis(-deg * back * 0.6f, up) * spineT.rotation;
+                chestT.rotation = Quaternion.AngleAxis(-deg * back * 0.4f, up) * chestT.rotation;
+            }
+            else spineT.rotation = Quaternion.AngleAxis(-deg * back, up) * spineT.rotation;
+        }
+
+        // Speltest CombatFeel.LegYaw: the legs follow the travel up to a little past the side; further back the stride turns round and
+        // plays backwards, with some give either way so it does not flicker at the side
+        const float LegHyst = 0.35f, LegMax = Mathf.PI / 2f + LegHyst, TorsoKeep = 0.25f;
+        static float LegYawFor(float rel, ref int dir)
+        {
+            rel = WrapPi(rel);
+            float side = Mathf.PI / 2f, a = Mathf.Abs(rel);
+            if (dir >= 0 && a > side + LegHyst) dir = -1;
+            else if (dir < 0 && a < side - LegHyst) dir = 1;
+            else if (dir == 0) dir = 1;
+            float y = dir > 0 ? rel : WrapPi(rel - Mathf.PI);
+            return Mathf.Clamp(y, -LegMax, LegMax);
+        }
+
+        static float WrapPi(float a) => Mathf.Repeat(a + Mathf.PI, 2f * Mathf.PI) - Mathf.PI;
+        // = Min(1, dt * k) at 60 fps, the same curve at any frame rate (Speltest HeroAnim.K60)
+        static float K60(float k, float dt) => k >= 60f ? (dt > 0f ? 1f : 0f) : 1f - Mathf.Pow(1f - k / 60f, dt * 60f);
+
+        // AnimFix.Life: a running hero leans into its turns and forward as it speeds up (back a little as it stops), a few degrees on
+        // the model under the clips; Speltest kept a little of the bank into turns too (PoseMx)
+        void Lean(float dt)
+        {
+            if (dt <= 1e-4f) return;
+            float yaw = transform.eulerAngles.y;
+            float yawRate = Mathf.DeltaAngle(lastYaw, yaw) / dt, acc = (gSpd - lastSpd) / dt;
+            lastYaw = yaw; lastSpd = gSpd;
+            float roll = Mathf.Clamp(-yawRate * 0.012f, -7f, 7f) * moveW, pitch = Mathf.Clamp(acc * 0.25f, -4f, 5f) * moveW;
+            leanR += (roll - leanR) * K60(8f, dt);
+            leanP += (pitch - leanP) * K60(6f, dt);
+            model.localRotation = Quaternion.Euler(leanP, 0f, leanR);
+        }
+
         // Old Speltest's stride (HeroMixamoGait.MxStride, Rickard 2026-10-26: Tikta and Tyra "hukar och går snabbt"): BAM played only
         // the run at 0.8-1.6x whatever the speed, so the feet slid and pattered. Now the speed over the ground, in hip heights a second,
         // picks how much walk and how much run play, and the stride runs at the rate that keeps the planted foot still on the ground.
@@ -794,12 +1123,14 @@ namespace BAM.Art
             if (!gaitMeasured) MeasureGait(clips[CWalk].GetAnimationClip(), clips[CRun].GetAnimationClip());
             Vector3 p = transform.position;
             float raw = 0f;
+            Vector3 vel = Vector3.zero;
             if (hasLast && dt > 1e-4f)
             {
                 Vector3 d = p - lastPos; d.y = 0f;
-                if (d.magnitude < 1f) raw = d.magnitude / dt; // a respawn or a pull jumps: not a step
+                if (d.magnitude < 1f) { raw = d.magnitude / dt; vel = d / dt; } // a respawn or a pull jumps: not a step
             }
             lastPos = p; hasLast = true;
+            travelV += (vel - travelV) * Mathf.Min(1f, dt * 10f); // the way it goes, for LegsFollow
             gSpd += (raw - gSpd) * Mathf.Min(1f, dt * (raw < gSpd ? 22f : 10f)); // Speltest's CombatFeel.GroundSpeed: stops faster than it starts
             float hipsW = hipsH * anim.transform.lossyScale.y;
             float rel = hipsW > 1e-4f ? gSpd / hipsW : 0f;
@@ -810,7 +1141,9 @@ namespace BAM.Art
             float runK = Mathf.Clamp01((rel - walkSpd) / (top - walkSpd));
             float stride = Mathf.Lerp(walkSpd * wLen, runSpd * rLen, runK), len = Mathf.Lerp(wLen, rLen, runK);
             float rate = Mathf.Clamp(rel / Mathf.Max(0.05f, stride), 0.6f / len, 1.8f / len);
-            if (moveW > 0.01f) gaitPh = Mathf.Repeat(gaitPh + dt * rate, 1f);
+            // backing off with its legs turned round (LegsFollow), the stride plays backwards
+            float back = AnimFix.LegsFollow && legDir < 0 && legW > 0.5f ? -1f : 1f;
+            if (moveW > 0.01f) gaitPh = Mathf.Repeat(gaitPh + dt * rate * back, 1f);
             clips[CWalk].SetTime(gaitPh * wLen);
             clips[CRun].SetTime(gaitPh * rLen);
             return runK;
@@ -934,6 +1267,7 @@ namespace BAM.Art
         {
             // as before 2026-10-27: the clip at its own pace, from AttackStart (Bram skips the hammer's dip to the side, so it rises
             // straight off his shoulder)
+            if (atkSeg) return t < windup ? atkFrom + t * atkSpeed : Mathf.Min(atkTo, atkBlow + (t - windup) * RecoverRate);
             if (!Phased(HeroIndex)) return Mathf.Min(clipLen[CAttack], atkStart + t * atkSpeed);
             float coil = windup - atkSlash;
             if (t < coil) { float w = t / Mathf.Max(1e-4f, coil); return atkRel * 0.7f * (1f - (1f - w) * (1f - w) * (1f - w)); }

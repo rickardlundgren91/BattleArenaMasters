@@ -6,7 +6,8 @@ namespace BAM.Art
     /// The menu hero's living idle, laid on top of its idle clip after the Animator (old Speltest HeroMixamo.MxBreath): a breath
     /// in the chest and shoulders, the weight rocking from side to side, a loose right arm, a head that looks about, and every
     /// 6 s a real look to one side and back. Some idle clips are one held pose (Blast's, Moa's, Bram's barely move), so without
-    /// this the menu hero stands stiff (Rickard 2026-10-26: "goblin i menyn står helt stel"). Menu previews only.
+    /// this the menu hero stands stiff (Rickard 2026-10-26: "goblin i menyn står helt stel"). Menu previews; in a match only the
+    /// breath (<see cref="ApplyMatch"/>, AnimFix.Life).
     /// </summary>
     sealed class PreviewBreath
     {
@@ -55,6 +56,20 @@ namespace BAM.Art
             Turn(chest, 0f, 9f * ge, 0f);
             Turn(neck, 0f, 8f * ge, 0f);
             Turn(head, -3f * Mathf.Abs(ge), 11f * ge, 0f);
+        }
+
+        /// <summary>AnimFix.Life in a match: the breath and half the weight shift only; no looking about (the hero watches its
+        /// fight) and the weapon arm left to the clip. w: about 0.6 standing at rest, 0 on the move or swinging.</summary>
+        internal void ApplyMatch(float time, float w)
+        {
+            if (w <= 0.001f) return;
+            float t = time + phase, br = Mathf.Sin(t * 1.9f) * w, sw = Mathf.Sin(t * 0.7f) * w * 0.5f, sh = Mathf.Sin(t * 0.45f + 1f) * w * 0.5f;
+            Turn(spine, 2.2f * br, 6f * sh, 5f * sw);
+            Turn(chest, 2.8f * br, 4f * sh, -3f * sw);
+            Turn(upperChest, 1.5f * br, 0f, 0f);
+            Turn(head, -1.5f * br, 0f, 0f);
+            Turn(lShoulder, 0f, 0f, 3.5f * br);
+            Turn(rShoulder, 0f, 0f, -3.5f * br);
         }
 
         static void Turn(Transform b, float x, float y, float z)

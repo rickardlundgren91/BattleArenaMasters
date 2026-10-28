@@ -67,6 +67,8 @@ namespace BAM.Art
         public virtual void SetChannel(float progress01) { }
         /// <summary>The Sprint spell is on: a lime speed trail while the unit moves.</summary>
         public virtual void SetSprint(bool on) { }
+        /// <summary>The unit faces a target or an aim, not the way it walks (AnimFix.LegsFollow: its legs turn to the travel).</summary>
+        public virtual void SetSquared(bool on) { }
         /// <summary>Tikta's Deathmark on this hero: seconds left, below 0 = off. A sigil over the head and a violet ring at the feet,
         /// blinking in the last 0.75 s. Call it only while the player can see the unit.</summary>
         public virtual void SetDeathmark(float left) { }

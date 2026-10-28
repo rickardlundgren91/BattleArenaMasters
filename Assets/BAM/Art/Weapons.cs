@@ -27,6 +27,20 @@ namespace BAM.Art
         public bool Reverse;
         /// <summary>Degrees the weapon is turned about its own handle after it is placed (a flat fan turned to lie along the knuckles).</summary>
         public float Twist;
+        /// <summary>With a hold angle (AnimFix.FixedGrip): how much of the hand's own turn away from its idle the weapon follows at
+        /// rest; 0 stands it still in the hero's space whatever the hand does, 1 fixes it in the fist (both looked wrong in the
+        /// run renders of 2026-10-28: stiff, or tipped flat by the pumping fist).</summary>
+        public float Follow = 0.25f;
+        /// <summary>AnimFix.FixedGrip: through a swing or cast the weapon keeps its rest aim, following <see cref="SwingFollow"/> of the
+        /// hand, instead of going over to the fist's own grip. For weapons the borrowed clips were not made for: in the fist's grip
+        /// Moa's staff flipped up to 170 degrees and Tikta's needles 100-150 at every swing (Blender renders 2026-10-28, bam-work/art/
+        /// rigg-anim/sving); a fist-made slash (Fenn, Bram, Bonk) keeps the fist's grip.</summary>
+        public bool SwingAim;
+        public float SwingFollow = 0.5f;
+        /// <summary>AnimFix.FixedGrip: degrees turned about the grip in the weapon's own x/y/z while an attack plays, with its weight
+        /// (Tyra's bow stands up for the shot; in the fist's own grip it lay flat). Not in a cast: Tyra's cast is a held draw, made for
+        /// a bow, upright in the fist's own grip.</summary>
+        public Vector3 SwingTurn;
         /// <summary>Rickard's own touch-up (Weapon Tuner): a shift in the hero's right/up/forward as a share of the figure's height,
         /// and degrees turned about the grip in the weapon's own x/y/z, on top of everything else, every frame.</summary>
         public Vector3 Offset, Turn;
@@ -88,7 +102,7 @@ namespace BAM.Art
             // overhead strike (HeroArtImport) lifts it straight off the shoulder
             g[(int)HeroId.Bram] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 36f, HoldOut = 170f } },
+                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.8f, Grip = 0.3f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f } },
                 ArmSpread = 22f,
                 Shoulder = true,
             };
@@ -96,10 +110,11 @@ namespace BAM.Art
             g[(int)HeroId.Knut] = new GearDef { Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f } } };
             // with her own clips the staff along the forearm hung beside the fist and the crest, face out at the side, read as a
             // torch from the front (Rickard 2026-10-26: "moa håller inte i sina vapen"): the staff now stands up through her right
-            // fist, face to the front, and the crest sits on her left hand turned half to the front
+            // fist, face to the front, and the crest sits on her left hand turned half to the front; (2026-10-28) it stays up through
+            // her swing and cast, leaning a third of the way with her hand, instead of flipping over in her fist
             g[(int)HeroId.Moa] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true } },
+                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, SwingFollow = 0.35f } },
                 Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true, Turn = 45f, Off = 0.12f },
             };
             // her ornate bow (Rickard's Tripo model 2026-10-24, old fig_ornateBow; Rickard 2026-10-26: "ja", put it in her hand),
@@ -108,17 +123,20 @@ namespace BAM.Art
             // flat along her outstretched arm (Rickard 2026-10-26: "håller konstigt i vapen"; checked in a Blender render of IdleBow)
             // at rest (her relaxed idle and walk, Rickard 2026-10-27) the bow hangs upright beside her left leg; her shot plays
             // the grip untouched
-            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -60f, HoldOut = -30f } } };
+            // (2026-10-28) for the shot the bow is turned a quarter about the fingers, so it stands up with its belly to the target
+            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -60f, HoldOut = -30f, Follow = 0.15f, SwingTurn = new Vector3(0f, 0f, -90f) } } };
             // her old needle daggers, one in each fist out of the thumb side (old View3DOwnHeroFx.cs MxNeedles before the Needle
             // Wing: NeedleMesh/NeedleTex as Props tikta_needle, NEEDLE_LEN 0.36, NEEDLE_GRIP 0.14; Rickard 2026-10-26: "tikta ska
             // ha sina gamla vapen, typ två daggers"); at rest the blades point down along her forearms, since her guard idle holds
-            // a fist at her mouth and out of the thumb side the needle stuck into her face
+            // a fist at her mouth and out of the thumb side the needle stuck into her face; (2026-10-28) they keep that aim through her
+            // swing, following half of her hand, instead of flipping 100-150 degrees into the fist's own grip (pointing at her face at
+            // the wind-up, across her body after the blow) at every swing
             g[(int)HeroId.Tikta] = new GearDef
             {
                 Weapons = new[]
                 {
-                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true, HoldUp = -70f, HoldOut = 20f },
-                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true },
                 },
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
@@ -129,7 +147,7 @@ namespace BAM.Art
             // the "Bonk has arrived" picture); only turning the club, it stood in front of his face, behind his back or in his pelt
             g[(int)HeroId.Bonk] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f } },
+                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f } },
                 Shoulder = true,
             };
             return g;
@@ -258,13 +276,21 @@ namespace BAM.Art
         float sMeshH, sMeshD;
         // arms turned out after the clips
         GearDef gdef;
-        Transform armR, armL;
+        Transform armR, armL, elbR, elbL;
         // the right arm bent to carry the weapon on the shoulder
         Transform carryUp, carryLo, carryHand;
         float figH;
         // thrown
         float hideIn = -1f, backIn = -1f;
         const float AwayFor = 0.45f, PopIn = 0.15f;
+        // AnimFix.FixedGrip, measured in the idle (MeasureRest): which way each weapon's flat side faced, kept so the rest aim never
+        // flips half a turn as the fist turns (Tikta's needles turned up to 178 degrees in her fists every step), and where each
+        // hand turned in the hero's own space; again when the tuner changes a number the idle aim depends on
+        int[] laxSign, votes;
+        Quaternion[] handRef, lastRel;
+        Vector4[] refSum;
+        bool rested;
+        int restKey;
 
         public static HeldGear Build(GearDef g, Animator an, float figH)
         {
@@ -279,8 +305,13 @@ namespace BAM.Art
             h.bindP = new Vector3[nw]; h.gripL = new Vector3[nw]; h.bindR = new Quaternion[nw]; h.bindS = new Vector3[nw];
             h.palmL = new Vector3[nw]; h.handleV = new Vector3[nw]; h.shaftC = new Vector3[nw];
             h.meshH = new float[nw]; h.handS = new float[nw]; h.placedLen = new float[nw]; h.placedGrip = new float[nw];
+            h.laxSign = new int[nw]; h.votes = new int[nw]; h.handRef = new Quaternion[nw]; h.refSum = new Vector4[nw];
+            h.lastRel = new Quaternion[nw];
+            for (int i = 0; i < nw; i++) h.lastRel[i] = Quaternion.identity;
             h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
             h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            h.elbR = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
+            h.elbL = an.GetBoneTransform(HumanBodyBones.LeftLowerArm);
             if (g.Shoulder)
             {
                 h.carryUp = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -384,7 +415,7 @@ namespace BAM.Art
         public void Reset()
         {
             hideIn = -1f; backIn = -1f;
-            for (int i = 0; i < wT.Length; i++) if (wT[i] != null) wT[i].localScale = bindS[i];
+            for (int i = 0; i < wT.Length; i++) { if (wT[i] != null) wT[i].localScale = bindS[i]; lastRel[i] = Quaternion.identity; }
         }
 
         /// <summary>A thrown weapon leaves the hand after <paramref name="delay"/> seconds (the release).</summary>
@@ -396,7 +427,7 @@ namespace BAM.Art
 
         /// <param name="moveW">0 standing .. 1 on the move.</param>
         /// <param name="actW">How much an attack or cast clip is playing (0..1).</param>
-        public void Tick(float dt, float moveW, float actW, bool dead)
+        public void Tick(float dt, float moveW, float actW, float atkW, bool dead)
         {
             float show = 1f;
             if (hideIn >= 0f)
@@ -419,25 +450,43 @@ namespace BAM.Art
                 WeaponDef W = defs[i];
                 if (W.Len != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
                 if (W.Thrown) t.localScale = bindS[i] * show;
-                if (W.HoldUp != 0f) HoldAngle(i, W, dead ? 0f : 1f - Mathf.Clamp01(actW));
-                else { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
-                if (W.Turn != Vector3.zero)
-                {
-                    Vector3 gg = t.TransformPoint(gripL[i]);
-                    Quaternion q = t.rotation * Quaternion.Euler(W.Turn) * Quaternion.Inverse(t.rotation);
-                    t.SetPositionAndRotation(gg + q * (t.position - gg), q * t.rotation);
-                }
+                float rest = dead ? 0f : 1f - Mathf.Clamp01(actW);
+                if (W.HoldUp == 0f || dead) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
+                else if (AnimFix.FixedGrip) Steady(i, W, rest);
+                else HoldAngle(i, W, rest, 0);
+                if (W.Turn != Vector3.zero) TurnAbout(i, Quaternion.Euler(W.Turn));
+                float sw = dead ? 0f : Mathf.Clamp01(atkW);
+                if (AnimFix.FixedGrip && W.SwingTurn != Vector3.zero && sw > 0.001f)
+                    TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
                 if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
             }
             if (sAnchor != null) ShieldFace(moveW);
+        }
+
+        // turned by a rotation in the weapon's own axes, about its grip
+        void TurnAbout(int i, Quaternion local)
+        {
+            Transform t = wT[i];
+            Vector3 gg = t.TransformPoint(gripL[i]);
+            Quaternion q = t.rotation * local * Quaternion.Inverse(t.rotation);
+            t.SetPositionAndRotation(gg + q * (t.position - gg), q * t.rotation);
         }
 
         // MxArmSpread: about the hero's forward axis, so a hanging arm swings out from the side (before the weapons read the hands)
         void ArmSpread(float spread)
         {
             Vector3 fwd = root.forward;
-            if (armR != null) armR.rotation = Quaternion.AngleAxis(spread, fwd) * armR.rotation;
-            if (armL != null) armL.rotation = Quaternion.AngleAxis(-spread, fwd) * armL.rotation;
+            if (armR != null) armR.rotation = Quaternion.AngleAxis(spread * Hang(armR, elbR), fwd) * armR.rotation;
+            if (armL != null) armL.rotation = Quaternion.AngleAxis(-spread * Hang(armL, elbL), fwd) * armL.rotation;
+        }
+
+        // AnimFix.ArmRoom: 1 for an upper arm hanging down (up to 45 degrees off, as in the run), less as it rises, 0 from level up
+        float Hang(Transform up, Transform lo)
+        {
+            if (!AnimFix.ArmRoom || lo == null) return 1f;
+            Vector3 d = lo.position - up.position;
+            float m = d.magnitude;
+            return m < 1e-6f ? 1f : Mathf.Clamp01(Vector3.Dot(d / m, -root.up) / 0.7f);
         }
 
         // The right arm bent by a two-bone IK after the clips (and the menu's breath): the wrist goes a little in front of and
@@ -467,13 +516,123 @@ namespace BAM.Art
             carryLo.rotation = Quaternion.FromToRotation(carryHand.position - lo, a + dir * d - lo) * carryLo.rotation;
         }
 
-        // MxHoldAngle: the grip is set in the T-pose, so with the arm hanging a hammer would point straight ahead, flat; turned
-        // about its grip to point forward and up, its head's long axis along the swing, and slid across the shaft into the palm
-        void HoldAngle(int i, WeaponDef W, float w)
+        /// <summary>AnimFix.FixedGrip wants the idle measured: the first time, or after the tuner changed a number the rest aim
+        /// depends on (BodyView then calls <see cref="BeginRest"/>, <see cref="SampleRest"/> per idle frame, <see cref="EndRest"/>).</summary>
+        public bool NeedsRest
+        {
+            get
+            {
+                if (!AnimFix.FixedGrip) return false;
+                bool aims = false;
+                for (int i = 0; i < defs.Length; i++) if (defs[i] != null && defs[i].HoldUp != 0f) aims = true;
+                return aims && (!rested || restKey != RestKey());
+            }
+        }
+
+        public void BeginRest()
+        {
+            for (int i = 0; i < wT.Length; i++) { votes[i] = 0; refSum[i] = Vector4.zero; }
+        }
+
+        /// <summary>The rig stands in one idle frame straight from the clip: the arms go as Tick puts them, then each hand's turn in
+        /// the hero's space and the way HoldAngle turns each weapon's flat side are noted. Writes bones (BodyView puts them back).</summary>
+        public void SampleRest()
+        {
+            if (gdef.ArmSpread > 0f) ArmSpread(gdef.ArmSpread);
+            if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(1f);
+            for (int i = 0; i < wT.Length; i++)
+            {
+                Transform t = wT[i];
+                if (t == null) continue;
+                WeaponDef W = defs[i];
+                if (W.Len != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
+                Quaternion q = Quaternion.Inverse(root.rotation) * hand[i].rotation;
+                var v = new Vector4(q.x, q.y, q.z, q.w);
+                if (Vector4.Dot(v, refSum[i]) < 0f) v = -v; // an idle's frames are close together: summed on one side they average
+                refSum[i] += v;
+                if (W.HoldUp != 0f) votes[i] += HoldAngle(i, W, 1f, 0);
+                t.localPosition = bindP[i]; t.localRotation = bindR[i];
+            }
+        }
+
+        public void EndRest()
+        {
+            for (int i = 0; i < wT.Length; i++)
+            {
+                Vector4 s = refSum[i];
+                float m = s.magnitude;
+                handRef[i] = m > 1e-6f ? new Quaternion(s.x / m, s.y / m, s.z / m, s.w / m) : Quaternion.identity;
+                laxSign[i] = votes[i] > 0 ? 1 : votes[i] < 0 ? -1 : 0;
+                lastRel[i] = Quaternion.identity;
+            }
+            rested = true;
+            restKey = RestKey();
+        }
+
+        // the numbers the idle aim depends on (the tuner changes them in place)
+        int RestKey()
+        {
+            unchecked
+            {
+                int k = (gdef.ArmSpread.GetHashCode() * 31 + gdef.CarryAt.GetHashCode()) * 31 + gdef.Elbow.GetHashCode();
+                for (int i = 0; i < defs.Length; i++)
+                {
+                    WeaponDef W = defs[i];
+                    if (W == null) continue;
+                    k = k * 31 + W.HoldUp.GetHashCode();
+                    k = k * 31 + W.HoldOut.GetHashCode();
+                    k = k * 31 + W.Len.GetHashCode();
+                    k = k * 31 + W.Grip.GetHashCode();
+                }
+                return k;
+            }
+        }
+
+        // AnimFix.FixedGrip: the rest aim is HoldAngle's (what Rickard tuned on the idle), with its flat side always the way the idle
+        // had it, so it never flips half a turn; it follows a share of the hand's own turn (W.Follow) instead of standing still while
+        // the fist turns round it; and the swing's grip is reached in one turn about the palm while the swing eases in (rest from
+        // BodyView), not let go of in a tenth of a second at every swing and taken back after it
+        // (a SwingAim weapon keeps the rest aim through the swing, following SwingFollow of the hand)
+        void Steady(int i, WeaponDef W, float rest)
         {
             Transform t = wT[i];
             t.localPosition = bindP[i]; t.localRotation = bindR[i];
-            if (w <= 0.001f) return;
+            bool keep = W.SwingAim && rested;
+            if (rest <= 0.001f && !keep) return;
+            Vector3 gl = gripL[i];
+            Quaternion rB = t.rotation;
+            Vector3 gB = t.TransformPoint(gl);
+            HoldAngle(i, W, 1f, rested ? laxSign[i] : 0);
+            Quaternion rR = t.rotation;
+            float follow = keep ? Mathf.Lerp(W.SwingFollow, W.Follow, rest) : W.Follow;
+            if (rested) rR = Share(i, hand[i].rotation * Quaternion.Inverse(root.rotation * handRef[i]), follow) * rR;
+            float w = keep ? 1f : rest;
+            Vector3 g = Vector3.Lerp(gB, t.TransformPoint(gl), w);
+            t.rotation = Quaternion.Slerp(rB, rR, w);
+            t.position += g - t.TransformPoint(gl);
+        }
+
+        // a share of the hand's turn from its rest, along the way it went: the shortest way (Slerp) jumps to the other side as the
+        // turn passes half a circle (Tikta's right hand turns 164 degrees in her swing), half a turn of a needle following half of it
+        Quaternion Share(int i, Quaternion q, float f)
+        {
+            Quaternion p = lastRel[i];
+            if (p.x * q.x + p.y * q.y + p.z * q.z + p.w * q.w < 0f) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+            lastRel[i] = q;
+            if (f <= 0f) return Quaternion.identity;
+            float w = Mathf.Clamp(q.w, -1f, 1f), s = Mathf.Sqrt(1f - w * w);
+            if (s < 1e-5f) return Quaternion.identity;
+            return Quaternion.AngleAxis(2f * Mathf.Acos(w) * Mathf.Rad2Deg * f, new Vector3(q.x / s, q.y / s, q.z / s));
+        }
+
+        // MxHoldAngle: the grip is set in the T-pose, so with the arm hanging a hammer would point straight ahead, flat; turned
+        // about its grip to point forward and up, its head's long axis along the swing, and slid across the shaft into the palm.
+        // sign: which way the flat side goes (0 = the one nearer the fist's, which flips as the fist turns); returns the one used
+        int HoldAngle(int i, WeaponDef W, float w, int sign)
+        {
+            Transform t = wT[i];
+            t.localPosition = bindP[i]; t.localRotation = bindR[i];
+            if (w <= 0.001f) return sign;
             Vector3 gl = gripL[i];
             Vector3 fwd = root.forward, upW = root.up;
             Transform hd = hand[i], ix = index[i];
@@ -500,7 +659,8 @@ namespace BAM.Art
             if (lax.sqrMagnitude > 1e-6f)
             {
                 lax.Normalize();
-                if (Vector3.Dot(lax, t.right) < 0f) lax = -lax;
+                if (sign == 0) sign = Vector3.Dot(lax, t.right) < 0f ? -1 : 1;
+                lax *= sign;
                 float ang = Vector3.SignedAngle(t.right, lax, sh) * w;
                 Vector3 gg = t.TransformPoint(gl);
                 Quaternion tw = Quaternion.AngleAxis(ang, sh);
@@ -509,6 +669,7 @@ namespace BAM.Art
             Vector3 d = palm - t.TransformPoint(gl);
             d -= sh * Vector3.Dot(d, sh); // slide across the shaft only, never along it
             t.position += d * w;
+            return sign;
         }
 
         // MxShieldFace: standing, held up in front close to the arm; on the move, carried at the left side, face turned outwards
