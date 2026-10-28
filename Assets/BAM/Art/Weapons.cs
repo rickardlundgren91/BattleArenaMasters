@@ -112,12 +112,12 @@ namespace BAM.Art
         static GearDef[] Make()
         {
             var g = new GearDef[(int)HeroId.Oaken + 1];
-            // at rest the sword lowered and out from the body, the blade forward on the run (Rickard's pick B 2026-10-28, after a
-            // tester found his upright hold beside the helmet odd on the menu stage); Len, Grip, Turn and Offset are his Weapon Tuner
-            // numbers, so Reset Fenn gives this hold and not the bind grip across the shield
+            // at rest the sword raised across beside his head (Rickard's own Weapon Tuner hold 2026-10-28 20:49 CET, after a tester
+            // found the upright hold beside the helmet odd on the menu stage and the lowered pick B looked worse to him in Unity), so
+            // Reset Fenn gives this hold and not the bind grip across the shield
             g[(int)HeroId.Fenn] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 0.98f, Grip = 0.18f, HoldUp = -15f, HoldOut = 45f, Turn = new Vector3(-4f, -7f, -4f), Offset = new Vector3(-0.01f, 0f, 0.02f) } },
+                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f, HoldUp = 45f, HoldOut = 62f, Turn = new Vector3(-33f, 55f, 0f) } },
                 Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f },
             };
             // arms out as in the old game (MX_ARM_SPREAD 22) and, at rest, the hammer on his right shoulder as Bonk carries his club
@@ -551,7 +551,14 @@ namespace BAM.Art
                 else HoldAngle(i, W, rest, 0);
                 if (AnimFix.FixedGrip && W.RestTurn != Vector3.zero && W.HoldUp != 0f && rest > 0.001f)
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.RestTurn), rest));
-                if (W.Turn != Vector3.zero) TurnAbout(i, Quaternion.Euler(W.Turn));
+                // Rickard's Turn is tuned on the rest hold, so with FixedGrip it goes as the rest aim goes: through a swing the weapon
+                // is in the fist's own grip (Fenn's -33/55 left his blade end-on to the match camera at the blow, 2026-10-28); a
+                // SwingAim weapon keeps its rest aim and its Turn, a weapon without a rest aim and a dead hero's keep the Turn whole
+                if (W.Turn != Vector3.zero)
+                {
+                    float tw = !AnimFix.FixedGrip || W.HoldUp == 0f || dead || (W.SwingAim && rested) ? 1f : rest;
+                    if (tw > 0.001f) TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.Turn), tw));
+                }
                 float sw = dead ? 0f : Mathf.Clamp01(atkW);
                 if (AnimFix.FixedGrip && W.SwingTurn != Vector3.zero && sw > 0.001f)
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
