@@ -724,9 +724,10 @@ namespace BAM.Art
             };
             if (propBody)
             {
-                // Rickard's wolf mesh is the body; the code adds only a ghostly glow on the ground under it
+                // Rickard's wolf mesh is the body. The code's ghostly glow disc under it read as "någon blå pöl" (tester Benny via
+                // Rickard 2026-10-28: "skall vara bara en full spectral varg"): only a speck stays, so the skinned mesh is not empty
                 b.Bone = WolfBody;
-                b.Color(Pal.Ghost).Disc(new Vector3(0f, 0.03f, 0f), 0.75f, 16);
+                b.Color(Pal.Ghost).Disc(new Vector3(0f, 0.03f, 0f), 0.001f, 3);
                 return new RigDef
                 {
                     Pivots = piv, Parents = new[] { -1, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody }, Kind = RigKind.Wolf,

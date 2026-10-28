@@ -142,9 +142,9 @@ namespace BAM.Art
                 trail = go.AddComponent<TrailRenderer>();
                 Material tm = TexTrail();
                 trail.sharedMaterial = tm ?? ArtKit.TrailMaterial;
-                trail.time = k == ProjKind.TowerShot || k == ProjKind.TyraBolt || k == ProjKind.TyraVolley ? 0.22f : 0.16f;
+                trail.time = k == ProjKind.TyraBolt ? 0.3f : k == ProjKind.TowerShot || k == ProjKind.TyraVolley ? 0.22f : 0.16f;
                 trail.minVertexDistance = 0.08f;
-                trail.widthMultiplier = k == ProjKind.TyraBolt || k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : 0.14f;
+                trail.widthMultiplier = k == ProjKind.TyraBolt ? 0.44f : k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : 0.14f; // Tyra's bolt: twice as wide (2026-10-28)
                 trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
                 if (tm != null)
                 {
@@ -381,6 +381,13 @@ namespace BAM.Art
             {
                 if (CanMiss(kind) && !hit) Fx.Fizzle(kind, vis.position, team);
                 else Fx.Impact(kind, vis.position, team);
+                // Tyra's bolt (Rickard 2026-10-28, tester Benny: "pilen borde ha mer ljus och effekter"): his spikes fly on the way
+                // it went, and a short light pillar stands where it struck
+                if (kind == ProjKind.TyraBolt && hit)
+                {
+                    Fx.Spikes(vis.position, dir, new Color(0.75f, 0.95f, 1f, 1f), 1.4f, 0.2f);
+                    Fx.Pillar(new Vector3(vis.position.x, 0f, vis.position.z), 0.7f, 3f, new Color(0.7f, 0.95f, 1f, 0.8f), 0.3f);
+                }
             }
             launched = false;
             tether = null;

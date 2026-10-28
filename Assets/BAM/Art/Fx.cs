@@ -1173,6 +1173,7 @@ namespace BAM.Art
                     break;
                 case ProjKind.TyraBolt:
                     SpecialHit((int)HeroId.Tyra, p, 1f);
+                    ImpactRing(new Vector3(p.x, 0f, p.z), 1.1f, new Color(0.75f, 0.95f, 1f, 1f), 0.3f);
                     Pow(p, 1, new Color32(180, 240, 255, 255), 0.9f, 0.16f);
                     Rays(p, new Color(0.7f, 0.95f, 1f, 1f), 1.1f, 0.18f);
                     HitStar(p, Color.white, 1.3f, 0.18f);
@@ -1252,7 +1253,15 @@ namespace BAM.Art
                 case ProjKind.TiktaNeedle: Bubbles(p, 1, C(Pal.Poison, 200), 0.08f, 0.1f, 0.35f, 0.3f); break;
                 case ProjKind.TiktaNeedleSpecial: Bubbles(p, 1, C(Pal.Poison), 0.12f, 0.2f, 0.45f, 0.4f, 0.05f); break;
                 case ProjKind.BlastFire: Smoke(p, 1, C(Pal.Ink, 90), 0.18f, 0.1f, 0.35f, 0.3f, 0.03f); break; // fuse smoke behind the thrown bomb
-                case ProjKind.TyraBolt: Stars(p, 1, new Color32(200, 245, 255, 255), 0.25f, 0.2f, 0.25f, 0f, 0.05f); break;
+                case ProjKind.TyraBolt:
+                    // a bright ball of light at the head, thin streaks and wisps behind, and a faint line of light left lying along
+                    // the path for half a second (Rickard 2026-10-28)
+                    Glow(p, 1, new Color32(200, 245, 255, 255), 0.75f, 0f, 0.08f);
+                    Stars(p, 1, new Color32(200, 245, 255, 255), 0.3f, 0.2f, 0.25f, 0f, 0.05f);
+                    SparksAlong(p, -dir, 1, new Color32(180, 240, 255, 255), 0.09f, 3f, 0.2f, 12f);
+                    if (Random.value < 0.5f) Wisps(p, 1, new Color32(170, 235, 255, 200), 0.35f, 0.3f, 0.4f, 0.4f, 0.05f);
+                    Glow(new Vector3(p.x, 0.15f, p.z), 1, new Color32(150, 225, 255, 110), 0.45f, 0f, 0.5f);
+                    break;
                 case ProjKind.TyraVolley: Glow(p, 1, new Color32(255, 230, 140, 220), 0.3f, 0.05f, 0.15f); if (Random.value < 0.35f) Embers(p, 1, new Color32(255, 214, 110, 255), 0.07f, 0.4f, 0.35f, 0.3f); break;
                 case ProjKind.BramHammerSpecial: Sparks(p, 1, heroAccent[(int)HeroId.Bram], 0.1f, 1.5f, 0.25f, 0.3f); break; // a forge tail
                 case ProjKind.TowerShot: Glow(p, 1, C(Pal.TeamLight(team)), 0.35f, 0.1f, 0.2f); break;

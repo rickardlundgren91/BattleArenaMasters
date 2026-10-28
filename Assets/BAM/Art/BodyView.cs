@@ -734,7 +734,7 @@ namespace BAM.Art
             if (!on) return;
             if (def.Ghost)
             {
-                float ga = a * (0.62f + ghostPulse * 0.18f);
+                float ga = a * (0.8f + ghostPulse * 0.15f); // a fuller spectral wolf (was 0.62-0.8; Rickard 2026-10-28)
                 for (int i = 0; i < ghostMats.Length; i++)
                 {
                     Color gc = i == 0 ? Color.white : ghostTint;
