@@ -173,6 +173,7 @@ namespace BAM.Sim
                         {
                             var x = ev[i];
                             if (usedHit[i] || x.Type != EventType.Hit || x.ASerial != s.Src || x.Kind != (byte)s.Kind) continue;
+                            if (PViewKeysByShot && PShotOf(x) != s.Serial) continue; // after the SHOT-01 fix every hit a flying shot makes carries its stamp: another stamp or none is not this shot's
                             if (s.Mode == ProjMode.Auto || s.Mode == ProjMode.Needle || s.Mode == ProjMode.Hammer) { if (x.BSerial == s.Tgt || (s.P.Tgt != null && x.BSerial == s.P.Tgt.Serial)) match = i; } // a retarget in its last tick
                             else if (x.B != null && SimMath.Hypot(x.B.X - s.P.X, x.B.Y - s.P.Y) <= s.Radius + x.B.R + 0.6f) match = i;
                         }

@@ -418,7 +418,7 @@ namespace BAM.Sim
             public int Seed;
             public long Dropped, FalseHit, FalseHitVisible, MissedHit, Ambiguous, FalseTicks, Volleys;
             public readonly Dictionary<string, long> FalseByKind = new Dictionary<string, long>(), DroppedByKind = new Dictionary<string, long>();
-            public readonly List<string> Examples = new List<string>();
+            public readonly List<string> Examples = new List<string>(), MissedEx = new List<string>();
 
             public void AfterStep(Match m)
             {
@@ -452,7 +452,7 @@ namespace BAM.Sim
                         string s = $"seed {Seed} t={m.Time:0.000}s shot #{r.Serial} {kn} ({r.Mode}) of unit #{r.Src}: {why}, but another {kn} of the same attacker hit in the same tick -> drawn as a hit";
                         if (Examples.Count < 12) Examples.Add(s);
                     }
-                    if (!view && truth) MissedHit++;
+                    if (!view && truth) { MissedHit++; if (MissedEx.Count < 3) MissedEx.Add($"seed {Seed} t={m.Time:0.000}s shot #{r.Serial} {kn} ({r.Mode}) of unit #{r.Src} at ({r.P.X:0.00},{r.P.Y:0.00}): hits this tick " + string.Join("; ", m.Events.Where(e => e.Type == EventType.Hit && e.ASerial == r.Src).Select(e => $"B#{e.BSerial} kind {(ProjKind)e.Kind} shot {PShotOf(e)} at ({e.X:0.00},{e.Y:0.00})"))); }
                     if (perKey[HitKey(r.Src, r.ViewKind)] > 1) Ambiguous++;
                 }
                 if (FalseHitVisible > falseBefore) FalseTicks++;
@@ -469,6 +469,7 @@ namespace BAM.Sim
                 foreach (var e in m.Events)
                 {
                     if (e.Type != EventType.Hit || e.ASerial != r.Src || e.Kind != (byte)p.Kind || e.B == null) continue;
+                    if (PViewKeysByShot && PShotOf(e) != r.Serial) continue; // after the SHOT-01 fix every hit a flying shot makes carries its stamp: another stamp or none is not this shot's
                     switch (p.Mode)
                     {
                         case ProjMode.Auto: case ProjMode.Needle: case ProjMode.Hammer:
@@ -541,6 +542,7 @@ namespace BAM.Sim
                 foreach (var kv in v.FalseByKind) total.FalseByKind[kv.Key] = (total.FalseByKind.TryGetValue(kv.Key, out long x) ? x : 0) + kv.Value;
                 foreach (var kv in v.DroppedByKind) total.DroppedByKind[kv.Key] = (total.DroppedByKind.TryGetValue(kv.Key, out long x) ? x : 0) + kv.Value;
                 foreach (var s in v.Examples) if (total.Examples.Count < 10) total.Examples.Add(s);
+                foreach (var s in v.MissedEx) if (total.MissedEx.Count < 3) total.MissedEx.Add(s);
             }
             SInfo($"{nMatches} Hard bot matches (10-hero pool): {total.Dropped} shots ended; drawn as hit without hitting: " + string.Join(", ", total.FalseByKind.OrderByDescending(k => k.Value).Select(kv => $"{kv.Key} {kv.Value}/{total.DroppedByKind[kv.Key]}")));
             foreach (var s in total.Examples.Take(2)) SInfo("e.g. " + s);
@@ -548,6 +550,7 @@ namespace BAM.Sim
             SCheck(vol == 0, "HIT-3_SHOT-01", $"[{(PViewKeysByShot ? "view per shot" : "view HitKey")}] {nMatches} Hard bot matches: {vol} of {(total.DroppedByKind.TryGetValue("TyraVolley", out long dv) ? dv : 0)} Tyra volley arrows drawn as hits without hitting ({total.FalseTicks} ticks, {total.Volleys} volleys; view rule copy, NOT TESTED in Unity)");
             SCheck(tik == 0, "HIT-4_TIKTA-02", $"{nMatches} Hard bot matches: {tik} of {(total.DroppedByKind.TryGetValue("TiktaNeedleSpecial", out long dt) ? dt : 0)} Tikta special needles drawn as hits without hitting");
             SCheck(total.FalseHitVisible == 0, "HIT-5", $"bot matches: no visible false hit-confirm of any kind ({total.FalseHitVisible}; PLAN gate = 0)");
+            foreach (var x in total.MissedEx) SInfo("real hit drawn as a miss: " + x);
             SCheck(total.MissedHit == 0, "HIT-6", $"bot matches: no real hit drawn as a miss ({total.MissedHit})");
         }
 
