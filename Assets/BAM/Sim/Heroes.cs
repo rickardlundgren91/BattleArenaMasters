@@ -193,6 +193,16 @@ namespace BAM.Sim
         /// <summary>Ties warning w to its shot or drop: w then ends when that does, not when the caster dies.</summary>
         static Proj WarnOf(Proj w, Proj of) { w.Of = of; w.OfSerial = of.Serial; return w; }
 
+        /// <summary>Tikta's drag warning and Moa's honey field do not give away a caster hidden in grass: a team that cannot see her
+        /// neither sees them drawn nor reads them (bots). Her needles still show once thrown (TIKTA-05, Rickard 2026-10-29 "Dölj tills kast").</summary>
+        public bool CastHiddenFrom(Proj p, int team)
+        {
+            var s = p.Src;
+            if (s == null || !s.Alive || s.Team == team || s.Kind != UnitKind.Hero) return false;
+            bool hides = (p.Mode == ProjMode.WarnLine && s.Hero == HeroId.Tikta) || (p.Mode == ProjMode.HoneyField && s.Hero == HeroId.Moa);
+            return hides && !IsVisibleTo(s, team);
+        }
+
         void WarnUpdate(Proj p)
         {
             var s = p.Src;
@@ -227,8 +237,11 @@ namespace BAM.Sim
         void HammerUpdate(Proj p, float dt)
         {
             var t = p.Tgt;
-            if (t == null || !t.Alive || t.Has(St.Untargetable)) { p.Done = true; return; }
-            float d = SimMath.Hypot(t.X - p.X, t.Y - p.Y), step = p.Speed * dt;
+            if (t == null) { p.Done = true; return; }
+            if (!p.Fizzle && (!t.Alive || t.Has(St.Untargetable))) { p.Fizzle = true; p.OX = t.X; p.OY = t.Y; } // keeps the spot it flew at
+            float step = p.Speed * dt;
+            if (p.Fizzle) { FlyToSpotAndPuff(p, step); return; } // its target fell or slipped away: no bounce either (BRAM-08)
+            float d = SimMath.Hypot(t.X - p.X, t.Y - p.Y);
             p.Ang = SimMath.Atan2(t.Y - p.Y, t.X - p.X);
             if (!Map.LosClear(p.X, p.Y, t.X, t.Y)) { p.Done = true; Blocked(p, p.X, p.Y); return; } // a wall between: the hammer drops
             if (d > step + t.R * 0.5f) { p.X += (t.X - p.X) / d * step; p.Y += (t.Y - p.Y) / d * step; return; }
@@ -705,11 +718,24 @@ namespace BAM.Sim
             Emit(EventType.AttackStart, h, t, 0, (byte)ProjKind.TiktaNeedleSpecial, true); // each needle shows a throw
         }
 
+        /// <summary>A homing shot whose target fell or turned untargetable flies on to the spot it was aimed at (OX, OY) and puffs out
+        /// there, no hit, so it is seen to land instead of vanishing in mid-air (TIKTA-07, BRAM-08).</summary>
+        void FlyToSpotAndPuff(Proj p, float step)
+        {
+            float ox = p.X, oy = p.Y, dl = SimMath.Hypot(p.OX - p.X, p.OY - p.Y), k = dl <= step ? 1 : step / dl;
+            p.X += (p.OX - p.X) * k; p.Y += (p.OY - p.Y) * k;
+            if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
+            else if (k >= 1) { p.Done = true; Blocked(p, p.X, p.Y); }
+        }
+
         void NeedleUpdate(Proj p, float dt)
         {
             var t = p.Tgt;
-            if (t == null || !t.Alive || t.Has(St.Untargetable)) { p.Done = true; return; }
-            float d = SimMath.Hypot(t.X - p.X, t.Y - p.Y), step = p.Speed * dt;
+            if (t == null) { p.Done = true; return; }
+            if (!p.Fizzle && (!t.Alive || t.Has(St.Untargetable))) { p.Fizzle = true; p.OX = t.X; p.OY = t.Y; } // keeps the spot it flew at
+            float step = p.Speed * dt;
+            if (p.Fizzle) { FlyToSpotAndPuff(p, step); return; } // its target fell or slipped away (TIKTA-07)
+            float d = SimMath.Hypot(t.X - p.X, t.Y - p.Y);
             if (!Map.LosClear(p.X, p.Y, t.X, t.Y)) { p.Done = true; Blocked(p, p.X, p.Y); return; } // the target ducked behind a wall
             if (d <= step + t.R * 0.5f) { p.Done = true; SpecialHit(p.Src, t, p.Dmg + TiktaMarkBonus(p.Src, t, p), p.Kind, true); NeedlePoison(p.Src, t); return; } // + Deathmark in the same hit
             p.Ang = SimMath.Atan2(t.Y - p.Y, t.X - p.X);

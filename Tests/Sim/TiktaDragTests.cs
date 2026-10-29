@@ -106,5 +106,72 @@ namespace BAM.Sim
             }
             Check(blocked >= 36 && blocked % 4 == 0 && worstWall <= 0.02f, $"needles into a wall spark at the wall: {blocked} sparks, worst {worstWall:0.000} tiles off");
         }
+    
+        static void TiktaHidden()
+        {
+            // TIKTA-05 (Rickard "Dölj tills kast"): a Tikta hidden in grass drags without her foes seeing the strip; her own team sees it
+            var m = TiktaScene(out var t, out _, out _);
+            int foes = Teams.Other(t.Team);
+            float gx = -1, gy = -1;
+            for (int y = 2; y < m.Map.H - 2 && gx < 0; y++)
+                for (int x = 1; x < m.Map.W - 1 && gx < 0; x++)
+                {
+                    float sx = x + 0.5f, sy = y + 0.5f;
+                    if (!m.Map.InGrass(sx, sy) || !m.Map.Free(sx, sy, 0.4f)) continue;
+                    var tw = m.Towers[foes]; if (tw != null && SimMath.Dist(tw, sx, sy) <= tw.UDef.Range + 1) continue;
+                    bool far = true; foreach (var u in m.Units) if (u.Alive && u.Team == foes && SimMath.Dist(u, sx, sy) <= Rules.GrassSight + 1) far = false;
+                    if (far) { gx = sx; gy = sy; }
+                }
+            Place(t, gx, gy); t.Charge = t.HDef.MaxCharge;
+            m.Step(TiktaDrag(0));
+            Proj w = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.WarnLine && p.Src == t && !p.Done) w = p;
+            Check(gx >= 0 && w != null && m.CastHiddenFrom(w, foes) && !m.CastHiddenFrom(w, t.Team), "hidden in grass: the drag strip is hidden from her foes, shown to her team");
+            Unit e = null; foreach (var h in m.Heroes) if (h.Team == foes) { e = h; break; }
+            Place(e, gx + 1.5f, gy); m.AddStatus(e, St.Stun, 999);
+            Check(w != null && !m.CastHiddenFrom(w, foes), "a foe within grass sight sees her and her strip");
+
+            // TIKTA-07: a tap needle whose target turns untargetable flies on to the spot and puffs out there, never vanishing mid-air
+            m = TiktaScene(out t, out float cx, out float cy);
+            Unit tg = null; foreach (var h in m.Heroes) if (h.Team != t.Team) { tg = h; break; }
+            Place(t, cx - 1.5f, cy); Place(tg, cx + 1.4f, cy); m.AddStatus(tg, St.Stun, 999); t.Charge = t.HDef.MaxCharge;
+            var tap = PlayerInput.None; tap.Special = true; tap.AimAngle = float.NaN;
+            int hits = 0, puffs = 0; float puffOff = 99; bool slipped = false; float sx0 = 0, sy0 = 0;
+            for (int k = 0; k < 90; k++)
+            {
+                m.Step(k == 0 ? tap : PlayerInput.None);
+                if (!slipped) foreach (var p in m.Projs) if (p.Mode == ProjMode.Needle && p.Tgt == tg && !p.Done && p.T > 0.05f)
+                        { slipped = true; sx0 = tg.X; sy0 = tg.Y; m.AddStatus(tg, St.Untargetable, 5); break; }
+                foreach (var ev in m.Events)
+                {
+                    if (ev.Kind != (byte)ProjKind.TiktaNeedleSpecial || ev.B != tg) continue;
+                    if (ev.Type == EventType.Hit) hits++;
+                    if (ev.Type == EventType.Blocked && slipped) { puffs++; puffOff = Math.Min(puffOff, SimMath.Hypot(ev.X - sx0, ev.Y - sy0)); }
+                }
+            }
+            Check(slipped && puffs >= 1 && puffOff <= 0.05f, $"needle at a target gone untargetable puffs out at its spot ({puffs} puffs, {puffOff:0.000} tiles off)");
+
+            // BRAM-08: the same for Bram's tapped hammer (no hit, no bounce)
+            m = Create(new MatchConfig { PlayerHero = HeroId.Bram, Allies = new[] { HeroId.Moa, HeroId.Fenn }, Enemies = new[] { HeroId.Tikta, HeroId.Knut, HeroId.Blast }, Seed = 7 });
+            foreach (var u in m.Units) { if (u.Kind == UnitKind.Minion) u.Alive = false; u.ClearStatuses(); }
+            m.State = MatchState.Play; m.Time = 10; m.WaveT = 1e9f; m.Events.Clear();
+            var b = m.Player; float px2 = 2;
+            foreach (var h in m.Heroes) if (h != b) { Place(h, px2, m.Map.H - 1.5f); px2 += 1.2f; m.AddStatus(h, St.Stun, 999); }
+            tg = null; foreach (var h in m.Heroes) if (h.Team != b.Team) { tg = h; break; }
+            Place(b, cx - 1.5f, cy); Place(tg, cx + 1.4f, cy); m.AddStatus(tg, St.Stun, 999); b.Charge = b.HDef.MaxCharge;
+            hits = 0; puffs = 0; puffOff = 99; slipped = false;
+            for (int k = 0; k < 90; k++)
+            {
+                m.Step(k == 0 ? tap : PlayerInput.None);
+                if (!slipped) foreach (var p in m.Projs) if (p.Mode == ProjMode.Hammer && p.Tgt == tg && !p.Done && p.T > 0.05f)
+                        { slipped = true; sx0 = tg.X; sy0 = tg.Y; m.AddStatus(tg, St.Untargetable, 5); break; }
+                foreach (var ev in m.Events)
+                {
+                    if (ev.Kind != (byte)ProjKind.BramHammerSpecial) continue;
+                    if (ev.Type == EventType.Hit) hits++;
+                    if (ev.Type == EventType.Blocked && slipped) { puffs++; puffOff = Math.Min(puffOff, SimMath.Hypot(ev.X - sx0, ev.Y - sy0)); }
+                }
+            }
+            Check(slipped && hits == 0 && puffs == 1 && puffOff <= 0.05f, $"Bram's hammer at a target gone untargetable puffs out at its spot ({hits} hits, {puffs} puffs, {puffOff:0.000} tiles off)");
+        }
     }
 }

@@ -301,6 +301,7 @@ namespace BAM.Sim
                 if (p.Done || p.Src == null || p.Team == h.Team) continue;
                 bool warn = p.IsWarning || p.Mode == ProjMode.Smash, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb || p.Mode == ProjMode.Keg;
                 if (!warn && !line && !bomb) continue;
+                if (warn && M.CastHiddenFrom(p, h.Team)) continue; // a hidden Tikta's strip is not seen (TIKTA-05)
                 if (!DodgeRoll(p, chance, out var dg) || Now < dg.At || Now > dg.At + dg.Len) continue;
                 if (warn) { TelegraphDodge(p, ref vx, ref vy); continue; }
                 if (line)

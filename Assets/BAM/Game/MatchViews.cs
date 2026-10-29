@@ -274,6 +274,9 @@ namespace BAM.Game
                 }
                 else if (p.IsZone || p.IsWarning)
                 {
+                    // a hidden Tikta's drag strip and a hidden Moa's honey field are not drawn for her foes: dropped while she is
+                    // hidden, drawn again (with the time it has left) once she is seen (TIKTA-05)
+                    if (m.CastHiddenFrom(p, Mine)) continue;
                     if (!zoneBySerial.TryGetValue(p.Serial, out ZoneRec z)) z = AddZone(p);
                     z.Seen = step;
                     // a warning that follows its caster (Tikta's line while her needles are in her hand, TIKTA-01)
