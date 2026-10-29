@@ -66,6 +66,28 @@ namespace BAM.Art
             return Store(300, "Zone Circle");
         }
 
+        /// <summary>A zone circle cut to how far it reaches each way (rim: points in the local xz plane, any order, at radius 1 where
+        /// nothing cuts it): soft fill with a bright edge like ZoneCircle, or only the fill. Not cached: the caller destroys it.</summary>
+        public static Mesh ReachFan(Vector3[] rim, bool edge)
+        {
+            System.Array.Sort(rim, (p, q) => Mathf.Atan2(p.z, p.x).CompareTo(Mathf.Atan2(q.z, q.x)));
+            b.Clear();
+            b.Color(edge ? Pal.WhiteSoft : Pal.WhiteMid);
+            float fill = edge ? 0.94f : 1f;
+            for (int i = 0; i < rim.Length; i++) b.Triangle(Vector3.zero, rim[(i + 1) % rim.Length] * fill, rim[i] * fill);
+            if (edge)
+            {
+                b.Color(Pal.White);
+                Vector3 up = new Vector3(0f, 0.002f, 0f);
+                for (int i = 0; i < rim.Length; i++)
+                {
+                    Vector3 p = rim[i], q = rim[(i + 1) % rim.Length];
+                    b.Face(p * 0.92f + up, q * 0.92f + up, q + up, p + up);
+                }
+            }
+            return b.ToMesh("Zone Reach");
+        }
+
         /// <summary>Strip from z = 0 to z = 1, x from -1 to 1, soft fill with bright edges.</summary>
         public static Mesh ZoneStrip()
         {

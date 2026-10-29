@@ -122,6 +122,8 @@ namespace BAM.Art
         /// <summary>After Show: an arrow from the centre along dir, length tiles long, for the way the zone pushes who it hits
         /// (Hilde's keg, HILDE-02); 0 = none. Show clears it.</summary>
         public virtual void SetPush(float length) { }
+        /// <summary>After Show: a circle cut to how far its blast reaches each way (world offsets from the centre), BLAST-05.</summary>
+        public virtual void CutTo(Vector3[] reach) { }
     }
 
     /// <summary>The aim shown while the player drags the special button, and the attack range ring.</summary>

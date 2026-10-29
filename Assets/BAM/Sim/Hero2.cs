@@ -119,6 +119,22 @@ namespace BAM.Sim
             return Math.Max(min, best);
         }
 
+        /// <summary>How far a blast at (x, y) with radius r reaches each way: into[i] for the angle i * 2 pi / into.Length (map space),
+        /// the farthest point not in a wall with a clear line from the centre (r on open ground). For the bomb and keg fuses.</summary>
+        public void BlastReach(float x, float y, float r, float[] into)
+        {
+            for (int i = 0; i < into.Length; i++)
+            {
+                float a = i * 2 * (float)Math.PI / into.Length, ca = SimMath.Cos(a), sa = SimMath.Sin(a);
+                if (Reaches(x, y, x + ca * r, y + sa * r)) { into[i] = r; continue; }
+                float lo = 0, hi = r;
+                for (int k = 0; k < 7; k++) { float mid = (lo + hi) * 0.5f; if (Reaches(x, y, x + ca * mid, y + sa * mid)) lo = mid; else hi = mid; }
+                into[i] = lo;
+            }
+        }
+
+        bool Reaches(float x, float y, float qx, float qy) => !Map.WallAt(qx, qy) && Map.LosClear(x, y, qx, qy);
+
         /// <summary>Every sampled point of the disc (px, py, rr) is reached by a blast from (x, y): not in a wall, a clear line.</summary>
         bool BlastReachesDisc(float x, float y, float px, float py, float rr)
         {
@@ -126,7 +142,7 @@ namespace BAM.Sim
             for (int i = 0; i < n; i++)
             {
                 float a = i * 2 * (float)Math.PI / n, qx = px + SimMath.Cos(a) * rr, qy = py + SimMath.Sin(a) * rr;
-                if (Map.WallAt(qx, qy) || !Map.LosClear(x, y, qx, qy)) return false;
+                if (!Reaches(x, y, qx, qy)) return false;
             }
             return true;
         }

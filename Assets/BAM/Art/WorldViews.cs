@@ -507,8 +507,42 @@ namespace BAM.Art
             }
         }
 
+        // Bomb and keg fuses (BLAST-05): their blast stops at walls, so the fuse is drawn only as far as it reaches each way
+        Mesh reachShape, reachFill;
+        bool cut;
+
+        /// <summary>Cuts a circle zone to how far its blast reaches (world offsets from the centre, one per direction, all of them at
+        /// the radius on open ground), after Show. Show makes it a full circle again.</summary>
+        public override void CutTo(Vector3[] reach)
+        {
+            Uncut();
+            if (reach == null || length > 0f) return;
+            var pts = new Vector3[reach.Length];
+            for (int i = 0; i < reach.Length; i++) { Vector3 l = transform.InverseTransformVector(reach[i]); l.y = 0f; pts[i] = l / radius; }
+            reachShape = Shapes.ReachFan(pts, true);
+            shapeF.sharedMesh = reachShape;
+            if (inner != null)
+            {
+                reachFill = Shapes.ReachFan((Vector3[])pts.Clone(), false);
+                inner.GetComponent<MeshFilter>().sharedMesh = reachFill;
+            }
+            cut = true;
+            if (rim != null) rim.gameObject.SetActive(false); // the round telegraph picture can't be cut
+        }
+
+        void Uncut()
+        {
+            if (!cut) return;
+            cut = false;
+            shapeF.sharedMesh = Shapes.ZoneCircle();
+            if (inner != null) inner.GetComponent<MeshFilter>().sharedMesh = Shapes.Disc(Pal.WhiteMid);
+            Destroy(reachShape); Destroy(reachFill);
+            reachShape = reachFill = null;
+        }
+
         public override void Show(Vector3 c, Vector3 d, float len, float r, float dur)
         {
+            Uncut();
             center = c; length = Mathf.Max(0f, len); radius = Mathf.Max(0.05f, r); duration = Mathf.Max(0.05f, dur);
             d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : Vector3.forward;
@@ -598,7 +632,7 @@ namespace BAM.Art
             mat.SetColor(ArtMaterials.BaseColor, c);
             if (rimMat != null)
             {
-                bool on = length <= 0f;
+                bool on = length <= 0f && !cut;
                 rim.gameObject.SetActive(on);
                 // additive: the colour's brightness is its strength
                 if (on) rimMat.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r * a, baseColor.g * a, baseColor.b * a, 1f));

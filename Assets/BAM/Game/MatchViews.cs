@@ -431,9 +431,28 @@ namespace BAM.Game
             z.V = ArtKit.CreateZone(p.Zone, Side(p.Team));
             z.V.Show(Coords.World(p.X, p.Y), Coords.Dir(p.Ang), p.ZoneLength, p.Radius, Mathf.Max(0.05f, p.TimeLeft));
             if (p.Kind == ProjKind.HildeKeg) z.V.SetPush(p.Radius + HildeS.KegKnock); // which way her keg throws who it hits (HILDE-02)
+            if (p.Zone == ZoneKind.BombFuse) CutFuse(z.V, p); // BLAST-05
             zones.Add(z);
             zoneBySerial[p.Serial] = z;
             return z;
+        }
+
+        // a bomb or keg fuse cut where its blast stops at walls (BLAST-05); left round on open ground
+        readonly float[] fuseReach = new float[48];
+        readonly Vector3[] fuseRim = new Vector3[48];
+        void CutFuse(ZoneView v, Proj p)
+        {
+            m.BlastReach(p.X, p.Y, p.Radius, fuseReach);
+            bool cut = false;
+            for (int i = 0; i < fuseReach.Length; i++) if (fuseReach[i] < p.Radius - 1e-3f) cut = true;
+            if (!cut) return;
+            Vector3 c = Coords.World(p.X, p.Y);
+            for (int i = 0; i < fuseReach.Length; i++)
+            {
+                float a = i * 2f * Mathf.PI / fuseReach.Length, d = Mathf.Max(0.05f, fuseReach[i]);
+                fuseRim[i] = Coords.World(p.X + Mathf.Cos(a) * d, p.Y + Mathf.Sin(a) * d) - c;
+            }
+            v.CutTo(fuseRim);
         }
 
         static Vector3 Flat(Vector3 d)

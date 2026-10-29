@@ -201,6 +201,20 @@ namespace BAM.Sim
                 }
                 Check(ok && r >= 0.5f, $"BLAST-05: by a wall the look ({lx:0.00}, {ly:0.00}) r {r:0.00} stays where the blast from ({bx}, {by}) reaches");
             }
+
+            // the bomb's fuse ring is cut where its blast stops: round in the open, short toward a wall, never past where it reaches
+            var reach = new float[48];
+            m.BlastReach(7.5f, 14.5f, BlastS.Radius, reach);
+            bool round = true; foreach (var d in reach) round &= Near(d, BlastS.Radius);
+            Check(round, "BLAST-05: in the open the fuse is a full circle");
+            m.BlastReach(4.6f, 7.5f, BlastS.Radius, reach);
+            float west = reach[24]; bool inside = true;
+            for (int i = 0; i < reach.Length; i++)
+            {
+                float a = i * 2 * (float)Math.PI / reach.Length;
+                inside &= m.Reaches(4.6f, 7.5f, 4.6f + SimMath.Cos(a) * reach[i], 7.5f + SimMath.Sin(a) * reach[i]);
+            }
+            Check(west < 0.7f && Near(reach[0], BlastS.Radius) && inside, $"BLAST-05: by a wall the fuse stops at it (toward the wall {west:0.00}, away {reach[0]:0.00})");
         }
 
         public static int RunHero2Tests()
