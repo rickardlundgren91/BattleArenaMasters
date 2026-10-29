@@ -11,7 +11,7 @@ namespace BAM.UI
     // StickySelect, MenuHeroFit.cs PageHero3Fit), ported exactly (Rickard 2026-10-26, read from his live Speltest):
     // - every subpage: the menu gradient with a mint glow, "‹ Back" at the top left, one glass sheet with a gold top edge, an H2
     //   title with a gold rule and diamond
-    // - Heroes: the grid only looks (ALL / BY ROLE); a tap opens the hero's own page with the 3D figure (tap = attack, drag =
+    // - Heroes: the grid only looks; a tap opens the hero's own page with the 3D figure (tap = attack, drag =
     //   turn), ‹ › to browse, role, stat bars against the best in the roster, special and passive, and SELECT at the bottom
     public static partial class Screens
     {
@@ -109,107 +109,23 @@ namespace BAM.UI
 
         // ---- Heroes: the grid ----
 
-        static GameObject heroGridAll, heroGridRoles;
         static readonly List<HeroCard> heroCards = new List<HeroCard>();
-        static Image sortAll, sortRole, sortAllEdge, sortRoleEdge;
-        static Text sortAllText, sortRoleText;
-        static bool heroesByRole;
         static ScrollRect heroScroll;
-        static readonly string[] HeroRoles = { "Tank", "Fighter", "Assassin", "Mage", "Marksman", "Support" };
 
         sealed class HeroCard { public int Index; public Image Fill, Edge, EdgeOn; public GameObject Check, Lock; public Text LockLevel; public RectTransform Box, Pic; public float Aspect; }
 
+        // One grid with all heroes (Rickard 2026-10-29: no ALL / BY ROLE bar)
         static void BuildHeroSelect()
         {
-            float sh = 8.5f * Cw;
-            var content = NewPage("Heroes", out heroSelect, out var panel, true, sh + Cw);
+            var content = NewPage("Heroes", out heroSelect, out var panel, true);
             tabPanels[1] = panel;
             heroScroll = panel.GetComponentInChildren<ScrollRect>();
             VList(content, 0, new RectOffset(0, 0, 0, Mathf.RoundToInt(4 * Cw)));
 
-            // ALL / BY ROLE, fixed above the grid (HeroesHead3); ALL each time the game starts
-            float head = 2 * Cw + Cw + 6.4f * Cw + 4.5f * Cw;
-            var bar = Pic(panel, "Sort", UiKit.Rounded, new Color(8 / 255f, 10 / 255f, 30 / 255f, 0.7f));
-            Radius(bar, sh / 2);
-            bar.raycastTarget = false;
-            TopLeft(bar.rectTransform, PageX, head, 1080 - 2 * PageX, sh);
-            bar.rectTransform.anchorMax = new Vector2(1, 1);
-            bar.rectTransform.offsetMax = new Vector2(-PageX, -head);
-            var barEdge = Pic(bar.rectTransform, "Edge", HomeArt.RoundRing(0.4f / (sh / 2)), HubLine);
-            RingRadius(barEdge, sh / 2);
-            SortHalf(bar.rectTransform, 0, "ALL", out sortAll, out sortAllEdge, out sortAllText);
-            SortHalf(bar.rectTransform, 1, "BY ROLE", out sortRole, out sortRoleEdge, out sortRoleText);
-
             var gridAll = HeroGrid(content, "All");
-            heroGridAll = gridAll.gameObject;
             for (int i = 0; i < HeroCatalog.Count; i++) BuildHeroCard(gridAll, i);
-
-            var roles = UiKit.NewRect("ByRole", content);
-            heroGridRoles = roles.gameObject;
-            var rl = VList(roles, 0, new RectOffset(0, 0, 0, 0));
-            rl.childControlHeight = true;
-            foreach (var role in HeroRoles)
-            {
-                bool any = false;
-                for (int i = 0; i < HeroCatalog.Count; i++) any |= HeroCatalog.All[i].Role == role;
-                if (!any) continue;
-                var headRow = UiKit.NewRect(role, roles);
-                headRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 7 * Cw;
-                var icon = UiKit.NewRect("Icon", headRow);
-                Mid(icon, 0, 1, 2 * Cw, -3 * Cw, 0, 0);
-                RoleIcon(icon, role, 1.8f * Cw, UiKit.Primary);
-                var name = UiKit.Label(headRow, role.ToUpperInvariant(), Mathf.RoundToInt(4.2f * Cw), TextAnchor.MiddleLeft, Color.white);
-                name.horizontalOverflow = HorizontalWrapMode.Overflow;
-                TopLeft(name.rectTransform, 5.5f * Cw, 3 * Cw - 3 * Cw, 60 * Cw, 6 * Cw);
-                var grid = HeroGrid(roles, role);
-                for (int i = 0; i < HeroCatalog.Count; i++) if (HeroCatalog.All[i].Role == role) BuildHeroCard(grid, i);
-                var gap = UiKit.NewRect("Gap", roles);
-                gap.gameObject.AddComponent<LayoutElement>().preferredHeight = 2 * Cw + 2.4f * Cw;
-            }
-            SetSort(false);
-            BuildHeroPage();
-        }
-
-        static void SortHalf(RectTransform bar, int k, string text, out Image fill, out Image edge, out Text label)
-        {
-            float sh = 8.5f * Cw, th = sh - 2 * Cw;
-            var half = UiKit.NewRect(text, bar);
-            half.anchorMin = new Vector2(k * 0.5f, 0);
-            half.anchorMax = new Vector2(k * 0.5f + 0.5f, 1);
-            half.offsetMin = new Vector2(k == 0 ? Cw : 0, Cw);
-            half.offsetMax = new Vector2(k == 0 ? 0 : -Cw, -Cw);
-            fill = half.gameObject.AddComponent<Image>();
-            fill.sprite = UiKit.Rounded;
-            fill.type = Image.Type.Sliced;
-            Radius(fill, th / 2);
-            edge = Pic(half, "Edge", HomeArt.RoundRing(0.45f / (th / 2 / Cw)), UiKit.Primary);
-            RingRadius(edge, th / 2);
-            label = UiKit.Label(half, text, Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, UiKit.TextDim);
-            UiKit.Stretch(label.rectTransform);
-            bool byRole = k == 1;
-            var b = half.gameObject.AddComponent<Button>();
-            b.transition = Selectable.Transition.None;
-            b.navigation = new Navigation { mode = Navigation.Mode.None };
-            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiToggle); SetSort(byRole); });
-            half.gameObject.AddComponent<ButtonFx>().PressScale = false;
-        }
-
-        // HubToggle: the chosen half dark with a mint wash and edge, the other a faint button shape with a lavender edge
-        static void SetSort(bool byRole)
-        {
-            heroesByRole = byRole;
-            heroGridAll.SetActive(!byRole);
-            heroGridRoles.SetActive(byRole);
-            SortLook(sortAll, sortAllEdge, sortAllText, !byRole);
-            SortLook(sortRole, sortRoleEdge, sortRoleText, byRole);
             if (heroScroll != null) heroScroll.verticalNormalizedPosition = 1;
-        }
-
-        static void SortLook(Image fill, Image edge, Text label, bool on)
-        {
-            fill.color = on ? HubToggleOn : new Color(1, 1, 1, 0.05f);
-            edge.color = on ? UiKit.Primary : new Color(150 / 255f, 160 / 255f, 1f, 0.35f);
-            label.color = on ? Color.white : UiKit.TextDim;
+            BuildHeroPage();
         }
 
         static RectTransform HeroGrid(RectTransform parent, string name)
