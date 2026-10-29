@@ -51,7 +51,7 @@ namespace BAM.Art
         AnimationMixerPlayable mixer;
         AnimationClipPlayable[] clips;
         float[] clipLen;
-        float atkSpeed = 1f, atkTotal = 0.5f, castLen = 0.6f, hitA = -1f, deathFadeAt = 0.55f;
+        float atkSpeed = 1f, atkTotal = 0.5f, castLen = 0.6f, hitA = -1f, deathFadeAt = 0.55f, deathFade = 0.45f;
         // old Speltest's HeroMixamo layers: standing, the attack and the cast move the whole body; on the move only the upper body
         // (this mask) swings while the legs keep running, so a hero hitting on the run no longer slides on frozen legs
         AnimationLayerMixerPlayable layers;
@@ -749,6 +749,10 @@ namespace BAM.Art
                 }
                 if (clips != null) { clips[CDeath].SetTime(0.0); clips[CDeath].SetTime(0.0); clips[CDeath].SetSpeed(1.0); }
                 if (imported) { leanP = leanR = 0f; model.localRotation = Quaternion.identity; } // no lean left in the fall (Life)
+                // ANIM-10: a hero's fall as Speltest's (HeroAnim.cs AnimState/PoseHero, HeroMixamo.cs PoseMx): the Dying clip from its
+                // start at its own speed, the body sinking from 0.6 s and faded out from 0.8 to 1.3 s. Ours faded from 2.0 s, so the
+                // clip's first stagger stood 1.3 s at full height before anything happened (Unity measuring run 1, 2026-10-29)
+                if (imported && IsHero && !Preview) { deathFadeAt = HeroFadeAt; deathFade = HeroFade; }
             }
             else
             {
@@ -836,7 +840,7 @@ namespace BAM.Art
 
         // ---------------------------------------------------------------- look
 
-        float DeathAlpha => deathT < 0f ? 1f : Mathf.Clamp01(1f - (deathT - deathFadeAt) / 0.45f);
+        float DeathAlpha => deathT < 0f ? 1f : Mathf.Clamp01(1f - (deathT - deathFadeAt) / deathFade);
 
         void ApplyLook()
         {
@@ -938,7 +942,11 @@ namespace BAM.Art
                 }
             }
             if (gear != null && clips != null && gear.NeedsRest) MeasureRest();
-            if (gear != null) gear.Tick(dt, moveW, gearAct, gearAtk, dead);
+            if (gear != null)
+            {
+                gear.Floor = Preview ? float.NegativeInfinity : transform.position.y; // ANIM-08/09: weapons stay above the ground
+                gear.Tick(dt, moveW, gearAct, gearAtk, dead);
+            }
             if (dead) AnimateDeath(dt);
             else
             {
@@ -1654,13 +1662,24 @@ namespace BAM.Art
         static float Back(float t) { t -= 1f; return 1f + t * t * (2.7f * t + 1.7f); }
         static float Smooth(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
 
+        const float HeroSinkAt = 0.6f, HeroSink = 0.9f, HeroFadeAt = 0.8f, HeroFade = 0.5f;
+
         void AnimateDeath(float dt)
         {
             if (deathT < 0f) return;
             float before = deathT;
             deathT += dt;
             float t = Mathf.Clamp01(deathT / 0.45f);
-            if (imported) { }
+            if (imported)
+            {
+                if (IsHero && !Preview)
+                {
+                    // Speltest's sink: 0.9 tiles a second from 0.6 s (set over InPlace's height, which is 0)
+                    Vector3 lp = model.localPosition;
+                    lp.y = -Mathf.Max(0f, deathT - HeroSinkAt) * HeroSink / Mathf.Max(1e-4f, transform.lossyScale.y);
+                    model.localPosition = lp;
+                }
+            }
             else if (def.Kind == RigKind.Target)
             {
                 float s = 1f - Smooth(deathT / 0.12f);

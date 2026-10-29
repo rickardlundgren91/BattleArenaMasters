@@ -383,6 +383,11 @@ namespace BAM.Art
         int restKey;
         /// <summary>A menu stage figure (BodyView.Preview): weapons with <see cref="WeaponDef.MenuFist"/> stay in the fist's grip.</summary>
         public bool OnMenu;
+        /// <summary>The ground's height under the hero (world y): no weapon's end goes below it (ANIM-08/09). Off (negative
+        /// infinity) on the menu stage.</summary>
+        public float Floor = float.NegativeInfinity;
+        // AboveGround: the way across the ground each weapon's end rested last frame (zero while it is above it)
+        Vector3[] lowDir;
 
         public static HeldGear Build(GearDef g, Animator an, float figH)
         {
@@ -656,6 +661,7 @@ namespace BAM.Art
                 if (AnimFix.FixedGrip && W.SwingTurn != Vector3.zero && sw > 0.001f)
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
                 if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
+                if (Floor > float.NegativeInfinity) AboveGround(i, dt);
             }
             if (sAnchor != null) ShieldFace(moveW);
             if (cT != null) CannonTick(dt, dead);
@@ -702,6 +708,42 @@ namespace BAM.Art
             Vector3 elbow = Vector3.ProjectOnPlane(cLo.position - cUp.position, axis), want = Vector3.ProjectOnPlane(pole, axis);
             if (elbow.sqrMagnitude < 1e-8f || want.sqrMagnitude < 1e-8f) return;
             cUp.rotation = Quaternion.AngleAxis(Vector3.SignedAngle(elbow, want, axis) * w, axis) * cUp.rotation;
+        }
+
+        // ANIM-08/09 (Unity measuring run 1, 2026-10-29): the borrowed swings and the fall put a long weapon's end through the ground
+        // (Fenn's sword tip 0.8-0.96 below it at every blow, Tyra's bow and Knut's anchor 0.5 as they fall, Bonk's club 0.28). The
+        // end below the ground is turned up about the grip, keeping its way across the ground, until it rests on it: the blade
+        // sweeps along the ground instead of into it. Nearly straight down, it goes the way the hero faces; and its way across the
+        // ground turns at most 1800 degrees a second (about as fast as the swing itself), so a blade swung through straight down
+        // (Fenn's, from behind him to the front in one frame) sweeps round along the ground instead of jumping.
+        void AboveGround(int i, float dt)
+        {
+            Transform t = wT[i];
+            if (lowDir == null || lowDir.Length != wT.Length) lowDir = new Vector3[wT.Length];
+            if (t.localScale.y < 1e-4f) { lowDir[i] = Vector3.zero; return; } // away (thrown)
+            float floor = Floor + 0.01f;
+            Vector3 g = t.TransformPoint(gripL[i]);
+            for (int pass = 0; pass < 2; pass++)
+            {
+                Vector3 a = t.TransformPoint(new Vector3(shaftC[i].x, 0f, shaftC[i].z));
+                Vector3 b = t.TransformPoint(new Vector3(shaftC[i].x, meshH[i], shaftC[i].z));
+                Vector3 v = (a.y < b.y ? a : b) - g;
+                if (g.y + v.y >= floor) { if (pass == 0) lowDir[i] = Vector3.zero; return; }
+                float L = v.magnitude;
+                if (L < 1e-5f) return;
+                Vector3 h = new Vector3(v.x, 0f, v.z), fw = new Vector3(root.forward.x, 0f, root.forward.z);
+                if (fw.sqrMagnitude > 1e-8f) h += fw.normalized * Mathf.Max(0f, 0.35f * L - h.magnitude);
+                if (h.sqrMagnitude < 1e-10f) return;
+                if (pass == 0)
+                {
+                    if (lowDir[i] != Vector3.zero) h = Vector3.RotateTowards(lowDir[i], h.normalized, 1800f * Mathf.Deg2Rad * dt, 0f);
+                    lowDir[i] = h.normalized;
+                }
+                float y = Mathf.Clamp(floor - g.y, -L, L);
+                Vector3 want = h.normalized * Mathf.Sqrt(L * L - y * y) + Vector3.up * y;
+                Quaternion q = Quaternion.FromToRotation(v, want);
+                t.SetPositionAndRotation(g + q * (t.position - g), q * t.rotation);
+            }
         }
 
         // turned by a rotation in the weapon's own axes, about its grip
