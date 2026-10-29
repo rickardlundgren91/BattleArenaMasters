@@ -691,7 +691,7 @@ namespace BAM.Game
                     SfxId boom = pk == ProjKind.BlastBomb || pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.BlastExplosion : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
                         : pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? SfxId.BramAnvil // Bram's Anvil Drop: Speltest's anvil (bramsmash), BRAM-04
-                        : SfxId.None; // Knut's Anchor Slam: no borrowed sound, his own is ordered (KNUT-03, bam-work/precision/ORDERS.md)
+                        : pk == ProjKind.KnutSlam ? SfxId.KnutSlam : SfxId.None; // Knut's Anchor Slam: Rickard's own clip (KNUT-03)
                     if (boom != SfxId.None) BamAudio.PlayAt(boom, at);
                     break;
                 }

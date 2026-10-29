@@ -31,5 +31,7 @@ namespace BAM.Audio
         // Hilde, hero 9 (2026-10-29, HILDE-01): Rickard's own Speltest clips: her cannon shot (atk_hilde), the keg throw (sp_hilde),
         // Wall Crash (wallcrash)
         AttackHilde, HildeKegThrow, HildeWallCrash,
+        // Knut's Anchor Slam landing (KNUT-03): Rickard's own clip made for it 2026-10-29
+        KnutSlam,
     }
 }

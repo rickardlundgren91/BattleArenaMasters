@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.HildeWallCrash + 1;
+        public const int Count = (int)SfxId.KnutSlam + 1;
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)
@@ -104,6 +104,7 @@ namespace BAM.Audio
                 case SfxId.AttackHilde: return new SfxInfo(0.7f, 3, 0.07f, 2, 0.05f);
                 case SfxId.HildeKegThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);
                 case SfxId.HildeWallCrash: return new SfxInfo(0.9f, 1, 0.3f, 3, 0.03f); // one keg stuns one hero at most
+                case SfxId.KnutSlam: return new SfxInfo(0.9f, 2, 0.15f, 3, 0.04f);
                 default: return new SfxInfo(0.6f, 1, 0.05f, 1, 0f);
             }
         }

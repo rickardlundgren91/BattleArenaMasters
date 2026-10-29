@@ -8,7 +8,8 @@ HitLight/HitHeavy <- hit (only when a hero hits you) | CloneAppear <- blink | To
 TowerDestroyed <- towerdown | HeroDeath/AllyDeath <- herodeath | Respawn <- respawn | LevelUp <- levelUp | LowHealth <- heartbeat
 Bonk: Rickard's own AI clips made for him 2026-10-26 (AttackBonk, BonkSlamWindup, BonkSlam, BonkBoulderThrow, BonkKnock, BonkStun); before that he borrowed warrior_swing, rockcrack, sp_oaken, wallcrash
 Hilde (2026-10-29): AttackHilde <- atk_hilde | HildeKegThrow <- sp_hilde (both kegs) | HildeWallCrash <- wallcrash (Speltest's Wall Crash sound)
-Silent (no file, synth muted): ShieldBlock, Stunned, WolfBite, CloneVanish, MinionMelee, MinionRanged, SiegeShot, MinionDeath, WaveSpawn, GrassEnter, SpecialReady
+Silent (no file, synth muted): Stunned, MinionMelee, MinionRanged, SiegeShot, MinionDeath, WaveSpawn, GrassEnter, SpecialReady
 Match feel 2026-10-27 (Speltest HeroJuice.cs + Sound.cs sound mix v2): HitConfirmLight <- hitLight | HitConfirmHeavy <- hitHeavy (your hit landing on an enemy hero; others' Tyra bolt / Tikta needle hits)
 LastHit <- lasthit | MultiKill <- streak | TowerHot <- towerHot | TowerUnderAttack <- towerHit | BramAnvil <- anvil | MoaHoney <- honey | Emote <- emote
 SpellRecall <- teleport | SpellBlink <- blink, SpellShield <- shield (both cut to 1.2 s with a 0.3 s fade, as Speltest's MAXLEN cuts blink)
+Ordered and made by Rickard 2026-10-29 (ElevenLabs, his own; trimmed, faded, peak -1 dB): WolfBite (wolf snarl lunge, take 3) | CloneVanish (soft poof) | KnutSlam (anchor into stone) | ShieldBlock (hit soaked by a shield)
