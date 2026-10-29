@@ -302,7 +302,8 @@ namespace BAM.Sim
                 for (int k = 0; k < 200; k++)
                 {
                     m.Step(PlayerInput.None); ev.AddRange(m.Events);
-                    if (stunAt < 0) foreach (var x in m.Events) if (x.Type == EventType.AttackStart && x.A == s) { m.AddStatus(s, St.Stun, 1.5f); stunAt = m.Time; }
+                    bool started = false; foreach (var x in m.Events) if (x.Type == EventType.AttackStart && x.A == s) started = true;
+                    if (stunAt < 0 && started) { m.AddStatus(s, St.Stun, 1.5f); stunAt = m.Time; } // after the loop: the stun now emits an Interrupt
                     if (stunAt >= 0 && m.Time > stunAt + 1.0f) break;
                 }
                 int hits = 0; foreach (var x in ev) if (x.Type == EventType.Hit && x.A == s) hits++;

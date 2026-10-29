@@ -36,7 +36,7 @@ namespace BAM.Sim
         {
             if (IsControl(type) && CcImmune(u)) return -1;
             int i = u.AddRaw(type, dur, v, amount, by, queen);
-            if ((type == St.Stun || type == St.Root) && dur > 0 && u.Kind == UnitKind.Hero) InterruptSpecial(u);
+            if ((type == St.Stun || type == St.Root) && dur > 0 && u.Kind == UnitKind.Hero) InterruptSpecial(u, type == St.Stun);
             return i;
         }
 
@@ -47,8 +47,10 @@ namespace BAM.Sim
             if (dur > 0) AddStatus(h, St.Channel, dur, dur);
         }
 
-        /// <summary>A stun or root on a hero cancels what of its special is still under way.</summary>
-        internal void InterruptSpecial(Unit u)
+        /// <summary>A stun or root on a hero cancels what of its special is still under way; a stun also cancels an auto attack
+        /// still winding up (Rickard 2026-10-29: "en stun ska avbryta ett slag som redan laddas", all heroes; BONK-01/CHAINMAP-03).
+        /// A root does not: a rooted hero still attacks.</summary>
+        internal void InterruptSpecial(Unit u, bool stun = false)
         {
             if (u.Kind != UnitKind.Hero || !u.Alive) return;
             bool any = false, cut = false;
@@ -59,6 +61,7 @@ namespace BAM.Sim
                 if (p.Src != u || p.Done) continue;
                 if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam || p.Mode == ProjMode.Volley || p.Mode == ProjMode.AnchorSlam || p.Mode == ProjMode.Worldbreaker || p.Mode == ProjMode.Quake)) { p.Done = true; any = cut = true; } // still in the hand
                 else if (p.Mode == ProjMode.Hook && p.Out && p.Caught == null) { p.Out = false; any = true; }          // the anchor comes back
+                else if (stun && p.T < 0 && (p.Mode == ProjMode.Auto || p.Mode == ProjMode.Smash)) { p.Done = true; any = true; } // the swing never lands
             }
             // the red warning goes with a shot that never left the hand; a shot already flying keeps its warning
             // (Tikta's one strip warns for all four needles: it stays while a needle of hers still flies, then goes, TIKTA-03)

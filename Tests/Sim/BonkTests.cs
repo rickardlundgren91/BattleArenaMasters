@@ -34,6 +34,20 @@ namespace BAM.Sim
             Check(Near(SimMath.Hypot(sm.X - b.X, sm.Y - b.Y), BonkS.SmashAhead, 0.02f) && a.Hp == a.MaxHp, $"the club lands {SimMath.Hypot(sm.X - b.X, sm.Y - b.Y):0.00} tiles in front of a walking Bonk");
             Place(b, x, y); Place(a, x + 1.6f, y); Place(c, x, y + 1.5f); Place(far, x - 4, y);
 
+            // a stun in the wind-up cancels the club (Rickard 2026-10-29, all heroes: BONK-01); a root does not
+            b.Facing = 0; m.BonkSwing(b, a, 50, false);
+            for (int k = 0; k < 20; k++) m.UpdateProjectiles(Rules.Tick);
+            m.AddStatus(b, St.Stun, 0.5f);
+            for (int k = 0; k * Rules.Tick < b.HDef.SpawnDelay; k++) m.UpdateProjectiles(Rules.Tick);
+            Check(a.Hp == a.MaxHp && c.Hp == c.MaxHp, "a stun in the wind-up cancels the club");
+            Place(b, x, y); Place(a, x + 1.6f, y); Place(c, x, y + 1.5f); Place(far, x - 4, y);
+            b.Facing = 0; m.BonkSwing(b, a, 50, false);
+            for (int k = 0; k < 20; k++) m.UpdateProjectiles(Rules.Tick);
+            m.AddStatus(b, St.Root, 0.5f);
+            for (int k = 0; k * Rules.Tick < b.HDef.SpawnDelay; k++) m.UpdateProjectiles(Rules.Tick);
+            Check(a.Hp < a.MaxHp, "a root in the wind-up does not cancel the club");
+            Place(b, x, y); Place(a, x + 1.6f, y); Place(c, x, y + 1.5f); Place(far, x - 4, y);
+
             // Ground Slam: a wind-up, then everyone round him takes the hit and a stun; nobody in reach: no cast
             b.Charge = b.HDef.MaxCharge;
             Check(m.TryCastSpecial(b, float.NaN, 0), "the slam casts with enemies in reach");
