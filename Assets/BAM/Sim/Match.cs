@@ -229,9 +229,10 @@ namespace BAM.Sim
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                h = Mix(h, (ulong)u.Serial); h = Mix(h, Bits(u.X)); h = Mix(h, Bits(u.Y)); h = Mix(h, Bits(u.Hp)); h = Mix(h, Bits(u.Charge));
+                h = Mix(h, (ulong)u.Serial); h = Mix(h, Bits(u.X)); h = Mix(h, Bits(u.Y)); h = Mix(h, Bits(u.Hp)); h = Mix(h, Bits(u.Charge)); h = Mix(h, Bits(u.Facing));
+                h = Mix(h, Bits(u.AtkTimer)); for (int s = 0; s < u.StCount; s++) { h = Mix(h, (ulong)u.Sts[s].Type); h = Mix(h, Bits(u.Sts[s].T)); }
             }
-            for (int i = 0; i < Projs.Count; i++) { h = Mix(h, Bits(Projs[i].X)); h = Mix(h, Bits(Projs[i].Y)); }
+            for (int i = 0; i < Projs.Count; i++) { h = Mix(h, Bits(Projs[i].X)); h = Mix(h, Bits(Projs[i].Y)); h = Mix(h, Bits(Projs[i].T)); }
             return h;
         }
         static ulong Mix(ulong h, ulong v) => (h ^ v) * 1099511628211UL;

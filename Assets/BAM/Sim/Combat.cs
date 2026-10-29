@@ -412,7 +412,7 @@ namespace BAM.Sim
         void RetargetAuto(Proj p)
         {
             var u = p.Src;
-            if (u == null || !u.Alive) return; // the shot just ends
+            if (u == null || !u.Alive) { if (p.Launched && p.T >= 0) p.Fizzle = true; return; } // nobody to pick a new target: one in flight lands on the spot, as below
             var list = EnemiesInRange(u, u.Range, Pick.Any, true, atkBuf);
             if (list.Count > 0)
             {
