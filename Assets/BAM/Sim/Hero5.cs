@@ -142,6 +142,33 @@ namespace BAM.Sim
             Emit(EventType.Explosion, h, null, p.Radius, (byte)p.Kind, true, p.X, p.Y);
         }
 
+        // ---------- Fenn 2.0 (Simon's #607, XYZ PR #609; Rickard 2026-10-29 "ta båda") ----------
+        /// <summary>Pack Hunt: the called (tapped) wolf takes the nearest enemy hero or minion within its sight of where it appears as
+        /// its prey at once: no hero first, never a tower or a decoy; ties go to the earlier unit (spawn order), no random pick. It
+        /// keeps that prey while it is alive, visible and within the leash of Fenn, then hunts by the called wolf's old rule.</summary>
+        void PackHunt(Unit w)
+        {
+            var l = EnemiesInRange(w, FennS.Sight, Pick.HeroOrMinion, false, aiBuf);
+            Unit best = null; float bd = float.MaxValue;
+            for (int i = 0; i < l.Count; i++)
+            {
+                var u = l[i]; if (u.IsClone || SimMath.Dist(w.Owner, u) > FennS.Leash) continue;
+                float d = SimMath.Dist(u, w.X, w.Y); if (d < bd) { bd = d; best = u; }
+            }
+            w.WolfPrey = best;
+        }
+
+        /// <summary>Shadow Escape: a real enemy hero's auto attack hits Fenn's decoy; Fenn runs 20 % faster for 1 s.</summary>
+        void ShadowEscape(Unit src, Unit decoy, DmgKind kind)
+        {
+            var att = src != null ? (src.Owner ?? src) : null;
+            if (kind != DmgKind.Auto || att == null || att != src || att.Kind != UnitKind.Hero || att.IsClone || att.Team == decoy.Team) return;
+            var f = decoy.Owner;
+            if (f == null || !f.Alive || f.Hero != HeroId.Fenn || !decoy.Alive) return;
+            AddStatus(f, St.SpeedPct, FennS.EscapeTime, FennS.EscapeBonus, 0, f);
+            Emit(EventType.ShadowEscape, f, att, FennS.EscapeTime, 0, false, f.X, f.Y);
+        }
+
         // ---------- Tyra ----------
         /// <summary>Arrow Volley: a random enemy hero or minion within her attack range with a clear line (no hero first; none: no
         /// cast), five arrows fanned round the way to it after the draw.</summary>

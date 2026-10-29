@@ -12,7 +12,7 @@ namespace BAM.Online.Mp
         // match
         public const byte Loaded = 20, In = 21, Frames = 22, Hash = 23, Desync = 24, LeftMatch = 25, MatchOver = 26;
         /// <summary>Phones with another protocol never meet (bump it whenever a message or the rules' input changes).</summary>
-        public const int Protocol = 7; // 2: groups in ONLINE MATCH (party in Hello, side in Room, Move); 3: Simon's reworks change the rules (8d996f0), so a 2 build would desync; 4: balance (Tyra, Tikta, Knut numbers); 5: Hilde and Oaken (heroes 9 and 10); 6: backdoor protection (half tower damage without a wave); 7: smaller start speed boost, Attack/Defend signals
+        public const int Protocol = 8; // 2: groups in ONLINE MATCH (party in Hello, side in Room, Move); 3: Simon's reworks change the rules (8d996f0), so a 2 build would desync; 4: balance (Tyra, Tikta, Knut numbers); 5: Hilde and Oaken (heroes 9 and 10); 6: backdoor protection (half tower damage without a wave); 7: smaller start speed boost, Attack/Defend signals; 8: Fenn 2.0 (Pack Hunt, Shadow Escape) and the thrown wolf's 6-tile cap, plus the Precision & Polish rule fixes (Tyra, Bram, Knut, Bonk, chain map)
     }
 
     static class MpQueue

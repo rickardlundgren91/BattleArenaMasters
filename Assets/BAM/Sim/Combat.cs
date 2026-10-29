@@ -92,7 +92,7 @@ namespace BAM.Sim
                     if (amount <= 0) return 0; // a hit the tutorial zeroes is no fight: it neither stops regen nor counts as combat
                 }
             }
-            if (tgt.IsClone) amount = Math.Max(amount, tgt.Hp); // Fenn's decoy is gone at the first damage of any kind (the old illusion took double)
+            if (tgt.IsClone) { amount = Math.Max(amount, tgt.Hp); ShadowEscape(src, tgt, kind); } // Fenn's decoy is gone at the first damage of any kind (the old illusion took double)
             tgt.LastCombat = Time;
             if (src != null && !tgt.IsClone)
             {

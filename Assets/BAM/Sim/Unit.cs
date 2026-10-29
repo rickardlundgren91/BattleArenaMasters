@@ -126,6 +126,7 @@ namespace BAM.Sim
         // ---------- Fenn's wolf ----------
         public WolfMode Wolf;
         internal float WolfGx, WolfGy;
+        internal float WolfOx, WolfOy; // where a thrown wolf left from: its flight stays in the red strip and within 6 tiles of it
         /// <summary>The enemy hero a thrown wolf hunts.</summary>
         public Unit WolfPrey;
 

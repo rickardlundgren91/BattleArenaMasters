@@ -34,6 +34,7 @@ namespace BAM.Sim
         TiktaMarkPop,  // Tikta A's needle took her Deathmark off B: the hit (its own Hit event) dealt V extra
         ChainSet,      // Blast A's Supernova set off Chain Reaction on burning hero B: X/Y = the frozen spot, V = its radius (it blasts 0.25 s later)
         Knock,         // A's boulder (or Hilde's keg, Kind) knocked B back: X/Y = where B would land, V = the slide time
+        ShadowEscape,  // Fenn A ran off faster because enemy hero B's attack hit his decoy (Fenn 2.0); V = seconds
         WallCrash,     // Hilde A's keg knocked hero B into a wall and stunned it (Wall Crash): X/Y = the wall side, V = the stun
         Quake,         // Oaken A's quake went off from where he stands to X/Y (V = its length); its hits and knocks are their own events
         OakenGuard,    // Oaken A's Stored Impact took V off B's hit and stored part of it for his next attack

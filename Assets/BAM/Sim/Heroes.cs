@@ -36,6 +36,9 @@ namespace BAM.Sim
         public const float ThrowReach = 6, ThrowSpeed = 11, HomeRadius = 1, PounceRadius = 1, RootDuration = 0.8f;
         public const float HpPercent = 0.3f, Duration = 4, DamageCoeff = 0.4f, Leash = 6, Sight = 3.5f, FollowGap = 1.2f;
         public const float CloneCooldown = 18, CloneLife = 3, CloneSight = 5;
+        /// <summary>Shadow Escape (Fenn 2.0, Simon's Skuggflykt, XYZ #607/#609): an enemy hero's auto attack hitting his decoy speeds
+        /// Fenn up 20 % for 1 s (the decoy is gone at that hit, so once per decoy).</summary>
+        public const float EscapeBonus = 0.2f, EscapeTime = 1;
         /// <summary>The clone's damage as a share of Fenn's: none, it is a decoy (the old illusion dealt all of it).</summary>
         public const float CloneDamage = 0;
     }
@@ -259,12 +262,13 @@ namespace BAM.Sim
                 // the throw ends where a wall would stop the wolf, so the red circle shows where it really lands
                 float ga = SimMath.Atan2(gy - wy, gx - wx), gd = WolfReach(wx, wy, ga, SimMath.Hypot(gx - wx, gy - wy));
                 gx = wx + SimMath.Cos(ga) * gd; gy = wy + SimMath.Sin(ga) * gd;
-                h.Facing = aa; w.Facing = aa; w.Wolf = WolfMode.Fly; w.WolfGx = gx; w.WolfGy = gy;
+                h.Facing = aa; w.Facing = aa; w.Wolf = WolfMode.Fly; w.WolfGx = gx; w.WolfGy = gy; w.WolfOx = wx; w.WolfOy = wy;
                 // red warning over the whole flight (it can turn onto a hero anywhere along it) and the landing spot
                 WarnLine(w, ga, gd, FennS.HomeRadius, gd / FennS.ThrowSpeed + 0.05f, true);
                 WarnCircle(w, gx, gy, FennS.PounceRadius, gd / FennS.ThrowSpeed + 0.05f, true);
                 castX = gx; castY = gy;
             }
+            else PackHunt(w); // the tap: the wolf picks its first prey at once (Fenn 2.0, Hero5.cs)
             Emit(EventType.WolfSummon, w, h, 0, 0, drag, wx, wy);
             return true;
         }
@@ -291,8 +295,14 @@ namespace BAM.Sim
             }
             if (w.Wolf == WolfMode.Follow)
             {
-                t = Nearest(EnemiesInRange(w, FennS.Sight, Pick.Any, false, aiBuf), w.X, w.Y);
-                if (t != null && SimMath.Dist(o, t) > FennS.Leash) t = null;
+                var prey = w.WolfPrey; // Pack Hunt's first prey (Hero5.cs), held while it is valid
+                if (prey != null && prey.Alive && !prey.Has(St.Untargetable) && IsVisibleTo(prey, w.Team) && SimMath.Dist(o, prey) <= FennS.Leash) t = prey;
+                else
+                {
+                    w.WolfPrey = null; // then the called wolf's old rule: the nearest enemy near it, within the leash
+                    t = Nearest(EnemiesInRange(w, FennS.Sight, Pick.Any, false, aiBuf), w.X, w.Y);
+                    if (t != null && SimMath.Dist(o, t) > FennS.Leash) t = null;
+                }
             }
             // its bite needs a clear line, so a target behind a wall is walked round to
             if (t != null) { if (SimMath.Dist(w, t) > w.Range + t.R || !Map.LosClear(w, t)) { WolfWalk(w, t.X, t.Y, dt); return; } }
@@ -318,7 +328,8 @@ namespace BAM.Sim
         void WolfFly(Unit w, float dt)
         {
             var prey = w.WolfPrey;
-            if (prey != null && (!prey.Alive || prey.Has(St.Untargetable))) prey = w.WolfPrey = null;
+            // it lets go of a prey that died, vanished or left the red strip (a dash or blink), and flies on to the red circle
+            if (prey != null && (!prey.Alive || prey.Has(St.Untargetable) || !InWolfStrip(w, prey))) prey = w.WolfPrey = null;
             if (prey == null)
             {
                 float bd = float.MaxValue;
@@ -327,7 +338,7 @@ namespace BAM.Sim
                     var u = Units[i];
                     if (!u.Alive || u.Team == w.Team || u.Kind != UnitKind.Hero || u.Has(St.Untargetable) || !IsVisibleTo(u, w.Team)) continue;
                     float d = SimMath.Dist(w, u) - u.R;
-                    if (d <= FennS.HomeRadius && d < bd && Map.LosClear(w, u)) { bd = d; prey = u; }
+                    if (d <= FennS.HomeRadius && d < bd && InWolfStrip(w, u) && Map.LosClear(w, u)) { bd = d; prey = u; }
                 }
                 w.WolfPrey = prey;
             }
@@ -337,9 +348,23 @@ namespace BAM.Sim
             bool last = dist - stop <= step;
             float k = last ? (dist > 1e-4f ? Math.Max(0, dist - stop) / dist : 0) : step / dist;
             float nx = w.X + (gx - w.X) * k, ny = w.Y + (gy - w.Y) * k;
+            // never past the 6-tile throw (Rickard 2026-10-25): at the edge it lands where it is
+            float ox = nx - w.WolfOx, oy = ny - w.WolfOy, od = SimMath.Hypot(ox, oy);
+            if (od > FennS.ThrowReach) { nx = w.WolfOx + ox * (FennS.ThrowReach / od); ny = w.WolfOy + oy * (FennS.ThrowReach / od); last = true; }
             bool wall = !Map.Free(nx, ny, w.R); // a wall stops the flight: it lands where it is (the old rush, wall = true)
             if (!wall) { w.X = nx; w.Y = ny; w.WalkT += dist * k; w.MovedAt = Time; }
             if (last || wall) WolfPounce(w, prey);
+        }
+
+        /// <summary>Is u inside the thrown wolf's red strip: from where it left to where it lands, HomeRadius + u's radius to the side
+        /// (so it never turns onto a hero behind Fenn or off to the side of what the warning showed).</summary>
+        bool InWolfStrip(Unit w, Unit u)
+        {
+            float lx = w.WolfGx - w.WolfOx, ly = w.WolfGy - w.WolfOy, len = SimMath.Hypot(lx, ly);
+            float ux = u.X - w.WolfOx, uy = u.Y - w.WolfOy;
+            if (len < 1e-4f) return SimMath.Hypot(ux, uy) <= FennS.HomeRadius + u.R; // a throw stopped at once: the landing circle
+            float along = (ux * lx + uy * ly) / len, side = Math.Abs(ux * ly - uy * lx) / len;
+            return along >= -u.R && along <= len + FennS.HomeRadius + u.R && side <= FennS.HomeRadius + u.R;
         }
 
         /// <summary>How far the thrown wolf flies from (x, y) along ang (map space) before a wall stops it, at most want: the
