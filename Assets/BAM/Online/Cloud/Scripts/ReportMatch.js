@@ -6,8 +6,9 @@
 // not refused by a cooldown (Speltest's 60 s cooldown refused every queued match but the first).
 // Every match id is answered in "done", also the refused ones, so the phone stops sending them.
 //
-// Rating by opponent (Rickard 2026-10-29): Easy +4, Normal +10, Hard +25 / -10, real players +50 / -20. Easy and Normal never
-// take Rating away, and stop giving any at 299 and 699 (Ember and Rift), so grinding easy bots cannot reach the top.
+// Rating by opponent (Rickard 2026-10-29, "20 matcher till Rift"): Easy +15, Normal +35, Hard +75 / -25, real players +150 / -50.
+// Easy and Normal never take Rating away, and stop giving any at 300 and 700 (Rift and Vanguard reached), so grinding easy bots
+// cannot reach the top.
 // XP and level count every match as before. Rating never goes under 0. Season 2 started everyone's Rating again from 0.
 // A match against real players ("vs", the online match's seed, and the player's team) gives the player Rating only once a
 // player of the OTHER team has reported the same match with the opposite result: each side writes what it reported in private
@@ -21,7 +22,7 @@ const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
 
 // keep equal to Progress.cs
 const MAX_LEVEL = 30, XP_WIN = 100, XP_LOSS = 60, XP_KILL = 5, XP_FIGHT_MAX = 60, XP_FIRST_WIN = 50;
-const RATING = { Easy: { win: 4, loss: 0, cap: 299 }, Normal: { win: 10, loss: 0, cap: 699 }, Hard: { win: 25, loss: -10, cap: 0 }, Players: { win: 50, loss: -20, cap: 0 } };
+const RATING = { Easy: { win: 15, loss: 0, cap: 300 }, Normal: { win: 35, loss: 0, cap: 700 }, Hard: { win: 75, loss: -25, cap: 0 }, Players: { win: 150, loss: -50, cap: 0 } };
 const SEASON = 2;
 const MIN_SECONDS = 45, MAX_SECONDS = 1800, MAX_PER_DAY = 60, MAX_AGE = 7 * 86400, MAX_BATCH = 20, KEEP_IDS = 300;
 const WAIT_SECONDS = 1800, MAX_WAIT = 20, PVP = "bam-pvp";

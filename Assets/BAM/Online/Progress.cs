@@ -20,11 +20,11 @@ namespace BAM.Online
         // Keep these equal to Cloud/Scripts/ReportMatch.js
         public const int MaxLevel = 30;
         public const int XpWin = 100, XpLoss = 60, XpKill = 5, XpFightMax = 60, XpFirstWin = 50;
-        // Rating by opponent (Rickard 2026-10-29): a win gives Easy +4, Normal +10, Hard +25, real players +50; a loss takes
-        // 0, 0, 10 and 20. Easy and Normal stop giving Rating at 299 and 699 (Ember, Rift). Never under 0.
+        // Rating by opponent (Rickard 2026-10-29, 20 Easy wins to Rift): a win gives Easy +15, Normal +35, Hard +75, real players
+        // +150; a loss takes 0, 0, 25 and 50. Easy and Normal stop giving Rating at 300 and 700 (Rift, Vanguard). Never under 0.
         public const string Players = "Players";
         static readonly string[] RatingKinds = { "Easy", "Normal", "Hard", Players };
-        static readonly int[] RatingWin = { 4, 10, 25, 50 }, RatingLoss = { 0, 0, -10, -20 }, RatingCap = { 299, 699, 0, 0 };
+        static readonly int[] RatingWin = { 15, 35, 75, 150 }, RatingLoss = { 0, 0, -25, -50 }, RatingCap = { 300, 700, 0, 0 };
 
         /// <summary>What a match changes the Rating by, the same way as ReportMatch.js ratingChange.</summary>
         public static int RatingChange(int rating, string kind, bool won)
