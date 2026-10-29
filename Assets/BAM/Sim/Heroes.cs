@@ -234,13 +234,14 @@ namespace BAM.Sim
             if (d > step + t.R * 0.5f) { p.X += (t.X - p.X) / d * step; p.Y += (t.Y - p.Y) / d * step; return; }
             p.AddHit(t);
             SpecialHit(p.Src, t, p.Dmg, p.Kind, true);
-            // the bounce: up to Bounces more, to an enemy hero or minion within BounceRange of t with a clear line from t
+            // the bounce: up to Bounces more, to an enemy hero or minion within BounceRange of t with a clear line from t, that
+            // Bram's team can see (Rickard 2026-10-29, BRAM-05: a hero hidden in the grass stays hidden)
             areaBuf.Clear();
             if (p.HitCount <= BramS.Bounces)
                 for (int i = 0; i < Units.Count; i++)
                 {
                     var u = Units[i];
-                    if (!u.Alive || u.Team == p.Team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable) || p.HasHit(u)) continue;
+                    if (!u.Alive || u.Team == p.Team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable) || p.HasHit(u) || !IsVisibleTo(u, p.Team)) continue;
                     if (SimMath.Dist(u, t) > BramS.BounceRange + u.R || !Map.LosClear(t.X, t.Y, u.X, u.Y)) continue;
                     areaBuf.Add(u);
                 }

@@ -55,6 +55,31 @@ namespace BAM.Sim
                 Verdict("BRAM06_echo_through_decoy_hits_at_contact", "Bram", n > 0 && worst <= 0.01f, "P3", $"{n} layouts hit, worst {F(worst)} tiles past first contact (want <= 0.01; a tick is {F(BramS.EchoSpeed * Rules.Tick)})");
             }
 
+            // BRAM-05 (Rickard 2026-10-29 "Nej, bara synliga"): the tap hammer never bounces onto an enemy hero hidden in the grass
+            {
+                var m = PBramKnutScene(HeroId.Bram); var b = m.Player; var a = m.PFoe(HeroId.Knut); var hid = m.PFoe(HeroId.Fenn);
+                foreach (var u in m.Heroes) if (u != b && u != a && u != hid) POff(u);
+                int tried = 0, bounced = 0;
+                for (int ty = 1; ty < m.Map.H - 1; ty++)
+                    for (int tx = 1; tx < m.Map.W - 1; tx++)
+                    {
+                        if (m.Map.Tile(tx, ty) != Arena.Grass) continue;
+                        float hx = tx + 0.5f, hy = ty + 0.5f;
+                        foreach (int dir in new[] { 1, -1 })
+                        {
+                            float ax = hx - dir * 1.5f, bx = hx - dir * 4.2f;
+                            if (!m.Map.Free(ax, hy, a.R) || !m.Map.Free(bx, hy, b.R) || m.Map.InGrass(ax, hy) || !m.Map.LosClear(bx, hy, hx, hy)) continue;
+                            PPlace(b, bx, hy); PPlace(a, ax, hy); PPlace(hid, hx, hy); hid.RevealT = a.RevealT = b.RevealT = 0;
+                            if (m.IsVisibleTo(hid, b.Team)) continue;
+                            tried++; m.Projs.Clear();
+                            var p = m.NewProj(ProjMode.Hammer, b, b.X, b.Y); p.Kind = ProjKind.BramHammerSpecial; p.Tgt = a; p.Speed = BramS.Speed; p.Dmg = 10; p.Radius = BramS.LineHitbox;
+                            for (int i = 0; i < 90 && !p.Done; i++) m.UpdateProjectiles(Rules.Tick);
+                            if (hid.Hp < hid.MaxHp) bounced++;
+                        }
+                    }
+                Verdict("BRAM05_hammer_never_bounces_onto_hidden_hero", "Bram", tried > 0 && bounced == 0, "P2", $"{bounced}/{tried} layouts bounced onto a grass-hidden hero (want 0)");
+            }
+
             // KNUT-01: a catch at full range: Knut is still in Casting (no walking) on every tick of the pull
             {
                 var m = PBramKnutScene(HeroId.Knut); var kn = m.Player; var t = m.PFoe(HeroId.Tikta);
