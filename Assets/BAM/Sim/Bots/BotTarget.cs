@@ -171,6 +171,7 @@ namespace BAM.Sim
                 for (int i = 0; i < M.Heroes.Count; i++) { var k = M.Heroes[i]; if (k.Team == h.Team && k != h && now - e.LastHitBy[i] < 2) { s += 1.5f; break; } }
                 if (e == focus) s += committed ? 3 : 1;
                 s += LeadScore(lead, lf); // join the human's fight
+                s += SignalBonus(e); // a teammate called ATTACK near e (BotSignal.cs)
                 for (int i = 0; i < allies.Count; i++) { var a = allies[i]; if (a.Bot != null && a.Bot.focus == e && Dist(a, h) < 8) s += TK(21) * (v3 ? TK3(3) : 1); } // focus the target a nearby teammate is on
                 if (v3 && e.Hp + ShieldOf(e) < h.StatDmg() * 1.05f && d < h.Range + e.R + 1) s += 2 * TK3(8); // a one-hit kill in reach comes first
                 if (s > bs) { bs = s; best = e; urgent = low || saving || hitMe || lf == 2; }

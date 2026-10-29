@@ -41,6 +41,7 @@ namespace BAM.Online.Mp
         // host
         readonly PlayerInput[] latest;
         readonly Queue<PlayerInput>[] specQ, spellQ;
+        readonly TeamSignal[] sigQ; // a guest's team signal waiting for the next frame
         readonly bool[] gone;
         int pendingMask;
         readonly long[] hashFrame = new long[128];
@@ -56,7 +57,7 @@ namespace BAM.Online.Mp
             Host = host; Seats = seats; Local = local;
             ring = new PlayerInput[Cap * seats];
             latest = new PlayerInput[seats];
-            specQ = new Queue<PlayerInput>[seats]; spellQ = new Queue<PlayerInput>[seats];
+            specQ = new Queue<PlayerInput>[seats]; spellQ = new Queue<PlayerInput>[seats]; sigQ = new TeamSignal[seats];
             gone = new bool[seats];
             for (int s = 0; s < seats; s++) { latest[s] = PlayerInput.None; specQ[s] = new Queue<PlayerInput>(MaxPresses); spellQ[s] = new Queue<PlayerInput>(MaxPresses); }
             for (int i = 0; i < hashFrame.Length; i++) hashFrame[i] = -1;
@@ -102,7 +103,7 @@ namespace BAM.Online.Mp
         {
             if (!Host || Started) return;
             Started = true;
-            for (int s = 0; s < Seats; s++) { latest[s] = PlayerInput.None; specQ[s].Clear(); spellQ[s].Clear(); }
+            for (int s = 0; s < Seats; s++) { latest[s] = PlayerInput.None; specQ[s].Clear(); spellQ[s].Clear(); sigQ[s] = TeamSignal.None; }
         }
 
         void Build(in PlayerInput own)
@@ -118,6 +119,7 @@ namespace BAM.Online.Mp
                     i.MoveX = latest[s].MoveX; i.MoveY = latest[s].MoveY;
                     if (specQ[s].Count > 0) { var p = specQ[s].Dequeue(); i.Special = true; i.AimAngle = p.AimAngle; i.AimK = p.AimK; }
                     if (spellQ[s].Count > 0) { var p = spellQ[s].Dequeue(); i.Spell = true; i.SpellAngle = p.SpellAngle; i.SpellK = p.SpellK; }
+                    i.Signal = sigQ[s]; sigQ[s] = TeamSignal.None;
                 }
                 ring[b + s] = i;
             }
@@ -157,6 +159,7 @@ namespace BAM.Online.Mp
                 latest[seat] = i;
                 if (i.Special && specQ[seat].Count < MaxPresses) specQ[seat].Enqueue(i);
                 if (i.Spell && spellQ[seat].Count < MaxPresses) spellQ[seat].Enqueue(i);
+                if (i.Signal != TeamSignal.None) sigQ[seat] = i.Signal;
             }
         }
 

@@ -105,6 +105,8 @@ namespace BAM.Sim
         internal float AimAng = float.NaN, AimK;                    // the aim of the cast being made (NaN = a tap)
         // the battle spell (Spells.cs): which, when it is ready again, the recall channel (end -1 = none) and where it started
         public SpellId Spell; public float SpellAt, SpellChanEnd = -1, SpellChanStart; internal float SpellChanX, SpellChanY;
+        // the last team signal this hero called and when (Signals.cs; NaN = never)
+        public TeamSignal Signal; public float SignalAt = float.NaN;
         // what the bots know: the smoothed motion (lead aim), where each team last saw it, when it last cast where they saw it
         public float MoVx, MoVy; internal float MoX, MoY; internal bool MoInit;
         public readonly float[] LastSeenX = new float[2], LastSeenY = new float[2], LastSeenT = { -99, -99 };

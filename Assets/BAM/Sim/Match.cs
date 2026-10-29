@@ -53,6 +53,8 @@ namespace BAM.Sim
         /// <summary>The battle spell button was tapped, or its drag released, this tick; SpellAngle NaN = the way the hero faces.</summary>
         public bool Spell;
         public float SpellAngle, SpellK;
+        /// <summary>A team signal called this tick (ATTACK or DEFEND on the emote wheel), else None.</summary>
+        public TeamSignal Signal;
         public static PlayerInput None => new PlayerInput { AimAngle = float.NaN, SpellAngle = float.NaN, SpellK = 1 };
     }
 
@@ -285,7 +287,7 @@ namespace BAM.Sim
                 if (Time >= 0)
                 {
                     Time = 0; State = MatchState.Play; Emit(EventType.MatchStart, null, null);
-                    if (Tut == null) for (int i = 0; i < Heroes.Count; i++) AddStatus(Heroes[i], St.SpeedPct, Rules.StartSpeedTime, 1);
+                    if (Tut == null) for (int i = 0; i < Heroes.Count; i++) AddStatus(Heroes[i], St.SpeedPct, Rules.StartSpeedTime, Rules.StartSpeedPct);
                 }
                 return;
             }
@@ -297,6 +299,7 @@ namespace BAM.Sim
                 seatMoveX[s] = input.MoveX; seatMoveY[s] = input.MoveY;
                 if (input.Special) { seatSpecBuf[s] = Rules.SpecialBuffer; seatBufAng[s] = input.AimAngle; seatBufK[s] = input.AimK; }
                 if (input.Spell) CastSpell(h, input.SpellAngle, input.SpellK); // the battle spell (Spells.cs)
+                if (input.Signal != TeamSignal.None) CallSignal(h, input.Signal); // a team signal (Signals.cs)
             }
 
             // minions of a wave come out one by one

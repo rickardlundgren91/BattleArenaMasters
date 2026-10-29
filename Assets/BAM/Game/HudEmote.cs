@@ -14,14 +14,18 @@ namespace BAM.Game
     /// finger) opens a wheel of emotes above the button, and letting go on one sends it (anywhere else sends nothing). The emote
     /// shows above the hero for 2 s as a white bubble (the heart) or a white pill with the word, and the button waits 2 s before
     /// the next one. A random other hero answers with a heart 60 % of the time, 0.6 to 1.6 s later. The heart and GG are seen by
-    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. The wheel's two team
-    /// signals (ATTACK, RETREAT) are not here: the new rules have no signals for the bots to follow.
+    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. The wheel's last two
+    /// slots are the team signals (old HudSignal.cs and the K3 wheel; Rickard 2026-10-29 "Attack och defend"): ATTACK (red) and
+    /// DEFEND (blue) go to the rules through PlayerInput (Signals.cs), so bot teammates follow them and online teammates see them;
+    /// the word shows above the hero for 2 s to its own team. Not offered without a teammate.
     /// </summary>
     sealed partial class Hud
     {
         static readonly string[] Emotes = { "", "GG", "Nice!", "Thanks!", "Haha", "Oops", "Help!", "Wow!" }; // 0 = the heart (drawn)
         const float EmoteTime = 2f, WheelOpenTime = 0.22f;
         static readonly Color BubbleWhite = Hex(0xf4f4f7), BubbleInk = Hex(0x2b2350), HeartRed = Hex(0xe8243c);
+        static readonly string[] Signals = { "ATTACK", "DEFEND" }; // wheel slots Emotes.Length + 0 and + 1 (TeamSignal 1 and 2)
+        static readonly Color SignalAttack = Hex(0xc8323c), SignalDefend = Hex(0x2a6fd0);
         static readonly Color HeartPlate = new Color(20f / 255f, 28f / 255f, 62f / 255f, 0.75f), WheelPick = new Color(1f, 214f / 255f, 90f / 255f, 0.9f);
 
         sealed class EmoteMark
@@ -42,7 +46,10 @@ namespace BAM.Game
         CanvasGroup heartGroup;
         EmoteButton heartButton;
         readonly EmoteMark[] emoteMarks = new EmoteMark[8];
-        readonly EmoteSlot[] wheelSlots = new EmoteSlot[Emotes.Length];
+        readonly EmoteSlot[] wheelSlots = new EmoteSlot[Emotes.Length + 2];
+        readonly EmoteMark[] signalMarks = new EmoteMark[8];
+        readonly float[] signalHeard = new float[8];
+        TeamSignal pendingSignal;
         // per hero (by its place in m.Heroes): when its emote started (match time) and which one; NaN = none
         readonly float[] emoteAt = new float[8];
         readonly int[] emoteKind = new int[8];
@@ -62,6 +69,8 @@ namespace BAM.Game
             {
                 emoteMarks[i] = MakeEmoteMark(emoteLayer, true);
                 emoteMarks[i].Root.gameObject.SetActive(false);
+                signalMarks[i] = MakeEmoteMark(emoteLayer, true);
+                signalMarks[i].Root.gameObject.SetActive(false);
             }
 
             // the heart button
@@ -105,7 +114,8 @@ namespace BAM.Game
 
         void BeginEmote()
         {
-            for (int i = 0; i < emoteAt.Length; i++) { emoteAt[i] = float.NaN; emoteKind[i] = 0; }
+            for (int i = 0; i < emoteAt.Length; i++) { emoteAt[i] = float.NaN; emoteKind[i] = 0; signalHeard[i] = float.NaN; }
+            pendingSignal = TeamSignal.None;
             emoteLast = -1e9f;
             holding = false; wheelPick = -1;
             if (wheelRoot != null) wheelRoot.gameObject.SetActive(false);
@@ -133,6 +143,29 @@ namespace BAM.Game
                 }
             }
         }
+
+        // the team signals: only with a living teammate hero, not in the guided match or the hero test
+        bool SignalsShown
+        {
+            get
+            {
+                var p = m.Player;
+                if (p == null || !p.Alive || tutorial || m.Config.HeroTest) return false;
+                for (int i = 0; i < m.Heroes.Count; i++) { var u = m.Heroes[i]; if (u != p && u.IsRealHero && u.Team == p.Team) return true; }
+                return false;
+            }
+        }
+
+        bool SignalReady => SignalsShown && m.SignalReady(m.Player) && pendingSignal == TeamSignal.None;
+
+        void PlayerSignal(TeamSignal kind)
+        {
+            if (m.State != MatchState.Play || !SignalReady) return;
+            pendingSignal = kind; // TakeInput hands it to the rules with the next tick
+        }
+
+        /// <summary>The signal picked on the wheel since the last tick, once.</summary>
+        TeamSignal TakeSignal() { var s = pendingSignal; pendingSignal = TeamSignal.None; return s; }
 
         bool BotCanEmote(int i)
         {
@@ -167,7 +200,8 @@ namespace BAM.Game
             HeartMove(at);
             holding = false;
             bool quick = Time.unscaledTime - heldAt < WheelOpenTime && (holdNow - holdFrom).magnitude <= SafeW * 0.04f;
-            if (wheelPick >= 0) PlayerEmote(wheelPick);
+            if (wheelPick >= Emotes.Length) PlayerSignal((TeamSignal)(wheelPick - Emotes.Length + 1));
+            else if (wheelPick >= 0) PlayerEmote(wheelPick);
             else if (quick) PlayerEmote(0); // a short tap: the heart
             wheelPick = -1;
         }
@@ -224,15 +258,19 @@ namespace BAM.Game
                 wheelRoot.localPosition = c;
                 wheelRoot.sizeDelta = new Vector2(back, back);
                 float alpha = EmoteReady ? 1f : 0.5f;
+                bool signals = SignalsShown, sigReady = SignalReady;
                 for (int i = 0; i < wheelSlots.Length; i++)
                 {
                     var s = wheelSlots[i];
+                    bool sig = i >= Emotes.Length;
+                    if (s.Root.gameObject.activeSelf != (!sig || signals)) s.Root.gameObject.SetActive(!sig || signals);
+                    if (sig && !signals) continue;
                     bool on = wheelPick == i;
                     float rr = sr * (on ? 1.18f : 1f);
                     s.Root.anchoredPosition = SlotCentre(i) - c;
                     s.Root.sizeDelta = new Vector2(2f * rr * 1.12f, 2f * rr * 1.12f);
                     s.Pick.enabled = on;
-                    LayoutEmote(s.Mark, i, rr, alpha);
+                    LayoutEmote(s.Mark, i, rr, sig ? (sigReady ? 1f : 0.5f) : alpha);
                 }
             }
 
@@ -257,6 +295,35 @@ namespace BAM.Game
                 float r = ts * 0.42f * Mathf.Min(1f, a * 6f) * (a > EmoteTime - 0.25f ? (EmoteTime - a) / 0.25f : 1f);
                 SetEmote(mk, emoteKind[i]);
                 LayoutEmote(mk, emoteKind[i], r, 1f);
+            }
+            SignalFrame(hidden, ts);
+        }
+
+        // the team signals over the heroes (drawSignalLabel): own team only, above the emote bubble when both show
+        void SignalFrame(bool hidden, float ts)
+        {
+            for (int i = 0; i < signalMarks.Length; i++)
+            {
+                var mk = signalMarks[i];
+                Unit u = i < m.Heroes.Count ? m.Heroes[i] : null;
+                var k = u != null ? m.SignalShown(u) : TeamSignal.None;
+                Vector3 bar = Vector3.zero;
+                bool show = !hidden && k != TeamSignal.None && u.Alive && u.IsRealHero && m.State != MatchState.Over && m.Player != null
+                            && u.Team == m.Player.Team && views.BarOf(u, out bar, out _);
+                if (mk.Root.gameObject.activeSelf != show) mk.Root.gameObject.SetActive(show);
+                if (!show) continue;
+                if (signalHeard[i] != u.SignalAt) { signalHeard[i] = u.SignalAt; BamAudio.Play(SfxId.Emote, u == m.Player ? 1f : 0.8f); }
+                float a = m.Time - u.SignalAt;
+                Vector3 sp = cam.Camera.WorldToScreenPoint(bar);
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, sp, null, out Vector2 at);
+                float size = ts * 1.05f;
+                bool emoting = !float.IsNaN(emoteAt[i]) && m.Time - emoteAt[i] >= 0f && m.Time - emoteAt[i] < EmoteTime;
+                float shake = a < 0.25f ? ts * 0.06f * Mathf.Sin(a * 25f) : 0f;
+                mk.Root.anchoredPosition = at + new Vector2(shake, size * (emoting ? 1.55f : 0.77f));
+                float r = ts * 0.42f * (0.6f + 0.4f * Mathf.Min(1f, a * 8f)) * (a > Match.SignalShowTime - 0.3f ? (Match.SignalShowTime - a) / 0.3f : 1f);
+                int kind = Emotes.Length + (int)k - 1;
+                SetEmote(mk, kind);
+                LayoutEmote(mk, kind, r, 1f);
             }
         }
 
@@ -294,12 +361,15 @@ namespace BAM.Game
             return img;
         }
 
+        // the word of wheel slot kind: an emote, or ATTACK / DEFEND after them
+        static string EmoteWord(int kind) => kind < Emotes.Length ? Emotes[kind] : kind - Emotes.Length < Signals.Length ? Signals[kind - Emotes.Length] : "";
+
         static void SetEmote(EmoteMark mk, int kind)
         {
-            bool heart = kind <= 0 || kind >= Emotes.Length;
+            bool heart = kind <= 0 || kind >= Emotes.Length + Signals.Length;
             if (mk.Heart.enabled != heart) mk.Heart.enabled = heart;
             if (mk.Word.enabled == heart) mk.Word.enabled = !heart;
-            string t = heart ? "" : Emotes[kind];
+            string t = heart ? "" : EmoteWord(kind);
             if (mk.Word.text != t) mk.Word.text = t;
         }
 
@@ -309,7 +379,7 @@ namespace BAM.Game
             bool on = r > 0.5f;
             if (mk.Body.gameObject.activeSelf != on) mk.Body.gameObject.SetActive(on);
             if (!on) { if (mk.Shadow != null) mk.Shadow.enabled = false; mk.Heart.enabled = false; mk.Word.enabled = false; return; }
-            bool heart = kind <= 0 || kind >= Emotes.Length;
+            bool heart = kind <= 0 || kind >= Emotes.Length + Signals.Length, sig = !heart && kind >= Emotes.Length;
             Vector2 box;
             if (heart)
             {
@@ -323,7 +393,7 @@ namespace BAM.Game
             }
             else
             {
-                string t = Emotes[kind];
+                string t = EmoteWord(kind);
                 mk.Word.enabled = true;
                 mk.Word.fontSize = Mathf.Max(6, Mathf.RoundToInt(r * (t.Length <= 3 ? 0.8f : t.Length <= 5 ? 0.62f : 0.5f)));
                 float h = r * 1.5f, w = Mathf.Max(r * 2f, mk.Word.preferredWidth + r * 0.7f);
@@ -333,10 +403,10 @@ namespace BAM.Game
                 Corners(mk.Body, h * 0.5f);
                 mk.Word.rectTransform.sizeDelta = box;
                 mk.Word.rectTransform.anchoredPosition = new Vector2(0f, -1f);
-                var c = BubbleInk; c.a = alpha; mk.Word.color = c;
+                var c = sig ? Color.white : BubbleInk; c.a = alpha; mk.Word.color = c;
             }
             mk.Body.rectTransform.sizeDelta = box;
-            var bc = BubbleWhite; bc.a = alpha; mk.Body.color = bc;
+            var bc = sig ? (kind == Emotes.Length ? SignalAttack : SignalDefend) : BubbleWhite; bc.a = alpha; mk.Body.color = bc;
             if (mk.Shadow != null)
             {
                 mk.Shadow.enabled = true;

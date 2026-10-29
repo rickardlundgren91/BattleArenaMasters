@@ -84,4 +84,6 @@ namespace BAM.Sim
 
     /// <summary>The battle spell a hero takes into the match (old SimSpells.cs): one extra button beside the SPECIAL.</summary>
     public enum SpellId : byte { None = 0, Blink = 1, Recall = 2, Shield = 3, Haste = 4, Sprint = 5 }
+    /// <summary>A team signal from the emote wheel (Signals.cs).</summary>
+    public enum TeamSignal : byte { None = 0, Attack = 1, Defend = 2 }
 }

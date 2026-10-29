@@ -131,7 +131,7 @@ namespace BAM.Sim
     {
         public const float Tick = 1f / 60f;
         public const float Countdown = 5;          // the match clock runs from -5 to 0 before play
-        public const float StartSpeedTime = 5;     // every hero runs +100 % for the first 5 s
+        public const float StartSpeedTime = 3, StartSpeedPct = 0.4f; // every hero runs +40 % for the first 3 s (was +100 % for 5 s; Rickard 2026-10-29: too much)
         public const float WaveFirst = 3, WavePeriod = 16, WaveStagger = 0.2f;
         public const float SecondsPerLevel = 16;
         public const int MaxLevel = 12;

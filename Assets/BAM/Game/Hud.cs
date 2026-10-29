@@ -168,6 +168,7 @@ namespace BAM.Game
             v = Coords.Screen(v);
             input.MoveX = v.x;
             input.MoveY = -v.y;
+            input.Signal = TakeSignal(); // ATTACK or DEFEND from the emote wheel (HudEmote.cs)
             if (specialQueued)
             {
                 specialQueued = false;

@@ -12,7 +12,7 @@ namespace BAM.Online.Mp
         // match
         public const byte Loaded = 20, In = 21, Frames = 22, Hash = 23, Desync = 24, LeftMatch = 25, MatchOver = 26;
         /// <summary>Phones with another protocol never meet (bump it whenever a message or the rules' input changes).</summary>
-        public const int Protocol = 6; // 2: groups in ONLINE MATCH (party in Hello, side in Room, Move); 3: Simon's reworks change the rules (8d996f0), so a 2 build would desync; 4: balance (Tyra, Tikta, Knut numbers); 5: Hilde and Oaken (heroes 9 and 10); 6: backdoor protection (half tower damage without a wave)
+        public const int Protocol = 7; // 2: groups in ONLINE MATCH (party in Hello, side in Room, Move); 3: Simon's reworks change the rules (8d996f0), so a 2 build would desync; 4: balance (Tyra, Tikta, Knut numbers); 5: Hilde and Oaken (heroes 9 and 10); 6: backdoor protection (half tower damage without a wave); 7: smaller start speed boost, Attack/Defend signals
     }
 
     static class MpQueue
@@ -68,7 +68,7 @@ namespace BAM.Online.Mp
         public static void Write(MpWriter w, in PlayerInput i)
         {
             w.U8(Q(i.MoveX)); w.U8(Q(i.MoveY));
-            w.U8((i.Special ? 1 : 0) | (i.Spell ? 2 : 0));
+            w.U8((i.Special ? 1 : 0) | (i.Spell ? 2 : 0) | ((int)i.Signal & 3) << 2); // bits 2-3: a team signal
             w.U16(i.Special ? Ang(i.AimAngle) : NoAngle); w.U8(i.Special ? K(i.AimK) : 0);
             w.U16(i.Spell ? Ang(i.SpellAngle) : NoAngle); w.U8(i.Spell ? K(i.SpellK) : 255);
         }
@@ -78,7 +78,7 @@ namespace BAM.Online.Mp
             var i = PlayerInput.None;
             i.MoveX = (sbyte)r.U8() / 127f; i.MoveY = (sbyte)r.U8() / 127f;
             int f = r.U8();
-            i.Special = (f & 1) != 0; i.Spell = (f & 2) != 0;
+            i.Special = (f & 1) != 0; i.Spell = (f & 2) != 0; i.Signal = (TeamSignal)((f >> 2) & 3);
             int a = r.U16(); int k = r.U8();
             if (i.Special) { i.AimAngle = UnAng(a); i.AimK = k / 255f; }
             a = r.U16(); k = r.U8();

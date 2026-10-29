@@ -233,6 +233,7 @@ namespace BAM.Sim
                 for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a != h && a.Team == h.Team && !a.IsClone && now - a.LastCombat < 1 && Dist(a, h) < 8) { retreat = false; break; } }
             bool finish = TowerFinish(enemyTower, hpR, myDps); if (finish) retreat = false;
             TeamStay(hpR); // don't leave the human alone in a fight
+            SignalSteer(hpR); // a teammate's ATTACK or DEFEND (BotSignal.cs)
             danger = !retreat && !finish && !(v3 && TK3(33) > 0 && InvulT(h) > 1.5f) && ttk < Tier.TtkDanger * TK(5) && !(commitT > now && ttk > 1.2f);
             var target = retreat ? null : PickHeroTarget(enemyTower, myDps);
             bool towerUp = enemyTower != null && enemyTower.Alive;
@@ -309,6 +310,7 @@ namespace BAM.Sim
             if (target == null && !finish && !retreat && (Mode == BotMode.Lane || Mode == BotMode.Group)) TeamFollow(hpR, myTower, fwd);
             else following = false;
             TeamLeash(finish, fwd); // stay within range of the human (BotTeam.cs)
+            if (!finish) SignalGoal(target, myTower, fwd); // a teammate's ATTACK or DEFEND (BotSignal.cs)
             if (hasGoal && hasBlocked && now < blockedT && Hyp(gX - blockedX, gY - blockedY) < 1.5f) hasGoal = false;
             if (target == null && !retreat && !danger && Mode != BotMode.BushChase && Mode != BotMode.Tower) HmOffset(); // own line per bot (BotMove.cs)
             if (HmKeepGoal(oHas, oX, oY, oStop, oFollow)) { gX = oX; gY = oY; } // barely moved: keep the old goal and path

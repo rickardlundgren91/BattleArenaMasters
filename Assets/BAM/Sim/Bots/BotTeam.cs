@@ -5,7 +5,7 @@ namespace BAM.Sim
     // Bots that play as a team with the human player (old SimTeamplay.cs, on by default in the old game). The player's
     // teammates join the player's fights, stay in them, pull back with the player and walk with the player; and with a
     // person in the match every bot reacts a little slower and holds its special for a moment worth it. A match without a
-    // human (MatchConfig.PlayerIsBot, the headless runner) is unchanged. The old team signals (ATTACK/RETREAT) are not in BAM.
+    // human (MatchConfig.PlayerIsBot, the headless runner) is unchanged. Team signals (ATTACK/DEFEND) are in BotSignal.cs.
     // Healthy bots also stay within TeamLeash of the human (old teamLeash, Rickard 2026-10-25: "they should back off when I back
     // off, go in when I go in"): enemy heroes far from the human are not chased, and a goal outside the ring becomes a spot beside them.
     public sealed partial class BotBrain
