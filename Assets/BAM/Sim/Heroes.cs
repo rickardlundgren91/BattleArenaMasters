@@ -615,11 +615,12 @@ namespace BAM.Sim
             if (p.Out)
             {
                 float k = SimMath.Clamp(p.T / KnutS.OutTime, 0, 1), sp = SimMath.Lerp(KnutS.OutSpeed, 0, k);
-                float ox = h.X + ca * p.D, oy = h.Y + sa * p.D;
-                p.D += sp * dt; p.X = h.X + ca * p.D; p.Y = h.Y + sa * p.D;
+                float ox = h.X + ca * p.D, oy = h.Y + sa * p.D, od = p.D;
+                // never past HookDistance, so it reaches exactly as far as the aim shows (it overshot up to 0.1 on its last tick)
+                p.D = Math.Min(p.D + sp * dt, KnutS.HookDistance); p.X = h.X + ca * p.D; p.Y = h.Y + sa * p.D;
                 // a wall on this tick's path (swept as the other shots, so it never slips a corner): the anchor stops before it
                 bool wall = Map.ShotBlocked(ox, oy, p.X, p.Y);
-                if (wall) { p.D -= sp * dt; p.X = ox; p.Y = oy; }
+                if (wall) { p.D = od; p.X = ox; p.Y = oy; }
                 Unit hit = null;
                 for (int i = 0; i < Units.Count; i++)
                 {

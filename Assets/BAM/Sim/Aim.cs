@@ -123,10 +123,19 @@ namespace BAM.Sim
                     var u = Units[i];
                     if (!u.Alive || u.Team == h.Team || u.Kind != UnitKind.Hero || u.Has(St.Untargetable) || !IsVisibleTo(u, h.Team)) continue;
                     float e = SimMath.Hypot(u.X - wx, u.Y - wy) - u.R;
-                    if (e <= a.PathHalf && e < bd && Map.LosClear(wx, wy, u.X, u.Y)) { bd = e; prey = u; }
+                    if (e <= a.PathHalf && e < bd && InStrip(a, u) && Map.LosClear(wx, wy, u.X, u.Y)) { bd = e; prey = u; }
                 }
                 if (prey != null || d >= a.Length) return prey;
             }
+        }
+
+        // as InWolfStrip (Fenn 2.0): only a hero inside the red strip from where the wolf leaves to where it lands
+        static bool InStrip(in AimInfo a, Unit u)
+        {
+            float ux = u.X - a.X, uy = u.Y - a.Y;
+            if (a.Length < 1e-4f) return SimMath.Hypot(ux, uy) <= a.PathHalf + u.R;
+            float ca = SimMath.Cos(a.Ang), sa = SimMath.Sin(a.Ang), along = ux * ca + uy * sa, side = Math.Abs(ux * sa - uy * ca);
+            return along >= -u.R && along <= a.Length + a.PathHalf + u.R && side <= a.PathHalf + u.R;
         }
 
         // how far along the line its front first touches u (a body of half width half)
