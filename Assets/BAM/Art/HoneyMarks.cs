@@ -5,7 +5,8 @@ namespace BAM.Art
 {
     /// <summary>
     /// Moa's shields on one hero (Simon's Moa 2.0, XYZ #610 f4dbfea, the picture part only), built the first time one is shown:
-    /// - Honey Guard (her tap): a ring of 12 hex cells round the feet in strong amber; a cell goes dark for each twelfth of the
+    /// - Honey Guard (her tap): a ring of 12 small hex beads round the feet in honey yellow, just outside the orange "special
+    ///   ready" ring (MOA-03); a cell goes dark for each twelfth of the
     ///   shield that is used up, so everyone can read how much is left.
     /// - The honey field's shield: the same ring, smaller and paler.
     /// - Queen's Instinct: a crown of 6 hex cells over the head and an orange ring at the feet, beating a double heartbeat.
@@ -14,14 +15,17 @@ namespace BAM.Art
     sealed class HoneyMarks
     {
         const int Ring = 12, Crown = 6;
-        static readonly Color GuardLit = new Color(1f, 0.7f, 0.12f), GuardDim = new Color(0.32f, 0.2f, 0.06f),
+        // the guard in the palette's honey yellow (Pal.Honey ffc93c), not amber: the orange "special ready" ring stays unique (MOA-03)
+        static readonly Color GuardLit = new Color(1f, 0.79f, 0.235f), GuardDim = new Color(0.3f, 0.24f, 0.08f),
             FieldLit = new Color(1f, 0.9f, 0.55f), FieldDim = new Color(0.2f, 0.16f, 0.08f),
             QueenLit = new Color(1f, 0.5f, 0.12f), QueenDim = new Color(0.3f, 0.12f, 0.04f), QueenRing = new Color(1f, 0.45f, 0.08f);
         // one hex cell of the picture (512 px, cells point up): its middle and half size, in pixels from the top left
         const float CellX = 127.5f, CellY = 61.5f, CellHalf = 42f, TexSize = 512f;
         static Texture2D hexTex;
         static bool texLoaded;
-        static readonly Mesh[] ringMeshes = new Mesh[Ring + 1], crownMeshes = new Mesh[Crown + 1];
+        static readonly Mesh[] ringMeshes = new Mesh[Ring + 1], guardMeshes = new Mesh[Ring + 1], crownMeshes = new Mesh[Crown + 1];
+        // the guard's cells are small, apart beads (0.6 of a full cell): a broken ring, unlike the solid ready ring (MOA-03)
+        const float GuardBead = 0.6f;
 
         readonly Transform parent;
         readonly float height, radius;
@@ -56,7 +60,7 @@ namespace BAM.Art
             if (g >= 0f && guard == null) BuildGuard();
             if (f >= 0f && field == null) BuildField();
             if (q >= 0f && crown == null) BuildQueen();
-            Cells(guardF, ref gN, g, Ring, ringMeshes, guard);
+            Cells(guardF, ref gN, g, Ring, guardMeshes, guard, GuardBead);
             Cells(fieldF, ref fN, f, Ring, ringMeshes, field);
             Cells(crownF, ref qN, q, Crown, crownMeshes, crown);
             Apply();
@@ -77,7 +81,7 @@ namespace BAM.Art
         }
 
         // a cell lights for each started twelfth (sixth on the crown) still left; one going dark gives a small honey spark there
-        void Cells(MeshFilter mf, ref int shown, float left, int count, Mesh[] cache, Transform at)
+        void Cells(MeshFilter mf, ref int shown, float left, int count, Mesh[] cache, Transform at, float scale = 1f)
         {
             if (mf == null || left < 0f) { shown = -1; return; }
             int n = Mathf.Clamp(Mathf.CeilToInt(left * count - 0.001f), 0, count);
@@ -85,7 +89,7 @@ namespace BAM.Art
             if (shown > n && visible && at != null)
                 Fx.Glow(at.position + new Vector3(0f, 0.15f, 0f), 2, Pal.Get(Pal.Honey), 0.14f, 0.6f, 0.3f, 0.6f, at.lossyScale.x * 0.8f);
             shown = n;
-            mf.sharedMesh = CellMesh(count, n, cache);
+            mf.sharedMesh = CellMesh(count, n, cache, scale);
         }
 
         /// <summary>After the animation, every frame while <see cref="Any"/>: the rings turn, pop in and the crown beats.</summary>
@@ -97,7 +101,10 @@ namespace BAM.Art
             if (g >= 0f && guard != null)
             {
                 gAge += dt;
-                float s = baseR * 1.75f * Pop(gAge);
+                // its beads sit just outside the orange "special ready" ring (MatchRings: max(0.55, R + 0.35) + 0.12, about 0.1
+                // wide when it breathes), so the two never overlap on the player's own hero (MOA-03)
+                float bead = Mathf.Sin(Mathf.PI / Ring) * 0.92f * GuardBead;
+                float s = Mathf.Max(baseR * 1.75f, (Mathf.Max(0.55f, radius + 0.35f) + 0.12f + 0.14f) / (1f - bead)) * Pop(gAge);
                 guard.position = p + new Vector3(0f, 0.05f, 0f);
                 guard.rotation = Quaternion.Euler(0f, time * 25f, 0f);
                 guard.localScale = Local(s);
@@ -189,7 +196,7 @@ namespace BAM.Art
 
         void BuildGuard()
         {
-            guard = Part("HoneyGuard", CellMesh(Ring, Ring, ringMeshes), guardLit = HexMat(3052), guardDim = HexMat(3051));
+            guard = Part("HoneyGuard", CellMesh(Ring, Ring, guardMeshes, GuardBead), guardLit = HexMat(3052), guardDim = HexMat(3051));
             guardF = guard.GetComponent<MeshFilter>();
         }
 
@@ -209,13 +216,13 @@ namespace BAM.Art
 
         /// <summary>count hex cells in a ring of radius 1 on the ground, the first lit of them (clockwise from the top, as seen
         /// from above) in submesh 0 and the rest in submesh 1; each cell is cut from the picture and points out from the middle.</summary>
-        static Mesh CellMesh(int count, int lit, Mesh[] cache)
+        static Mesh CellMesh(int count, int lit, Mesh[] cache, float scale = 1f)
         {
             if (cache[lit] != null) return cache[lit];
             // a cell's corners in its own units: x along the ring, y out from the middle (the picture's cells point up)
             var hx = new[] { 0f, 1f, 1f, 0f, -1f, -1f };
             var hy = new[] { 1f, 0.5f, -0.5f, -1f, -0.5f, 0.5f };
-            float size = Mathf.Sin(Mathf.PI / count) * 0.92f; // the cells nearly touch
+            float size = Mathf.Sin(Mathf.PI / count) * 0.92f * scale; // at scale 1 the cells nearly touch
             var v = new Vector3[count * 7];
             var uv = new Vector2[v.Length];
             float cu = CellX / TexSize, cv = 1f - CellY / TexSize, hu = CellHalf / TexSize;
