@@ -379,7 +379,9 @@ namespace BAM.Art
         int[] runSign, runVotes; // the same for WeaponDef.Run
         Quaternion[] handRef;
         Vector4[] refSum;
-        bool rested;
+        Vector3[] restGrip, gripSum; // an Along weapon's grip in its hand's own space in the idle (HoldAngle holds it there)
+        int restN;
+        bool rested, sampling;
         int restKey;
         /// <summary>A menu stage figure (BodyView.Preview): weapons with <see cref="WeaponDef.MenuFist"/> stay in the fist's grip.</summary>
         public bool OnMenu;
@@ -407,6 +409,7 @@ namespace BAM.Art
             h.palmL = new Vector3[nw]; h.handleV = new Vector3[nw]; h.shaftC = new Vector3[nw];
             h.meshH = new float[nw]; h.handS = new float[nw]; h.placedLen = new float[nw]; h.placedGrip = new float[nw];
             h.laxSign = new int[nw]; h.votes = new int[nw]; h.handRef = new Quaternion[nw]; h.refSum = new Vector4[nw];
+            h.restGrip = new Vector3[nw]; h.gripSum = new Vector3[nw];
             h.runSign = new int[nw]; h.runVotes = new int[nw];
             h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
             h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
@@ -860,7 +863,9 @@ namespace BAM.Art
 
         public void BeginRest()
         {
-            for (int i = 0; i < wT.Length; i++) { votes[i] = runVotes[i] = 0; refSum[i] = Vector4.zero; }
+            for (int i = 0; i < wT.Length; i++) { votes[i] = runVotes[i] = 0; refSum[i] = Vector4.zero; gripSum[i] = Vector3.zero; }
+            restN = 0;
+            sampling = true;
         }
 
         /// <summary>The rig stands in one idle frame straight from the clip: the arms go as Tick puts them, then each hand's turn in
@@ -880,9 +885,11 @@ namespace BAM.Art
                 if (Vector4.Dot(v, refSum[i]) < 0f) v = -v; // an idle's frames are close together: summed on one side they average
                 refSum[i] += v;
                 if (W.HoldUp != 0f) votes[i] += HoldAngle(i, W, 1f, 0);
+                if (W.HoldUp != 0f && W.Along) gripSum[i] += hand[i].InverseTransformPoint(t.TransformPoint(gripL[i]));
                 if (W.Run.On) runVotes[i] += HoldAngle(i, W, 1f, 0, W.Run.Up, W.Run.Out);
                 t.localPosition = bindP[i]; t.localRotation = bindR[i];
             }
+            restN++;
         }
 
         public void EndRest()
@@ -894,7 +901,9 @@ namespace BAM.Art
                 handRef[i] = m > 1e-6f ? new Quaternion(s.x / m, s.y / m, s.z / m, s.w / m) : Quaternion.identity;
                 laxSign[i] = votes[i] > 0 ? 1 : votes[i] < 0 ? -1 : 0;
                 runSign[i] = runVotes[i] > 0 ? 1 : runVotes[i] < 0 ? -1 : 0;
+                restGrip[i] = restN > 0 ? gripSum[i] / restN : Vector3.zero;
             }
+            sampling = false;
             rested = true;
             restKey = RestKey();
         }
@@ -1007,7 +1016,10 @@ namespace BAM.Art
                 t.SetPositionAndRotation(gg + tw * (t.position - gg), tw * t.rotation);
             }
             Vector3 d = palm - t.TransformPoint(gl);
-            d -= sh * Vector3.Dot(d, sh); // slide across the shaft only, never along it
+            // an Along weapon (Moa's staff) stays where the idle holds it in the fist: slid across its shaft only, the staff stood
+            // still while her fist ran up and down it with the arm's swing, up to 0.3 tiles (ANIM-03, Unity run 2026-10-29)
+            if (W.Along && rested && !sampling) d = hd.TransformPoint(restGrip[i]) - t.TransformPoint(gl);
+            else d -= sh * Vector3.Dot(d, sh); // slide across the shaft only, never along it
             t.position += d * w;
             return sign;
         }

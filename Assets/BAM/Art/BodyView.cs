@@ -69,6 +69,7 @@ namespace BAM.Art
         Transform instT, footL, footR, toeL, toeR;
         float footRef = float.NaN, groundY;
         bool groundSet;
+        float gearK = 1f; // the renderer bounds' height over the sole-to-crown one the model is fitted by (BuildImported)
 #if UNITY_EDITOR
         float soleGap, instY0, groundLogT; // what the grounding found, logged once a second into a menu stage
         bool groundLogged;
@@ -341,13 +342,18 @@ namespace BAM.Art
             // the menu stages frame with HeightOf, not these bounds
             Bounds bb = new Bounds();
             for (int i = 0; i < rends.Length; i++) { if (i == 0) bb = rends[i].bounds; else bb.Encapsulate(rends[i].bounds); }
-            float h = bb.size.y > 0.01f ? bb.size.y : 1f;
-            float k = art.Height / h;
+            float hb = bb.size.y > 0.01f ? bb.size.y : 1f;
             // the soles go on the ground by the meshes' own bottom in the pose they were made in (BindBottom), not by these bounds:
             // a fresh skinned renderer's bounds may reach below the feet, and the model then stood that much over the ground
             // (Benny and Rickard 2026-10-28: the heroes floated about a tenth of their height over the ring on Home)
             float sole = BindBottom(rends, bb.min.y);
-            if (Mathf.Abs(sole - bb.min.y) > 0.25f * h) sole = bb.min.y; // a mesh whose stored bounds make no sense: as before
+            if (Mathf.Abs(sole - bb.min.y) > 0.25f * hb) sole = bb.min.y; // a mesh whose stored bounds make no sense: as before
+            // and the height is sole to crown in that pose too, as Speltest fitted its models (HeroMixamo: the meshes' own bounds).
+            // Fitted to these bounds, every hero was drawn 7-14 % shorter than its Height (COORDS-03, Unity run 2026-10-29)
+            float h = BindTop(rends, bb.max.y) - sole;
+            if (h < 0.5f * hb || h > 1.02f * hb) h = hb;
+            float k = art.Height / h;
+            gearK = hb / h; // the weapons, the shoulder carry and the tuner's offsets grow with the body, as Rickard tuned them on it
 #if UNITY_EDITOR
             soleGap = (sole - bb.min.y) * k;
 #endif
@@ -492,7 +498,7 @@ namespace BAM.Art
         // the weapons go on in the bind pose, before the clips play (HeldGear), and join the body's renderers and materials
         void AddGear(HeroArt art)
         {
-            gear = HeldGear.Build(def.Gear, anim, art.Height * transform.lossyScale.y);
+            gear = HeldGear.Build(def.Gear, anim, art.Height * transform.lossyScale.y * gearK);
             if (gear == null) return;
             gear.OnMenu = Preview; // Tyra's bow stays in her fist's grip on the menu stage (WeaponDef.MenuFist)
             int n0 = rends.Length, ng = gear.Rends.Length;
@@ -956,8 +962,14 @@ namespace BAM.Art
                         breath?.ApplyMatch(Time.time, 0.6f * (1f - moveW) * (1f - Mathf.Clamp01(gearAct)));
                     }
                     else model.localRotation = Quaternion.Euler(0f, aimYaw, 0f);
+                    // standing, the feet go on the ground as on the menu stages: Bram's idle held him a quarter tile over his ring and
+                    // some blows sank feet into it (ANIM-02, Unity run 2026-10-29); the stride is left as it plays (a run's flight
+                    // has both feet up)
+                    GroundFeet(dt, 1f - moveW);
                 }
             }
+            // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
+            if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
             if (gear != null && clips != null && gear.NeedsRest) MeasureRest();
             if (gear != null)
             {
@@ -1521,7 +1533,8 @@ namespace BAM.Art
             float wLen = clipLen[CWalk], rLen = clipLen[CRun];
             float top = Mathf.Max(walkSpd + 0.5f, 0.6f * runSpd);
             float runK = Mathf.Clamp01((rel - walkSpd) / (top - walkSpd));
-            float stride = Mathf.Lerp(walkSpd * wLen, runSpd * rLen, runK), len = Mathf.Lerp(wLen, rLen, runK);
+            float reach = !Preview && (uint)HeroIndex < (uint)RunReach.Length ? RunReach[HeroIndex] : 1f;
+            float stride = Mathf.Lerp(walkSpd * wLen, runSpd * reach * rLen, runK), len = Mathf.Lerp(wLen, rLen, runK);
             float rate = Mathf.Clamp(rel / Mathf.Max(0.05f, stride), 0.6f / len, 1.8f / len);
             // backing off with its legs turned round (LegsFollow), the stride plays backwards
             float back = AnimFix.LegsFollow && legDir < 0 && legW > 0.5f ? -1f : 1f;
@@ -1530,6 +1543,12 @@ namespace BAM.Art
             clips[CRun].SetTime(gaitPh * rLen);
             return runK;
         }
+
+        // the run's stride in a match against GroundSpeed's measure of it, by HeroId (Unity run 2026-10-29 on Rickard's PC, ANIM-01):
+        // played at the measured speed, the planted foot slipped back 7-31 % of the way the body went (the clip ran too fast for the
+        // ground), Hilde's was carried 24 % forward. The same run clip lands differently on each rig with its foot IK, so it goes by
+        // hero; measure again when a hero's model or run clip changes
+        static readonly float[] RunReach = { 1.106f, 1.24f, 1.313f, 1.233f, 1.073f, 1.184f, 1.218f, 1.319f, 0.757f, 1.147f };
 
         // a view built under the hidden pool root can't play its clips yet: measured the first frame it is out
         void MeasureGait(AnimationClip walk, AnimationClip run)
@@ -1611,17 +1630,17 @@ namespace BAM.Art
         }
 
         // moves the model so its lowest foot bone stays at its bind-pose height over the stage (smoothed, so a step or a swing does
-        // not make it bob); only on the menu stages. The lift is worked out fresh each frame from where the feet are with `model`
-        // level and goes on `model`, which only this view moves: on the Animator's own transform (2026-10-27) it never took, and
-        // Rickard's Home still had Bonk a tenth of his height over the ring the next day
-        void GroundFeet(float dt)
+        // not make it bob); on the menu stages, and in a match by w (a hero standing, ANIM-02). The lift is worked out fresh each
+        // frame from where the feet are with `model` level and goes on `model`, which only this view moves: on the Animator's own
+        // transform (2026-10-27) it never took, and Rickard's Home still had Bonk a tenth of his height over the ring the next day
+        void GroundFeet(float dt, float w = 1f)
         {
             if (float.IsNaN(footRef)) return;
             float low = LowestFoot();
             if (float.IsNaN(low)) return;
             float s = Mathf.Max(1e-4f, transform.lossyScale.y);
             Vector3 mp = model.localPosition;
-            float want = (transform.position.y + footRef - (low - mp.y * s)) / s; // the lift that puts the foot on its mark
+            float want = (transform.position.y + footRef - (low - mp.y * s)) / s * w; // the lift that puts the foot on its mark
             groundY = groundSet ? Mathf.Lerp(groundY, want, Mathf.Min(1f, Mathf.Max(dt, 1f / 60f) * 8f)) : want;
             groundSet = true;
             mp.y = groundY;
@@ -1629,7 +1648,7 @@ namespace BAM.Art
 #if UNITY_EDITOR
             // one line per menu hero, so a hero that still floats tells why: bounds reaching under the soles (now ignored), the
             // foot mark, the lift the stage needed and whether anything moved the Animator's own transform
-            if (!groundLogged && (groundLogT += dt) > 1f && instT != null)
+            if (Preview && !groundLogged && (groundLogT += dt) > 1f && instT != null)
             {
                 groundLogged = true;
                 float hh = Mathf.Max(0.01f, def.Height * s);
@@ -1640,25 +1659,29 @@ namespace BAM.Art
 #endif
         }
 
-        // the lowest point of the meshes in the pose the model was made in: each mesh's stored bounds through its own node (no CPU
-        // read, so fine on a phone), or a renderer's bounds where it has no mesh. All the heroes and minions stand with their soles
-        // on their origin there (Blender 2026-10-28)
-        static float BindBottom(Renderer[] rs, float fallback)
+        // the lowest (BindBottom) or highest (BindTop) point of the meshes in the pose the model was made in: each mesh's stored
+        // bounds through its own node (no CPU read, so fine on a phone), or a renderer's bounds where it has no mesh. All the heroes
+        // and minions stand with their soles on their origin there (Blender 2026-10-28)
+        static float BindBottom(Renderer[] rs, float fallback) => BindY(rs, fallback, false);
+        static float BindTop(Renderer[] rs, float fallback) => BindY(rs, fallback, true);
+
+        static float BindY(Renderer[] rs, float fallback, bool top)
         {
-            float y = float.MaxValue;
+            float none = top ? float.MinValue : float.MaxValue, y = none;
             foreach (Renderer r in rs)
             {
                 Mesh m = r is SkinnedMeshRenderer sk ? sk.sharedMesh : r.TryGetComponent(out MeshFilter mf) ? mf.sharedMesh : null;
-                if (m == null) { y = Mathf.Min(y, r.bounds.min.y); continue; }
+                if (m == null) { y = top ? Mathf.Max(y, r.bounds.max.y) : Mathf.Min(y, r.bounds.min.y); continue; }
                 Bounds b = m.bounds;
                 Matrix4x4 w = r.transform.localToWorldMatrix;
                 for (int c = 0; c < 8; c++)
                 {
                     var p = new Vector3((c & 1) == 0 ? b.min.x : b.max.x, (c & 2) == 0 ? b.min.y : b.max.y, (c & 4) == 0 ? b.min.z : b.max.z);
-                    y = Mathf.Min(y, w.MultiplyPoint3x4(p).y);
+                    float py = w.MultiplyPoint3x4(p).y;
+                    y = top ? Mathf.Max(y, py) : Mathf.Min(y, py);
                 }
             }
-            return y == float.MaxValue ? fallback : y;
+            return y == none ? fallback : y;
         }
 
         // standing (and in the menu) the graph is the plain mixer as before the layers came; a swing on the move routes it through
@@ -1745,9 +1768,10 @@ namespace BAM.Art
             {
                 if (IsHero && !Preview)
                 {
-                    // Speltest's sink: 0.9 tiles a second from 0.6 s (set over InPlace's height, which is 0)
+                    // Speltest's sink: 0.9 tiles a second from 0.6 s (below InPlace's height, which is 0, and the standing lift as it
+                    // settles away, ANIM-02)
                     Vector3 lp = model.localPosition;
-                    lp.y = -Mathf.Max(0f, deathT - HeroSinkAt) * HeroSink / Mathf.Max(1e-4f, transform.lossyScale.y);
+                    lp.y -= Mathf.Max(0f, deathT - HeroSinkAt) * HeroSink / Mathf.Max(1e-4f, transform.lossyScale.y);
                     model.localPosition = lp;
                 }
             }
