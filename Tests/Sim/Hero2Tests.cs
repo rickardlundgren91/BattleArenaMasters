@@ -154,7 +154,7 @@ namespace BAM.Sim
 
         public static int RunHero2Tests()
         {
-            Tikta(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Signals(); FennWolf(); Fenn2();
+            Tikta(); TiktaDrag(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Signals(); FennWolf(); Fenn2();
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;
         }

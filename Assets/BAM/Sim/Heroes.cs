@@ -193,7 +193,9 @@ namespace BAM.Sim
         void WarnUpdate(Proj p)
         {
             var s = p.Src;
-            if (p.T >= p.Dur || s == null || !s.Alive || (p.Tied && !(s.Kind == UnitKind.Wolf && s.Wolf == WolfMode.Fly))) p.Done = true;
+            if (p.T >= p.Dur || s == null || !s.Alive || (p.Tied && !(s.Kind == UnitKind.Wolf && s.Wolf == WolfMode.Fly))) { p.Done = true; return; }
+            // Tikta's drag: her needles still in the hand leave from where she is then, so the strip moves with her (TIKTA-01)
+            if (p.Mode == ProjMode.WarnLine && s.Kind == UnitKind.Hero && s.Hero == HeroId.Tikta && NeedleInHand(s)) { p.X = s.X; p.Y = s.Y; }
         }
 
         // ---------- Bram ----------
@@ -707,6 +709,7 @@ namespace BAM.Sim
         /// never carries it past an enemy; the first enemy along it is hit if no wall stands between, else it stops at the wall.</summary>
         void NeedleLineUpdate(Proj p, float dt)
         {
+            if (p.D == 0 && p.Src != null && p.Src.Alive) { p.X = p.Src.X; p.Y = p.Src.Y; } // leaves from where she is now, as her warning (TIKTA-01)
             float ox = p.X, oy = p.Y, step = p.Speed * dt, len = Math.Max(0, Math.Min(step, TiktaS.LineReach - p.D));
             var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, len, TiktaS.LineHitbox, out float at);
             if (u != null)
@@ -720,9 +723,31 @@ namespace BAM.Sim
                     return;
                 }
             }
-            p.X += SimMath.Cos(p.Ang) * step; p.Y += SimMath.Sin(p.Ang) * step; p.D += step;
-            if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
-            if (p.D >= TiktaS.LineReach) p.Done = true;
+            float move = Math.Max(0, Math.Min(step, TiktaS.LineReach - p.D)); // the last step ends at the reach, not past it (TIKTA-04)
+            p.X += SimMath.Cos(p.Ang) * move; p.Y += SimMath.Sin(p.Ang) * move; p.D += move;
+            if (Map.ShotBlocked(ox, oy, p.X, p.Y))
+            {   // the spark where the line first meets the wall, not at the start of the step (TIKTA-04)
+                float lo = 0, hi = move;
+                for (int k = 0; k < 8; k++) { float mid = (lo + hi) * 0.5f; if (Map.ShotBlocked(ox, oy, ox + SimMath.Cos(p.Ang) * mid, oy + SimMath.Sin(p.Ang) * mid)) hi = mid; else lo = mid; }
+                p.X = ox + SimMath.Cos(p.Ang) * lo; p.Y = oy + SimMath.Sin(p.Ang) * lo;
+                p.Done = true; Blocked(p, p.X, p.Y); return;
+            }
+            if (p.D >= TiktaS.LineReach - 1e-4f) p.Done = true;
+        }
+
+        /// <summary>Tikta still holds a needle of her drag, or it leaves this tick (from where she is then).</summary>
+        bool NeedleInHand(Unit h)
+        {
+            for (int i = 0; i < Projs.Count; i++) { var q = Projs[i]; if (q.Src == h && !q.Done && q.Mode == ProjMode.NeedleLine && q.D <= q.Speed * Rules.Tick * 1.001f) return true; } // in the hand or leaving this tick
+            return false;
+        }
+
+        /// <summary>The longest time one of Tikta's dragged needles already flying still needs to its reach (0 if none).</summary>
+        float NeedleFlightLeft(Unit h)
+        {
+            float left = 0;
+            for (int i = 0; i < Projs.Count; i++) { var q = Projs[i]; if (q.Src == h && !q.Done && q.Mode == ProjMode.NeedleLine && q.T >= 0) left = Math.Max(left, (TiktaS.LineReach - q.D) / q.Speed); }
+            return left;
         }
 
         /// <summary>A needle poisons an enemy hero: 10 % of Tikta's damage per second for 2 s, Strongest Wins (Hero2.cs).</summary>

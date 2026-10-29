@@ -61,7 +61,9 @@ namespace BAM.Sim
                 else if (p.Mode == ProjMode.Hook && p.Out && p.Caught == null) { p.Out = false; any = true; }          // the anchor comes back
             }
             // the red warning goes with a shot that never left the hand; a shot already flying keeps its warning
-            if (cut) for (int i = 0; i < Projs.Count; i++) { var p = Projs[i]; if (p.Src == u && !p.Done && p.IsWarning) p.Done = true; }
+            // (Tikta's one strip warns for all four needles: it stays while a needle of hers still flies, then goes, TIKTA-03)
+            float flying = cut && u.Hero == HeroId.Tikta ? NeedleFlightLeft(u) : 0;
+            if (cut) for (int i = 0; i < Projs.Count; i++) { var p = Projs[i]; if (p.Src == u && !p.Done && p.IsWarning) { if (flying > 0) p.Dur = Math.Min(p.Dur, p.T + flying); else p.Done = true; } }
             if (!any) { u.RemoveAll(St.Channel); return; }
             u.RemoveAll(St.Casting); u.RemoveAll(St.Channel);
             Emit(EventType.Interrupt, u, null);
