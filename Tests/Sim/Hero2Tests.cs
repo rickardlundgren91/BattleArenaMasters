@@ -181,6 +181,26 @@ namespace BAM.Sim
             Check(b.Bot != null && m.TryCastSpecial(b, float.NaN, 0), "a bot Blast taps");
             Proj bm = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Bomb && !p.Done && p.Src == b) bm = p;
             Check(bm != null && !m.Map.WallAt(bm.X, bm.Y), $"BLAST-04: a bot's led bomb never lands inside a wall ({bm?.X:0.00}, {bm?.Y:0.00})");
+
+            // BLAST-05: the explosion's look is drawn only where the blast reaches; on open ground it is the blast itself
+            float r = m.BlastLookDisc(7.5f, 14.5f, BlastS.Radius, 0.5f, out float ox, out float oy);
+            Check(Near(r, BlastS.Radius) && Near(ox, 7.5f) && Near(oy, 14.5f), "BLAST-05: in the open the look is the blast's own disc");
+            int walls = 0;
+            foreach (var (bx, by) in new[] { (4.3f, 7.5f), (4.6f, 9.8f), (4.32f, 10.6f), (2.6f, 7.5f) })
+            {
+                r = m.BlastLookDisc(bx, by, BlastS.Radius, 0.5f, out float lx, out float ly);
+                bool ok = r <= BlastS.Radius + 1e-3f && SimMath.Hypot(lx - bx, ly - by) + r <= BlastS.Radius + 1e-3f;
+                for (int i = 0; i < 64 && r > 0.5f; i++)
+                {
+                    float a = i * 2 * (float)Math.PI / 64;
+                    for (float f = 0.25f; f <= 1.001f; f += 0.25f)
+                    {
+                        float qx = lx + SimMath.Cos(a) * r * f, qy = ly + SimMath.Sin(a) * r * f;
+                        if (m.Map.WallAt(qx, qy) || !m.Map.LosClear(bx, by, qx, qy)) { ok = false; walls++; }
+                    }
+                }
+                Check(ok && r >= 0.5f, $"BLAST-05: by a wall the look ({lx:0.00}, {ly:0.00}) r {r:0.00} stays where the blast from ({bx}, {by}) reaches");
+            }
         }
 
         public static int RunHero2Tests()

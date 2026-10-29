@@ -93,6 +93,44 @@ namespace BAM.Sim
             return i >= 0 && u.Sts[i].T > 0 && u.Sts[i].Amount > 0 && u.Sts[i].By == blast;
         }
 
+        // ---------- Blast's blasts and walls, for the look (BLAST-05) ----------
+        // Supernova and the chain stop at walls, so their explosion must not be drawn over a wall onto heroes it can't reach. The
+        // look is drawn as the biggest disc that lies wholly where the blast reaches (inside its radius, with a clear line from its
+        // centre): on open ground the blast's own disc, by a wall a smaller one pulled away from it. Never smaller than min, so
+        // every blast is still seen. Views only; the rules never call it.
+
+        /// <summary>Where and how big to draw a blast at (x, y) with radius r so the look stays where it reaches; returns the radius.</summary>
+        public float BlastLookDisc(float x, float y, float r, float min, out float cx, out float cy)
+        {
+            cx = x; cy = y;
+            if (BlastReachesDisc(x, y, x, y, r)) return r;
+            float best = 0;
+            for (int d = -1; d < 16; d++) // -1: the centre itself, then 16 ways to pull the disc
+            {
+                float ca = d < 0 ? 0 : SimMath.Cos(d * (float)Math.PI / 8), sa = d < 0 ? 0 : SimMath.Sin(d * (float)Math.PI / 8);
+                for (float s = d < 0 ? 0 : 0.25f; s <= (d < 0 ? 0 : r - 0.25f); s += 0.25f)
+                {
+                    float px = x + ca * s, py = y + sa * s, lo = 0, hi = r - s;
+                    if (hi <= best || !BlastReachesDisc(x, y, px, py, 0)) continue;
+                    for (int k = 0; k < 6; k++) { float mid = (lo + hi) * 0.5f; if (BlastReachesDisc(x, y, px, py, mid)) lo = mid; else hi = mid; }
+                    if (lo > best + 1e-3f) { best = lo; cx = px; cy = py; }
+                }
+            }
+            return Math.Max(min, best);
+        }
+
+        /// <summary>Every sampled point of the disc (px, py, rr) is reached by a blast from (x, y): not in a wall, a clear line.</summary>
+        bool BlastReachesDisc(float x, float y, float px, float py, float rr)
+        {
+            int n = rr <= 0 ? 1 : 24;
+            for (int i = 0; i < n; i++)
+            {
+                float a = i * 2 * (float)Math.PI / n, qx = px + SimMath.Cos(a) * rr, qy = py + SimMath.Sin(a) * rr;
+                if (Map.WallAt(qx, qy) || !Map.LosClear(x, y, qx, qy)) return false;
+            }
+            return true;
+        }
+
         /// <summary>BombBlast, before Supernova deals any damage: set off the chain if it may.</summary>
         void ChainOnImpact(Unit h, Proj bomb, float r)
         {

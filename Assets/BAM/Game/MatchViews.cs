@@ -661,6 +661,11 @@ namespace BAM.Game
                     // is no wider in the rules, so it is told by its sound and shake, not a bigger ring: BONK-06)
                     float esize = pk == ProjKind.BlastChain || bonk ? Mathf.Max(0.1f, e.V) : size;
                     if (own) esize = Mathf.Max(0.1f, e.V);
+                    if (pk == ProjKind.BlastBomb || pk == ProjKind.BlastChain)
+                    {   // Blast's blasts stop at walls: draw them only where they reach (BLAST-05)
+                        esize = m.BlastLookDisc(e.X, e.Y, esize, 0.5f, out float lx, out float ly);
+                        at = Coords.World(lx, ly);
+                    }
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb || pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.BlastExplosion : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
@@ -676,8 +681,11 @@ namespace BAM.Game
                 // Blast 2.0: Chain Reaction is set off; its blast follows BlastChainS.Delay later as an Explosion of ProjKind.BlastChain.
                 // The warning shows to everyone, so enemies there can see it coming.
                 case EventType.ChainSet:
-                    ArtKit.PlayChainWarn(Coords.World(e.X, e.Y), Mathf.Max(0.1f, e.V), BlastChainS.Delay);
+                {   // its blast stops at walls, so its warning is drawn only where it reaches (BLAST-05)
+                    float wr = m.BlastLookDisc(e.X, e.Y, Mathf.Max(0.1f, e.V), 0.4f, out float wx, out float wy);
+                    ArtKit.PlayChainWarn(Coords.World(wx, wy), wr, BlastChainS.Delay);
                     break;
+                }
                 // Bonk's boulder knocks a hero back: the rules slide it (drawn between ticks as any move), a thud and dust where it was hit
                 case EventType.Knock:
                     if (e.B != null && m.IsVisibleTo(e.B, Mine))
