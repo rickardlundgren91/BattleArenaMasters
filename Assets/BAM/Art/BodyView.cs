@@ -101,7 +101,7 @@ namespace BAM.Art
         bool restSet, hitBig;
         float hitWin = 0.3f, hitBlow = -1f, hitTo = -1f;
         bool squared;
-        Transform hipsT, spineT, chestT;
+        Transform hipsT, spineT, chestT, thighL, thighR;
         Vector3 travelV;
         float legW, legYaw, leanP, leanR, lastYaw, lastSpd;
         int legDir = 1;
@@ -398,6 +398,7 @@ namespace BAM.Art
                 toeL = anim.GetBoneTransform(HumanBodyBones.LeftToes); toeR = anim.GetBoneTransform(HumanBodyBones.RightToes);
                 hipsT = anim.GetBoneTransform(HumanBodyBones.Hips); spineT = anim.GetBoneTransform(HumanBodyBones.Spine);
                 chestT = anim.GetBoneTransform(HumanBodyBones.Chest);
+                thighL = anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg); thighR = anim.GetBoneTransform(HumanBodyBones.RightUpperLeg);
                 float f = LowestFoot();
                 if (!float.IsNaN(f)) footRef = f - transform.position.y; // the bind pose, its mesh's sole on the ground
             }
@@ -1229,8 +1230,10 @@ namespace BAM.Art
         // so a swing whose whole body turns into the blow (Bonk's overhead slam, Bram's too: the hips 135 degrees round at the blow)
         // swung its arms from hips still facing the target and the weapon landed beside or behind the hero on the move (Bram 17-62,
         // Bonk 9-51 degrees off the line to the target, Tyra's bow hand to the side). The hips' turn the clip has at the frame on
-        // screen, by the swing's share of the upper layer, goes back on: some on the hips (the legs step round with it, as standing)
-        // and the rest up the spine, so the blow lands where it does standing. Same frame and weight the pose was evaluated with.
+        // screen, by the swing's share of the upper layer, goes back on: some on the pelvis and the rest up the spine, so the blow
+        // lands where it does standing. Same frame and weight the pose was evaluated with. (ANIM-20) The thighs are turned back about
+        // their own joints, so the legs keep their stride: turned with the hips, a planted foot swung round with them (Unity run 3:
+        // Bram's and Bonk's feet slid 0.4-0.5 of the way the body went in their swings on the move, 0.02-0.04 between swings).
         const float UpperTurnHips = 0.4f;
         // Tyra's cast as well (Tyra_11, Unity run 1): her volley is shot side on like her arrows, and on the run it went off square
         void UpperTurn()
@@ -1239,7 +1242,10 @@ namespace BAM.Art
             float deg = ClipYaw(upAtk, drUpA) + ClipYaw(upCast, drUpC);
             if (Mathf.Abs(deg) < 0.05f) return;
             Vector3 up = transform.up;
-            hipsT.rotation = Quaternion.AngleAxis(deg * UpperTurnHips, up) * hipsT.rotation;
+            Quaternion hips = Quaternion.AngleAxis(deg * UpperTurnHips, up), back = Quaternion.Inverse(hips);
+            hipsT.rotation = hips * hipsT.rotation;
+            if (thighL != null) thighL.rotation = back * thighL.rotation;
+            if (thighR != null) thighR.rotation = back * thighR.rotation;
             float rest = deg * (1f - UpperTurnHips);
             if (chestT != null)
             {
