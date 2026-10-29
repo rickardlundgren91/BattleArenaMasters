@@ -674,7 +674,7 @@ namespace BAM.Sim
                     else SCheck(t.Hp == hp0 && !hit, "INT-2", line + " (a shot in the hand dies with its shooter)");
                 }
 
-            SInfo($"INT-1 BONK-01/CHAINMAP-03 (HELD for Rickard, no verdict): a stun in the auto's wind-up did NOT stop it for {autoStunLands} of {autoStunTested} heroes (time left in the hand: {string.Join(", ", stunLanded)}); old game the same");
+            SCheck(autoStunTested >= 10 && autoStunLands == 0, "INT-1_BONK-01", $"a stun in the auto's wind-up cancels it (BONK-01/CHAINMAP-03, Rickard's rule): it still landed for {autoStunLands} of {autoStunTested} heroes ({string.Join(", ", stunLanded)})");
             // 6b. specials with a wind-up: stun / root during it; one tick before release; a Moa-shielded caster is not cut
             var sp = new (HeroId h, string n, bool drag)[]
             {

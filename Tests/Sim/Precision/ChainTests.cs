@@ -292,6 +292,9 @@ namespace BAM.Sim
                 var x = Scripted(); var y = Scripted(); var rx = new Random(9); var ry = new Random(9);
                 for (int k = 0; k < 900; k++) { x.Step(Inp(rx)); y.Step(Inp(ry)); }
                 Unit h = null; foreach (var u in y.Heroes) if (u.Alive && u.Bot != null) { h = u; break; }
+                // the field must exist to drift: give both runs the same slow, and step both until a shot is in the air
+                if (what == "status timer -0.1") { Unit hx = null; foreach (var u in x.Heroes) if (u.Serial == h.Serial) hx = u; x.AddStatus(hx, St.Root, 3f); y.AddStatus(h, St.Root, 3f); }
+                if (what == "proj T -0.05") for (int k = 0; k < 600 && y.Projs.Count == 0; k++) { x.Step(Inp(rx)); y.Step(Inp(ry)); }
                 switch (what)
                 {
                     case "stun 0.5 s": y.AddStatus(h, St.Stun, 0.5f); break;
@@ -307,7 +310,7 @@ namespace BAM.Sim
                 rows.Add($"{what}: {(seen < 0 ? "not seen in 10 s" : seen == 0 ? "at once" : (seen / 60f).ToString("0.00") + " s later")}");
             }
             Verdict("Checksum_SeesDriftAtOnce", "online", late == 0, "P3",
-                $"Match.Checksum hashes positions, health, charge, rng, proj positions only; a drift elsewhere shows once it moves something: {string.Join("; ", rows)}");
+                $"a one-field drift in the online fingerprint (Match.Checksum) shows: {string.Join("; ", rows)}");
         }
 
         // ---------------------------------------------------------------- online lockstep: two phones in one process
