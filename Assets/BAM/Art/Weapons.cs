@@ -56,9 +56,11 @@ namespace BAM.Art
         /// <summary>AnimFix.FixedGrip, code only (not in WeaponTune.json): the hold eased in with the move weight while the hero walks
         /// or runs (Tyra's bow upright at her side, Rickard 2026-10-29).</summary>
         public Hold Run;
-        /// <summary>Code only: on the menu stage the weapon is left as the fist holds it, without the rest hold (Tyra's bow hanging
-        /// from her fist, Rickard's pick 2026-10-29).</summary>
-        public bool MenuFist;
+        /// <summary>Code only: on the menu stage the weapon is held this way instead of the rest hold, its flat side to
+        /// <see cref="MenuSign"/> (Tyra's bow hanging from her fist, Rickard's pick 2026-10-29). Aimed in the hero's own space: left
+        /// in the fist's own grip, Unity's retargeted idle turned her hand so the bow lay level across her legs (ANIM-22).</summary>
+        public Hold Menu;
+        public int MenuSign;
         /// <summary>Rickard's own touch-up (Weapon Tuner): a shift in the hero's right/up/forward as a share of the figure's height,
         /// and degrees turned about the grip in the weapon's own x/y/z, on top of everything else, every frame.</summary>
         public Vector3 Offset, Turn;
@@ -168,10 +170,12 @@ namespace BAM.Art
             // back, the string up (Rickard's three pictures 2026-10-28, after hanging it beside her leg cut into it and none of four
             // other holds looked right; render bam-work/art/rigg-anim/vila/tyra-bage-ny.png); her shot plays the fist's grip
             // (2026-10-28) for the shot the bow is turned a quarter about the fingers, so it stands up with its belly to the target;
-            // (Rickard 2026-10-29) on the menu stage it is left in the fist's own grip, hanging from her left fist down and out to
-            // her knee in her relaxed idle (his pick 1 of bam-work/art/grundposer/forslag-bram-tyra.png was rendered with no hold;
-            // HoldUp -60 HoldOut -30 put the upper limb up past her shoulder), and on the move she carries it upright at her side,
-            // its lower limb out past her leg (run renders bam-work/art/rigg-anim/vila/tyra-bage-sidan.png)
+            // (Rickard 2026-10-29) on the menu stage it hangs from her left fist down and forward past her knee in her relaxed idle,
+            // as his pick 1 of bam-work/art/grundposer/forslag-bram-tyra.png (rendered in the fist's own grip: there its lower limb
+            // pointed 48 degrees down and 15 out to her side, the string side to her front; HoldUp -60 HoldOut -30 put the upper limb
+            // up past her shoulder; in Unity the fist's own grip lay level across her legs, his screenshot 22:52 CET, ANIM-22), and on
+            // the move she carries it upright at her side, its lower limb out past her leg (run renders
+            // bam-work/art/rigg-anim/vila/tyra-bage-sidan.png)
             g[(int)HeroId.Tyra] = new GearDef
             {
                 Weapons = new[]
@@ -179,7 +183,7 @@ namespace BAM.Art
                     new WeaponDef
                     {
                         Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f),
-                        SwingTurn = new Vector3(0f, 0f, -90f), MenuFist = true, Run = new Hold { Up = -80f, Out = 90f },
+                        SwingTurn = new Vector3(0f, 0f, -90f), Menu = new Hold { Up = -48f, Out = 15f }, MenuSign = -1, Run = new Hold { Up = -80f, Out = 90f },
                     },
                 },
             };
@@ -383,7 +387,7 @@ namespace BAM.Art
         int restN;
         bool rested, sampling;
         int restKey;
-        /// <summary>A menu stage figure (BodyView.Preview): weapons with <see cref="WeaponDef.MenuFist"/> stay in the fist's grip.</summary>
+        /// <summary>A menu stage figure (BodyView.Preview): weapons with a <see cref="WeaponDef.Menu"/> hold are held that way.</summary>
         public bool OnMenu;
         /// <summary>The ground's height under the hero (world y): no weapon's end goes below it (ANIM-08/09). Off (negative
         /// infinity) on the menu stage.</summary>
@@ -639,7 +643,8 @@ namespace BAM.Art
                 if ((W.Thrown || hideHeld) && (hideSide == 0 || hideSide > 0 != W.Left)) t.localScale = bindS[i] * show;
                 else if (t.localScale != bindS[i]) t.localScale = bindS[i]; // a held weapon put back by a swing during its throw
                 float rest = dead ? 0f : 1f - Mathf.Clamp01(actW);
-                if (W.HoldUp == 0f || dead || OnMenu && W.MenuFist) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
+                if (W.HoldUp == 0f || dead) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
+                else if (OnMenu && W.Menu.On) HoldAngle(i, W, rest, W.MenuSign, W.Menu.Up, W.Menu.Out); // a tapped swing plays the fist's grip
                 else if (AnimFix.FixedGrip)
                 {
                     // the rest hold, and the run's eased in as the hero moves (Tyra's bow at her side)

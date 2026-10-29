@@ -464,6 +464,9 @@ namespace BAM.Art
         /// <summary>A shown hero's height in world units, feet to crown, as the art fitted it (for the menu stages' framing).</summary>
         public static float HeightOf(UnitView view) => view is BodyView b ? b.ShownHeight : 1.8f;
 
+        /// <summary>The highest point of a shown hero's held weapons now (world y); negative infinity without any.</summary>
+        public static float GearTopOf(UnitView view) => view is BodyView b ? b.GearTop() : float.NegativeInfinity;
+
         public static void Release(Component view)
         {
             if (view == null) return;

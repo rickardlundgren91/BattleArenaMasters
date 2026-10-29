@@ -63,6 +63,7 @@ namespace BAM.Art
         float atkRel, atkSlash, atkHold, atkRec, atkStart;
         bool imported;
         HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
+        Vector3[][] gearVerts;    // their meshes' vertices, read once by GearTop (the menu stages)
         PreviewBreath breath;     // the menu hero's living idle on top of its clip (Preview only)
         // the menu hero's feet kept on the stage (Rickard 2026-10-27: Bram and Fenn floated above the ring on Home): each idle stands
         // the model at its own height over the root, so the lowest foot bone is held where it was in the bind pose, standing on the ground
@@ -466,6 +467,31 @@ namespace BAM.Art
         /// <summary>The model's height in world units as it was fitted (the hero's height in tiles), for the menu stages.</summary>
         internal float ShownHeight => def != null ? def.Height * transform.lossyScale.y : 1.8f;
 
+        /// <summary>The highest point of the held weapons now (world y), negative infinity without any, for the menu stages: their
+        /// meshes' highest vertex, since a turned box reaches above the mesh (Bram's hammer: 1.40 of his height against 1.36).</summary>
+        internal float GearTop()
+        {
+            float top = float.NegativeInfinity;
+            if (gear == null) return top;
+            if (gearVerts == null) gearVerts = new Vector3[gear.Rends.Length][];
+            for (int i = 0; i < gear.Rends.Length; i++)
+            {
+                Renderer r = gear.Rends[i];
+                if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+                if (gearVerts[i] == null)
+                {
+                    var mf = r.GetComponent<MeshFilter>();
+                    Mesh m = mf != null ? mf.sharedMesh : null;
+                    gearVerts[i] = m != null && m.isReadable ? m.vertices : new Vector3[0];
+                }
+                Vector3[] v = gearVerts[i];
+                if (v.Length == 0) { top = Mathf.Max(top, r.bounds.max.y); continue; }
+                Matrix4x4 w = r.localToWorldMatrix;
+                for (int k = 0; k < v.Length; k++) top = Mathf.Max(top, w.m10 * v[k].x + w.m11 * v[k].y + w.m12 * v[k].z + w.m13);
+            }
+            return top;
+        }
+
         /// <summary>Where a hero's shot leaves its hand now (UnitView.Muzzle, SHOT-02): Hilde's cannon mouth; Bonk's boulder between his
         /// hands; Moa's casting hand; else the held weapon's head (HeldGear.ShotFrom: the bow's arrow, the bomb, the hammer, anchor or
         /// the needle in the throwing fist), else that fist. False for minions, towers, the wolf and code figures.</summary>
@@ -501,7 +527,7 @@ namespace BAM.Art
         {
             gear = HeldGear.Build(def.Gear, anim, art.Height * transform.lossyScale.y * gearK);
             if (gear == null) return;
-            gear.OnMenu = Preview; // Tyra's bow stays in her fist's grip on the menu stage (WeaponDef.MenuFist)
+            gear.OnMenu = Preview; // Tyra's bow hangs from her fist on the menu stage (WeaponDef.Menu)
             int n0 = rends.Length, ng = gear.Rends.Length;
             var r2 = new Renderer[n0 + ng];
             var o2 = new Material[n0 + ng][];

@@ -109,6 +109,10 @@ namespace BAM.UI
         HeroId shownId;
         bool hasHero;
         float heroHeight = 1.8f; // world units, measured from the model when shown
+        // the held weapons' highest point over the feet so far (world units, 0 = none yet), from the frame the idle holds them,
+        // never while a tapped swing plays
+        float gearTop, swingTill;
+        int measureAt;
 
         /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback).</summary>
         public bool Show(HeroId id)
@@ -122,10 +126,12 @@ namespace BAM.UI
             view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, Facing(), 0));
             view.SetMoving(false, 0);
             heroHeight = MeasureHeight(view, Spot.y);
+            gearTop = swingTill = 0;
+            measureAt = Time.frameCount + 2; // the model plays its idle from the next frame, and the weapons follow in its LateUpdate
             shownId = id;
             hasHero = true;
             view.gameObject.SetActive(isActiveAndEnabled);
-            Picture.enabled = true;
+            Picture.enabled = false; // shown once its weapons are measured (FitGear), so the hero never jumps smaller
             cam.enabled = isActiveAndEnabled;
             Frame();
             return true;
@@ -158,14 +164,21 @@ namespace BAM.UI
                 cam.targetTexture = rt;
                 Picture.texture = rt;
             }
-            float viewH = heroHeight / HeroFill;
+            // a weapon held above the head stays in the picture: the hero is drawn only as much smaller as that needs (Rickard's
+            // pick 2026-10-29; ANIM-23: Bram's hammer reaches 1.36 times his height, and since the heroes' true heights its top was cut)
+            float viewH = Mathf.Max(heroHeight / HeroFill, gearTop * 1.04f / Mathf.Max(0.05f, 1f - FeetAt));
             cam.orthographicSize = viewH / 2;
             cam.aspect = size.x / size.y;
             cam.transform.position = Spot + new Vector3(0, viewH / 2 - FeetAt * viewH, -6f);
         }
 
         /// <summary>Plays one attack (a tap on the hero page's stage).</summary>
-        public void Swing() { if (hasHero) view.PlayAttack(0.3f); }
+        public void Swing()
+        {
+            if (!hasHero) return;
+            view.PlayAttack(0.3f);
+            swingTill = Time.unscaledTime + 3f; // the longest attack clip is 2.4 s; the swing may leave the picture, as in the old game
+        }
 
         void Setup()
         {
@@ -216,6 +229,20 @@ namespace BAM.UI
                 spin = Mathf.MoveTowards(spin, 0, Mathf.Max(360f, Mathf.Abs(spin) * 3f) * Time.unscaledDeltaTime);
             }
             if (hasHero) view.transform.rotation = Quaternion.Euler(0, Facing(), 0);
+            if (hasHero) FitGear();
+        }
+
+        // as the old ShowTopH (View3DTeam.cs): the frame only grows while a hero is shown, so his idle never pumps it, and a weapon
+        // that sticks up far (thrown, a bad pose) is counted as at most 1.6 times his height
+        void FitGear()
+        {
+            if (Time.frameCount < measureAt) return;
+            if (Time.unscaledTime >= swingTill)
+            {
+                float top = Mathf.Min(ArtKit.GearTopOf(view) - Spot.y, 1.6f * heroHeight);
+                if (top > gearTop + 0.001f) { gearTop = top; Frame(); }
+            }
+            if (!Picture.enabled) Picture.enabled = true;
         }
 
         // the dragged yaw plus a slow sway, so the hero never stands frozen (old Speltest View3DTeam: sin(t * 0.6))
