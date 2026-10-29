@@ -938,6 +938,7 @@ namespace BAM.Game
             float speed01 = 0f;
             if (moving && u.BaseSpeed > 0f) speed01 = Mathf.Sqrt((u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY)) / Rules.Tick / u.BaseSpeed;
             v.SetMoving(moving, moving ? Mathf.Max(0.5f, speed01) : 0f);
+            if (u.Kind == UnitKind.Wolf) WolfLook(u, v);
 
             float hp01 = u.MaxHp > 0f ? Mathf.Clamp01(u.Hp / u.MaxHp) : 0f;
             float sh01 = u.MaxHp > 0f ? Mathf.Clamp01(u.ShieldAmount / u.MaxHp) : 0f;
@@ -962,6 +963,29 @@ namespace BAM.Game
             float vis = !m.IsVisibleTo(u, Mine) ? 0f : u.Team == Mine && u.Kind == UnitKind.Hero && m.HiddenFromFoes(u) ? 0.5f : 1f;
             if (Hidden != null && Hidden(u)) vis = 0f; // the match intro: not yet beamed in
             if (vis != r.Vis) { r.Vis = vis; v.SetVisibility(vis); }
+        }
+
+        // Fenn's thrown wolf leaps over its flight: how far along its red strip it is, cut short at the prey it turned onto (FENN-07)
+        void WolfLook(Unit w, UnitView v)
+        {
+            float k = -1f, len = 0f;
+            if (w.Wolf == WolfMode.Fly)
+            {
+                k = 1f; // its strip already gone (a long turn onto a prey): it comes down
+                var list = m.Projs;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var p = list[i];
+                    if (p.Done || p.Mode != ProjMode.WarnLine || p.Src != w) continue;
+                    float along = (w.X - p.X) * SimMath.Cos(p.Ang) + (w.Y - p.Y) * SimMath.Sin(p.Ang);
+                    len = p.D;
+                    var prey = w.WolfPrey;
+                    if (prey != null) len = Mathf.Min(len, along + Mathf.Max(0f, SimMath.Dist(w, prey) - w.R - prey.R - 0.1f));
+                    k = len > 0.05f ? Mathf.Clamp01(along / len) : 1f;
+                    break;
+                }
+            }
+            v.SetLeap(k, len);
         }
 
         // a hero in a fight: it swung at its target within about one swing's time, the target alive, seen by the player (facing it must

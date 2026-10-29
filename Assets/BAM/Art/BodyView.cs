@@ -115,6 +115,8 @@ namespace BAM.Art
         bool moving;
         float speed01, moveW, phase, idleT, seed;
         float atkT = -1f, windup = 0.3f, castT = -1f, hitT = -1f, hitLen = 0.15f, recoil;
+        float atkCut = -1f, castCut = -1f; // Interrupt: where the swing or the cast was stopped (it holds there and fades out)
+        const float CutFade = 0.15f;
         float propBack = -1f;
         float hp = -1f, towerFxT, dustT;
         float channel = -1f, channelT, swirlT, sprintT;
@@ -223,6 +225,7 @@ namespace BAM.Art
         }
 
         AnimationClipPlayable wolfWalk;
+        float leapK = -1f, leapLen, leapY, wolfTilt;  // the throw (SetLeap): progress 0..1, below 0 on the ground
 
         // Fenn's wolf as old Speltest draws it (View3DWolf.cs): Rickard's rigged Meshy wolf on the body bone, turned so hips to head
         // points forward, about 2 tiles nose to tail, see-through turquoise like the rest of the ghost, its walk played as it runs
@@ -459,6 +462,7 @@ namespace BAM.Art
         {
             gear = HeldGear.Build(def.Gear, anim, art.Height * transform.lossyScale.y);
             if (gear == null) return;
+            gear.OnMenu = Preview; // Tyra's bow stays in her fist's grip on the menu stage (WeaponDef.MenuFist)
             int n0 = rends.Length, ng = gear.Rends.Length;
             var r2 = new Renderer[n0 + ng];
             var o2 = new Material[n0 + ng][];
@@ -508,6 +512,7 @@ namespace BAM.Art
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
+            leapK = -1f; leapY = wolfTilt = 0f; atkCut = castCut = -1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
             model.localScale = Vector3.one;
@@ -530,13 +535,29 @@ namespace BAM.Art
 
         public override void SetMoving(bool isMoving, float speed) { moving = isMoving; speed01 = Mathf.Clamp(speed, 0f, 2f); }
 
+        public override void SetLeap(float progress, float length) { leapK = progress; leapLen = length; }
+
+        public override void Interrupt(bool swing)
+        {
+            // a root or knockback leaves the auto attack alone (the rules let a rooted hero swing)
+            bool atkOn = atkT >= 0f && atkCut < 0f, cutAtk = swing && atkOn, cutCast = castT >= 0f && castCut < 0f;
+            if (!imported) { if (cutAtk) atkT = -1f; if (cutCast) castT = -1f; }
+            else
+            {
+                if (cutAtk) { atkCut = atkT; atkTotal = atkT + CutFade; }
+                if (cutCast) { castCut = castT; castLen = castT + CutFade; }
+            }
+            // the throw waiting in the hand stays there, unless a swing that goes on still throws it
+            if (gear != null && (cutAtk || cutCast) && !(atkOn && !cutAtk && atkT < windup)) gear.Cancel();
+        }
+
         public override void PlayAttack(float w)
         {
             windup = Mathf.Max(0.05f, w);
             float now = Time.time;
             if (now - lastAtkAt < 4f) atkGap = now - lastAtkAt; // a fight's swings: how long the recovery may take (BlowSegment)
             lastAtkAt = now;
-            atkT = 0f;
+            atkT = 0f; atkCut = -1f;
             atkCarry = lastAtkW;
             atkSeg = false;
             if (clips != null)
@@ -605,7 +626,7 @@ namespace BAM.Art
 
         public override void PlayCast(bool drag)
         {
-            castT = 0f;
+            castT = 0f; castCut = -1f;
             castCarry = lastCastW;
             castDrag = drag;
             if (IsHero && !dead && vis > 0.01f) Fx.HeroCast(HeroIndex, transform.position); // never gives a hider away
@@ -978,7 +999,7 @@ namespace BAM.Art
                         // eased in (from where a swing still fading out left it) and out over a quarter of a second, never before
                         // the blow; the linear 0.06-0.16 s in and the 0.18 s out of a clip cut short read as a snap. Tyra steps into
                         // her stance over the whole windup.
-                        float blendIn = Bow ? windup : Mathf.Clamp(windup * 0.6f, 0.08f, 0.2f), fadeOut = atkSeg ? atkFade : Mathf.Clamp(atkTotal - windup, 0.05f, 0.25f);
+                        float blendIn = Bow ? windup : Mathf.Clamp(windup * 0.6f, 0.08f, 0.2f), fadeOut = atkCut >= 0f ? CutFade : atkSeg ? atkFade : Mathf.Clamp(atkTotal - windup, 0.05f, 0.25f);
                         // on the move the recovery hands over to the stride within its fade-out instead of playing out bent over
                         // the running legs
                         if (atkSeg && atkT > windup && moveW > 0.3f && atkTotal - atkT > fadeOut) atkTotal = atkT + fadeOut;
@@ -989,22 +1010,23 @@ namespace BAM.Art
                         // the swing blends in over up to 0.16 s, not 0.06 (Rickard 2026-10-27: Bram's hammer hung low on the walk and
                         // "teleporteras" up into the swing); still well inside the windup, so the blow lands on time
                         float blendIn = Mathf.Clamp(windup * 0.45f, 0.06f, 0.16f);
-                        wAtk = Mathf.Min(Mathf.Clamp01(atkT / blendIn), Mathf.Clamp01((atkTotal - atkT) / 0.18f));
+                        wAtk = Mathf.Min(Mathf.Clamp01(atkT / blendIn), Mathf.Clamp01((atkTotal - atkT) / (atkCut >= 0f ? CutFade : 0.18f)));
                     }
-                    double at = AttackTime(atkT);
+                    double at = AttackTime(atkCut >= 0f ? atkCut : atkT);
                     clips[CAttack].SetTime(at); upAtk.SetTime(at);
-                    if (atkT >= atkTotal) atkT = -1f;
+                    if (atkT >= atkTotal) { atkT = -1f; atkCut = -1f; }
                 }
                 if (castT >= 0f)
                 {
                     castT += dt;
-                    float castOut = castSeg ? castFade : Mathf.Clamp(castLen - castBlowAt, 0.05f, 0.25f);
+                    float castOut = castCut >= 0f ? CutFade : castSeg ? castFade : Mathf.Clamp(castLen - castBlowAt, 0.05f, 0.25f);
                     wCast = life ? Mathf.Min(Mathf.Lerp(castCarry, 1f, Smooth(castT / 0.1f)), Smooth((castLen - castT) / castOut))
                         : Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
-                    double ct = !castSeg ? castT * 1.2f : castT < castBlowAt ? castFrom + castT * castPre
-                        : Mathf.Min(castTo, castPeak + (castT - castBlowAt) * CastRate);
+                    float cs = castCut >= 0f ? castCut : castT; // cut: the cast holds where it was
+                    double ct = !castSeg ? cs * 1.2f : cs < castBlowAt ? castFrom + cs * castPre
+                        : Mathf.Min(castTo, castPeak + (cs - castBlowAt) * CastRate);
                     clips[CCast].SetTime(ct); upCast.SetTime(ct);
-                    if (castT >= castLen) castT = -1f;
+                    if (castT >= castLen) { castT = -1f; castCut = -1f; }
                 }
                 if (hitA >= 0f)
                 {
@@ -1689,8 +1711,20 @@ namespace BAM.Art
 
         void PoseWolf(float dt)
         {
-            if (wolfWalk.IsValid()) wolfWalk.SetSpeed(moveW * (1.1f + speed01 * 0.3f)); // the walk runs as it moves and holds when it stands
-            float s = Mathf.Sin(phase * 1.2f) * 40f * moveW;
+            // the throw (FENN-07): it leaps over the flight instead of running it at 4x its walk, the walk held on its widest stride
+            // (0.4 of the clip: a front paw far forward, a hind paw far back), nose up at the take-off and down at the landing; the
+            // arc's top grows with the throw (0.45 tile over 6 tiles) and it is down when the rules land it
+            bool leap = leapK >= 0f;
+            float top = Mathf.Clamp(leapLen * 0.08f, 0.1f, 0.45f);
+            leapY = leap ? Mathf.Lerp(leapY, 4f * top * leapK * (1f - leapK), 1f - Mathf.Exp(-30f * dt)) : Mathf.MoveTowards(leapY, 0f, 6f * dt);
+            float tilt = leap ? Mathf.Clamp(-Mathf.Atan(4f * top * (1f - 2f * leapK) / Mathf.Max(1f, leapLen)) * Mathf.Rad2Deg * 1.5f, -25f, 25f) : 0f;
+            wolfTilt = Mathf.Lerp(wolfTilt, tilt, 1f - Mathf.Exp(-20f * dt));
+            if (wolfWalk.IsValid())
+            {
+                if (leap) { wolfWalk.SetSpeed(0.0); wolfWalk.SetTime(wolfWalk.GetAnimationClip().length * 0.4f); }
+                else wolfWalk.SetSpeed(moveW * (1.1f + speed01 * 0.3f) * ArtKit.Slow); // the walk runs as it moves and holds when it stands
+            }
+            float s = leap ? 55f : Mathf.Sin(phase * 1.2f) * 40f * moveW; // the code wolf's legs: stretched out front and back in the leap
             float idle = Mathf.Sin(idleT * 3f + seed);
             float lunge = 0f, headX = idle * 3f * (1f - moveW);
             if (atkT >= 0f)
@@ -1702,12 +1736,13 @@ namespace BAM.Art
                 if (r >= 1f) atkT = -1f;
             }
             if (castT >= 0f) { castT += dt; headX = -35f * Mathf.Sin(Mathf.Clamp01(castT / 0.5f) * Mathf.PI); if (castT > 0.5f) castT = -1f; }
-            bones[Models.WolfBody].localPosition = def.Pivots[Models.WolfBody] + new Vector3(0f, Mathf.Abs(Mathf.Cos(phase * 1.2f)) * 0.04f * moveW + 0.04f, lunge);
-            bones[Models.WolfBody].localRotation = Quaternion.Euler(Mathf.Sin(phase * 1.2f) * 4f * moveW - recoil * 10f, 0f, 0f);
+            float stride = leap ? 0f : moveW;
+            bones[Models.WolfBody].localPosition = def.Pivots[Models.WolfBody] + new Vector3(0f, Mathf.Abs(Mathf.Cos(phase * 1.2f)) * 0.04f * stride + 0.04f + leapY, lunge);
+            bones[Models.WolfBody].localRotation = Quaternion.Euler(Mathf.Sin(phase * 1.2f) * 4f * stride - recoil * 10f + wolfTilt, 0f, 0f);
             bones[Models.WolfHead].localRotation = Quaternion.Euler(headX, 0f, 0f);
             bones[Models.WolfFL].localRotation = Quaternion.Euler(-s, 0f, 0f);
-            bones[Models.WolfBR].localRotation = Quaternion.Euler(-s, 0f, 0f);
-            bones[Models.WolfFR].localRotation = Quaternion.Euler(s, 0f, 0f);
+            bones[Models.WolfBR].localRotation = Quaternion.Euler(leap ? s : -s, 0f, 0f);
+            bones[Models.WolfFR].localRotation = Quaternion.Euler(leap ? -s : s, 0f, 0f);
             bones[Models.WolfBL].localRotation = Quaternion.Euler(s, 0f, 0f);
             bones[Models.WolfTail].localRotation = Quaternion.Euler(0f, Mathf.Sin(idleT * 9f) * 25f, 0f);
         }

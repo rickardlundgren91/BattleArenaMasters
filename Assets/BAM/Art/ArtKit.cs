@@ -52,6 +52,10 @@ namespace BAM.Art
         /// <summary>The special is cast, tapped or dragged (the Cast event's Big): a view that times the gesture by form (a slam lands
         /// later than a throw) takes it, the rest play the cast.</summary>
         public virtual void PlayCast(bool drag) => PlayCast();
+        /// <summary>A stun, root or knockback cut the special before its release (EventType.Interrupt), with <paramref name="swing"/>
+        /// (a stun) also a swing still winding up: the gesture stops where it is and fades out instead of playing its blow, and a
+        /// weapon waiting to leave the hand stays in it.</summary>
+        public virtual void Interrupt(bool swing) { }
         /// <summary>Took damage. big = a crit-like hit (passive bonus, special).</summary>
         public abstract void PlayHit(bool big);
         /// <summary>Died (play the death and hide) or came back (respawn).</summary>
@@ -83,6 +87,9 @@ namespace BAM.Art
         /// field's shield and Queen's Instinct. A ring of hex cells at the feet that go dark as the shield is used. Call it only while
         /// the player can see the unit.</summary>
         public virtual void SetHoneyShields(float guard, float field, float queen) { }
+        /// <summary>Fenn's thrown wolf in the air: how far along its throw it is (0..1) and the throw's length in tiles; progress below 0
+        /// = on the ground. It leaps over the flight (FENN-07).</summary>
+        public virtual void SetLeap(float progress, float length) { }
         /// <summary>Where a hero's shot leaves its hand now (world space, at its height), for the shot's first drawn point (SHOT-02):
         /// Hilde's cannon mouth, the arrow on Tyra's bow, Blast's bomb, the head of a held weapon (Bram's hammer, Knut's anchor, the
         /// needle in the fist Tikta throws with), Moa's casting hand, Bonk's boulder between his hands. False for the rest (minions,

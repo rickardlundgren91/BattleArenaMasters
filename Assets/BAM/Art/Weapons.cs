@@ -5,6 +5,15 @@ using UnityEngine.Rendering;
 
 namespace BAM.Art
 {
+    /// <summary>A rest hold as <see cref="WeaponDef.HoldUp"/>, <see cref="WeaponDef.HoldOut"/> and <see cref="WeaponDef.RestTurn"/>
+    /// (AnimFix.FixedGrip); off while Up is 0.</summary>
+    struct Hold
+    {
+        public float Up, Out;
+        public Vector3 Turn;
+        public bool On => Up != 0f;
+    }
+
     /// <summary>One weapon held in a fist (ported from the old game's HeroMixamoWeapon.cs MX_WEAPON).</summary>
     sealed class WeaponDef
     {
@@ -44,6 +53,12 @@ namespace BAM.Art
         /// <summary>AnimFix.FixedGrip: degrees turned about the grip in the weapon's own x/y/z at rest, with the rest weight, before
         /// Rickard's Turn (Tyra's bow lies level at her hip with the string up, as his pictures of 2026-10-28).</summary>
         public Vector3 RestTurn;
+        /// <summary>AnimFix.FixedGrip, code only (not in WeaponTune.json): the hold eased in with the move weight while the hero walks
+        /// or runs (Tyra's bow upright at her side, Rickard 2026-10-29).</summary>
+        public Hold Run;
+        /// <summary>Code only: on the menu stage the weapon is left as the fist holds it, without the rest hold (Tyra's bow hanging
+        /// from her fist, Rickard's pick 2026-10-29).</summary>
+        public bool MenuFist;
         /// <summary>Rickard's own touch-up (Weapon Tuner): a shift in the hero's right/up/forward as a share of the figure's height,
         /// and degrees turned about the grip in the weapon's own x/y/z, on top of everything else, every frame.</summary>
         public Vector3 Offset, Turn;
@@ -152,8 +167,22 @@ namespace BAM.Art
             // at rest (her relaxed idle and walk) it lies level at her left hip, gripped at the middle, one limb forward and one
             // back, the string up (Rickard's three pictures 2026-10-28, after hanging it beside her leg cut into it and none of four
             // other holds looked right; render bam-work/art/rigg-anim/vila/tyra-bage-ny.png); her shot plays the fist's grip
-            // (2026-10-28) for the shot the bow is turned a quarter about the fingers, so it stands up with its belly to the target
-            g[(int)HeroId.Tyra] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f), SwingTurn = new Vector3(0f, 0f, -90f) } } };
+            // (2026-10-28) for the shot the bow is turned a quarter about the fingers, so it stands up with its belly to the target;
+            // (Rickard 2026-10-29) on the menu stage it is left in the fist's own grip, hanging from her left fist down and out to
+            // her knee in her relaxed idle (his pick 1 of bam-work/art/grundposer/forslag-bram-tyra.png was rendered with no hold;
+            // HoldUp -60 HoldOut -30 put the upper limb up past her shoulder), and on the move she carries it upright at her side,
+            // its lower limb out past her leg (run renders bam-work/art/rigg-anim/vila/tyra-bage-sidan.png)
+            g[(int)HeroId.Tyra] = new GearDef
+            {
+                Weapons = new[]
+                {
+                    new WeaponDef
+                    {
+                        Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f),
+                        SwingTurn = new Vector3(0f, 0f, -90f), MenuFist = true, Run = new Hold { Up = -80f, Out = 90f },
+                    },
+                },
+            };
             // her old needle daggers, one in each fist out of the thumb side (old View3DOwnHeroFx.cs MxNeedles before the Needle
             // Wing: NeedleMesh/NeedleTex as Props tikta_needle, NEEDLE_LEN 0.36, NEEDLE_GRIP 0.14; Rickard 2026-10-26: "tikta ska
             // ha sina gamla vapen, typ två daggers"); at rest the blades point down along her forearms, since her guard idle holds
@@ -347,10 +376,13 @@ namespace BAM.Art
         // flips half a turn as the fist turns (Tikta's needles turned up to 178 degrees in her fists every step), and where each
         // hand turned in the hero's own space; again when the tuner changes a number the idle aim depends on
         int[] laxSign, votes;
+        int[] runSign, runVotes; // the same for WeaponDef.Run
         Quaternion[] handRef;
         Vector4[] refSum;
         bool rested;
         int restKey;
+        /// <summary>A menu stage figure (BodyView.Preview): weapons with <see cref="WeaponDef.MenuFist"/> stay in the fist's grip.</summary>
+        public bool OnMenu;
 
         public static HeldGear Build(GearDef g, Animator an, float figH)
         {
@@ -366,6 +398,7 @@ namespace BAM.Art
             h.palmL = new Vector3[nw]; h.handleV = new Vector3[nw]; h.shaftC = new Vector3[nw];
             h.meshH = new float[nw]; h.handS = new float[nw]; h.placedLen = new float[nw]; h.placedGrip = new float[nw];
             h.laxSign = new int[nw]; h.votes = new int[nw]; h.handRef = new Quaternion[nw]; h.refSum = new Vector4[nw];
+            h.runSign = new int[nw]; h.runVotes = new int[nw];
             h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
             h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             h.elbR = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
@@ -550,6 +583,10 @@ namespace BAM.Art
             return true;
         }
 
+        /// <summary>The swing or cast was cut before its release (EventType.Interrupt): a weapon waiting to leave the hand stays, the
+        /// cannon does not kick; one already away comes back as usual.</summary>
+        public void Cancel() { hideIn = -1f; kickIn = -1f; }
+
         /// <summary>A cannon kicks back as its shot leaves, after <paramref name="delay"/> seconds (the blow).</summary>
         public void Fire(float delay)
         {
@@ -590,11 +627,23 @@ namespace BAM.Art
                 if ((W.Thrown || hideHeld) && (hideSide == 0 || hideSide > 0 != W.Left)) t.localScale = bindS[i] * show;
                 else if (t.localScale != bindS[i]) t.localScale = bindS[i]; // a held weapon put back by a swing during its throw
                 float rest = dead ? 0f : 1f - Mathf.Clamp01(actW);
-                if (W.HoldUp == 0f || dead) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
-                else if (AnimFix.FixedGrip) Steady(i, W, rest);
+                if (W.HoldUp == 0f || dead || OnMenu && W.MenuFist) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
+                else if (AnimFix.FixedGrip)
+                {
+                    // the rest hold, and the run's eased in as the hero moves (Tyra's bow at her side)
+                    RestHold(i, W, rest, new Hold { Up = W.HoldUp, Out = W.HoldOut, Turn = W.RestTurn }, laxSign[i]);
+                    float rw = W.Run.On ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(moveW)) : 0f;
+                    if (rw > 0.001f)
+                    {
+                        Quaternion ra = t.rotation;
+                        Vector3 ga = t.TransformPoint(gripL[i]);
+                        RestHold(i, W, rest, W.Run, runSign[i]);
+                        Vector3 gb = t.TransformPoint(gripL[i]);
+                        t.rotation = Quaternion.Slerp(ra, t.rotation, rw);
+                        t.position += Vector3.Lerp(ga, gb, rw) - t.TransformPoint(gripL[i]);
+                    }
+                }
                 else HoldAngle(i, W, rest, 0);
-                if (AnimFix.FixedGrip && W.RestTurn != Vector3.zero && W.HoldUp != 0f && rest > 0.001f)
-                    TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.RestTurn), rest));
                 // Rickard's Turn is tuned on the rest hold, so with FixedGrip it goes as the rest aim goes: through a swing the weapon
                 // is in the fist's own grip (Fenn's -33/55 left his blade end-on to the match camera at the blow, 2026-10-28); a
                 // SwingAim weapon keeps its rest aim and its Turn, a weapon without a rest aim and a dead hero's keep the Turn whole
@@ -729,7 +778,7 @@ namespace BAM.Art
 
         public void BeginRest()
         {
-            for (int i = 0; i < wT.Length; i++) { votes[i] = 0; refSum[i] = Vector4.zero; }
+            for (int i = 0; i < wT.Length; i++) { votes[i] = runVotes[i] = 0; refSum[i] = Vector4.zero; }
         }
 
         /// <summary>The rig stands in one idle frame straight from the clip: the arms go as Tick puts them, then each hand's turn in
@@ -749,6 +798,7 @@ namespace BAM.Art
                 if (Vector4.Dot(v, refSum[i]) < 0f) v = -v; // an idle's frames are close together: summed on one side they average
                 refSum[i] += v;
                 if (W.HoldUp != 0f) votes[i] += HoldAngle(i, W, 1f, 0);
+                if (W.Run.On) runVotes[i] += HoldAngle(i, W, 1f, 0, W.Run.Up, W.Run.Out);
                 t.localPosition = bindP[i]; t.localRotation = bindR[i];
             }
         }
@@ -761,6 +811,7 @@ namespace BAM.Art
                 float m = s.magnitude;
                 handRef[i] = m > 1e-6f ? new Quaternion(s.x / m, s.y / m, s.z / m, s.w / m) : Quaternion.identity;
                 laxSign[i] = votes[i] > 0 ? 1 : votes[i] < 0 ? -1 : 0;
+                runSign[i] = runVotes[i] > 0 ? 1 : runVotes[i] < 0 ? -1 : 0;
             }
             rested = true;
             restKey = RestKey();
@@ -780,6 +831,7 @@ namespace BAM.Art
                     k = k * 31 + W.HoldOut.GetHashCode();
                     k = k * 31 + W.Len.GetHashCode();
                     k = k * 31 + W.Grip.GetHashCode();
+                    k = k * 31 + W.Run.Up.GetHashCode() + W.Run.Out.GetHashCode() * 7;
                 }
                 return k;
             }
@@ -790,7 +842,13 @@ namespace BAM.Art
         // the fist turns round it; and the swing's grip is reached in one turn about the palm while the swing eases in (rest from
         // BodyView), not let go of in a tenth of a second at every swing and taken back after it
         // (a SwingAim weapon keeps the rest aim through the swing, following SwingFollow of the hand)
-        void Steady(int i, WeaponDef W, float rest)
+        void RestHold(int i, WeaponDef W, float rest, Hold h, int sign)
+        {
+            Steady(i, W, rest, h, sign);
+            if (h.Turn != Vector3.zero && rest > 0.001f) TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(h.Turn), rest));
+        }
+
+        void Steady(int i, WeaponDef W, float rest, Hold h, int sign)
         {
             Transform t = wT[i];
             t.localPosition = bindP[i]; t.localRotation = bindR[i];
@@ -799,7 +857,7 @@ namespace BAM.Art
             Vector3 gl = gripL[i];
             Quaternion rB = t.rotation;
             Vector3 gB = t.TransformPoint(gl);
-            HoldAngle(i, W, 1f, rested ? laxSign[i] : 0);
+            HoldAngle(i, W, 1f, rested ? sign : 0, h.Up, h.Out);
             Quaternion rR = t.rotation;
             float follow = keep ? Mathf.Lerp(W.SwingFollow, W.Follow, rest) : W.Follow;
             if (rested) rR = Share(hand[i].rotation * Quaternion.Inverse(root.rotation * handRef[i]), follow) * rR;
@@ -826,7 +884,9 @@ namespace BAM.Art
         // MxHoldAngle: the grip is set in the T-pose, so with the arm hanging a hammer would point straight ahead, flat; turned
         // about its grip to point forward and up, its head's long axis along the swing, and slid across the shaft into the palm.
         // sign: which way the flat side goes (0 = the one nearer the fist's, which flips as the fist turns); returns the one used
-        int HoldAngle(int i, WeaponDef W, float w, int sign)
+        int HoldAngle(int i, WeaponDef W, float w, int sign) => HoldAngle(i, W, w, sign, W.HoldUp, W.HoldOut);
+
+        int HoldAngle(int i, WeaponDef W, float w, int sign, float up, float outDeg)
         {
             Transform t = wT[i];
             t.localPosition = bindP[i]; t.localRotation = bindR[i];
@@ -836,7 +896,7 @@ namespace BAM.Art
             Transform hd = hand[i], ix = index[i];
             Vector3 palm = hd.position + (ix != null ? (ix.position - hd.position) * 0.6f : Vector3.zero);
             Vector3 g0 = t.TransformPoint(gl);
-            float a = W.HoldUp * Mathf.Deg2Rad, o = W.HoldOut * Mathf.Deg2Rad;
+            float a = up * Mathf.Deg2Rad, o = outDeg * Mathf.Deg2Rad;
             Vector3 flat = fwd * Mathf.Cos(o) + (W.Left ? -root.right : root.right) * Mathf.Sin(o);
             Vector3 want = flat * Mathf.Cos(a) + upW * Mathf.Sin(a);
             Quaternion q = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(t.up, want), w);
