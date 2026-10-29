@@ -47,6 +47,7 @@ namespace BAM.Game
             public bool Sprint;
             public bool Marked, Spark;     // Tikta's Deathmark and Blast's chain spark shown (Tikta 2.0 / Blast 2.0)
             public float ChainCd = -1f;    // the player's Blast: the chain cooldown arc shown, -1 none
+            public float StoredFx;         // Oaken: when his Stored Impact glow was last puffed (OAKEN-02)
             public int Honey = HoneyOff;   // Moa's shield rings shown: lit cells per ring (HoneyKey)
             public Quaternion Rot;
             public bool Squared;           // the view was told it faces a target or an aim, not its path (AnimFix.LegsFollow)
@@ -607,12 +608,15 @@ namespace BAM.Game
                     var pk = (ProjKind)e.Kind;
                     if (pk == ProjKind.BonkClub && e.A != null && !m.IsVisibleTo(e.A, Mine)) break; // BONK-09
                     // Bram's passive (every 4th hammer) is the heavy anvil blow, Blast's Chain Reaction its own crack, not a bomb
-                    bool bonk = pk == ProjKind.BonkSlam || pk == ProjKind.BonkClub || pk == ProjKind.OakenSlam; // Oaken's fists into the ground borrow Bonk's cracks and dust until he has his own
+                    bool bonk = pk == ProjKind.BonkSlam || pk == ProjKind.BonkClub;
+                    // Hilde's kegs and Oaken's slam have their own looks (2026-10-29, HILDE-03 / OAKEN-02), drawn on the true radius
+                    bool own = pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst || pk == ProjKind.OakenSlam;
                     // Bram's Anvil Drop and Knut's Anchor Slam (Simon's reworks) get their own heroes' blows, not Blast's fireball
                     FxKind ek = pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? FxKind.AnvilStrike : pk == ProjKind.KnutSlam ? FxKind.AnchorHit
-                        : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : FxKind.Explosion;
+                        : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : pk == ProjKind.OakenSlam ? FxKind.OakenSlam : own ? FxKind.KegBlast : FxKind.Explosion;
                     // Bonk: his auto slam (a power swing a size bigger) and Ground Slam, both the club into the ground
                     float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
+                    if (own) esize = Mathf.Max(0.1f, e.V);
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb || pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.BlastExplosion : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
@@ -640,28 +644,28 @@ namespace BAM.Game
                 case EventType.Pull:
                     if (e.B != null) BamAudio.PlayAt(SfxId.KnutAnchorHook, Coords.Of(e.B));
                     break;
-                // Hilde's keg slid a hero into a wall (and Oaken's quake, which hurts but never stuns): a thud and dust at the wall
+                // Hilde's keg slid a hero into a wall and stunned it (Wall Crash; Oaken's quake hurts at a wall but never stuns, so it
+                // sends none): Speltest's own crack, flash and sound at the wall
                 case EventType.WallCrash:
                     if (e.B != null && m.IsVisibleTo(e.B, Mine))
                     {
-                        BamAudio.PlayAt(SfxId.BonkKnock, Coords.World(e.X, e.Y));
-                        ArtKit.PlayFx(FxKind.GroundSmash, Coords.World(e.X, e.Y), 0.5f, Side(e.B.Team));
+                        BamAudio.PlayAt(SfxId.HildeWallCrash, Coords.World(e.X, e.Y));
+                        ArtKit.PlayFx(FxKind.WallCrash, Coords.World(e.X, e.Y), 1f, Side(e.B.Team), (int)HeroId.Hilde);
                     }
                     break;
-                // Oaken's quake: dust and cracks along the line from where he stood (e.V long) to its end (e.X, e.Y), seen by everyone
-                // as the warning was; Bonk's ground look until Oaken has his own
+                // Oaken's quake: his own gold-lit crack along the line from where he stood (e.V long) to its end (e.X, e.Y), seen by
+                // everyone as the warning was (its sound is still Bonk's until Rickard has heard sp_oaken: OAKEN-01)
                 case EventType.Quake:
                     if (e.A != null)
                     {
                         Vector3 qa = Coords.Of(e.A), qb = Coords.World(e.X, e.Y);
-                        int n = Mathf.Max(2, Mathf.CeilToInt(e.V / 0.8f));
-                        for (int i = 0; i <= n; i++) ArtKit.PlayFx(FxKind.GroundSmash, Vector3.Lerp(qa, qb, i / (float)n), 0.5f, Side(e.A.Team), (int)HeroId.Oaken);
+                        ArtKit.PlayOakenQuake(qa, qb, OakenS.QuakeHalfWidth);
                         BamAudio.PlayAt(SfxId.BonkSlam, Vector3.Lerp(qa, qb, 0.5f));
                     }
                     break;
-                // Oaken's Stored Impact took part of a hit: a shield flash on him
+                // Oaken's Stored Impact took part of a hit: his stone skin flashes gold
                 case EventType.OakenGuard:
-                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.ShieldPop, Coords.Of(e.A), 0.8f, Side(e.A.Team), (int)HeroId.Oaken);
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.OakenGuard, Coords.Of(e.A), 0.8f, Side(e.A.Team), (int)HeroId.Oaken);
                     break;
                 // battle spells (the art's port of View3DSpellLooks.cs): a blink from where it started, the others on the caster
                 case EventType.SpellCast:
@@ -739,7 +743,7 @@ namespace BAM.Game
         {
             switch (a.Kind)
             {
-                case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackBlast : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Hilde and Oaken borrow until they have their own
+                case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackHilde : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Oaken borrows Bonk's until he has his own
                 case UnitKind.Tower: return SfxId.TowerShot;
                 case UnitKind.Wolf: return SfxId.WolfBite;
                 default: return SfxId.None; // minions are silent (Rickard 2026-10-26)
@@ -758,7 +762,7 @@ namespace BAM.Game
                 case HeroId.Tikta: return SfxId.TiktaNeedles;
                 case HeroId.Blast: return dragged ? SfxId.BlastFireLane : SfxId.BlastBombThrow;
                 case HeroId.Bonk: return dragged ? SfxId.BonkBoulderThrow : SfxId.BonkSlamWindup; // the slam's landing sounds on its Explosion
-                case HeroId.Hilde: return SfxId.BlastBombThrow; // borrowed until she has her own
+                case HeroId.Hilde: return SfxId.HildeKegThrow; // both kegs (Speltest sp_hilde)
                 case HeroId.Oaken: return SfxId.BonkSlamWindup; // borrowed until he has his own
                 default: return SfxId.None;
             }
@@ -910,6 +914,13 @@ namespace BAM.Game
             if (seen) HoneyLeft(u, ref hg, ref hf, ref hq);
             int key = HoneyKey(hg, hf, hq);
             if (key != r.Honey) { r.Honey = key; v.SetHoneyShields(hg, hf, hq); }
+
+            // Oaken's Stored Impact holds damage for his next punch: a gold glow at his fists while it lasts, for him and his foes alike
+            if (seen && u.Hero == HeroId.Oaken && u.OakenStored > 0f && m.Time <= u.OakenStoredUntil && Time.time - r.StoredFx >= 0.12f)
+            {
+                r.StoredFx = Time.time;
+                ArtKit.PlayFx(FxKind.OakenStored, v.transform.position, 1f, Side(u.Team), (int)HeroId.Oaken);
+            }
         }
 
         const int HoneyOff = 31 | 31 << 5 | 31 << 10;

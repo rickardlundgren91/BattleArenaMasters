@@ -55,6 +55,25 @@ namespace BAM.Art.Editor
                         EditorGUILayout.Slider("  forward", d.Offset.z, -0.5f, 0.5f));
                 }
 
+            if (g.Cannon != null)
+            {
+                // Hilde's shoulder cannon (HILDE-04): placed on her shoulder by the code, these move it on top, live
+                CannonDef c = g.Cannon;
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField(c.Model + " (on the right shoulder)", EditorStyles.boldLabel);
+                c.Len = EditorGUILayout.Slider(new GUIContent("Size", "Length as a share of the hero's height"), c.Len, 0.1f, 1.2f);
+                EditorGUILayout.LabelField("Extra turn (degrees about the cannon)");
+                c.Turn = new Vector3(
+                    EditorGUILayout.Slider("  x", c.Turn.x, -180f, 180f),
+                    EditorGUILayout.Slider("  y", c.Turn.y, -180f, 180f),
+                    EditorGUILayout.Slider("  z", c.Turn.z, -180f, 180f));
+                EditorGUILayout.LabelField("Extra shift (share of the hero's height)");
+                c.Offset = new Vector3(
+                    EditorGUILayout.Slider("  right", c.Offset.x, -0.5f, 0.5f),
+                    EditorGUILayout.Slider("  up", c.Offset.y, -0.5f, 0.5f),
+                    EditorGUILayout.Slider("  forward", c.Offset.z, -0.5f, 0.5f));
+            }
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Arms", EditorStyles.boldLabel);
             g.ArmSpread = EditorGUILayout.Slider(new GUIContent("Arms out", "Degrees both upper arms turn out from the sides"), g.ArmSpread, 0f, 45f);

@@ -75,6 +75,9 @@ namespace BAM.Art
         public Vector3 At;
         /// <summary>The recoil of a shot: how far back (share of the figure's height) and how long it takes to come back.</summary>
         public float Kick = 0.05f, KickTime = 0.25f;
+        /// <summary>Rickard's own touch-up (Weapon Tuner, HILDE-04): a shift in the hero's right/up/forward as a share of the figure's
+        /// height, and degrees turned about the cannon's own x/y/z, on top of the placement, every frame. Len is live too.</summary>
+        public Vector3 Offset, Turn;
     }
 
     sealed class GearDef
@@ -227,6 +230,14 @@ namespace BAM.Art
             public Weapon[] Weapons;
             public float ArmSpread;
             public Vector3 CarryAt, Elbow;
+            public Cannon Cannon; // Hilde's; Len 0 (an older file, or a hero without one) leaves the code's numbers
+        }
+
+        [System.Serializable]
+        internal sealed class Cannon
+        {
+            public float Len;
+            public Vector3 Offset, Turn;
         }
 
         [System.Serializable]
@@ -257,6 +268,7 @@ namespace BAM.Art
         {
             d.ArmSpread = h.ArmSpread;
             d.CarryAt = h.CarryAt; d.Elbow = h.Elbow;
+            if (d.Cannon != null && h.Cannon != null && h.Cannon.Len > 0f) { d.Cannon.Len = h.Cannon.Len; d.Cannon.Offset = h.Cannon.Offset; d.Cannon.Turn = h.Cannon.Turn; }
             if (h.Weapons == null || d.Weapons == null) return;
             for (int w = 0; w < h.Weapons.Length && w < d.Weapons.Length; w++)
             {
@@ -268,6 +280,7 @@ namespace BAM.Art
         internal static Hero From(string name, GearDef d)
         {
             var h = new Hero { Name = name, ArmSpread = d.ArmSpread, CarryAt = d.CarryAt, Elbow = d.Elbow };
+            if (d.Cannon != null) h.Cannon = new Cannon { Len = d.Cannon.Len, Offset = d.Cannon.Offset, Turn = d.Cannon.Turn };
             int n = d.Weapons != null ? d.Weapons.Length : 0;
             h.Weapons = new Weapon[n];
             for (int w = 0; w < n; w++)
@@ -321,6 +334,8 @@ namespace BAM.Art
         CannonDef cDef;
         Transform cT, cUp, cLo, cHand, cIndex, cOther;
         Vector3 cAt, cBack;
+        Quaternion cRot;           // the cannon's placed turn on the chest, before Rickard's Turn
+        Vector3 cScale; float cLen; // its placed size and the Len it was placed at, so a tuned Len scales it live
         float kickIn = -1f, kickT = -1f, deadT;
         float figH;
         // thrown
@@ -486,6 +501,7 @@ namespace BAM.Art
             t.SetParent(chest, true);
             cDef = C; cT = t;
             cAt = t.localPosition;
+            cRot = t.localRotation; cScale = t.localScale; cLen = C.Len;
             cBack = t.localRotation * Vector3.left * (C.Kick * H / Mathf.Max(1e-6f, chest.lossyScale.y));
             cUp = sh; cLo = ra; cHand = rh; cOther = lsh;
             cIndex = an.GetBoneTransform(HumanBodyBones.RightIndexProximal);
@@ -586,6 +602,10 @@ namespace BAM.Art
                 if (kickT >= cDef.KickTime) kickT = -1f;
             }
             cT.localPosition = cAt + cBack * kick;
+            // the Weapon Tuner's numbers, live (HILDE-04): size, turn about its own axes, shift in the hero's right/up/forward
+            cT.localScale = cScale * (cLen > 0f ? cDef.Len / cLen : 1f);
+            cT.localRotation = cDef.Turn != Vector3.zero ? cRot * Quaternion.Euler(cDef.Turn) : cRot;
+            if (cDef.Offset != Vector3.zero) cT.position += root.TransformDirection(cDef.Offset) * figH;
             deadT = dead ? deadT + dt : 0f;
             float w = dead ? Mathf.Clamp01(1f - deadT / 0.25f) : 1f;
             if (w > 0.001f) CannonFist(w);

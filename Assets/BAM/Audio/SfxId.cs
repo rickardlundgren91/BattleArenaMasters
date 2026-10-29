@@ -28,5 +28,8 @@ namespace BAM.Audio
         // far away, Bram's Anvil Strike, Moa's shield taking hold, three battle spells and an emote
         HitConfirmLight, HitConfirmHeavy, LastHit, MultiKill, TowerHot, TowerUnderAttack, BramAnvil, MoaHoney,
         SpellBlink, SpellRecall, SpellShield, Emote,
+        // Hilde, hero 9 (2026-10-29, HILDE-01): Rickard's own Speltest clips: her cannon shot (atk_hilde), the keg throw (sp_hilde),
+        // Wall Crash (wallcrash)
+        AttackHilde, HildeKegThrow, HildeWallCrash,
     }
 }

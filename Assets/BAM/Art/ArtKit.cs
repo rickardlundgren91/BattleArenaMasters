@@ -115,6 +115,12 @@ namespace BAM.Art
         Cast = 8, Bounce = 9, WolfSummon = 10, CloneSpawn = 11, CloneEnd = 12, MinionSpawn = 13, TowerShotFlash = 14, AnchorHit = 15,
         AnvilStrike = 16, WolfLand = 17, DeathmarkTaken = 18, ChainBoom = 19,
         GroundSmash = 20, // Bonk's club into the ground (his slow overhead auto attack and Ground Slam): size = the hit radius
+        // Hilde and Oaken's own looks (2026-10-29, HILDE-03 / OAKEN-02), size = the hit radius where there is one
+        KegBlast = 21,    // Hilde's keg goes off (Speltest KegVerdictFx): a hot core, chips, and an amber edge exactly on the radius
+        WallCrash = 22,   // a keg slid a hero into a wall: a crack, a flash and stone at the wall
+        OakenSlam = 23,   // Oaken's fists into the ground: gold-lit cracks and a stone ring on the radius
+        OakenGuard = 24,  // Stored Impact takes part of a hit: a stone skin flash in his gold
+        OakenStored = 25, // while Stored Impact holds damage for his next punch: a gold glow at his fists (sent every few frames)
     }
 
     public static class ArtKit
@@ -352,6 +358,13 @@ namespace BAM.Art
         {
             if (!ready) return;
             Fx.Play(kind, position, size <= 0f ? 1f : size, team == 1 ? 1 : 0, hero);
+        }
+
+        /// <summary>Oaken's quake (event Quake): a crack running from a to b on the ground, halfWidth to each side.</summary>
+        public static void PlayOakenQuake(Vector3 a, Vector3 b, float halfWidth)
+        {
+            if (!ready) return;
+            Fx.OakenQuake(a, b, halfWidth);
         }
 
         /// <summary>A battle spell went off (event SpellCast): from = where the caster stood (a blink's start), at = where it is now.</summary>

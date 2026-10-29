@@ -998,6 +998,71 @@ namespace BAM.Art
                     Shards(mid, 6, C(Pal.Honey), 0.09f * size, 3.5f, 0.5f, 1.5f, 0.3f);
                     Ring(p, 0.4f * size, 1.1f * size, new Color(1f, 0.85f, 0.3f, 0.8f), 0.3f);
                     break;
+                case FxKind.KegBlast:
+                {
+                    // Hilde's keg (Speltest View3DStudioHilde.cs KegVerdictFx, Simon's "powder verdict"): a small quick white-hot core,
+                    // dark stave and stone chips, a few hot splinters and fast sparks, a little powder smoke inside the edge, a shock
+                    // front that stops dead on the true radius and a crisp amber band lying on it; the scorch stays. size = the radius
+                    Color amber = new Color(1f, 0.757f, 0.435f, 1f), hot = new Color(1f, 0.96f, 0.82f, 1f);
+                    Flash(mid, 0.15f * size, 0.6f * size, new Color(1f, 0.96f, 0.82f, 0.95f), 0.1f);
+                    Pow(mid, 1, (Color32)hot, 1.1f * size, 0.16f);
+                    Glow(p + Vector3.up * 0.07f, 1, new Color32(255, 193, 111, 200), 1.6f * size, 0f, 0.16f); // the ground lit inside the edge
+                    Chunks(p + Vector3.up * 0.3f, 12, new Color32(41, 28, 20, 255), 0.14f, 4.5f, 0.55f, 3.5f, 0.15f); // stave and stone chips
+                    Shards(p + Vector3.up * 0.35f, 8, (Color32)hot, 0.1f, 4.2f, 0.4f, 2f); // hot splinters
+                    Sparks(p + Vector3.up * 0.35f, 16, (Color32)hot, 0.1f, 6f, 0.25f, 1.5f);
+                    Smoke(p + Vector3.up * 0.3f, 5, new Color32(107, 92, 82, 115), 0.6f * size, 1f, 0.65f, 0.6f, 0.35f * size);
+                    ImpactRing(p, size, hot, 0.22f); // the shock front, out to the edge
+                    Spawn(Shapes.RingMesh(0.92f, Pal.White), p, size, size, amber, 0.4f, true, 0); // the finite edge, on the radius
+                    Pic("tx_fx_blast_scorch", p, new Color(1f, 1f, 1f, 0.7f), 1.7f * size, 2.2f);
+                    break;
+                }
+                case FxKind.WallCrash:
+                {
+                    // a hero slid into a wall by Hilde's keg (Speltest View3DSpecialFx.WallCrashFx: its own crack, flash and sound):
+                    // a short white flash at the wall, a brass crack on the ground there, stone thrown off the wall and a little dust
+                    Color32 m = heroMain[(int)HeroId.Hilde], a = heroAccent[(int)HeroId.Hilde];
+                    Flash(p + Vector3.up * 0.6f, 0.1f, 0.55f, new Color(1f, 0.96f, 0.85f, 0.95f), 0.09f);
+                    HitStar(p + Vector3.up * 0.6f, (Color)a, 1.0f, 0.16f);
+                    Crack(p, 0.6f, 1.4f, new Color(1f, 0.8f, 0.5f, 0.8f));
+                    ImpactRing(p, 0.6f, (Color)m, 0.2f);
+                    Chunks(p + Vector3.up * 0.5f, 6, C(Pal.Stone), 0.13f, 3f, 0.6f, 2.2f, 0.2f);
+                    Sparks(p + Vector3.up * 0.6f, 8, a, 0.1f, 3.5f, 0.25f, 1.2f);
+                    Dust(p + Vector3.up * 0.2f, 4, C(Pal.Ground, 200), 0.45f, 1.2f, 0.5f, 0.3f, 0.2f);
+                    break;
+                }
+                case FxKind.OakenSlam:
+                {
+                    // Oaken's two fists into the ground (no Speltest look exists for Oaken 3.0): the ground splits with his gold glowing
+                    // in the cracks, a stone ring rolls out to the true radius, grey stone chunks and dust, a short gold light. Not
+                    // Bonk's brown wood-and-dust look. size = the hit radius
+                    Color gold = (Color)heroAccent[(int)HeroId.Oaken];
+                    Flash(p + Vector3.up * 0.3f, 0.2f * size, 0.7f * size, new Color(1f, 0.95f, 0.8f, 0.85f), 0.08f);
+                    Crack(p, 0.8f * size, 2.2f, new Color(gold.r, gold.g, gold.b, 0.9f));
+                    Crack(p, 0.45f * size, 1.6f, new Color(1f, 0.95f, 0.75f, 0.8f));
+                    ImpactRing(p, size, gold, 0.3f);
+                    Ring(p, 0.25f * size, size, new Color(0.75f, 0.72f, 0.66f, 0.8f), 0.35f, 1.1f);
+                    Rays(p + Vector3.up * 0.4f, gold, 1.1f * size, 0.18f);
+                    Chunks(p + Vector3.up * 0.25f, 8 + Mathf.RoundToInt(3f * size), C(Pal.Stone), 0.14f + 0.03f * size, 4f + size, 0.75f, 3.6f, 0.4f * size);
+                    Dust(p + Vector3.up * 0.15f, 8, new Color32(170, 162, 150, 210), 0.55f * size, 2f * size, 0.8f, 0.5f, 0.5f * size);
+                    Glow(p + Vector3.up * 0.2f, 6, heroAccent[(int)HeroId.Oaken], 0.25f, 1.2f, 0.5f, 1.5f, 0.5f * size);
+                    break;
+                }
+                case FxKind.OakenGuard:
+                {
+                    // Stored Impact takes part of a hit: his stone skin flashes gold and chips fly off it (no longer Moa's honey bubble)
+                    Color32 a = heroAccent[(int)HeroId.Oaken];
+                    Pow(mid, 1, a, 0.9f * size, 0.16f);
+                    Flash(mid, 0.3f * size, 0.75f * size, new Color(1f, 0.85f, 0.4f, 0.6f), 0.14f);
+                    Shards(mid, 6, C(Pal.Stone), 0.1f * size, 3f, 0.45f, 1.5f, 0.3f);
+                    Sparks(mid, 6, a, 0.1f, 3f, 0.25f, 1f);
+                    Ring(p, 0.3f * size, 0.9f * size, new Color(1f, 0.8f, 0.3f, 0.8f), 0.3f);
+                    break;
+                }
+                case FxKind.OakenStored:
+                    // the damage he holds for his next punch: gold glowing at both fists, a spark now and then (p = his feet)
+                    Glow(p + Vector3.up * 0.75f, 2, new Color32(255, 200, 70, 200), 0.3f * size, 0.25f, 0.25f, 0.4f, 0.35f);
+                    Embers(p + Vector3.up * 0.7f, 1, heroAccent[(int)HeroId.Oaken], 0.08f, 0.5f, 0.45f, 0.8f, 0.35f);
+                    break;
                 case FxKind.Cast when hero >= 0:
                     // HeroCast already gives the glow and stars: only the ground swirl and ring, in the hero's two colours
                     Swirl(p, 1.1f * size, (Color)heroMain[hero], 0.5f);
@@ -1222,8 +1287,19 @@ namespace BAM.Art
                 case ProjKind.RangedMinionShot:
                     Pow(p, 1, C(Pal.Cream, 200), 0.35f, 0.1f);
                     break;
+                case ProjKind.HildeShell:
+                {
+                    // her cannon shell (Speltest View3DHilde.cs: a blast, a flash and a burst in powder orange): her powder flash and
+                    // brass sparks over the siege shell's dust and chips
+                    Color32 m = heroMain[(int)HeroId.Hilde], a = heroAccent[(int)HeroId.Hilde];
+                    Flash(p + Vector3.up * 0.3f, 0.1f, 0.45f, new Color(1f, 0.9f, 0.6f, 0.9f), 0.08f);
+                    Pow(p, 1, m, 0.85f, 0.16f);
+                    Sparks(p + Vector3.up * 0.3f, 6, a, 0.1f, 3.5f, 0.25f, 1.2f);
+                    Dust(p, 4, C(Pal.Ground, 210), 0.6f, 1.5f, 0.5f, 0.3f, 0.2f);
+                    Chunks(p, 3, C(Pal.Rock), 0.12f, 2.5f, 0.5f, 2f);
+                    break;
+                }
                 case ProjKind.SiegeShell:
-                case ProjKind.HildeShell: // her cannon shell: the siege shell's burst until she has her own
                     Pow(p, 1, C(Pal.FireCore), 0.8f, 0.15f);
                     Dust(p, 4, C(Pal.Ground, 210), 0.6f, 1.5f, 0.5f, 0.3f, 0.2f);
                     Chunks(p, 3, C(Pal.Rock), 0.12f, 2.5f, 0.5f, 2f);
@@ -1233,6 +1309,28 @@ namespace BAM.Art
                     Sparks(p, 6, teamL, 0.12f, 3.5f, 0.3f, 1f);
                     break;
             }
+        }
+
+        /// <summary>Oaken's quake (ArtKit.PlayOakenQuake): the ground splits from a to b, his gold in the crack, grey stone and dust
+        /// thrown up along it and a few gold sparks running the way it goes; nothing reaches past the line's half width.</summary>
+        public static void OakenQuake(Vector3 a, Vector3 b, float halfWidth)
+        {
+            a.y = 0f; b.y = 0f;
+            Vector3 d = b - a;
+            float len = d.magnitude;
+            Vector3 dir = len > 1e-4f ? d / len : Vector3.forward;
+            Color gold = (Color)heroAccent[(int)HeroId.Oaken];
+            int n = Mathf.Max(2, Mathf.CeilToInt(len / 0.6f));
+            for (int i = 0; i <= n; i++)
+            {
+                Vector3 q = Vector3.Lerp(a, b, i / (float)n);
+                Crack(q, 1.3f * halfWidth, 2f, new Color(gold.r, gold.g, gold.b, 0.85f));
+                Chunks(q + Vector3.up * 0.2f, 3, C(Pal.Stone), 0.13f, 2.5f, 0.6f, 3f, 0.6f * halfWidth);
+                Dust(q + Vector3.up * 0.1f, 2, new Color32(170, 162, 150, 200), 0.5f, 1f, 0.7f, 0.4f, 0.6f * halfWidth);
+                if ((i & 1) == 0) SparksAlong(q + Vector3.up * 0.2f, dir, 3, heroAccent[(int)HeroId.Oaken], 0.1f, 4f, 0.3f, 20f);
+            }
+            ImpactRing(b, 2f * halfWidth, gold, 0.25f);
+            Flash(a + Vector3.up * 0.3f, 0.15f, 0.6f, new Color(1f, 0.95f, 0.8f, 0.8f), 0.08f);
         }
 
         /// <summary>A skillshot that hit nothing: a small puff in its colour, no flash, so a miss never reads as a hit.</summary>
