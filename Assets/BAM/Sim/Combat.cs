@@ -381,28 +381,46 @@ namespace BAM.Sim
             var tgt = p.Tgt;
             if (!p.Launched) { p.Launched = true; p.OX = p.Src.X; p.OY = p.Src.Y; } // the shot leaves where the shooter stood at the release
             float ox = p.X, oy = p.Y;
+            float tx = p.Fizzle ? p.FX : tgt.X, ty = p.Fizzle ? p.FY : tgt.Y; // a fizzling shot flies to its spot and hits nothing there
             if (p.Speed > 0)
             {
-                float d = SimMath.Hypot(tgt.X - p.X, tgt.Y - p.Y), step = p.Speed * Rules.Tick;
+                float d = SimMath.Hypot(tx - p.X, ty - p.Y), step = p.Speed * Rules.Tick;
                 if (d <= step || d < 0.05f)
                 {
                     p.Done = true;
-                    if (!Map.ShotBlocked(ox, oy, tgt.X, tgt.Y)) HitWith(p); else Blocked(p, ox, oy);
+                    if (Map.ShotBlocked(ox, oy, tx, ty)) Blocked(p, ox, oy);
+                    else if (p.Fizzle) { p.X = tx; p.Y = ty; }
+                    else HitWith(p);
                 }
                 else
                 {
-                    p.X += (tgt.X - p.X) / d * step; p.Y += (tgt.Y - p.Y) / d * step;
+                    p.X += (tx - p.X) / d * step; p.Y += (ty - p.Y) / d * step;
                     if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
                 }
             }
             else
             {
                 float k = SimMath.Clamp(p.T / p.Travel, 0, 1);
-                p.X = SimMath.Lerp(p.OX, tgt.X, k); p.Y = SimMath.Lerp(p.OY, tgt.Y, k);
+                p.X = SimMath.Lerp(p.OX, tx, k); p.Y = SimMath.Lerp(p.OY, ty, k);
                 if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
-                else if (p.T >= p.Travel) { p.Done = true; HitWith(p); }
+                else if (p.T >= p.Travel) { p.Done = true; if (!p.Fizzle) HitWith(p); }
             }
             if (!tgt.Alive && !p.Done && !p.Fizzle) p.Done = true;
+        }
+
+        /// <summary>Rickard 2026-10-29 ("skottet ska inte hoppa, man kan blinka sig ur skottläget"): a hero that blinks or recalls
+        /// leaves the homing shots on their way to it, autos and homing specials alike, in the hand or flying: they fly on to the
+        /// spot it left and end there with no hit, instead of jumping after it.</summary>
+        internal void LoseShots(Unit h)
+        {
+            for (int i = 0; i < Projs.Count; i++)
+            {
+                var p = Projs[i];
+                if (p.Done || p.Fizzle || p.Tgt != h || (p.Mode != ProjMode.Auto && p.Mode != ProjMode.Needle && p.Mode != ProjMode.Hammer)) continue;
+                p.Fizzle = true;
+                if (p.Mode == ProjMode.Auto) { p.FX = h.X; p.FY = h.Y; }
+                else { p.OX = h.X; p.OY = h.Y; } // a needle or hammer keeps its spot there and puffs out on it (Heroes.FlyToSpotAndPuff)
+            }
         }
 
         /// <summary>A shot stopped by a wall still shows something where it stopped.</summary>
@@ -415,7 +433,7 @@ namespace BAM.Sim
         void RetargetAuto(Proj p)
         {
             var u = p.Src;
-            if (u == null || !u.Alive) { if (p.Launched && p.T >= 0) p.Fizzle = true; return; } // nobody to pick a new target: one in flight lands on the spot, as below
+            if (u == null || !u.Alive) { if (p.Launched && p.T >= 0) { p.Fizzle = true; p.FX = p.Tgt.X; p.FY = p.Tgt.Y; } return; } // nobody to pick a new target: one in flight lands on the spot, as below
             var list = EnemiesInRange(u, u.Range, Pick.Any, true, atkBuf);
             if (list.Count > 0)
             {
@@ -433,7 +451,7 @@ namespace BAM.Sim
             }
             // nobody to go to: a shot still in the hand ends; one already flying lands on the fallen target's spot with no hit, so it
             // is seen to land instead of vanishing in the air (precision CHAINMAP-09)
-            if (p.Launched && p.T >= 0) { p.Fizzle = true; return; }
+            if (p.Launched && p.T >= 0) { p.Fizzle = true; p.FX = p.Tgt.X; p.FY = p.Tgt.Y; return; }
             p.Done = true;
         }
 

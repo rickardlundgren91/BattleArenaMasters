@@ -216,7 +216,8 @@ namespace BAM.Sim
                             if (SimMath.Hypot(last.X - mine.X, last.Y - mine.Y) > 0.05f) ghostWrongSpot++;
                         }
                         // a shot that flew on to its fallen target's spot (Proj.Fizzle) is seen to land there: only one that ends away from it vanishes
-                        bool atTarget = s.P.Tgt != null && SimMath.Hypot(s.P.Tgt.X - s.P.X, s.P.Tgt.Y - s.P.Y) <= s.P.Tgt.R + 0.35f;
+                        bool atTarget = s.P.Tgt != null && SimMath.Hypot(s.P.Tgt.X - s.P.X, s.P.Tgt.Y - s.P.Y) <= s.P.Tgt.R + 0.35f
+                            || s.P.Fizzle && SimMath.Hypot(s.P.FX - s.P.X, s.P.FY - s.P.Y) <= 0.05f; // or at the spot its target blinked or recalled from (SHOT-08)
                         if (match < 0 && !blocked && !atTarget && (s.Mode == ProjMode.Auto || s.Mode == ProjMode.Needle || s.Mode == ProjMode.Hammer) && s.T >= 0)
                         {
                             silentVanish++; if (s.Kind <= ProjKind.BlastFire || s.Kind >= ProjKind.BramHammerSpecial && s.Kind != ProjKind.TowerShot) heroVanish++; string w = s.Mode + "/" + s.Kind;
@@ -255,7 +256,7 @@ namespace BAM.Sim
             Verdict("Projectile_NoTeleport_OnRetarget", "views", teleports == 0, "P2",
                 $"{teleports} ticks where a shot that changed target jumped more than 1 tile in one tick (max {F((float)maxJump)} tiles, {jumpWhat})");
             Info("Projectile_FollowsMovedTarget", "views",
-                $"{followJumps} ticks where a timed shot jumped more than 1 tile with the SAME target: the target blinked (a timed shot cannot be dodged by Blink, it follows), or a fast melee slash (Fenn/Knut, 0.08 s over up to 3 tiles). Rules as they are, not CHAINMAP-05");
+                $"{followJumps} ticks where a timed shot jumped more than 1 tile with the SAME target: the target blinked in the tick the shot was fired (from then on a blink makes it miss, SHOT-08), or a fast melee slash (Fenn/Knut, 0.08 s over up to 3 tiles). Rules as they are, not CHAINMAP-05");
             Verdict("AttackStart_UniquePerTick", "views", dupAttackStart == 0, "P2", $"{dupAttackStart} ticks with two AttackStart of one attacker and kind (the views pair shots by that)");
             Verdict("EventOrder_DamageThenHit_Contract", "views", contractBreaks == 0, "P2",
                 $"{contractBreaks} of {contractChecked} special/passive hits break MatchViews.IsTick's 'Damage then Hit within 3' rule (taken for a DoT tick: no flinch, no hit tick): {Top(breakBy)}");

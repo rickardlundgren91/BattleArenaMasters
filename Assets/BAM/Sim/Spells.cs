@@ -67,6 +67,7 @@ namespace BAM.Sim
                     float a = float.IsNaN(ang) ? h.Facing : ang;
                     BlinkPoint(h, a, k, out float x, out float y);
                     if (SimMath.Hypot(x - h.X, y - h.Y) < 0.5f) return false; // against a wall
+                    LoseShots(h); // the shots on their way miss: a blink gets you out of them (Combat.cs)
                     h.X = h.PX = x; h.Y = h.PY = y; h.Facing = a; h.MoInit = false; h.MovedAt = Time;
                     break;
                 }
@@ -126,6 +127,7 @@ namespace BAM.Sim
                 {
                     h.SpellChanEnd = -1;
                     float fx = h.X, fy = h.Y;
+                    LoseShots(h);
                     h.X = h.PX = h.SpawnX; h.Y = h.PY = h.SpawnY; h.MoInit = false;
                     if (h.Bot != null) h.Bot.Reset(false);
                     Emit(EventType.Recall, h, null, 0, 0, false, fx, fy);
