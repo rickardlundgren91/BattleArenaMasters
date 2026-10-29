@@ -148,6 +148,8 @@ namespace BAM.Art
         // Bonk's own pictures (Rickard 2026-10-26, coloured with alpha, drawn alpha-blended): cracks and a dust ring flat on the
         // ground, dust puffs and a 4x4 sheet of stone chips (null when missing: GroundSmash then uses the shared helpers)
         static ParticleSystem bCrack, bShock, bDust, bRocks;
+        // Hilde's own powder puff for her keg's knockback (Rickard 2026-10-29, O-012; null when missing: Dust stands in)
+        static ParticleSystem hDust;
         static ParticleSystem.EmitParams ep;
         static readonly List<ParticleSystem> systems = new List<ParticleSystem>(32); // every one made, for ClearAll and SetPaused
         public static float Amount = 1f; // 1 on High, about half on Low
@@ -413,6 +415,14 @@ namespace BAM.Art
                 bDust = MakeSystem("BAM Bonk Dust", ArtMaterials.ParticleAlpha, -0.03f, 0.6f, 1.7f, 160);
                 RetextureAlpha(bDust, t, false);
                 var spin = bDust.rotationOverLifetime;
+                spin.enabled = true;
+                spin.z = new ParticleSystem.MinMaxCurve(-1f, 1f);
+            }
+            if ((t = RickardFx.Load("tx_fx_hilde_knock")) != null)
+            {
+                hDust = MakeSystem("BAM Hilde Knock", ArtMaterials.ParticleAlpha, -0.03f, 0.6f, 1.6f, 60);
+                RetextureAlpha(hDust, t, false);
+                var spin = hDust.rotationOverLifetime;
                 spin.enabled = true;
                 spin.z = new ParticleSystem.MinMaxCurve(-1f, 1f);
             }
@@ -1040,6 +1050,12 @@ namespace BAM.Art
                     Dust(p + Vector3.up * 0.2f, 4, C(Pal.Ground, 200), 0.45f, 1.2f, 0.5f, 0.3f, 0.2f);
                     break;
                 }
+                case FxKind.HildeKnock:
+                    // a hero shoved by her keg (was Bonk's dust): his powder puffs, tinted a smoky powder grey, and a few brass sparks
+                    if (hDust != null) Burst(hDust, p + Vector3.up * 0.25f, 4, new Color32(222, 212, 196, 225), 0.6f * size, 1.6f * size, 0.8f, 0.45f, 0.25f * size);
+                    else Dust(p + Vector3.up * 0.15f, 6, C(Pal.Ground, 210), 0.5f * size, 1.6f * size, 0.7f, 0.4f, 0.3f * size);
+                    Sparks(p + Vector3.up * 0.5f, 4, heroAccent[(int)HeroId.Hilde], 0.08f, 3f, 0.22f, 0.8f);
+                    break;
                 case FxKind.OakenSlam:
                 {
                     // Oaken's two fists into the ground (no Speltest look exists for Oaken 3.0): the ground splits with his gold glowing

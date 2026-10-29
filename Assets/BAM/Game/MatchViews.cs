@@ -719,7 +719,9 @@ namespace BAM.Game
                     {
                         ProjKind kk = (ProjKind)e.Kind;
                         BamAudio.PlayAt(kk == ProjKind.HildeKeg || kk == ProjKind.HildeBurst ? SfxId.HildeKnock : SfxId.BonkKnock, Coords.Of(e.B));
-                        ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(e.B), 0.45f, Side(e.B.Team));
+                        bool keg = kk == ProjKind.HildeKeg || kk == ProjKind.HildeBurst;
+                        if (keg) ArtKit.PlayFx(FxKind.HildeKnock, Coords.Of(e.B), 1f, Side(e.B.Team), (int)HeroId.Hilde); // her own puff (O-012)
+                        else ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(e.B), 0.45f, Side(e.B.Team));
                     }
                     break;
                 case EventType.Pull:

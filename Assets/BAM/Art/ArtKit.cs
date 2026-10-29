@@ -156,6 +156,7 @@ namespace BAM.Art
         OakenSlam = 23,   // Oaken's fists into the ground: gold-lit cracks and a stone ring on the radius
         OakenGuard = 24,  // Stored Impact takes part of a hit: a stone skin flash in his gold
         OakenStored = 25, // while Stored Impact holds damage for his next punch: a gold glow at his fists (sent every few frames)
+        HildeKnock = 26,  // a hero shoved by Hilde's keg: Rickard's powder puff (tx_fx_hilde_knock) where it was hit
     }
 
     public static class ArtKit
