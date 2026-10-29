@@ -99,7 +99,9 @@ namespace BAM.Online
             return i < FreeHeroes ? 1 : HeroLevelStep * (i - FreeHeroes + 1);
         }
 
-        public static bool HeroOpen(HeroId id) => Shown.level >= HeroLevel(id);
+        // in the Unity Editor every hero is always open (Rickard 2026-10-29: "när jag kör på datorn måste jag alltid få ha alla heroes
+        // upplåsta"); on a phone the level decides
+        public static bool HeroOpen(HeroId id) => Application.isEditor || Shown.level >= HeroLevel(id);
 
         /// <summary>The heroes that open when the level goes from `from` to `to`, e.g. "Moa" or "Knut, Tikta"; null for none.</summary>
         public static string UnlockedBetween(int from, int to)
