@@ -25,6 +25,25 @@ namespace BAM.UI
         static readonly Color HubDark = new Color32(0x06, 0x23, 0x1a, 0xff);
         static readonly Color HubToggleOn = new Color(0.102f, 0.186f, 0.317f); // HubToggle: #161b46 under rgba(62,230,176,0.10)
 
+        // Home's painting behind every subpage, dimmed, so the pages feel like the same place (Rickard 2026-10-29: "samma
+        // känsla, behåll vår stil"). Covers the frame, centred; nothing when the picture is missing.
+        static void PageArt(RectTransform body)
+        {
+            var tex = Picture("home_bg", true);
+            if (tex == null) return;
+            var clip = UiKit.NewRect("Art", body);
+            UiKit.Stretch(clip);
+            clip.gameObject.AddComponent<RectMask2D>();
+            var pic = UiKit.NewRect("Painting", clip);
+            var raw = pic.gameObject.AddComponent<RawImage>();
+            raw.texture = tex;
+            raw.raycastTarget = false;
+            var fit = pic.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fit.aspectRatio = tex.width / (float)tex.height;
+            UiKit.Fill(clip, new Color(6 / 255f, 9 / 255f, 30 / 255f, 0.55f)).name = "Shade";
+        }
+
         /// <summary>A subpage: background, Back pill, the glass sheet and (with a title) the H2. Returns the scroll content.</summary>
         static RectTransform NewPage(string title, out GameObject go, out RectTransform panelRt, bool scroll = true, float headExtra = 0)
         {
@@ -34,6 +53,7 @@ namespace BAM.UI
             UiKit.Fill(rt, Color.black).raycastTarget = true; // black outside the standing frame
             var body = UiKit.SafeArea(rt);
             UiKit.Background(body);
+            PageArt(body);
             var glow = UiKit.Fill(body, Color.white, HomeArt.PageGlow);
             glow.rectTransform.anchorMin = new Vector2(-0.35f, 0.32f);
             glow.rectTransform.anchorMax = new Vector2(1.35f, 1.04f);
@@ -52,7 +72,7 @@ namespace BAM.UI
             var grad = UiKit.NewRect("Gradient", glass.rectTransform);
             UiKit.Stretch(grad);
             var gi = grad.gameObject.AddComponent<RawImage>();
-            gi.texture = HomeArt.Gradient(new Color32(0x1a, 0x1f, 0x4a, 0xff), new Color32(0x0a, 0x0d, 0x26, 0xff));
+            gi.texture = HomeArt.Gradient(new Color32(0x1a, 0x1f, 0x4a, 0xd0), new Color32(0x0a, 0x0d, 0x26, 0xe6)); // glass: Home's art shows through
             gi.raycastTarget = false;
             var edge = Pic(glass.rectTransform, "Gold", HomeArt.RoundRing(0.4f / 4f), HubGold);
             RingRadius(edge, r);
