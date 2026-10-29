@@ -500,6 +500,8 @@ namespace BAM.Game
                     }
                     // Tyra's twang plays when her arrow leaves the bow, not at the draw (ReleaseSound, TYRA-03/04)
                     if ((a.Kind != UnitKind.Tower || e.B == m.Player) && !(a.Kind == UnitKind.Hero && a.Hero == HeroId.Tyra)) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
+                    // a tower shooting someone else within 8 tiles of the player is heard softly (VIS-02, Rickard 2026-10-29)
+                    else if (a.Kind == UnitKind.Tower && m.Player != null && e.B != null && SimMath.Dist(e.B, m.Player) <= 8f) Sound(SfxId.TowerShot, a, 0.35f);
                     break;
                 }
                 case EventType.Hit:
