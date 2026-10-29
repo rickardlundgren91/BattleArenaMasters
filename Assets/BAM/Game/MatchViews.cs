@@ -620,7 +620,8 @@ namespace BAM.Game
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb || pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.BlastExplosion : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
-                        : pk == ProjKind.BramHammer ? SfxId.BramAnvil : SfxId.None; // Bram's Anvil Strike: Speltest's anvil (bramsmash)
+                        : pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? SfxId.BramAnvil // Bram's Anvil Drop: Speltest's anvil (bramsmash), BRAM-04
+                        : pk == ProjKind.KnutSlam ? SfxId.BonkSlam : SfxId.None; // Knut's Anchor Slam borrows Bonk's ground slam until he has his own (KNUT-03)
                     if (boom != SfxId.None) BamAudio.PlayAt(boom, at);
                     break;
                 }

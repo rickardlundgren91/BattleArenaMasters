@@ -339,7 +339,6 @@ namespace BAM.Sim
                 {
                     case ProjMode.Auto: UpdateAuto(p, dt); break;
                     case ProjMode.Hammer: HammerUpdate(p, dt); break;
-                    case ProjMode.HammerLine: HammerLineUpdate(p, dt); break;
                     case ProjMode.Bolt: BoltUpdate(p, dt); break;
                     case ProjMode.Hook: HookUpdate(p, dt); break;
                     case ProjMode.Needle: NeedleUpdate(p, dt); break;

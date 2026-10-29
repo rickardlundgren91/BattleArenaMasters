@@ -11,13 +11,26 @@ namespace BAM.Sim
         /// <summary>Anvil Drop: the hammer comes down on the aimed point after DropDelay; a red circle warns where.</summary>
         bool CastAnvilDrop(Unit h, float dmg, float aa, float ak)
         {
-            AimPoint(h, aa, ak, BramS.Reach, out float x, out float y);
+            AnvilPoint(h, aa, ak, out float x, out float y);
             var p = NewProj(ProjMode.Drop, h, x, y);
             p.Kind = ProjKind.BramHammerSpecial; p.T = -BramS.DropDelay; p.Dur = BramS.DropDelay; p.Radius = BramS.DropRadius; p.Dmg = dmg * BramS.DropCoeff; p.Big = true;
             WarnCircle(h, x, y, BramS.DropRadius, BramS.DropDelay);
             h.Facing = aa; h.AimT = Time + 0.6f; AddStatus(h, St.Casting, 0.2f);
             castX = x; castY = y;
             return true;
+        }
+
+        /// <summary>Where Anvil Drop lands for this aim (also for the aim circle): the aimed point, but never inside a wall tile,
+        /// where every line from it is blocked and it would hit nobody (BRAM-03): there it comes down on the wall's face, the last
+        /// point on the way back to Bram that is not in a wall. Over a wall it still flies (the wall rule).</summary>
+        public void AnvilPoint(Unit h, float ang, float k, out float x, out float y)
+        {
+            AimPoint(h, ang, k, BramS.Reach, out x, out y);
+            if (!Map.WallAt(x, y)) return;
+            float d = SimMath.Hypot(h.X - x, h.Y - y);
+            if (d < 1e-4f) return;
+            float sx = (h.X - x) / d * 0.05f, sy = (h.Y - y) / d * 0.05f;
+            for (float m = 0; m < d && Map.WallAt(x, y); m += 0.05f) { x += sx; y += sy; }
         }
 
         /// <summary>The anvil lands: every enemy hero and minion (not towers) within its radius with a clear line from it is hurt and
@@ -59,8 +72,8 @@ namespace BAM.Sim
         void EchoUpdate(Proj p, float dt)
         {
             float ox = p.X, oy = p.Y, len = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
-            var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, len, p.Radius, out float at, p.Tgt);
-            if (u != null && !u.IsClone && IsVisibleTo(u, p.Team))
+            var u = EchoHit(p, ox, oy, len, out float at);
+            if (u != null)
             {
                 float hx = ox + SimMath.Cos(p.Ang) * at, hy = oy + SimMath.Sin(p.Ang) * at;
                 if (!Map.ShotBlocked(ox, oy, hx, hy))
@@ -73,6 +86,26 @@ namespace BAM.Sim
             p.X += SimMath.Cos(p.Ang) * len; p.Y += SimMath.Sin(p.Ang) * len; p.D += len;
             if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
             if (p.D >= p.Travel - 1e-5f) p.Done = true;
+        }
+
+        /// <summary>The first enemy the echo's path touches this tick that it may hit: as SweptHit, but Fenn's decoy and enemies the
+        /// team cannot see are passed by here, so one in front never hides a real target behind it for a tick (BRAM-06).</summary>
+        Unit EchoHit(Proj p, float ox, float oy, float len, out float along)
+        {
+            along = 0; Unit best = null; float bestAt = float.MaxValue, ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang);
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (!Hurtable(p.Src, u) || u.Team == p.Team || u == p.Tgt || u.IsClone || !IsVisibleTo(u, p.Team)) continue;
+                float dx = u.X - ox, dy = u.Y - oy, a = dx * ca + dy * sa, perp2 = dx * dx + dy * dy - a * a, rr = u.R + p.Radius;
+                if (perp2 > rr * rr) continue;
+                float hh = SimMath.Sqrt(Math.Max(0, rr * rr - perp2)), enter = a - hh;
+                if (a + hh < 0 || enter > len) continue;
+                enter = Math.Max(0, enter);
+                if (enter < bestAt) { bestAt = enter; best = u; }
+            }
+            along = best != null ? bestAt : 0;
+            return best;
         }
 
         // ---------- Knut ----------

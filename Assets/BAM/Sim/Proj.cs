@@ -3,10 +3,10 @@ namespace BAM.Sim
     public enum ProjMode : byte
     {
         Auto,        // an auto attack: homing (Speed > 0) or a timed flight from the release point (Travel s)
-        Hammer,      // Bram tap: homes in on an enemy hero, then bounces to up to two more enemies
-        HammerLine,  // Bram drag: straight, through every enemy on the line
+        Hammer,      // Bram tap: homes in on an enemy hero or minion, then bounces to up to two more enemies
+        HammerLine,  // unused since 2026-10-28 (Bram's old drag); kept so the numbers after it stay the same
         Bolt,        // Tyra: straight after a short draw, stops in the first enemy
-        Hook,        // Knut: flies out and comes back on its chain, pulls the first enemy hero
+        Hook,        // Knut drag: flies out and comes back on its chain, pulls the first enemy it touches
         Needle,      // Tikta tap: homes in on its target
         NeedleLine,  // Tikta drag: straight, stops in the first enemy
         Bomb,        // Blast tap: a fuse circle for 0.5 s, then the blast

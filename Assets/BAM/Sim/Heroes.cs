@@ -7,15 +7,12 @@ namespace BAM.Sim
     // tap and drag forms, SimMoaInstinct, SimTelegraph). Fenn's wolf and clone are the decided new versions (Docs/DECISIONS.md).
     // Every special has two forms: a tap (Unit.AimAng NaN) picks its own target, a drag casts the aimed form.
 
-    /// <summary>Bram, Hammer Throw. Tap: the hammer homes in on a random enemy hero in reach and bounces on to up to two more
-    /// enemies nearby (each bounce weaker). Drag: a straight throw through every enemy on the line. Passive: every 4th auto attack
-    /// also hurts everyone around its target.</summary>
+    /// <summary>Bram, Hammer Throw. Tap: the hammer homes in on a random enemy hero or minion in reach and bounces on to up to
+    /// two more enemies nearby (each bounce weaker). Drag: Anvil Drop. Passive: Backlash (both Hero5.cs).</summary>
     public static class BramS
     {
-        public const float Reach = 5, Speed = 13, DamageCoeff = 1.3f, BounceRange = 2.5f, BounceCoeff = 0.7f, LineReach = 5, LineHitbox = 0.2f;
+        public const float Reach = 5, Speed = 13, DamageCoeff = 1.3f, BounceRange = 2.5f, BounceCoeff = 0.7f, LineHitbox = 0.2f;
         public const int Bounces = 2;
-        public const int PassiveEvery = 4;
-        public const float PassiveRadius = 1.5f, PassiveCoeff = 0.5f;
         /// <summary>Anvil Drop (the drag since 2026-10-28, XYZ 2026-10-25): lands DropDelay s later on the aimed point within Reach,
         /// hurts and stuns every enemy hero and minion within DropRadius with a clear line from it.</summary>
         public const float DropDelay = 0.6f, DropRadius = 1.1f, DropCoeff = 1.0f, DropStun = 1.5f;
@@ -71,12 +68,12 @@ namespace BAM.Sim
         public const float QueenRange = 4, QueenThreshold = 0.25f, QueenShieldPercent = 0.08f, QueenDuration = 2, QueenCooldown = 22;
     }
 
-    /// <summary>Knut, Anchor Throw: an anchor on a chain that pulls the first enemy it hits to him and stuns it (the stun
-    /// lasts the pull plus 0.4 s). Tap: at a random enemy hero or minion in reach, no hero first (Rickard 2026-10-27; towers are
-    /// never a special's target). Drag: the aimed way. Passive: his auto attacks slow (Defs).</summary>
+    /// <summary>Knut, Anchor Throw. Tap: Anchor Slam round him (Hero5.cs). Drag: the anchor on a chain, thrown the full
+    /// HookDistance the aimed way; it pulls the first enemy it touches (hero, minion, Fenn's wolf or decoy, never a tower) to him
+    /// and stuns it for the pull plus 0.4 s. Passive: his auto attacks slow (Defs).</summary>
     public static class KnutS
     {
-        public const float HookRadius = 0.4f, HookDistance = 6.5f, TapReach = 3.5f, OutSpeed = 14, OutTime = 1.2f, Release = 0.5f;
+        public const float HookRadius = 0.4f, HookDistance = 6.5f, OutSpeed = 14, OutTime = 1.2f, Release = 0.5f;
         public const float PullSpeed = 15, StunAfter = 0.4f, DamageCoeff = 1, CastTime = 0.9f;
         /// <summary>Anchor Slam (the tap since 2026-10-28, Rickard's idea "en slow aoe och den andra hooken"): after a short wind-up
         /// where he stands, every enemy hero and minion round him with a clear line takes the hit and a 40 % slow.</summary>
@@ -236,39 +233,6 @@ namespace BAM.Sim
                 }
             if (areaBuf.Count == 0) { p.Done = true; return; }
             p.Tgt = PickRandom(areaBuf); p.Dmg *= BramS.BounceCoeff; p.X = t.X; p.Y = t.Y;
-        }
-
-        /// <summary>The old dragged throw (until 2026-10-28, now Anvil Drop): straight, through every enemy on the line, stops at a
-        /// wall or after LineReach. Nothing casts it any more.</summary>
-        void HammerLineUpdate(Proj p, float dt)
-        {
-            float ox = p.X, oy = p.Y, step = p.Speed * dt;
-            p.X += SimMath.Cos(p.Ang) * step; p.Y += SimMath.Sin(p.Ang) * step; p.D += step;
-            if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
-            if (p.D > BramS.LineReach) { p.Done = true; return; }
-            for (int i = 0; i < Units.Count; i++)
-            {
-                var u = Units[i];
-                if (!Hurtable(p.Src, u) || u.Team == p.Team || p.HasHit(u) || SimMath.Dist(u, p.X, p.Y) > u.R + BramS.LineHitbox) continue;
-                p.AddHit(u);
-                SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
-            }
-        }
-
-        /// <summary>The old passive Anvil Strike (until 2026-10-28, now Backlash, Hero5.cs): every 4th auto attack also hit everyone
-        /// (not towers) around its target for half its damage. Nothing calls it any more.</summary>
-        void BramPassive(Unit h, Unit t, Proj p)
-        {
-            if (++h.PassHits < BramS.PassiveEvery) return;
-            h.PassHits = 0;
-            areaBuf.Clear();
-            for (int i = 0; i < Units.Count; i++)
-            {
-                var u = Units[i];
-                if (u != t && Hurtable(h, u) && SimMath.Dist(u, t) <= BramS.PassiveRadius + u.R) areaBuf.Add(u);
-            }
-            for (int i = 0; i < areaBuf.Count; i++) if (areaBuf[i].Alive) SpecialHit(h, areaBuf[i], p.Dmg * BramS.PassiveCoeff, ProjKind.BramHammer, false, DmgKind.Passive);
-            Emit(EventType.Explosion, h, t, BramS.PassiveRadius, (byte)ProjKind.BramHammer, false, t.X, t.Y, DmgKind.Passive);
         }
 
         // ---------- Fenn ----------
@@ -614,7 +578,11 @@ namespace BAM.Sim
             if (p.Out)
             {
                 float k = SimMath.Clamp(p.T / KnutS.OutTime, 0, 1), sp = SimMath.Lerp(KnutS.OutSpeed, 0, k);
+                float ox = h.X + ca * p.D, oy = h.Y + sa * p.D;
                 p.D += sp * dt; p.X = h.X + ca * p.D; p.Y = h.Y + sa * p.D;
+                // a wall on this tick's path (swept as the other shots, so it never slips a corner): the anchor stops before it
+                bool wall = Map.ShotBlocked(ox, oy, p.X, p.Y);
+                if (wall) { p.D -= sp * dt; p.X = ox; p.Y = oy; }
                 Unit hit = null;
                 for (int i = 0; i < Units.Count; i++)
                 {
@@ -630,13 +598,15 @@ namespace BAM.Sim
                     if (!free)
                     {
                         Emit(EventType.Pull, h, hit, 0, (byte)p.Kind, false, hit.X, hit.Y);
-                        if (hit.Alive) AddStatus(hit, St.Stun, Math.Max(0, p.D - back) / KnutS.PullSpeed + KnutS.StunAfter, 0, 0, h);
+                        float pull = Math.Max(0, p.D - back) / KnutS.PullSpeed;
+                        if (hit.Alive) AddStatus(hit, St.Stun, pull + KnutS.StunAfter, 0, 0, h);
+                        AddStatus(h, St.Casting, pull); // he stands till the catch is in, so it never trails a walking Knut
                     }
                 }
-                else if (p.D >= KnutS.HookDistance || k >= 1 || Map.WallAt(p.X, p.Y))
+                else if (p.D >= KnutS.HookDistance || k >= 1 || wall)
                 {
                     p.Out = false; h.RemoveAll(St.Channel);
-                    if (Map.WallAt(p.X, p.Y)) Blocked(p, p.X, p.Y);
+                    if (wall) Blocked(p, p.X, p.Y);
                 }
             }
             else
