@@ -453,9 +453,12 @@ namespace BAM.Game
                 {
                     var a = e.A;
                     V(a)?.PlayAttack(e.V);
+                    // a swing by a hider the player cannot see is not heard: attacking does not reveal, only a hit does (BONK-09)
+                    bool heard = m.IsVisibleTo(a, Mine);
                     // Bonk's club has no shot: it lands e.V s later as an Explosion of ProjKind.BonkClub (cracks and dust)
-                    if ((ProjKind)e.Kind == ProjKind.BonkClub) { Sound(SfxId.BonkSlamWindup, a, e.Big ? 0.8f : 0.55f); break; }
+                    if ((ProjKind)e.Kind == ProjKind.BonkClub) { if (heard) Sound(SfxId.BonkSlamWindup, a, e.Big ? 0.8f : 0.55f); break; }
                     pending.Add(new Pending { A = a.Serial, Src = a, Tgt = e.B, Kind = (ProjKind)e.Kind });
+                    if (!heard) break;
                     // a tower's shot is heard only when it aims at you (Speltest), sharper from its third shot in a row on you, as its
                     // damage ramps up (Speltest towerHot at towerStreak 2; the rules' TowerRamp resets after TowerRampReset)
                     if (a.Kind == UnitKind.Tower && e.B == m.Player)
@@ -481,7 +484,8 @@ namespace BAM.Game
                         : kind == ProjKind.BramHammerSpecial ? FxKind.Bounce
                         : kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial ? FxKind.Hit
                         : e.Big ? FxKind.HitBig : FxKind.Hit;
-                    ArtKit.PlayFx(fx, at, b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f, b != null ? Side(b.Team) : 0, HeroOf(e.A));
+                    float hs = (b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f) * (e.A != null && e.A.Kind == UnitKind.Minion ? 0.6f : 1f); // VIS-03
+                    ArtKit.PlayFx(fx, at, hs, b != null ? Side(b.Team) : 0, HeroOf(e.A));
                     if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? Side(b.Team) : 0);
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
                         : b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
@@ -577,10 +581,10 @@ namespace BAM.Game
                     }
                     break;
                 case EventType.CloneSpawn:
-                    if (e.A != null) { ArtKit.PlayFx(FxKind.CloneSpawn, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneAppear, Coords.Of(e.A)); }
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) { ArtKit.PlayFx(FxKind.CloneSpawn, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneAppear, Coords.Of(e.A)); } // FENN-09
                     break;
                 case EventType.CloneEnd:
-                    if (e.A != null) { ArtKit.PlayFx(FxKind.CloneEnd, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneVanish, Coords.Of(e.A)); }
+                    if (e.A != null && unitBySerial.TryGetValue(e.A.Serial, out UnitRec cv) && cv.Vis > 0f) { ArtKit.PlayFx(FxKind.CloneEnd, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneVanish, Coords.Of(e.A)); } // FENN-09
                     break;
                 case EventType.WolfSummon:
                     if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.WolfSummon, Coords.Of(e.A), 1f, Side(e.A.Team));
@@ -601,6 +605,7 @@ namespace BAM.Game
                     Vector3 at = Coords.World(e.X, e.Y);
                     float size = Mathf.Max(0.5f, e.V);
                     var pk = (ProjKind)e.Kind;
+                    if (pk == ProjKind.BonkClub && e.A != null && !m.IsVisibleTo(e.A, Mine)) break; // BONK-09
                     // Bram's passive (every 4th hammer) is the heavy anvil blow, Blast's Chain Reaction its own crack, not a bomb
                     bool bonk = pk == ProjKind.BonkSlam || pk == ProjKind.BonkClub || pk == ProjKind.OakenSlam; // Oaken's fists into the ground borrow Bonk's cracks and dust until he has his own
                     // Bram's Anvil Drop and Knut's Anchor Slam (Simon's reworks) get their own heroes' blows, not Blast's fireball

@@ -221,7 +221,7 @@ namespace BAM.Art
             lastPos = transform.position;
             vis.localScale = Vector3.one;
             Place(0f);
-            if (trail != null) { trail.Clear(); trail.emitting = ArtKit.High; }
+            if (trail != null) { trail.Clear(); trail.emitting = true; } // VIS-06: on Low too, the thin shots need their trail to be seen
             if (melee)
             {
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, arc ? arcColor : WithAlpha(visR.sharedMaterial.GetColor(ArtMaterials.BaseColor), 1f));

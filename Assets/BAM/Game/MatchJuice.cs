@@ -85,7 +85,8 @@ namespace BAM.Game
                     {
                         // Bonk's club into the ground shakes the screen a little when it is near (Rickard 2026-10-26)
                         var k = (ProjKind)e.Kind;
-                        if ((k == ProjKind.BonkSlam || k == ProjKind.BonkClub) && p.Alive)
+                        // a club swung from where the player cannot see Bonk (a miss in grass) shakes nothing: swinging does not reveal (BONK-09)
+                        if ((k == ProjKind.BonkSlam || k == ProjKind.BonkClub) && p.Alive && (e.A == null || m.IsVisibleTo(e.A, p.Team)))
                         {
                             float dx = e.X - p.X, dy = e.Y - p.Y;
                             if (dx * dx + dy * dy < 36f)
