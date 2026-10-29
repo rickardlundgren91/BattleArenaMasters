@@ -8,4 +8,12 @@
   <assembly fullname="BAM.UI" preserve="all" ignoreIfMissing="1" />
   <assembly fullname="BAM.Analytics" preserve="all" ignoreIfMissing="1" />
   <assembly fullname="BAM.Game" preserve="all" ignoreIfMissing="1" />
+  <!-- online (0.2): Unity's services read their server answers into classes by reflection (Newtonsoft); keep those whole so a
+       stripped constructor or property never turns a good answer into an error on the phone -->
+  <assembly fullname="BAM.Online" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="Unity.Services.Friends" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="Unity.Services.CloudCode" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="Unity.Services.Lobbies" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="Unity.Services.Relay" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="Unity.Services.Leaderboards" preserve="all" ignoreIfMissing="1" />
 </linker>

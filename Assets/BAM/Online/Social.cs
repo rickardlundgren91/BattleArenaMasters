@@ -109,19 +109,33 @@ namespace BAM.Online
             if (string.Equals(name, Account.Name, StringComparison.OrdinalIgnoreCase)) return "That is you";
             string id = await Server.FindPlayer(name);
             if (id == null) return "No player is called " + name;
-            return await Run(() => FriendsService.Instance.AddFriendAsync(id), "Friend request sent", "Could not send the request");
+            if (id == PlayerIdNow) return "That is you";
+            return await Run(() => FriendsService.Instance.AddFriendAsync(id), "Friend request sent", "Could not send the request", id);
         }
 
-        public static Task<string> AddById(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend request sent", "Could not send the request");
-        public static Task<string> Accept(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend added", "Could not add friend");
+        public static Task<string> AddById(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend request sent", "Could not send the request", playerId);
+        public static Task<string> Accept(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend added", "Could not add friend", playerId);
         public static Task<string> Decline(string playerId) => Run(() => FriendsService.Instance.DeleteIncomingFriendRequestAsync(playerId), null, "Could not decline");
         public static Task<string> Cancel(string playerId) => Run(() => FriendsService.Instance.DeleteOutgoingFriendRequestAsync(playerId), null, "Could not cancel");
         public static Task<string> Remove(string playerId) => Run(() => FriendsService.Instance.DeleteFriendAsync(playerId), null, "Could not remove friend");
         public static Task<string> Block(string playerId) => Run(() => FriendsService.Instance.AddBlockAsync(playerId), "Blocked", "Could not block");
         public static Task<string> Unblock(string playerId) => Run(() => FriendsService.Instance.DeleteBlockAsync(playerId), null, "Could not unblock");
 
-        // the call is made here, after the check: FriendsService.Instance throws before the service has started
-        static async Task<string> Run(Func<Task> call, string ok, string fail)
+        static string PlayerIdNow { get { try { return AuthenticationService.Instance.PlayerId; } catch (Exception) { return null; } } }
+
+        // Friends knows a request or friendship with this player (its own lists, kept up to date by its events)
+        static bool Linked(string playerId)
+        {
+            var s = FriendsService.Instance;
+            foreach (var r in s.OutgoingFriendRequests) if (r.Member != null && r.Member.Id == playerId) return true;
+            foreach (var r in s.Friends) if (r.Member != null && r.Member.Id == playerId) return true;
+            return false;
+        }
+
+        // the call is made here, after the check: FriendsService.Instance throws before the service has started.
+        // target: an add or accept. The request can reach the other player while the answer to us fails (Rickard 2026-10-29:
+        // "Could not send the request", yet FUL got it), so after an error we look whether Friends now knows the link before saying so.
+        static async Task<string> Run(Func<Task> call, string ok, string fail, string target = null)
         {
             if (!active) return "Friends is not available right now";
             try
@@ -132,8 +146,16 @@ namespace BAM.Online
             }
             catch (Exception e)
             {
-                Debug.LogWarning("[BAM.Online] friends: " + e.Message);
-                return fail;
+                Debug.LogWarning("[BAM.Online] friends: " + e);
+                if (target != null)
+                    for (int i = 0; i < 6; i++)
+                    {
+                        try { if (Linked(target)) { if (ok != null) Say?.Invoke(ok); return null; } } catch (Exception) { }
+                        await Task.Delay(250);
+                    }
+                string why = e.Message ?? "";
+                if (why.Length > 60) why = why.Substring(0, 60) + "…";
+                return why.Length > 0 ? fail + " (" + why + ")" : fail;
             }
             finally
             {
