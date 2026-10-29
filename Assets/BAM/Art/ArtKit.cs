@@ -199,6 +199,7 @@ namespace BAM.Art
             Object.DontDestroyOnLoad(go);
             root = go.transform;
             go.AddComponent<ArtDriver>();
+            go.AddComponent<ShaderWarm>(); // PERF-04: builds the recorded shader states in the menu (Resources/BAMArt/Shaders)
 
             ArtMaterials.Init();
             TrailMaterial = ArtMaterials.Instance(ArtMaterials.ParticleAdd);
@@ -498,6 +499,7 @@ namespace BAM.Art
             SetPaused(false);
             slow = 1f;
             if (ready) Fx.ClearAll();
+            ShaderWarm.MatchEnded();
         }
     }
 }

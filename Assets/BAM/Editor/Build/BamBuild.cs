@@ -44,6 +44,15 @@ namespace BAM.Build
             BuildApk(true);
         }
 
+        // PERF-04: a test APK that records every shader state one match draws and sends the list to this editor at the match's
+        // end (ShaderWarm.cs). Play one full match on Low and one on High, phone connected, until the Console says each arrived.
+        [MenuItem("BAM/Build shader recording APK and run on phone (USB)", priority = 24)]
+        static void BuildTraceApkMenu()
+        {
+            if (!Prepare()) return;
+            BuildApk(true, new[] { "BAM_SHADER_TRACE" });
+        }
+
         [MenuItem("BAM/Open Builds folder", priority = 40)]
         static void OpenFolderMenu()
         {
@@ -158,7 +167,7 @@ namespace BAM.Build
         }
 
         // Development APK signed with Unity's debug key: installs on a phone directly, can never go to Play.
-        static void BuildApk(bool run)
+        static void BuildApk(bool run, string[] defines = null)
         {
             string file = Path.Combine(OutputDir(), "BAM-" + BamVersion.Name + "-test.apk");
             bool ok;
@@ -168,7 +177,7 @@ namespace BAM.Build
                 EditorUserBuildSettings.buildAppBundle = false;
                 var options = BuildOptions.Development;
                 if (run) options |= BuildOptions.AutoRunPlayer;
-                ok = Run(file, options, "test APK");
+                ok = Run(file, options, defines != null ? "shader recording APK" : "test APK", defines);
             }
             finally
             {
@@ -181,7 +190,7 @@ namespace BAM.Build
                 EditorUtility.DisplayDialog("APK klar", "Filen finns här:\n" + file, "OK");
         }
 
-        static bool Run(string file, BuildOptions options, string what)
+        static bool Run(string file, BuildOptions options, string what, string[] defines = null)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(file));
             var bpo = new BuildPlayerOptions
@@ -191,6 +200,7 @@ namespace BAM.Build
                 target = BuildTarget.Android,
                 targetGroup = BuildTargetGroup.Android,
                 options = options,
+                extraScriptingDefines = defines,
             };
 
             Debug.Log("[BAM.Build] Building " + what + " -> " + file);

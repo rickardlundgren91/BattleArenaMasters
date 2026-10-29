@@ -273,7 +273,7 @@ namespace BAM.Art
                 r.sharedMaterials = ms;
                 r.shadowCastingMode = ShadowCastingMode.Off;
                 r.receiveShadows = false;
-                if (r is SkinnedMeshRenderer sk) sk.updateWhenOffscreen = true;
+                if (r is SkinnedMeshRenderer sk) FixedBounds(sk);
                 r2[rends.Length + i] = r; o2[rends.Length + i] = ms; f2[rends.Length + i] = ms;
             }
             rends = r2; opaqueSets = o2; fadeSets = f2;
@@ -295,6 +295,29 @@ namespace BAM.Art
             wolfWalk.SetSpeed(0.0);
             output.SetSourcePlayable(wolfWalk);
             graph.Play();
+        }
+
+        // PERF-03: a skinned body no longer works out its bounds from its bones every frame (updateWhenOffscreen), on or off screen.
+        // It gets one fixed box instead, round its root bone (the box moves and turns with it), reaching 1.5 times as far as the
+        // farthest point of the mesh in the pose it was made in, in every direction. Mixamo and Meshy rigs only turn their bones
+        // (no stretch), and a T-pose already has arms and legs at full length, so no swing or cast can take a vertex outside the
+        // box: the body is never culled while any part of it is on screen (every attack visible). Held weapons are their own
+        // renderers with their own bounds. Animators stay AlwaysAnimate, so a body coming on screen is already in the right pose.
+        static void FixedBounds(SkinnedMeshRenderer sk)
+        {
+            Mesh m = sk.sharedMesh;
+            Transform space = sk.rootBone != null ? sk.rootBone : sk.transform;
+            if (m == null) { sk.updateWhenOffscreen = true; return; }
+            Bounds mb = m.bounds;
+            float far = 0f;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 c = mb.center + Vector3.Scale(mb.extents, new Vector3((i & 1) != 0 ? 1f : -1f, (i & 2) != 0 ? 1f : -1f, (i & 4) != 0 ? 1f : -1f));
+                far = Mathf.Max(far, space.InverseTransformPoint(sk.transform.TransformPoint(c)).magnitude);
+            }
+            if (!(far > 1e-4f) || float.IsInfinity(far)) { sk.updateWhenOffscreen = true; return; } // a mesh that makes no sense: as before
+            sk.updateWhenOffscreen = false;
+            sk.localBounds = new Bounds(Vector3.zero, Vector3.one * (2f * 1.5f * far));
         }
 
         // Rickard's model: scaled to the hero's height, feet on the ground, his texture on our lit material (so the hit flash
@@ -347,7 +370,7 @@ namespace BAM.Art
                 }
                 rends[i].sharedMaterials = opaqueSets[i];
                 rends[i].receiveShadows = true;
-                if (rends[i] is SkinnedMeshRenderer sk) sk.updateWhenOffscreen = true; // attacks must always show, even at the screen edge
+                if (rends[i] is SkinnedMeshRenderer sk) FixedBounds(sk); // attacks must always show, even at the screen edge
             }
             mats = all.ToArray();
             fadeMats = fades.ToArray();
