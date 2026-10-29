@@ -203,6 +203,22 @@ namespace BAM.Art.Editor
             new Spec { Hero = "Oaken", Model = "Oaken/Oaken", Idle = "Oaken/Anim/Idle", Run = "Oaken/Anim/Run", Attack = "Oaken/Anim/Attack1", Cast = "Oaken/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.49f },
         };
 
+        // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original
+        // (Models/FennOriginal, his Meshy body rigged in Mixamo, with the right leg's ankle and foot weights mirrored from the left
+        // since Mixamo had put that ankle on the toes) or the Clay body (Models/Fenn). Original unless BAM > Art > Fenn: Clay is
+        // picked on this computer; the choice is remembered per computer and the hero list is built again at once.
+        const string FennClayPref = "BAM.Art.FennClay";
+        static string ModelOf(Spec s) => s.Hero == "Fenn" && !EditorPrefs.GetBool(FennClayPref, false) ? "FennOriginal/Fenn" : s.Model;
+
+        [MenuItem("BAM/Art/Fenn: Original")]
+        static void FennOriginal() { EditorPrefs.SetBool(FennClayPref, false); Rebuild(); }
+        [MenuItem("BAM/Art/Fenn: Original", true)]
+        static bool FennOriginalCheck() { Menu.SetChecked("BAM/Art/Fenn: Original", !EditorPrefs.GetBool(FennClayPref, false)); return true; }
+        [MenuItem("BAM/Art/Fenn: Clay")]
+        static void FennClay() { EditorPrefs.SetBool(FennClayPref, true); Rebuild(); }
+        [MenuItem("BAM/Art/Fenn: Clay", true)]
+        static bool FennClayCheck() { Menu.SetChecked("BAM/Art/Fenn: Clay", EditorPrefs.GetBool(FennClayPref, false)); return true; }
+
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
         // the hero list was not built yet on this computer.
         [InitializeOnLoadMethod]
@@ -216,7 +232,7 @@ namespace BAM.Art.Editor
                 foreach (Spec s in specs)
                 {
                     var art = AssetDatabase.LoadAssetAtPath<HeroArt>(OutOf(s) + "/" + s.Hero + ".asset");
-                    if (art == null || art.Model == null || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
+                    if (art == null || art.Model == null || art.Model != AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + ModelOf(s) + ".fbx") || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
                         || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null) { BuildAll(); return; }
                 }
             };
@@ -228,7 +244,7 @@ namespace BAM.Art.Editor
         {
             var paths = new System.Collections.Generic.HashSet<string>();
             foreach (Spec s in specs)
-                foreach (string p in new[] { s.Model, s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
+                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
                     if (p != null) paths.Add(ModelsDir + p + ".fbx");
             foreach (string p in pool) paths.Add(ModelsDir + p + ".fbx");
             bool any = false;
@@ -259,7 +275,7 @@ namespace BAM.Art.Editor
         static void Rebuild()
         {
             foreach (Spec s in specs)
-                foreach (string p in new[] { s.Model, s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
+                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
                     if (p != null) AssetDatabase.ImportAsset(ModelsDir + p + ".fbx", ImportAssetOptions.ForceUpdate);
             BuildAll();
         }
@@ -270,15 +286,15 @@ namespace BAM.Art.Editor
             int ok = 0;
             foreach (Spec s in specs)
             {
-                var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + s.Model + ".fbx");
-                if (model == null) { Debug.LogWarning("[BAM.Art] " + s.Hero + ": model " + s.Model + ".fbx not found, the code model is used"); continue; }
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + ModelOf(s) + ".fbx");
+                if (model == null) { Debug.LogWarning("[BAM.Art] " + s.Hero + ": model " + ModelOf(s) + ".fbx not found, the code model is used"); continue; }
                 if (!AssetDatabase.IsValidFolder(OutOf(s))) { Directory.CreateDirectory(OutOf(s)); AssetDatabase.Refresh(); }
                 string path = OutOf(s) + "/" + s.Hero + ".asset";
                 var art = AssetDatabase.LoadAssetAtPath<HeroArt>(path);
                 bool isNew = art == null;
                 if (isNew) art = ScriptableObject.CreateInstance<HeroArt>();
                 art.Model = model;
-                art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ModelsDir + s.Model + "_Tex.jpg");
+                art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ModelsDir + ModelOf(s) + "_Tex.jpg");
                 art.Idle = Clip(s.Idle, 0); art.Run = Clip(s.Run, 1); art.Attack = Clip(s.Attack, 2);
                 art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
                 art.Height = s.Height;
