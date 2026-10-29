@@ -780,7 +780,7 @@ namespace BAM.Art
                 // ANIM-07: a minion's as Speltest's (View3DWorld minions: deadT 0.6 s): it tips over to its side, sinks half a tile and
                 // fades over 0.6 s, a puff of dust where it lands. Ours stood through its Dying clip's first 1.3 s and faded from 2 s
                 // (Unity measuring run 2, 2026-10-29)
-                else if (imported && !IsHero && !Preview && def.Kind == RigKind.Humanoid) { deathFadeAt = 0f; deathFade = MinionDie; minionLanded = false; }
+                else if (MinionBody) { deathFadeAt = 0f; deathFade = MinionDie; minionLanded = false; }
             }
             else
             {
@@ -1774,6 +1774,8 @@ namespace BAM.Art
 
         const float HeroSinkAt = 0.6f, HeroSink = 0.9f, HeroFadeAt = 0.8f, HeroFade = 0.5f, MinionDie = 0.6f;
         bool minionLanded;
+        // the minions' imported bodies; the siege goblin keeps the old cart's RigKind (ANIM-07b: it missed the minions' death)
+        bool MinionBody => imported && !IsHero && !Preview && (def.Kind == RigKind.Humanoid || def.Kind == RigKind.Cart);
 
         void AnimateDeath(float dt)
         {
@@ -1791,7 +1793,7 @@ namespace BAM.Art
                     lp.y -= Mathf.Max(0f, deathT - HeroSinkAt) * HeroSink / Mathf.Max(1e-4f, transform.lossyScale.y);
                     model.localPosition = lp;
                 }
-                else if (!IsHero && !Preview && def.Kind == RigKind.Humanoid)
+                else if (MinionBody)
                 {
                     // ANIM-07 (Speltest View3DWorld): over to its side by 85 degrees in the first 45 % of the 0.6 s, sinking 0.5 tiles in the rest
                     float k = Mathf.Clamp01(deathT / MinionDie), fall = Mathf.Clamp01(k / 0.45f);
