@@ -215,6 +215,8 @@ namespace BAM.Game
             if (!inMatch) return; // the back press may have left the match
 
             float dt = Time.deltaTime;
+            // the bodies and effects slow with the hit-stop's ticks below, so a swing never lands before its shot (offline only)
+            BAM.Art.ArtKit.SetSlow(net == null && !paused && !over && juice.Stopping ? 0.1f : 1f);
             if (net != null && !over) NetTicks(dt);
             else if (!paused && !over)
             {

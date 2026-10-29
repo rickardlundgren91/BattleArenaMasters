@@ -338,8 +338,10 @@ namespace BAM.Art
         Vector3 cScale; float cLen; // its placed size and the Len it was placed at, so a tuned Len scales it live
         float kickIn = -1f, kickT = -1f, deadT;
         float figH;
-        // thrown
-        float hideIn = -1f, backIn = -1f;
+        // thrown: when the weapon leaves the hand, how long it stays away, and whether a weapon that is not Thrown goes too (Throw)
+        float hideIn = -1f, backIn = -1f, awayFor = AwayFor;
+        bool hideHeld;
+        int hideSide;
         const float AwayFor = 0.45f, PopIn = 0.15f;
         // AnimFix.FixedGrip, measured in the idle (MeasureRest): which way each weapon's flat side faced, kept so the rest aim never
         // flips half a turn as the fist turns (Tikta's needles turned up to 178 degrees in her fists every step), and where each
@@ -510,17 +512,42 @@ namespace BAM.Art
         /// <summary>Back in the hand, for a fresh life out of the pool.</summary>
         public void Reset()
         {
-            hideIn = -1f; backIn = -1f;
+            hideIn = -1f; backIn = -1f; hideHeld = false; hideSide = 0;
             for (int i = 0; i < wT.Length; i++) if (wT[i] != null) wT[i].localScale = bindS[i];
             kickIn = -1f; kickT = -1f; deadT = 0f;
             if (cT != null) cT.localPosition = cAt;
         }
 
-        /// <summary>A thrown weapon leaves the hand after <paramref name="delay"/> seconds (the release).</summary>
-        public void Throw(float delay)
+        /// <summary>A thrown weapon leaves the hand after <paramref name="delay"/> seconds (the release) and is back in it about
+        /// <paramref name="away"/> seconds later. <paramref name="held"/>: a weapon that is not Thrown goes too (Knut's anchor on the
+        /// hook, Tikta's needle); the next throw without it (a swing) puts it back in the fist at once. <paramref name="side"/>: only
+        /// the right hand's (1) or the left's (-1), 0 both.</summary>
+        public void Throw(float delay, float away = AwayFor, bool held = false, int side = 0)
         {
             hideIn = Mathf.Max(0f, delay);
             backIn = -1f;
+            awayFor = Mathf.Max(PopIn, away);
+            hideHeld = held;
+            hideSide = side;
+        }
+
+        /// <summary>Where a shot leaves this gear now (world space): the cannon's mouth; with a <paramref name="bow"/> the arrow at its
+        /// grip; a thrown bomb in the palm; else the head of the weapon, its end away from the fist (the hammer's, the anchor's flukes, a
+        /// needle's point), in the <paramref name="right"/> hand if there is one in each. False without a weapon.</summary>
+        public bool ShotFrom(bool bow, bool right, out Vector3 at)
+        {
+            if (Mouth(out at)) return true;
+            int i = -1;
+            for (int k = 0; k < wT.Length; k++)
+                if (wT[k] != null && (i < 0 || defs[k].Left != right)) i = k;
+            if (i < 0) return false;
+            WeaponDef W = defs[i];
+            Transform t = wT[i];
+            if (W.Thrown) { at = hand[i].TransformPoint(palmL[i]); return true; } // the bomb in the palm, also once it has left
+            float y = bow ? gripL[i].y : W.Grip >= 0.5f ? meshH[i] * 0.1f : meshH[i] * 0.9f;
+            // in the weapon's own space at its placed size, so a needle already flashed away (scaled to 0) still gives its point
+            at = t.parent.TransformPoint(t.localPosition + t.localRotation * Vector3.Scale(bindS[i], new Vector3(shaftC[i].x, y, shaftC[i].z)));
+            return true;
         }
 
         /// <summary>A cannon kicks back as its shot leaves, after <paramref name="delay"/> seconds (the blow).</summary>
@@ -544,7 +571,7 @@ namespace BAM.Art
             if (hideIn >= 0f)
             {
                 hideIn -= dt;
-                if (hideIn < 0f) { hideIn = -1f; backIn = AwayFor; }
+                if (hideIn < 0f) { hideIn = -1f; backIn = awayFor; }
             }
             if (backIn >= 0f)
             {
@@ -560,7 +587,8 @@ namespace BAM.Art
                 if (t == null) continue;
                 WeaponDef W = defs[i];
                 if (W.Len != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
-                if (W.Thrown) t.localScale = bindS[i] * show;
+                if ((W.Thrown || hideHeld) && (hideSide == 0 || hideSide > 0 != W.Left)) t.localScale = bindS[i] * show;
+                else if (t.localScale != bindS[i]) t.localScale = bindS[i]; // a held weapon put back by a swing during its throw
                 float rest = dead ? 0f : 1f - Mathf.Clamp01(actW);
                 if (W.HoldUp == 0f || dead) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
                 else if (AnimFix.FixedGrip) Steady(i, W, rest);

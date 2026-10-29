@@ -49,6 +49,9 @@ namespace BAM.Art
         public abstract void PlayAttack(float windup);
         /// <summary>The special is cast.</summary>
         public abstract void PlayCast();
+        /// <summary>The special is cast, tapped or dragged (the Cast event's Big): a view that times the gesture by form (a slam lands
+        /// later than a throw) takes it, the rest play the cast.</summary>
+        public virtual void PlayCast(bool drag) => PlayCast();
         /// <summary>Took damage. big = a crit-like hit (passive bonus, special).</summary>
         public abstract void PlayHit(bool big);
         /// <summary>Died (play the death and hide) or came back (respawn).</summary>
@@ -80,7 +83,10 @@ namespace BAM.Art
         /// field's shield and Queen's Instinct. A ring of hex cells at the feet that go dark as the shield is used. Call it only while
         /// the player can see the unit.</summary>
         public virtual void SetHoneyShields(float guard, float field, float queen) { }
-        /// <summary>Where a held gun's mouth is now (Hilde's cannon), for her shots and kegs to leave from; false for the rest.</summary>
+        /// <summary>Where a hero's shot leaves its hand now (world space, at its height), for the shot's first drawn point (SHOT-02):
+        /// Hilde's cannon mouth, the arrow on Tyra's bow, Blast's bomb, the head of a held weapon (Bram's hammer, Knut's anchor, the
+        /// needle in the fist Tikta throws with), Moa's casting hand, Bonk's boulder between his hands. False for the rest (minions,
+        /// towers, the wolf, code figures).</summary>
         public virtual bool Muzzle(out Vector3 at) { at = Vector3.zero; return false; }
     }
 
@@ -142,8 +148,16 @@ namespace BAM.Art
         static readonly List<Renderer> casters = new List<Renderer>(64);
 
         static bool paused;
-        /// <summary>The art layer's frame time: 0 while the game is paused, so warnings, zones, shots and effects wait with the sim.</summary>
-        internal static float Dt => paused ? 0f : Time.deltaTime;
+        static float slow = 1f;
+        /// <summary>The art layer's frame time: 0 while the game is paused and slowed with the rules in a hit-stop, so warnings, zones,
+        /// shots and effects wait with the sim.</summary>
+        internal static float Dt => paused ? 0f : Time.deltaTime * slow;
+        /// <summary>How fast the picture runs against the clock: 1, or less in a hit-stop while the rules' ticks come slower.</summary>
+        internal static float Slow => slow;
+
+        /// <summary>The hit-stop feeds the rules' ticks at k of the clock (GameFlow, MatchJuice.Stopping; 1 = normal): the bodies, shots
+        /// and effects go as slow, so a swing never lands before its shot leaves (CHAINMAP-07: they ran on at full speed).</summary>
+        public static void SetSlow(float k) => slow = Mathf.Clamp01(k);
 
         /// <summary>The game was paused or resumed (GameFlow.Pause/Resume): freezes the one-shot effects, particles, zones and shots.</summary>
         public static void SetPaused(bool on)
@@ -465,10 +479,11 @@ namespace BAM.Art
             if (c.transform.parent != root) c.transform.SetParent(root, false);
         }
 
-        /// <summary>Clears running particles and rings and lifts a pause (GameFlow.Teardown, after MatchViews.Dispose).</summary>
+        /// <summary>Clears running particles and rings and lifts a pause and a hit-stop (GameFlow.Teardown, after MatchViews.Dispose).</summary>
         public static void ClearEffects()
         {
             SetPaused(false);
+            slow = 1f;
             if (ready) Fx.ClearAll();
         }
     }

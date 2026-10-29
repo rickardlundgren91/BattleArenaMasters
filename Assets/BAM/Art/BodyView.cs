@@ -83,6 +83,9 @@ namespace BAM.Art
         float atkCarry, castCarry, lastAtkW, lastCastW;
         bool atkSeg, castSeg, clipsInfo;
         float atkFrom, atkBlow, atkTo, castFrom, castBlowAt, castTo;
+        // the special's form (dragged or tapped), its clip's peak and the pace of the clip up to it (CastSegment)
+        bool castDrag;
+        float castPeak, castPre = CastRate;
         // (2026-10-28, after Rickard's test) the recovery's pace and fade-out, the special's fade-out, the time between the last two
         // swings, and how far Tyra turns so her arrow points at the target; her archer's stance between shots (a second copy of her
         // shot clip, see Stance) and how much it shows
@@ -421,8 +424,29 @@ namespace BAM.Art
         /// <summary>The model's height in world units as it was fitted (the hero's height in tiles), for the menu stages.</summary>
         internal float ShownHeight => def != null ? def.Height * transform.lossyScale.y : 1.8f;
 
-        /// <summary>Where Hilde's cannon mouth is now (HeldGear), for her shot to leave from; false for every other view.</summary>
-        public override bool Muzzle(out Vector3 at) => CannonMouth(out at);
+        /// <summary>Where a hero's shot leaves its hand now (UnitView.Muzzle, SHOT-02): Hilde's cannon mouth; Bonk's boulder between his
+        /// hands; Moa's casting hand; else the held weapon's head (HeldGear.ShotFrom: the bow's arrow, the bomb, the hammer, anchor or
+        /// the needle in the throwing fist), else that fist. False for minions, towers, the wolf and code figures.</summary>
+        public override bool Muzzle(out Vector3 at)
+        {
+            if (CannonMouth(out at)) return true;
+            if (HeroIndex < 0 || anim == null || !anim.isHuman) return false;
+            Transform l = anim.GetBoneTransform(HumanBodyBones.LeftHand), r = anim.GetBoneTransform(HumanBodyBones.RightHand);
+            if (l == null || r == null) return false;
+            var h = (HeroId)HeroIndex;
+            if (h == HeroId.Bonk) { at = (l.position + r.position) * 0.5f; return true; }
+            bool right = ThrowsRight(castT >= 0f && (atkT < 0f || castT < atkT) ? CCast : CAttack);
+            if (h != HeroId.Moa && gear != null && gear.ShotFrom(bowHero, right, out at)) return true;
+            at = right ? r.position : l.position;
+            return true;
+        }
+
+        // the hand that throws in a clip: the faster one at its measured blow (Tikta's needles, Moa's honey); the right without a measure
+        bool ThrowsRight(int slot)
+        {
+            ClipInfo ci = clips != null && AnimFix.BlowTiming ? Info(clips[slot].GetAnimationClip()) : null;
+            return ci == null || ci.Right;
+        }
 
         internal bool CannonMouth(out Vector3 at)
         {
@@ -530,7 +554,13 @@ namespace BAM.Art
                 atkTotal = Phased(HeroIndex) ? windup + atkHold + atkRec : Mathf.Min((len - atkStart) / atkSpeed, windup + 0.45f);
                 if (AnimFix.BlowTiming && !Phased(HeroIndex)) BlowSegment(len);
             }
-            if (gear != null) { gear.Throw(windup); gear.Fire(windup); }
+            if (gear != null)
+            {
+                // a bomb leaves the hand as the shot leaves it; Tikta's needle leaves the fist she throws with for a moment (TIKTA-06)
+                if (HeroIndex == (int)HeroId.Tikta) gear.Throw(windup, 0.1f, true, ThrowsRight(CAttack) ? 1 : -1);
+                else gear.Throw(windup);
+                gear.Fire(windup);
+            }
         }
 
         // AnimFix.BlowTiming: the part of the clip round its measured blow (old Speltest's own attacks: from, hit, to). The windup
@@ -571,10 +601,13 @@ namespace BAM.Art
         // (aimYaw) and stays in her archer's stance between shots (Stance)
         bool Bow => IsHero && bowHero && AnimFix.BlowTiming;
 
-        public override void PlayCast()
+        public override void PlayCast() => PlayCast(false);
+
+        public override void PlayCast(bool drag)
         {
             castT = 0f;
             castCarry = lastCastW;
+            castDrag = drag;
             if (IsHero && !dead && vis > 0.01f) Fx.HeroCast(HeroIndex, transform.position); // never gives a hider away
             castSeg = false;
             if (clips != null)
@@ -584,24 +617,52 @@ namespace BAM.Art
                 double c0 = castSeg ? castFrom : 0.0;
                 clips[CCast].SetTime(c0); clips[CCast].SetTime(c0); upCast.SetTime(c0); upCast.SetTime(c0);
             }
-            if (gear != null) gear.Throw(clips != null ? castBlowAt : castLen * 0.35f);
+            if (gear != null) ThrowOnCast(clips != null ? castBlowAt : castLen * 0.35f);
         }
 
-        // AnimFix.BlowTiming: the special takes effect when it is cast, so its clip starts just before its own measured peak (a
-        // tenth of a second of lead) instead of at 0, where Moa's, Blast's and Tyra's casts were cut off before their gesture; at
-        // least a quarter of a second passes after the peak (the clip holding its end), so the fade-out never starts before it
+        // what leaves the hand at the cast's peak: Blast's bomb (Thrown), and Knut's anchor only on the hook (the drag), for about as
+        // long as he casts: his fist kept a second anchor while the chained one flew. The tapped slam keeps it in his fist (KNUT-03).
+        void ThrowOnCast(float at)
+        {
+            if (HeroIndex == (int)HeroId.Knut) { if (castDrag) gear.Throw(at, KnutS.CastTime, true); }
+            else gear.Throw(at);
+        }
+
+        // seconds from the cast to its gesture's peak: the rules' wind-up for a special that lands later (the slams of Knut, Bonk and
+        // Oaken, Tyra's arrows, Bonk's boulder, Oaken's quake), so the blow never shows before the hit; a tenth of a second for one
+        // that takes effect at once
+        float CastLead()
+        {
+            switch ((HeroId)HeroIndex)
+            {
+                case HeroId.Tyra: return castDrag ? TyraS.Windup : TyraS.VolleyWindup;
+                case HeroId.Knut: return castDrag ? 0.12f : KnutS.SlamWindup;
+                case HeroId.Bonk: return castDrag ? BonkS.BoulderWindup : BonkS.SlamWindup;
+                case HeroId.Oaken: return castDrag ? OakenS.QuakeWindup : OakenS.SlamWindup;
+                default: return 0.12f;
+            }
+        }
+
+        // AnimFix.BlowTiming: the clip starts before its own measured peak so the peak comes as the special takes effect (CastLead),
+        // instead of at 0, where Moa's, Blast's and Tyra's casts were cut off before their gesture; a clip with too little before its
+        // peak for a long wind-up plays that part slower (Oaken's slam waits 0.6 s). Tyra's cast is a held draw: her arrows leave at
+        // full draw, as her shot's. At least a quarter of a second passes after the peak (the clip holding its end), so the fade-out
+        // never starts before it
         void CastSegment()
         {
             float len = clipLen[CCast];
             ClipInfo ci = Info(clips[CCast].GetAnimationClip());
             float blow = ci != null && ci.Blow > 0f ? ci.Blow : 0.4f * len;
-            float lead = HeroIndex == (int)HeroId.Bonk ? 0.25f : 0.12f;
+            if (Bow && ci != null && ci.Draw > 0f) blow = ci.Draw;
+            float lead = CastLead();
             castFrom = Mathf.Max(0f, blow - lead * CastRate);
             // played on until the body is back up, as the attack (at most 1.2 s of the clip after its peak)
             castTo = Mathf.Min(len, ci != null && ci.Settle > blow ? Mathf.Min(ci.Settle, blow + 1.2f) : blow + 0.6f);
             if (castTo - castFrom < 0.1f) return;
-            castBlowAt = (blow - castFrom) / CastRate;
-            float play = (castTo - castFrom) / CastRate;
+            castPeak = blow;
+            castPre = lead > 0.01f && blow > castFrom ? (blow - castFrom) / lead : CastRate;
+            castBlowAt = (blow - castFrom) / castPre;
+            float play = castBlowAt + Mathf.Max(0f, castTo - blow) / CastRate;
             castLen = Mathf.Max(play, castBlowAt + 0.35f);
             castFade = Mathf.Clamp(Mathf.Max((castLen - castBlowAt) * 0.4f, castLen - play), 0.12f, 0.35f);
             castSeg = true;
@@ -779,7 +840,7 @@ namespace BAM.Art
         void LateUpdate()
         {
             if (def == null) return; // a script reload in Play mode clears the view's state: stay still instead of throwing every frame
-            float dt = Time.deltaTime;
+            float dt = Time.deltaTime * ArtKit.Slow; // in a hit-stop as slow as the rules' ticks, so the swing waits with its shot
             if (lastQuality != ArtKit.QualityVersion)
             {
                 lastQuality = ArtKit.QualityVersion;
@@ -940,7 +1001,8 @@ namespace BAM.Art
                     float castOut = castSeg ? castFade : Mathf.Clamp(castLen - castBlowAt, 0.05f, 0.25f);
                     wCast = life ? Mathf.Min(Mathf.Lerp(castCarry, 1f, Smooth(castT / 0.1f)), Smooth((castLen - castT) / castOut))
                         : Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
-                    double ct = castSeg ? Mathf.Min(castTo, castFrom + castT * CastRate) : castT * 1.2f;
+                    double ct = !castSeg ? castT * 1.2f : castT < castBlowAt ? castFrom + castT * castPre
+                        : Mathf.Min(castTo, castPeak + (castT - castBlowAt) * CastRate);
                     clips[CCast].SetTime(ct); upCast.SetTime(ct);
                     if (castT >= castLen) castT = -1f;
                 }
@@ -1045,8 +1107,9 @@ namespace BAM.Art
         // graph as GroundSpeed, the bones put back after. (2026-10-28, after Rickard's test) Also where the body is back up after the
         // blow (Settle: head, hands and feet round the hips and the hips' height within 0.3 hip heights of the first frame; Bonk's
         // slam 1.9 s, Knut's 2.1, Tikta's 1.5; -1 if never, Tyra's shot ends drawn), and for a bow the full draw (Draw: the bow hand
-        // at its highest from 10 % on) with which way the arrow points there (AimL: degrees from straight ahead, left negative)
-        sealed class ClipInfo { public float Blow = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public Vector2[] Hips; }
+        // at its highest from 10 % on) with which way the arrow points there (AimL: degrees from straight ahead, left negative), and
+        // which hand is the fast one at the blow (Right; the hand a shot leaves from, Muzzle)
+        sealed class ClipInfo { public float Blow = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public bool Right = true; public Vector2[] Hips; }
         static readonly Dictionary<AnimationClip, ClipInfo> clipInfo = new Dictionary<AnimationClip, ClipInfo>();
         static readonly List<AnimationClip> measureList = new List<AnimationClip>();
 
@@ -1123,8 +1186,8 @@ namespace BAM.Art
                     {
                         float f = (float)i / (n - 1);
                         if (f < 0.1f || f > 0.85f) continue;
-                        float sp = Mathf.Max((L[i + 1] - L[i - 1]).sqrMagnitude, (R[i + 1] - R[i - 1]).sqrMagnitude);
-                        if (sp > best) { best = sp; ci.Blow = step * i; }
+                        float sl = (L[i + 1] - L[i - 1]).sqrMagnitude, sr = (R[i + 1] - R[i - 1]).sqrMagnitude, sp = Mathf.Max(sl, sr);
+                        if (sp > best) { best = sp; ci.Blow = step * i; ci.Right = sr >= sl; }
                     }
                     if (ci.Blow >= 0f)
                         for (int i = 0; i < n; i++)

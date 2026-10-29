@@ -583,7 +583,7 @@ namespace BAM.Game
                     var a = e.A;
                     // a hidden enemy casting in a bush stays hidden: casting does not reveal in the rules (fx review P2-1)
                     if (a == null || !m.IsVisibleTo(a, Mine)) break;
-                    V(a)?.PlayCast();
+                    V(a)?.PlayCast(e.Big); // the form times the gesture: a slam's blow lands with its hit (BodyView.CastLead)
                     ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, Side(a.Team), e.Kind);
                     if (a == m.Player) BamAudio.Duck(0.8f);
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
