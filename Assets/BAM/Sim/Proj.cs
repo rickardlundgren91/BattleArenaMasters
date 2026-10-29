@@ -50,6 +50,8 @@ namespace BAM.Sim
         /// <summary>How long a zone or warning lasts.</summary>
         public float Dur;
         public bool Big, OnHit, Launched, Out, Done, Tied;
+        /// <summary>An auto attack whose target fell with nobody else to go to: it flies on to the spot and ends there, no hit.</summary>
+        public bool Fizzle;
         public int Ticks;
         internal int TiktaCast; // Tikta 2.0: the cast a needle belongs to (at most one Deathmark bonus per cast)
         internal int VolleyCast; // Tyra: the Arrow Volley an arrow belongs to (its hits are shared through Unit.VolleyHit)
@@ -83,7 +85,7 @@ namespace BAM.Sim
         {
             Mode = ProjMode.Auto; Kind = ProjKind.TowerShot; Team = 0; Src = Tgt = Caught = null;
             X = Y = PX = PY = OX = OY = Ang = D = Travel = Speed = T = Dmg = Radius = Dur = 0;
-            Big = OnHit = Launched = Out = Done = Tied = false; Ticks = 0; TiktaCast = 0; VolleyCast = 0;
+            Big = OnHit = Launched = Out = Done = Tied = Fizzle = false; Ticks = 0; TiktaCast = 0; VolleyCast = 0;
             for (int i = 0; i < HitCount; i++) Hit[i] = null;
             HitCount = 0;
         }

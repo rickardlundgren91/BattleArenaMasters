@@ -34,6 +34,10 @@ namespace BAM.Game
         readonly MatchIntro intro = new MatchIntro();
         bool inMatch, paused, over, resultShown, resultMusic, endSent;
         float acc, overAt;
+        // online: how far the drawing is past the last stepped tick. It counts on the local clock but is used up only by ticks
+        // really stepped, so a frame without a new frame from the host holds on the newest tick instead of sliding back a tick
+        // (precision CHAINMAP-08: a guest stepped 0 ticks in ~4 % of frames and its alpha restarted)
+        float netDraw;
         // an online match (BAM.Online lockstep): the rules step only with the ticks the link knows, never on their own
         IMatchNet net;
         PlayerInput[] netInputs;
@@ -175,7 +179,7 @@ namespace BAM.Game
             hud.Intro = intro;
             hud.Begin(match, views, cam);
             inMatch = true; paused = false; over = false; resultShown = false; resultMusic = false; endSent = false;
-            acc = 0f;
+            acc = 0f; netDraw = 0f;
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
             BamAudio.PlayMusic(MusicId.Match);
@@ -236,7 +240,7 @@ namespace BAM.Game
                 }
                 if (acc >= Rules.Tick) acc = 0f;
             }
-            float alpha = paused || over ? 1f : Mathf.Clamp01(acc / Rules.Tick);
+            float alpha = paused || over ? 1f : Mathf.Clamp01((net != null ? netDraw : acc) / Rules.Tick);
             views.Frame(alpha, dt, paused);
             cam.Frame(alpha, dt, over);
             juice.Frame(paused ? 0f : dt);
@@ -259,7 +263,7 @@ namespace BAM.Game
         // the others play on), and the rules step with every tick the link knows. Hit-stop stays off, so no phone slows the host.
         void NetTicks(float dt)
         {
-            acc += dt;
+            acc += dt; netDraw += dt;
             int n = 0, extra = 0;
             while (acc >= Rules.Tick && n < MaxTicksPerFrame)
             {
@@ -271,6 +275,7 @@ namespace BAM.Game
                 if (over) break;
             }
             if (acc >= Rules.Tick) acc = 0f;
+            netDraw = Mathf.Min(netDraw, Rules.Tick);
             net.Flush();
             string st = net.Status;
             if (st != netStatus)
@@ -284,6 +289,7 @@ namespace BAM.Game
         bool NetStep()
         {
             match.Step(netInputs);
+            netDraw = Mathf.Max(0f, netDraw - Rules.Tick);
             net.AfterStep(match);
             Screens.CountEvents(match);
             views.AfterStep();

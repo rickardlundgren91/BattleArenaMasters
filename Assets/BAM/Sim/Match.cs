@@ -101,6 +101,14 @@ namespace BAM.Sim
         readonly PlayerInput[] oneInput = new PlayerInput[1];
         // the player's (seat 0) buffered special, read by the guided match
         float specialBuf => seatSpecBuf[0];
+        // a press while the hero cannot act (stunned, knocked back, busy casting) is kept, not run down, for up to this long after
+        // the press, so it fires when the hero can act again instead of vanishing with no feedback (precision CHAINMAP-04)
+        const float SpecialHold = 1f;
+        readonly float[] seatSpecAt = new float[MaxSeats];
+        readonly bool[] seatActed = new bool[MaxSeats];
+        // the match clock summed in double, so it does not drift from the tick count (float: 176 ms off after 15 min, CHAINMAP-09);
+        // a Time set from outside (tests, the guided match) is taken over
+        double timeD; float timeSet = float.NaN;
         float bufAng => seatBufAng[0];
         readonly List<Unit> unitBuf = new List<Unit>(96), atkBuf = new List<Unit>(48), aiBuf = new List<Unit>(48), tmpBuf = new List<Unit>(48);
         readonly List<Proj> projBuf = new List<Proj>(160), projPool = new List<Proj>(160);
@@ -291,13 +299,14 @@ namespace BAM.Sim
                 }
                 return;
             }
-            Time += dt; Ticks++;
+            if (Time != timeSet) timeD = Time;
+            timeD += 1.0 / 60.0; Time = timeSet = (float)timeD; Ticks++;
             for (int s = 0; s < Humans.Count && s < inputs.Length && s < MaxSeats; s++)
             {
                 var h = Humans[s]; if (h == null) continue;
                 var input = inputs[s];
                 seatMoveX[s] = input.MoveX; seatMoveY[s] = input.MoveY;
-                if (input.Special) { seatSpecBuf[s] = Rules.SpecialBuffer; seatBufAng[s] = input.AimAngle; seatBufK[s] = input.AimK; }
+                if (input.Special) { seatSpecBuf[s] = Rules.SpecialBuffer; seatBufAng[s] = input.AimAngle; seatBufK[s] = input.AimK; seatSpecAt[s] = Time; }
                 if (input.Spell) CastSpell(h, input.SpellAngle, input.SpellK); // the battle spell (Spells.cs)
                 if (input.Signal != TeamSignal.None) CallSignal(h, input.Signal); // a team signal (Signals.cs)
             }
@@ -389,7 +398,11 @@ namespace BAM.Sim
                 }
                 UpdateAttack(u, dt);
             }
-            for (int s = 0; s < MaxSeats; s++) seatSpecBuf[s] = Math.Max(0, seatSpecBuf[s] - dt);
+            for (int s = 0; s < MaxSeats; s++)
+            {
+                if (seatActed[s] || Time - seatSpecAt[s] >= SpecialHold) seatSpecBuf[s] = Math.Max(0, seatSpecBuf[s] - dt);
+                seatActed[s] = false;
+            }
 
             // minions gone 0.6 s after death, clones at once
             int w = 0;
@@ -408,6 +421,7 @@ namespace BAM.Sim
         void PlayerAct(Unit u, float dt)
         {
             int s = u.Seat;
+            seatActed[s] = true;
             MoveUnit(u, seatMoveX[s], seatMoveY[s], dt);
             if (seatSpecBuf[s] > 0)
             {

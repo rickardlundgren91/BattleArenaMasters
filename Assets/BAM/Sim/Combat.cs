@@ -324,7 +324,7 @@ namespace BAM.Sim
             {
                 var p = projBuf[i];
                 if (p.Done) continue;
-                if (p.Mode == ProjMode.Auto && p.Tgt != null && !p.Tgt.Alive) { RetargetAuto(p); if (p.Done) continue; }
+                if (p.Mode == ProjMode.Auto && p.Tgt != null && !p.Tgt.Alive && !p.Fizzle) { RetargetAuto(p); if (p.Done) continue; }
                 p.T += dt;
                 if (p.T < 0)
                 {
@@ -395,7 +395,7 @@ namespace BAM.Sim
                 if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
                 else if (p.T >= p.Travel) { p.Done = true; HitWith(p); }
             }
-            if (!tgt.Alive && !p.Done) p.Done = true;
+            if (!tgt.Alive && !p.Done && !p.Fizzle) p.Done = true;
         }
 
         /// <summary>A shot stopped by a wall still shows something where it stopped.</summary>
@@ -403,6 +403,8 @@ namespace BAM.Sim
 
         /// <summary>An auto attack whose target died before it landed goes to another enemy in range (a hero picks at random,
         /// others the nearest); with none the swing is dropped.</summary>
+        const float RetargetTime = 1f / 20f; // s per tile: a retargeted timed shot flies at most 20 tiles a second
+
         void RetargetAuto(Proj p)
         {
             var u = p.Src;
@@ -413,8 +415,18 @@ namespace BAM.Sim
                 p.Tgt = u.Kind == UnitKind.Hero ? PickRandom(list) : Nearest(list, u.X, u.Y);
                 if (u.Kind != UnitKind.Hero) p.Dmg = u.DefDmg * UnitAutoCoeff(u, p.Tgt); // priced for the new target, not the dead one
                 u.Facing = SimMath.Atan2(p.Tgt.Y - u.Y, p.Tgt.X - u.X);
+                // a timed shot already flying goes on from where it is, at least RetargetTime per tile, instead of jumping onto the
+                // line from its start to the new target (up to 4.4 tiles in one tick, precision CHAINMAP-05)
+                if (p.Launched && p.Speed <= 0 && p.T > 0)
+                {
+                    float d = SimMath.Hypot(p.Tgt.X - p.X, p.Tgt.Y - p.Y);
+                    p.OX = p.X; p.OY = p.Y; p.Travel = Math.Max(p.Travel - p.T, d * RetargetTime); p.T = 0;
+                }
                 return;
             }
+            // nobody to go to: a shot still in the hand ends; one already flying lands on the fallen target's spot with no hit, so it
+            // is seen to land instead of vanishing in the air (precision CHAINMAP-09)
+            if (p.Launched && p.T >= 0) { p.Fizzle = true; return; }
             p.Done = true;
         }
 
@@ -431,6 +443,7 @@ namespace BAM.Sim
         void OnHeroHit(Unit h, Unit t, Proj p, float dealt)
         {
             if (t.IsClone) return; // Fenn's decoy gives no charge and no on-hit passives (old phantomHit)
+            if (dealt <= 0 && t.Has(St.Invulnerable)) return; // nor does a hit on respawn protection (precision CHAINMAP-06; a shield still charges)
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
             h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1);
             if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddStatus(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, 0, h);
