@@ -484,7 +484,8 @@ namespace BAM.Game
         void SetFade(float a)
         {
             if (fade.color.a == a) return;
-            fade.color = new Color(0f, 0f, 0f, a);
+            // the jump from the island to the arena goes through the island's light sky, not black (Rickard 2026-10-29: no cut)
+            fade.color = tutorial ? new Color(0.8f, 0.9f, 0.98f, a) : new Color(0f, 0f, 0f, a);
             fade.enabled = a > 0f;
         }
 

@@ -99,13 +99,14 @@ namespace BAM.Sim
         void StartIsland()
         {
             NoStars = true;
-            var tu = Tut = new Tutorial { Island = true, Step = Tutorial.IslandWalk, Tower = Towers[Teams.Enemy], Pause = IslandFirstPause, Speaker = "FENN SAYS" };
+            var tu = Tut = new Tutorial { Island = true, Step = Tutorial.IslandWalk, Tower = Towers[Teams.Enemy], Pause = IslandFirstPause };
             tu.CamHold = true; tu.CamX = IslandDiscX; tu.CamY = IslandCamY;
             tu.PadX = IslandPadTx + 0.5f; tu.PadY = IslandPadTy + 0.5f;
             State = MatchState.Play; Time = 0;
             for (int t = 0; t < 2; t++) AddStatus(Towers[t], St.Disarm, 1e9f);
-            // Tyra plays it (Rickard 2026-10-26, Fenn still speaks the lines as the guide); as strong as the old onboarding match made the hero
+            // Tyra plays it (Rickard 2026-10-26) and speaks the lines; as strong as the old onboarding match made the hero
             var p = NewHero(HeroId.Tyra, Teams.Player, IslandStartX, IslandStartY);
+            tu.Speaker = HeroCatalog.Get(p.Hero).Name.ToUpperInvariant() + " SAYS"; // the hero you play speaks (Rickard 2026-10-29)
             p.IsPlayer = true; p.DmgMult = 2; p.TakenMult = 0.5f; p.Charge = 0; Player = p;
             RefreshIsland();
         }

@@ -44,6 +44,7 @@ namespace BAM.Game
         float islandShownAt, pillShownAt;
         // healing: green "+N" over Tyra on every regen tick, and a soft green glow round him while the heal moment lasts
         float lastTutHp = -1f;
+        bool landPending;
         Image healGlow, healRing;
         static readonly Color HealGreen = Hex(0x5dff8a), TabTeal = Hex(0x13a89e);
 
@@ -87,6 +88,12 @@ namespace BAM.Game
         void TutorialFrame(bool hidden)
         {
             DissolveFrame();
+            // the arena half starts with Tyra landing from the island's boost pad: a puff of dust where she comes down
+            if (landPending && m.Tut != null && !island && m.Player != null)
+            {
+                landPending = false;
+                BAM.Art.ArtKit.PlayFx(BAM.Art.FxKind.WolfLand, views.DrawnAt(m.Player), 1.8f, m.Player.Team);
+            }
             var tu = m.Tut;
             bool on = tu != null && !hidden;
             float over = flow.OverSeconds;
@@ -276,9 +283,7 @@ namespace BAM.Game
                 float tx = 0f, ty = 0f, stop = 0.6f; bool any = false;
                 Unit goal = null;
                 if (tu.Step == Tutorial.StepMove) { tx = Tutorial.MarkX; ty = Tutorial.MarkY; any = true; }
-                else if (tu.Step == Tutorial.StepTower) goal = tu.Tower;
-                else if (tu.Step == Tutorial.StepFight) goal = tu.Guard;
-                else if (tu.Step <= Tutorial.StepThrow && tu.Dummy != null && tu.Dummy.Alive && !tu.BurstDone && (tu.Step == Tutorial.StepAuto || p.SpecialReady)) goal = tu.Dummy;
+                else goal = tu.Goal; // the nearest enemy minion, Knut or the tower (Tutorial.cs)
                 if (goal != null && goal.Alive && SimMath.Hypot(goal.X - p.X, goal.Y - p.Y) > p.Range + goal.R)
                 {
                     tx = goal.X; ty = goal.Y; stop = p.Range * 0.8f; any = true;
@@ -597,6 +602,7 @@ namespace BAM.Game
         void BeginTutorial()
         {
             pillShown = null; islandSrc = null;
+            landPending = m.Tut != null && !m.Tut.Island;
             islandPanel.gameObject.SetActive(false); lastTutHp = -1f;
             healGlow.enabled = healRing.enabled = false;
             tutSkip.gameObject.SetActive(false);
