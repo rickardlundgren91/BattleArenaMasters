@@ -78,6 +78,30 @@ namespace BAM.Art
             return Store(301, "Zone Strip");
         }
 
+        /// <summary>Tyra's Arrow Volley on the ground (precision TYRA-09): a soft fan of radius 1 from the origin along +z, +-half
+        /// radians, with a bright line along each of the n arrows' paths. Scaled by her reach and turned the volley's way.</summary>
+        public static Mesh VolleyFan(float half, int n)
+        {
+            if (Cached(304, out Mesh m)) return m; // one volley shape (TyraS's numbers never change in a match)
+            b.Clear();
+            const int seg = 12;
+            b.Color(Pal.WhiteSoft);
+            for (int i = 0; i < seg; i++)
+            {
+                float a0 = -half + 2f * half * i / seg, a1 = -half + 2f * half * (i + 1) / seg;
+                b.Triangle(Vector3.zero, new Vector3(Mathf.Sin(a0), 0f, Mathf.Cos(a0)), new Vector3(Mathf.Sin(a1), 0f, Mathf.Cos(a1)));
+            }
+            b.Color(Pal.White);
+            const float w = 0.012f; // half width of an arrow's line, of the radius (0.05 tile at her 4.0)
+            for (int i = 0; i < n; i++)
+            {
+                float a = n == 1 ? 0f : -half + 2f * half * i / (n - 1);
+                Vector3 d = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)), side = new Vector3(d.z, 0f, -d.x) * w, up = new Vector3(0f, 0.002f, 0f);
+                b.Face(up - side, up - side + d, up + side + d, up + side);
+            }
+            return Store(304, "Volley Fan");
+        }
+
         /// <summary>Aim line body: x -0.5..0.5, z 0..1.</summary>
         public static Mesh AimBody()
         {

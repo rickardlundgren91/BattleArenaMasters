@@ -681,6 +681,16 @@ namespace BAM.Art
             bu.T.position = at + bu.T.right * (size * 0.85f);
         }
 
+        /// <summary>Tyra's Arrow Volley drawn on the ground while she draws (precision TYRA-09): the real fan, half radians each side
+        /// of dir with n arrow lines, radius long, fading out over life.</summary>
+        public static void VolleyFan(Vector3 at, Vector3 dir, float radius, float half, int n, Color c, float life)
+        {
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 1e-4f) return;
+            Spawn(Shapes.VolleyFan(half, n), at, radius, radius, c, life, true, 0);
+            live[live.Count - 1].T.rotation = Quaternion.LookRotation(dir.normalized);
+        }
+
         /// <summary>Cracks in the ground that fade (heavy landings, explosions). Radius in units.</summary>
         public static void Crack(Vector3 pos, float radius, float life, float alpha = 0.7f) => Crack(pos, radius, life, new Color(1f, 0.75f, 0.45f, alpha));
 
