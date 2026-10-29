@@ -14,7 +14,7 @@ namespace BAM.Sim
             AnvilPoint(h, aa, ak, out float x, out float y);
             var p = NewProj(ProjMode.Drop, h, x, y);
             p.Kind = ProjKind.BramHammerSpecial; p.T = -BramS.DropDelay; p.Dur = BramS.DropDelay; p.Radius = BramS.DropRadius; p.Dmg = dmg * BramS.DropCoeff; p.Big = true;
-            WarnCircle(h, x, y, BramS.DropRadius, BramS.DropDelay);
+            WarnOf(WarnCircle(h, x, y, BramS.DropRadius, BramS.DropDelay), p); // stays if Bram dies: the anvil still lands (BRAM-01)
             h.Facing = aa; h.AimT = Time + 0.6f; AddStatus(h, St.Casting, 0.2f);
             castX = x; castY = y;
             return true;

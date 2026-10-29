@@ -25,7 +25,9 @@ namespace BAM.Game
         static Texture2D ownRange, ownArrow, ownArea; // Rickard's pictures, null when missing
         // where his pictures draw: the reach ring at 0.735 of tx_aim_range's half width, the area's rim at 0.79 of tx_aim_area's;
         // tx_aim_arrow (508 x 1024, v up): tail 0.04, head's base 0.707, tip 0.941, picture's top 0.97; head 0.414 of the width
-        const float RangeAt = 0.735f, AreaAt = 0.79f, ArrowTail = 0.04f, ArrowBase = 0.707f, ArrowTip = 0.941f, ArrowTop = 0.97f, ArrowHeadU = 0.414f;
+        // (Precision AIM-07/02: the ring's peak measured at 0.729; the shaft spans u 0.4075-0.5905 = 0.183 of the width, up to v 0.70)
+        const float RangeAt = 0.729f, AreaAt = 0.79f, ArrowTail = 0.04f, ArrowBase = 0.707f, ArrowTip = 0.941f, ArrowTop = 0.97f, ArrowHeadU = 0.414f;
+        const float ArrowShaftU = 0.183f, ArrowShaftTop = 0.70f;
         static Mesh quadZ, quadC;
 
         // the outline ribbons, in world units: the crisp edge and its dark rim reach EdgeOut outside the shape, the glow EdgeIn inside
@@ -149,57 +151,61 @@ namespace BAM.Game
             rangeRim.SetColor(Edge(ready, cancel, 0.6f));
         }
 
-        /// <summary>An arrow from the hero, length long and width wide (the hit width): one outline round body and head, a fill that
-        /// grows towards the tip, and a light that runs along it.</summary>
-        public void Line(Vector3 from, Vector3 dir, float length, float width, bool ready, bool cancel, float dt)
+        /// <summary>An arrow from the hero over what the rules' line covers (Sim AimInfo, Precision program AIM-01/02/06): its middle
+        /// travels length (already cut at the first wall), a body is hit within half of that path, the danger goes tip further at the
+        /// far end and back behind the hero. The shaft is exactly 2 x half wide from -back to length, the head's point is at
+        /// length + tip and its sides pass the shaft's end corners, so the outline is the hit area (the round end as its chord).
+        /// alpha dims the whole arrow (Fenn's wolf path, Hilde's push).</summary>
+        public void Line(Vector3 from, Vector3 dir, float length, float half, float tip, float back, bool ready, bool cancel, float dt, float alpha = 1f)
         {
             dir.y = 0f;
             if (dir.sqrMagnitude < 1e-6f) dir = Vector3.forward;
             dir.Normalize();
-            width = Mathf.Max(0.3f, width);
-            length = Mathf.Max(0.6f, length);
-            float headLen = Mathf.Min(length * 0.28f, Mathf.Max(0.5f, width * 0.85f));
-            float bodyLen = length - headLen, half = width * 0.5f, wing = Mathf.Max(half + 0.18f, half * 1.6f);
+            half = Mathf.Max(0.02f, half);
+            length = Mathf.Max(0.05f, length);
+            float z0 = -Mathf.Max(0f, back), end = length + Mathf.Max(0f, tip), wing = Mathf.Max(half + 0.18f, half * 1.4f);
+            // the head's sides go through (half, length): head length = wing x tip / half; a flat end (tip 0) keeps a short head inside
+            float headLen = tip > 0.01f ? wing * tip / half : wing;
+            headLen = Mathf.Min(headLen, (end - z0) * 0.45f);
+            float headBase = end - headLen;
 
             // the outline in the arrow's own frame (x across to the right, y along), counter-clockwise seen from above
-            pts[0] = new Vector2(half, 0f);
-            pts[1] = new Vector2(half, bodyLen);
-            pts[2] = new Vector2(wing, bodyLen);
-            pts[3] = new Vector2(0f, length);
-            pts[4] = new Vector2(-wing, bodyLen);
-            pts[5] = new Vector2(-half, bodyLen);
-            pts[6] = new Vector2(-half, 0f);
+            pts[0] = new Vector2(half, z0);
+            pts[1] = new Vector2(half, headBase);
+            pts[2] = new Vector2(wing, headBase);
+            pts[3] = new Vector2(0f, end);
+            pts[4] = new Vector2(-wing, headBase);
+            pts[5] = new Vector2(-half, headBase);
+            pts[6] = new Vector2(-half, z0);
             var q = Quaternion.LookRotation(dir);
 
             if (ownArrow != null)
             {
-                // his arrow: the head as wide as the old wings and kept in its own shape, the shaft stretched to the reach
-                float pictureW = wing * 2f / ArrowHeadU, head = Mathf.Min(length * 0.45f, wing * 2f * 1.14f);
-                arrowFill.Rib.PictureArrow(pictureW, length - head, length);
+                // his arrow: the shaft picture scaled so its shaft is the hit width, stretched to the path; the head on top of its end
+                arrowFill.Rib.PictureArrow(2f * half / ArrowShaftU, 2f * wing / ArrowHeadU, z0, length, headBase, headLen);
                 Place(arrowFill, from, q, Vector3.one, 0.06f);
-                arrowFill.SetColor(Edge(ready, cancel, 0.95f));
+                arrowFill.SetColor(Edge(ready, cancel, 0.95f * alpha));
                 arrowRim.R.enabled = false;
-                bodyLen = length - head;
-                width = pictureW * 0.17f; // the light runs inside his shaft
             }
             else
             {
-                arrowFill.Rib.Arrow(half, wing, bodyLen, length);
+                arrowFill.Rib.Arrow(half, wing, z0, length, headBase, end);
                 Place(arrowFill, from, q, Vector3.one, 0.06f);
-                arrowFill.SetColor(Fill(ready, cancel, 0.5f));
+                arrowFill.SetColor(Fill(ready, cancel, 0.5f * alpha));
 
                 arrowRim.Rib.Build(pts, 7, false, EdgeOut, EdgeIn);
                 Place(arrowRim, from, q, Vector3.one, 0.062f);
-                arrowRim.SetColor(Edge(ready, cancel, 0.95f));
+                arrowRim.SetColor(Edge(ready, cancel, 0.95f * alpha));
             }
 
             // a soft light runs from the hero to the head every 0.9 s (old HudAim: "a slow light running along it")
+            float bodyLen = length;
             sweepT = cancel ? 0f : (sweepT + dt / 0.9f) % 1f;
             float band = Mathf.Min(1.1f, bodyLen * 0.4f);
             float at = Mathf.Lerp(-band * 0.5f, bodyLen - band * 0.5f, sweepT);
             float a0 = Mathf.Max(0f, at), a1 = Mathf.Min(bodyLen, at + band);
-            Place(sweep, from + dir * a0, q, new Vector3(Mathf.Max(0.05f, width - 0.06f), 1f, Mathf.Max(0.02f, a1 - a0)), 0.061f);
-            sweep.SetColor(Fill(ready, cancel, cancel ? 0f : 0.35f * Mathf.Sin(sweepT * Mathf.PI)));
+            Place(sweep, from + dir * a0, q, new Vector3(Mathf.Max(0.05f, 2f * half * 0.8f), 1f, Mathf.Max(0.02f, a1 - a0)), 0.061f);
+            sweep.SetColor(Fill(ready, cancel, cancel ? 0f : 0.35f * alpha * Mathf.Sin(sweepT * Mathf.PI)));
             sweep.R.enabled = !cancel && a1 > a0 + 0.02f;
         }
 
@@ -207,7 +213,7 @@ namespace BAM.Game
         /// thin guide from the hero (old HudAim GROUND).</summary>
         public void Circle(Vector3 hero, Vector3 center, float radius, bool ready, bool cancel, float dt)
         {
-            radius = Mathf.Max(0.3f, radius);
+            radius = Mathf.Max(0.05f, radius);
             if (ownArea != null)
             {
                 // his disc carries the fill, rim, ticks and the middle dot itself
@@ -315,27 +321,27 @@ namespace BAM.Game
                 Apply();
             }
 
-            /// <summary>The arrow's fill: body and head, u across, v along from the hero (0) to the tip (1).</summary>
-            public void Arrow(float half, float wing, float bodyLen, float length)
+            /// <summary>The arrow's fill: the body from z0 to bodyEnd, the head from headBase to its point at end; u across, v along.</summary>
+            public void Arrow(float half, float wing, float z0, float bodyEnd, float headBase, float end)
             {
                 nv = nt = 0;
-                float vb = bodyLen / length;
-                Put(half, 0f, 1f, 0f); Put(half, bodyLen, 1f, vb); Put(-half, bodyLen, 0f, vb); Put(-half, 0f, 0f, 0f);
+                float span = Mathf.Max(0.01f, end - z0), vb = (bodyEnd - z0) / span, vh = (headBase - z0) / span;
+                Put(half, z0, 1f, 0f); Put(half, bodyEnd, 1f, vb); Put(-half, bodyEnd, 0f, vb); Put(-half, z0, 0f, 0f);
                 Tri(0, 1, 2); Tri(0, 2, 3);
-                Put(wing, bodyLen, 1f, vb); Put(0f, length, 0.5f, 1f); Put(-wing, bodyLen, 0f, vb);
+                Put(wing, headBase, 1f, vh); Put(0f, end, 0.5f, 1f); Put(-wing, headBase, 0f, vh);
                 Tri(4, 5, 6);
                 Apply();
             }
 
-            /// <summary>Rickard's arrow picture on two quads, w wide: the shaft from the hero (v tail to the head's base) stretched to
-            /// bodyLen, the head (v base to the picture's top) kept in shape from bodyLen to the tip at length.</summary>
-            public void PictureArrow(float w, float bodyLen, float length)
+            /// <summary>Rickard's arrow picture on two quads: the shaft (v tail to just under the head) shaftW wide from z0 to bodyEnd,
+            /// and the head (v base to the picture's top) headW wide from headBase, kept in shape so its point is headLen further.</summary>
+            public void PictureArrow(float shaftW, float headW, float z0, float bodyEnd, float headBase, float headLen)
             {
                 nv = nt = 0;
-                float h = w * 0.5f, top = bodyLen + (length - bodyLen) * (ArrowTop - ArrowBase) / (ArrowTip - ArrowBase);
-                Put(-h, 0f, 0f, ArrowTail); Put(h, 0f, 1f, ArrowTail); Put(h, bodyLen, 1f, ArrowBase); Put(-h, bodyLen, 0f, ArrowBase);
+                float h = shaftW * 0.5f, hh = headW * 0.5f, top = headBase + headLen * (ArrowTop - ArrowBase) / (ArrowTip - ArrowBase);
+                Put(-h, z0, 0f, ArrowTail); Put(h, z0, 1f, ArrowTail); Put(h, bodyEnd, 1f, ArrowShaftTop); Put(-h, bodyEnd, 0f, ArrowShaftTop);
                 Tri(0, 1, 2); Tri(0, 2, 3);
-                Put(-h, bodyLen, 0f, ArrowBase); Put(h, bodyLen, 1f, ArrowBase); Put(h, top, 1f, ArrowTop); Put(-h, top, 0f, ArrowTop);
+                Put(-hh, headBase, 0f, ArrowBase); Put(hh, headBase, 1f, ArrowBase); Put(hh, top, 1f, ArrowTop); Put(-hh, top, 0f, ArrowTop);
                 Tri(4, 5, 6); Tri(4, 6, 7);
                 Apply();
             }

@@ -30,8 +30,8 @@ namespace BAM.Sim
             {   // Boulder Toss: rolls straight along the aim after the wind-up, a red line warns the way
                 var p = NewProj(ProjMode.Boulder, h, h.X, h.Y);
                 p.Kind = ProjKind.BonkBoulder; p.T = -BonkS.BoulderWindup; p.Ang = aa; p.Speed = BonkS.BoulderSpeed; p.Dmg = dmg * BonkS.BoulderCoeff; p.Radius = BonkS.BoulderHitbox;
-                float len = Map.LaneReach(h.X, h.Y, aa, BonkS.BoulderReach);
-                WarnLine(h, aa, len, BonkS.BoulderHitbox, BonkS.BoulderWindup + len / BonkS.BoulderSpeed);
+                float len = Map.ShotReach(h.X, h.Y, aa, BonkS.BoulderReach); // where the boulder really stops, as its aim shows (BONK-05)
+                WarnOf(WarnLine(h, aa, len, BonkS.BoulderHitbox, BonkS.BoulderWindup + len / BonkS.BoulderSpeed), p);
                 h.Facing = aa; h.AimT = Time + BonkS.BoulderWindup + 0.2f;
                 AddStatus(h, St.Casting, BonkS.BoulderWindup); Channel(h, BonkS.BoulderWindup);
                 castX = h.X + SimMath.Cos(aa) * len; castY = h.Y + SimMath.Sin(aa) * len;

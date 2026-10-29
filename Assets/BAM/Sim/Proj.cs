@@ -55,6 +55,9 @@ namespace BAM.Sim
         public int Ticks;
         internal int TiktaCast; // Tikta 2.0: the cast a needle belongs to (at most one Deathmark bonus per cast)
         internal int VolleyCast; // Tyra: the Arrow Volley an arrow belongs to (its hits are shared through Unit.VolleyHit)
+        /// <summary>A warning's own shot or drop (with its Serial, the pool reuses Projs): the warning ends with it, not with its caster (AIM / BRAM-01, TYRA-02).</summary>
+        internal Proj Of;
+        internal int OfSerial;
         internal Unit[] Hit = new Unit[16];
         internal int HitCount;
 
@@ -85,7 +88,7 @@ namespace BAM.Sim
         {
             Mode = ProjMode.Auto; Kind = ProjKind.TowerShot; Team = 0; Src = Tgt = Caught = null;
             X = Y = PX = PY = OX = OY = Ang = D = Travel = Speed = T = Dmg = Radius = Dur = 0;
-            Big = OnHit = Launched = Out = Done = Tied = Fizzle = false; Ticks = 0; TiktaCast = 0; VolleyCast = 0;
+            Big = OnHit = Launched = Out = Done = Tied = Fizzle = false; Ticks = 0; TiktaCast = 0; VolleyCast = 0; Of = null; OfSerial = 0;
             for (int i = 0; i < HitCount; i++) Hit[i] = null;
             HitCount = 0;
         }

@@ -45,9 +45,12 @@ namespace BAM.Game
         Color blinkColor;
         static readonly Color RingEdge = new Color(0.03f, 0.05f, 0.1f, 0.4f);
         static readonly Color ReadyOrange = new Color(1f, 0.54f, 0.12f), HitRed = new Color(1f, 0.2f, 0.25f);
-        bool aimOn, aimLine;
-        Vector2 aimA, aimB;
-        float aimHalf;
+        bool aimOn;
+        AimInfo aimInfo;
+        readonly System.Collections.Generic.List<Unit> aimHits = new System.Collections.Generic.List<Unit>(8);
+        // Moa: the ally her tap would shield now (MOA-02); Bonk: his club's ground circle while it winds up (BONK-07)
+        readonly Ring[] moaPick = new Ring[1], smash = new Ring[4];
+        static readonly Color Honey = new Color(1f, 0.8f, 0.25f);
         Match m;
         MatchViews views;
         Unit autoTarget;
@@ -57,14 +60,14 @@ namespace BAM.Game
         {
             m = match; views = matchViews;
             autoTarget = null; autoAt = swingAt = -99f;
-            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal);
+            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash);
             blinkOn = false;
             aimOn = false;
         }
 
         public void End()
         {
-            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink); Free(goal);
+            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink); Free(goal); Free(moaPick); Free(smash);
             m = null; views = null; autoTarget = null;
         }
 
@@ -97,11 +100,11 @@ namespace BAM.Game
             }
         }
 
-        /// <summary>The special being dragged, in the rules' coordinates: a line from a to b (half wide), or a circle at a (half its
-        /// radius). Set every frame by the HUD; off when the finger is not aiming.</summary>
-        public void SetAim(bool on, bool line, Vector2 a, Vector2 b, float half)
+        /// <summary>The special being dragged: what the rules would cover if let go now (Sim Aim.cs). Set every frame by the HUD;
+        /// off when the finger is not aiming.</summary>
+        public void SetAim(bool on, in AimInfo a)
         {
-            aimOn = on; aimLine = line; aimA = a; aimB = b; aimHalf = half;
+            aimOn = on; aimInfo = a;
         }
 
         /// <summary>The blink being dragged: where it would land, in the rules' coordinates. Set every frame by the HUD.</summary>
@@ -197,27 +200,43 @@ namespace BAM.Game
                 Show(ready[1], at, rr0 + rw + (1f + 2f * br) * px * 2f, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.35f * br), 1.5f * px);
             }
 
-            // the dragged special's hit preview: who is inside the shape now (walls are not checked: a guide, not a promise)
+            // the dragged special's hit preview: who the rules would hit if let go now (Sim AimTargets: walls, line of sight, only the
+            // first one a bolt, hook, needle or boulder meets; Moa's field: the allies it shields, in honey) (AIM-03, AIM-04)
             if (aimOn)
             {
-                int n = 0;
-                var us = m.Units;
-                for (int i = 0; i < us.Count && n < hits.Length; i++)
+                m.AimTargets(p, aimInfo, aimHits);
+                Color hc = aimInfo.Allies ? Honey : HitRed;
+                for (int i = 0; i < aimHits.Count && i < hits.Length; i++)
                 {
-                    var u = us[i];
-                    if (!u.Alive || u.Team == p.Team || u.Kind == UnitKind.Tower || !m.IsVisibleTo(u, p.Team)) continue;
-                    var q = new Vector2(u.X, u.Y);
-                    float d;
-                    if (aimLine)
-                    {
-                        Vector2 ab = aimB - aimA;
-                        float t = Mathf.Clamp01(Vector2.Dot(q - aimA, ab) / Mathf.Max(1e-6f, ab.sqrMagnitude));
-                        d = (aimA + ab * t - q).magnitude;
-                    }
-                    else d = (q - aimA).magnitude;
-                    if (d > aimHalf + u.R) continue;
+                    var u = aimHits[i];
                     Vector3 up = views.DrawnAt(u); up.y = 0f;
-                    Show(hits[n++], up, u.R + 0.25f, new Color(HitRed.r, HitRed.g, HitRed.b, 0.9f), 3f * px);
+                    Show(hits[i], up, u.R + 0.25f, new Color(hc.r, hc.g, hc.b, 0.9f), 3f * px);
+                }
+            }
+            else if (p.SpecialReady && p.Hero == HeroId.Moa)
+            {
+                // Moa's tap shields the ally hero (or herself) with the lowest health share in reach: show who that is now (MOA-02)
+                var pick = m.MostHurtAlly(p, MoaS.Range);
+                if (pick != null && pick != p)
+                {
+                    Vector3 up = views.DrawnAt(pick); up.y = 0f;
+                    Show(moaPick[0], up, pick.R + 0.22f, new Color(Honey.r, Honey.g, Honey.b, 0.75f), 2.5f * px);
+                }
+            }
+
+            // Bonk's club lands on a ground circle after its wind-up: show it faintly (the enemy's red, ours white), as the bots
+            // already read it (BONK-07)
+            {
+                int n = 0;
+                var ps = m.Projs;
+                for (int i = 0; i < ps.Count && n < smash.Length; i++)
+                {
+                    var q = ps[i];
+                    if (q.Done || q.Mode != ProjMode.Smash || q.T >= 0f || q.Src == null || !m.IsVisibleTo(q.Src, p.Team)) continue;
+                    bool foe = q.Team != p.Team;
+                    float sk = Mathf.Clamp01(1f + q.T / Mathf.Max(0.05f, q.Dur)); // 0 at the swing's start, 1 as it lands
+                    Color sc = foe ? HitRed : Color.white;
+                    Show(smash[n++], Coords.World(q.X, q.Y), q.Radius, new Color(sc.r, sc.g, sc.b, (foe ? 0.35f : 0.22f) + 0.35f * sk), 2f * px);
                 }
             }
 
@@ -245,7 +264,7 @@ namespace BAM.Game
 
         void HideAll()
         {
-            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink); Hide(goal);
+            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink); Hide(goal); Hide(moaPick); Hide(smash);
         }
 
         static void Hide(Ring[] rings)

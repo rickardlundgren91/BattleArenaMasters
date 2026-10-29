@@ -22,8 +22,12 @@ namespace BAM.Game
         public static bool Turned;
         /// <summary>A screen direction (x right, y up) as the camera sees it: turned half a circle when Turned.</summary>
         public static Vector2 Screen(Vector2 v) => Turned ? -v : v;
-        /// <summary>The rules' angle of a screen direction (screen up is -y on the map, or +y when Turned).</summary>
-        public static float ScreenAngle(Vector2 v) { v = Screen(v); return Mathf.Atan2(-v.y, v.x); }
+        /// <summary>The rules' angle of a screen direction (screen up is -y on the map, or +y when Turned). The camera looks down at
+        /// 55 degrees, so the map's depth shows 0.82 as long on screen: that is undone here, so a drag aims where the finger points
+        /// (the old HudAim: atan2(-dy / YS, dx); Precision COORDS-02). The joystick does not use it (the old game did not either).</summary>
+        public static float ScreenAngle(Vector2 v) { v = Screen(v); return Mathf.Atan2(-v.y / DepthOnScreen, v.x); }
+        /// <summary>The sine of the camera's elevation (MatchCamera: asin 0.82): one tile of map depth is this long on screen.</summary>
+        public const float DepthOnScreen = 0.82f;
     }
 
     /// <summary>

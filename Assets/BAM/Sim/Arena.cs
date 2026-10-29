@@ -164,13 +164,39 @@ namespace BAM.Sim
         /// <summary>A shot moving from a to b this tick hits a wall (on the way, or b is in a wall tile).</summary>
         public bool ShotBlocked(float ax, float ay, float bx, float by) => !LineClear(ax, ay, bx, by, LosHalf) || WallAt(bx, by);
 
-        /// <summary>How far a strip from (x, y) along ang reaches before a wall cuts the sight line, in 0.3 tile steps (Inferno Lane).</summary>
+        /// <summary>How far a strip from (x, y) along ang reaches before a wall cuts the sight line (Inferno Lane, the quake): found in
+        /// 0.3 tile steps up to the reach itself, then narrowed to 0.01 tile, so it ends at the wall face (BLAST-03: it used to stop
+        /// anywhere from 0.3 short of the face to 0.1 inside it, and could skip the last step). At least 0.3, as before.</summary>
         public float LaneReach(float x, float y, float ang, float reach)
         {
             float ca = SimMath.Cos(ang), sa = SimMath.Sin(ang);
-            for (float d = 0.3f; d <= reach; d += 0.3f) if (!LosClear(x, y, x + ca * d, y + sa * d)) return Math.Max(0.3f, d - 0.3f);
+            return Math.Max(Math.Min(0.3f, reach), Reach(x, y, ca, sa, reach, false));
+        }
+
+        /// <summary>How far a straight shot from (x, y) along ang flies before a wall stops it (ShotBlocked), at most reach, to 0.01 tile:
+        /// what the aim and the red warning draw for a bolt, hook, needle or boulder (AIM-01).</summary>
+        public float ShotReach(float x, float y, float ang, float reach) => Reach(x, y, SimMath.Cos(ang), SimMath.Sin(ang), reach, true);
+
+        // the last free distance along (ca, sa): 0.3 tile steps (the last one exactly at reach), then five halvings between free and blocked
+        float Reach(float x, float y, float ca, float sa, float reach, bool shot)
+        {
+            float free = 0;
+            for (int i = 1; free < reach; i++)
+            {
+                float d = Math.Min(reach, i * 0.3f);
+                if (!Cut(x, y, x + ca * d, y + sa * d, shot)) { free = d; continue; }
+                float lo = free, hi = d;
+                for (int k = 0; k < 5; k++)
+                {
+                    float mid = (lo + hi) * 0.5f;
+                    if (Cut(x, y, x + ca * mid, y + sa * mid, shot)) hi = mid; else lo = mid;
+                }
+                return lo;
+            }
             return reach;
         }
+
+        bool Cut(float ax, float ay, float bx, float by, bool shot) => shot ? ShotBlocked(ax, ay, bx, by) : !LosClear(ax, ay, bx, by);
 
         /// <summary>How far (x, y) is from the lane's line (the waypoints' polyline).</summary>
         public float LaneDist(float x, float y)

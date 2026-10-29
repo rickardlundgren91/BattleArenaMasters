@@ -190,10 +190,18 @@ namespace BAM.Sim
             p.Radius = r; p.Dur = Math.Max(0.15f, dur); p.Tied = tied;
             return p;
         }
+        /// <summary>Ties warning w to its shot or drop: w then ends when that does, not when the caster dies.</summary>
+        static Proj WarnOf(Proj w, Proj of) { w.Of = of; w.OfSerial = of.Serial; return w; }
+
         void WarnUpdate(Proj p)
         {
             var s = p.Src;
-            if (p.T >= p.Dur || s == null || !s.Alive || (p.Tied && !(s.Kind == UnitKind.Wolf && s.Wolf == WolfMode.Fly))) { p.Done = true; return; }
+            if (p.Of != null)
+            {   // tied to its shot or drop: it shows as long as that is on its way, even after the caster dies (the anvil still lands)
+                if (p.T >= p.Dur || p.Of.Serial != p.OfSerial || p.Of.Done) { p.Done = true; return; }
+            }
+            else if (p.T >= p.Dur || s == null || !s.Alive || (p.Tied && !(s.Kind == UnitKind.Wolf && s.Wolf == WolfMode.Fly))) { p.Done = true; return; }
+            if (s == null) return;
             // Tikta's drag: her needles still in the hand leave from where she is then, so the strip moves with her (TIKTA-01)
             if (p.Mode == ProjMode.WarnLine && s.Kind == UnitKind.Hero && s.Hero == HeroId.Tikta && NeedleInHand(s)) { p.X = s.X; p.Y = s.Y; }
         }
@@ -467,7 +475,8 @@ namespace BAM.Sim
             h.Facing = ang;
             var p = NewProj(ProjMode.Bolt, h, h.X, h.Y);
             p.Kind = ProjKind.TyraBolt; p.T = -TyraS.Windup; p.Ang = ang; p.Travel = TyraS.Length; p.Dmg = dmg * TyraS.DamageCoeff; p.Speed = TyraS.Speed; p.Radius = TyraS.Hitbox;
-            WarnLine(h, ang, TyraS.Length, TyraS.Hitbox, TyraS.Windup + TyraS.Length / TyraS.Speed);
+            // as long as the bolt really flies (to the first wall) and only while it does (TYRA-02)
+            WarnOf(WarnLine(h, ang, Map.ShotReach(h.X, h.Y, ang, TyraS.Length), TyraS.Hitbox, TyraS.Windup + TyraS.Length / TyraS.Speed), p);
             AddStatus(h, St.Casting, TyraS.Windup); AddStatus(h, St.Disarm, TyraS.Windup); Channel(h, TyraS.Windup);
             return true;
         }

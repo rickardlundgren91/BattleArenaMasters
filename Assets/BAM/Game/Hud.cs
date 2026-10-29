@@ -367,32 +367,34 @@ namespace BAM.Game
             var p = m.Player;
             aim.Hide();
             aimLook.Hide();
-            rings.SetAim(false, false, Vector2.zero, Vector2.zero, 0f);
+            rings.SetAim(false, default);
             if (hidden || !p.Alive || m.State != MatchState.Play || !special.Dragging) return;
             var d = p.HDef;
             Vector3 hero = views.DrawnAt(p);
             bool ready = p.SpecialReady, cancel = special.OverCancel;
             float dt = Time.unscaledDeltaTime;
             Vector2 o = special.Offset;
-            Vector2 so = Coords.Screen(o); Vector3 dir = new Vector3(so.x, 0f, so.y).normalized;
-            Vector2 from = new Vector2(p.X, p.Y), sdir = new Vector2(dir.x, -dir.z); // the rules' y runs the other way
+            // what the rules would do if let go now (Sim Aim.cs: wall cuts, the map edge, Fenn's flight; Precision AIM-01..06, BRAM-02),
+            // drawn from where the hero is drawn; the cast gets the same angle and share (OnAimed)
+            var a = m.AimFor(p, Coords.ScreenAngle(o), AimK(o));
+            Vector3 dir = Coords.Dir(a.Ang);
             // the MLBB-style indicator (AimIndicator.cs); cancelling dims it grey and drops the hit marks
-            if (d.Drag == AimShape.Line)
+            if (a.Shape == AimShape.Line)
             {
                 aimLook.Range(hero, d.DragReach, ready, cancel);
-                aimLook.Line(hero, dir, d.DragReach, d.DragWidth * 2f, ready, cancel, dt);
-                if (!cancel) rings.SetAim(true, true, from, from + sdir * d.DragReach, d.DragWidth);
+                aimLook.Line(hero, dir, a.Length, a.Half, a.Tip, a.Back, ready, cancel, dt);
+                if (!cancel) rings.SetAim(true, a);
             }
-            else if (d.Drag == AimShape.Circle)
+            else if (a.Shape == AimShape.Circle)
             {
-                float k = AimK(o);
-                // as the rules' AimPoint: at least 1.5 tiles out, except Moa's field, which may land on herself
-                float dist = p.Hero == HeroId.Moa ? k * d.DragReach : Mathf.Min(d.DragReach, Mathf.Max(1.5f, k * d.DragReach));
-                // Fenn's thrown wolf stops at the first wall: show where it really lands
-                if (p.Hero == HeroId.Fenn) dist = m.WolfReach(p.X, p.Y, Coords.ScreenAngle(o), dist);
+                Vector3 c = hero + (Coords.World(a.CX, a.CY) - Coords.World(p.X, p.Y));
                 aimLook.Range(hero, d.DragReach, ready, cancel);
-                aimLook.Circle(hero, hero + dir * dist, d.DragWidth, ready, cancel, dt);
-                if (!cancel) rings.SetAim(true, false, from + sdir * dist, Vector2.zero, d.DragWidth);
+                // Fenn's wolf turns onto a hero anywhere along its flight: its path, faint (AIM-05)
+                if (a.PathHalf > 0f) aimLook.Line(hero, dir, a.Length, a.PathHalf, 0f, 0f, ready, cancel, 0f, 0.4f);
+                aimLook.Circle(hero, c, a.Radius, ready, cancel, dt);
+                // Hilde's keg pushes the heroes it hits the way she aims (HILDE-02, old View3DBreachCharge)
+                if (a.PushLength > 0f) aimLook.Line(c, dir, a.Radius + a.PushLength, 0.12f, 0.12f, 0f, ready, cancel, 0f, 0.85f);
+                if (!cancel) rings.SetAim(true, a);
             }
         }
 
