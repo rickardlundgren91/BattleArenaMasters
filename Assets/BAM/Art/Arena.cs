@@ -398,11 +398,15 @@ namespace BAM.Art
             return (hh & 0xffffff) / (float)0x1000000;
         }
 
-        // The middle boulders: Rickard's painted mossy boulder standing upright at its foot line, as in the old game (RuinBill): a
-        // hero behind it is hidden, one in front is drawn over it. About 2.4 tiles wide, the rules' boulder plus a hero's radius.
+        // The middle boulders: Rickard's painted mossy boulder, as in the old game (RuinBill): a hero behind it is hidden, one in front
+        // is drawn over it. About 2.4 tiles wide, the rules' boulder plus a hero's radius. "Behind" means north of the boulder's
+        // middle: the picture's lower part lies flat on the ground from the foot line to the middle and only the rest stands upright
+        // there, the same picture on screen (the camera is orthographic). Standing upright at the foot line, it hid a hero beside the
+        // boulder's southern half (Rickard 2026-10-29: the hero stood "inside" the rock).
         static void RockPictures(GameObject root, ArenaInfo info, Texture2D tex)
         {
             const float CY = 0.5724f; // cos of the camera's elevation: a vertical edge shows this much shorter on screen
+            const float SY = 0.82f;   // sin of the camera's elevation: ground depth shows this much shorter on screen
             var v = new System.Collections.Generic.List<Vector3>();
             var uv = new System.Collections.Generic.List<Vector2>();
             var t = new System.Collections.Generic.List<int>();
@@ -415,13 +419,18 @@ namespace BAM.Art
                 float rad = Mathf.Max(0.3f, r.z), sh = rad * 2.05f, sw = sh * ar;
                 // the foot on the boulder's side nearest the camera: turned online (COORDS-01) that is the north side, and the
                 // picture faces the other way (half flipped keeps the winding toward the camera and the picture unmirrored)
-                float near = info.Turned ? -1f : 1f;
-                var foot = new Vector3(r.x, 0.02f, r.y - near * rad * 1.35f);
-                Vector3 up = new Vector3(0f, sh / CY, 0f), half = new Vector3(near * sw * 0.5f, 0f, 0f);
+                float near = info.Turned ? -1f : 1f, depth = rad * 1.35f;
+                var foot = new Vector3(r.x, 0.02f, r.y - near * depth);
+                var mid = new Vector3(r.x, 0.02f, r.y);
+                // the flat part shows depth x SY on screen; the upright part the rest of the picture's sh
+                float split = Mathf.Min(0.95f, depth * SY / sh);
+                Vector3 up = new Vector3(0f, (sh - split * sh) / CY, 0f), half = new Vector3(near * sw * 0.5f, 0f, 0f);
                 int b = v.Count;
-                v.Add(foot - half); v.Add(foot - half + up); v.Add(foot + half + up); v.Add(foot + half);
-                uv.Add(new Vector2(0f, 0f)); uv.Add(new Vector2(0f, 1f)); uv.Add(new Vector2(1f, 1f)); uv.Add(new Vector2(1f, 0f));
-                t.Add(b); t.Add(b + 1); t.Add(b + 2); t.Add(b); t.Add(b + 2); t.Add(b + 3);
+                v.Add(foot - half); v.Add(mid - half); v.Add(mid - half + up); v.Add(foot + half); v.Add(mid + half); v.Add(mid + half + up);
+                uv.Add(new Vector2(0f, 0f)); uv.Add(new Vector2(0f, split)); uv.Add(new Vector2(0f, 1f));
+                uv.Add(new Vector2(1f, 0f)); uv.Add(new Vector2(1f, split)); uv.Add(new Vector2(1f, 1f));
+                t.Add(b); t.Add(b + 1); t.Add(b + 4); t.Add(b); t.Add(b + 4); t.Add(b + 3);         // flat on the ground
+                t.Add(b + 1); t.Add(b + 2); t.Add(b + 5); t.Add(b + 1); t.Add(b + 5); t.Add(b + 4); // upright at the middle
             }
             var mesh = new Mesh { name = "Arena rocks" };
             mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
