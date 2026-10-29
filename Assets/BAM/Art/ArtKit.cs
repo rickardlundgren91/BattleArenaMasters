@@ -397,8 +397,9 @@ namespace BAM.Art
         /// <summary>Hands a view back to its pool (minions, projectiles and zones come and go all match long).</summary>
         /// <summary>Blast's Chain Reaction warning at a frozen point: a violet ring with its edge on the radius, a gold ring growing
         /// from the middle that reaches the edge exactly when the fuse runs out, and a spark at the point. Then play FxKind.ChainBoom.</summary>
-        /// <summary>Tyra's Arrow Volley being drawn (Speltest tyravolley): a warm gold cone of light from her toward the aim, as long
-        /// as her range, held through the draw.</summary>
+        /// <summary>Tyra's Arrow Volley being drawn (Speltest tyravolley): a warm gold flare of light from her toward the aim, held
+        /// through the draw. A camera-facing picture about half her range long, not the rules' fan (the five arrows themselves fly
+        /// the real +-0.35 rad fan to her range; precision TYRA-09).</summary>
         public static void PlayVolleyDraw(Vector3 from, Vector3 dir, float range, float windup)
         {
             if (!ready) return;
@@ -406,7 +407,7 @@ namespace BAM.Art
             if (dir.sqrMagnitude < 1e-4f) return;
             dir.Normalize();
             Color gold = new Color(1f, 0.92f, 0.55f, 0.85f);
-            // his hit-spike fan is the cone: its root on her bow, spreading out the aimed way (the fan spans about +-0.35 rad)
+            // his hit-spike picture is the flare: its root on her bow, spreading out the aimed way
             Fx.Spikes(from + Vector3.up * 0.8f, dir, gold, range * 0.5f, windup + 0.1f);
             Fx.Pic("tx_fx_tyra_charge", from + Vector3.up * 0.9f, gold, 1.6f, windup);
         }

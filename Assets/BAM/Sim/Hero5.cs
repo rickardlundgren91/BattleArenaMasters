@@ -136,7 +136,8 @@ namespace BAM.Sim
         /// reach or a wall.</summary>
         void VolleyUpdate(Proj p, float dt)
         {
-            var s = p.Src; float ox = p.X, oy = p.Y, step = p.Speed * dt;
+            // the last step stops on the reach (precision TYRA-01: a full 0.3-tile step took it to 4.2, half a tile past the ring)
+            var s = p.Src; float ox = p.X, oy = p.Y, step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
             p.X += SimMath.Cos(p.Ang) * step; p.Y += SimMath.Sin(p.Ang) * step; p.D += step;
             if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
             bool shared = s.VolleyCast == p.VolleyCast;
@@ -148,7 +149,7 @@ namespace BAM.Sim
                 if (shared) s.VolleyHit.Add(u); else p.AddHit(u);
                 SpecialHit(s, u, p.Dmg, p.Kind, false);
             }
-            if (p.D >= p.Travel) p.Done = true;
+            if (p.D >= p.Travel - 1e-5f) p.Done = true;
         }
 
         /// <summary>Featherstep: her auto attack hurting an enemy hero (not Fenn's decoy) speeds her up, once every 10 s.</summary>

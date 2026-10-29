@@ -484,8 +484,10 @@ namespace BAM.Sim
         /// <summary>Tyra's bolt flies straight and stops in the first enemy (or wall) it meets.</summary>
         void BoltUpdate(Proj p, float dt)
         {
-            float step = p.Speed * dt, ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang);
+            // the wall first, then the enemies, as the volley's arrows (precision TYRA-11); the last step stops on the reach
+            float ox = p.X, oy = p.Y, step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D)), ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang);
             p.X += ca * step; p.Y += sa * step; p.D += step;
+            if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
@@ -494,8 +496,7 @@ namespace BAM.Sim
                 SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
                 return;
             }
-            if (Map.ShotBlocked(p.X - ca * step, p.Y - sa * step, p.X, p.Y)) { p.Done = true; Blocked(p, p.X - ca * step, p.Y - sa * step); }
-            else if (p.D >= p.Travel) p.Done = true;
+            if (p.D >= p.Travel - 1e-5f) p.Done = true;
         }
 
         /// <summary>Bonk's every 4th swing is a power hit (big = the hit is drawn bigger). Tikta's Final Sting is gone (Deathmark,

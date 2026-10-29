@@ -298,7 +298,7 @@ namespace BAM.Sim
             }
             u.Facing = SimMath.Atan2(tgt.Y - u.Y, tgt.X - u.X); u.AimT = Time + spawnDelay + 0.1f;
             float travel = projTime != 0 ? projTime : 0.1f;
-            if (hero && u.Hero == HeroId.Tyra) travel = SimMath.Clamp(SimMath.Dist(u, tgt) / 15f, 0.08f, projTime); // her arrow flies at a steady 15 tiles/s
+            if (hero && u.Hero == HeroId.Tyra) travel = SimMath.Clamp(SimMath.Dist(u, tgt) / 15f, 0.08f, projTime); // about 15 tiles/s, between 0.08 and 0.25 s of flight (measured 10-16 tiles/s with the tick rounding, precision TYRA-11)
             if (hero && u.Hero == HeroId.Bonk) { BonkSwing(u, tgt, dmg * coeff, big); return; } // a slow slam on the ground in front (Hero3.cs)
             var p = NewProj(ProjMode.Auto, u, u.X, u.Y);
             p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero;
