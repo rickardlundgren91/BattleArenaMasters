@@ -130,6 +130,9 @@ namespace BAM.Art
         public virtual void SetPush(float length) { }
         /// <summary>After Show: a circle cut to how far its blast reaches each way (world offsets from the centre), BLAST-05.</summary>
         public virtual void CutTo(Vector3[] reach) { }
+        /// <summary>After Show: a strip warning's fill reaches along tiles from its start (it follows its shot's tip), instead of
+        /// racing to the end by the clock.</summary>
+        public virtual void SetFront(float along) { }
     }
 
     /// <summary>The aim shown while the player drags the special button, and the attack range ring.</summary>

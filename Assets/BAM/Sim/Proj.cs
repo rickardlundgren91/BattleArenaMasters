@@ -60,6 +60,8 @@ namespace BAM.Sim
         /// <summary>A warning's own shot or drop (with its Serial, the pool reuses Projs): the warning ends with it, not with its caster (AIM / BRAM-01, TYRA-02).</summary>
         internal Proj Of;
         internal int OfSerial;
+        /// <summary>The Serial of the shot or drop this warning belongs to (0 = none), for the view.</summary>
+        public int WarnFor => OfSerial;
         internal Unit[] Hit = new Unit[16];
         internal int HitCount;
 

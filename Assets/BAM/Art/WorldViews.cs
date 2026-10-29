@@ -21,7 +21,7 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched, mirror, struck, arc, hit, honey, boulder;
+        bool melee, launched, mirror, struck, arc, hit, honey, boulder, boltPic;
         bool spent;                  // it hurt someone earlier and flew on: ends without a splash or a fizzle
         float prog = -1f;            // the rules' share of the flight done (SetProgress), -1 = by the clock
         Vector3 launchOff;           // the hand's offset from the rules' path at the release, eased out over LaunchEase
@@ -33,6 +33,9 @@ namespace BAM.Art
         Transform dustT; // Bonk's boulder: Rickard's dust trail picture (tx_fx_bonk_trail) streaming out behind it
         Material dustMat;
         static bool arcLoaded, boulderLoaded, arcAlpha;
+        // Tyra's bolt: Rickard's own arrow picture (tx_fx_tyra_bolt, head to the right) when it exists, else the code-made bolt
+        static Texture2D boltTex;
+        static bool boltLoaded;
         static Material texTrail; // Rickard's comet trail picture (tx_fx_trail), shared by every shot that leaves one
         static bool texTrailLoaded;
         MeshFilter visF;
@@ -91,7 +94,9 @@ namespace BAM.Art
             // Bonk's boulder: Rickard's own picture (tx_fx_bonk_boulder) facing the camera and rolling, big and heavy
             if (k == ProjKind.BonkBoulder && !boulderLoaded) { boulderLoaded = true; boulderTex = RickardFx.Load("tx_fx_bonk_boulder"); dustTrailTex = RickardFx.Load("tx_fx_bonk_trail"); }
             boulder = k == ProjKind.BonkBoulder && boulderTex != null;
-            visF.sharedMesh = boulder ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            if (k == ProjKind.TyraBolt && !boltLoaded) { boltLoaded = true; boltTex = RickardFx.Load("tx_fx_tyra_bolt"); }
+            boltPic = k == ProjKind.TyraBolt && boltTex != null;
+            visF.sharedMesh = boulder || boltPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot || k == ProjKind.TyraVolley;
@@ -114,6 +119,13 @@ namespace BAM.Art
             {
                 visR.sharedMaterial = FxAtlas.Material(ArtMaterials.UnlitFade);
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, new Color(1f, 0.78f, 0.22f, 1f));
+                visR.sharedMaterial.renderQueue = 3020;
+            }
+            else if (boltPic)
+            {
+                visR.sharedMaterial = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, boltTex);
+                visR.sharedMaterial.mainTexture = boltTex;
                 visR.sharedMaterial.renderQueue = 3020;
             }
             else if (boulder)
@@ -289,6 +301,17 @@ namespace BAM.Art
                     float roll = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg + 90f;
                     vis.rotation = cam * Quaternion.Euler(0f, 0f, roll) * Quaternion.Euler(-90f, 0f, 0f);
                     vis.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+                    break;
+                }
+                case ProjKind.TyraBolt when boltPic:
+                {
+                    // Rickard 2026-10-29 "en mycket bättre pil, större och mer unik": his picture facing the camera, its head (the
+                    // picture's right) pointing the way the bolt flies on screen, about 1.8 tiles across
+                    Quaternion cam = ArtDriver.CamRot;
+                    Vector3 r = cam * Vector3.right, u = cam * Vector3.up;
+                    float ang = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg;
+                    vis.rotation = cam * Quaternion.Euler(0f, 0f, ang) * Quaternion.Euler(-90f, 0f, 0f);
+                    vis.localScale = new Vector3(1.8f, 1.8f, 1.8f);
                     break;
                 }
                 case ProjKind.BonkBoulder when boulder:
@@ -540,9 +563,14 @@ namespace BAM.Art
             reachShape = reachFill = null;
         }
 
+        // a warning strip whose fill follows its shot (Tyra's bolt, Rickard 2026-10-29): how far the fill reaches, -1 = by the clock
+        float front = -1f;
+        public override void SetFront(float along) => front = along;
+
         public override void Show(Vector3 c, Vector3 d, float len, float r, float dur)
         {
             Uncut();
+            front = -1f;
             center = c; length = Mathf.Max(0f, len); radius = Mathf.Max(0.05f, r); duration = Mathf.Max(0.05f, dur);
             d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : Vector3.forward;
@@ -604,7 +632,8 @@ namespace BAM.Art
                 a = fadeIn * (0.85f + Mathf.Sin(age * 18f) * 0.15f);
                 if (length > 0f)
                 {
-                    inner.localScale = new Vector3(radius * 2f * 0.84f, 1f, Mathf.Max(0.01f, length * t));
+                    float fill = front >= 0f ? Mathf.Min(front, length) : length * t;
+                    inner.localScale = new Vector3(radius * 2f * 0.84f, 1f, Mathf.Max(0.01f, fill));
                     inner.localPosition = new Vector3(0f, 0.004f, 0f);
                 }
                 else

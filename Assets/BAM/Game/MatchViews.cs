@@ -80,6 +80,7 @@ namespace BAM.Game
         {
             public int Serial, Seen;
             public ZoneView V;
+            public int FollowShot; // Tyra's bolt warning: the bolt whose tip its fill follows (0 = none)
         }
 
         struct Pending { public int A; public Unit Src, Tgt; public ProjKind Kind; public bool Hit; public Vector3 At; }
@@ -433,6 +434,11 @@ namespace BAM.Game
             z.V.Show(Coords.World(p.X, p.Y), Coords.Dir(p.Ang), p.ZoneLength, p.Radius, Mathf.Max(0.05f, p.TimeLeft));
             if (p.Kind == ProjKind.HildeKeg) z.V.SetPush(p.Radius + HildeS.KegKnock); // which way her keg throws who it hits (HILDE-02)
             if (p.Zone == ZoneKind.BombFuse) CutFuse(z.V, p); // BLAST-05
+            // Tyra's bolt (Rickard 2026-10-29): the strip's fill rides just behind the bolt's tip instead of racing ahead of it
+            z.FollowShot = 0;
+            if (p.Mode == ProjMode.WarnLine && p.WarnFor != 0)
+                for (int i = 0; i < m.Projs.Count; i++)
+                    if (m.Projs[i].Serial == p.WarnFor && m.Projs[i].Kind == ProjKind.TyraBolt) { z.FollowShot = p.WarnFor; z.V.SetFront(0f); break; }
             zones.Add(z);
             zoneBySerial[p.Serial] = z;
             return z;
@@ -938,6 +944,16 @@ namespace BAM.Game
                         if (done + left > 1e-3f) s.V.SetProgress(done / (done + left));
                     }
                 }
+            }
+            // a warning strip that follows its bolt: the fill ends where the bolt is drawn now (its middle, just behind the tip)
+            for (int i = 0; i < zones.Count; i++)
+            {
+                var z = zones[i];
+                if (z.FollowShot == 0) continue;
+                if (!shotBySerial.TryGetValue(z.FollowShot, out ShotRec s) || s.V == null) continue; // still in her hand (0 since Show), or just ended
+                Transform zt = z.V.transform;
+                Vector3 d = s.V.transform.position - zt.position; d.y = 0f;
+                z.V.SetFront(Mathf.Max(0f, Vector3.Dot(d, zt.forward)));
             }
         }
 
