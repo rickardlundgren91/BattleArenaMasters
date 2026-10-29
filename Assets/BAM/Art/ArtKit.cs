@@ -119,6 +119,9 @@ namespace BAM.Art
     {
         /// <summary>A circle (length = 0) or a strip from center along dir. duration = how long it lasts (for fades/fuses).</summary>
         public abstract void Show(Vector3 center, Vector3 dir, float length, float radius, float duration);
+        /// <summary>After Show: an arrow from the centre along dir, length tiles long, for the way the zone pushes who it hits
+        /// (Hilde's keg, HILDE-02); 0 = none. Show clears it.</summary>
+        public virtual void SetPush(float length) { }
     }
 
     /// <summary>The aim shown while the player drags the special button, and the attack range ring.</summary>

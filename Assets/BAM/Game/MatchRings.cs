@@ -217,10 +217,12 @@ namespace BAM.Game
             {
                 // Moa's tap shields the ally hero (or herself) with the lowest health share in reach: show who that is now (MOA-02)
                 var pick = m.MostHurtAlly(p, MoaS.Range);
-                if (pick != null && pick != p)
+                if (pick != null)
                 {
                     Vector3 up = views.DrawnAt(pick); up.y = 0f;
-                    Show(moaPick[0], up, pick.R + 0.22f, new Color(Honey.r, Honey.g, Honey.b, 0.75f), 2.5f * px);
+                    // on Moa herself it goes just outside her orange ready rings, so the two never sit on top of each other
+                    float pr = pick == p ? Mathf.Max(0.55f, p.R + 0.35f) + 0.12f + 12f * px : pick.R + 0.22f;
+                    Show(moaPick[0], up, pr, new Color(Honey.r, Honey.g, Honey.b, 0.75f), 2.5f * px);
                 }
             }
 

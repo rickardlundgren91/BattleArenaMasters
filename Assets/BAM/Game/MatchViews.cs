@@ -430,6 +430,7 @@ namespace BAM.Game
             z.Serial = p.Serial;
             z.V = ArtKit.CreateZone(p.Zone, Side(p.Team));
             z.V.Show(Coords.World(p.X, p.Y), Coords.Dir(p.Ang), p.ZoneLength, p.Radius, Mathf.Max(0.05f, p.TimeLeft));
+            if (p.Kind == ProjKind.HildeKeg) z.V.SetPush(p.Radius + HildeS.KegKnock); // which way her keg throws who it hits (HILDE-02)
             zones.Add(z);
             zoneBySerial[p.Serial] = z;
             return z;

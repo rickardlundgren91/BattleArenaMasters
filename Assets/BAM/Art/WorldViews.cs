@@ -443,6 +443,8 @@ namespace BAM.Art
         // tongues inside it that leap on every burn, which also throws embers (FireLook)
         const int LaneSegs = 10, LaneTongues = 10;
         MeshRenderer[] laneFloor, laneTongue, laneCore;
+        Transform pushBody, pushHead; // Hilde's keg: the way it pushes (HILDE-02)
+        Transform capA, capB; // the lane's round ends: it burns everyone within its half width of the line, behind Blast too (BLAST-02)
         GameObject laneFire;
         int laneTicks, laneLit;
         // Rickard 2026-10-27 ("blasts drag skill känns lite för lite och enkel"): the lane catches fire from Blast to its end in a
@@ -471,6 +473,7 @@ namespace BAM.Art
                 : (t == Teams.Player ? new Color(1f, 0.6f, 0.15f, 1f) : new Color(1f, 0.15f, 0.12f, 1f));
             if (warn) mat.renderQueue = 2995; // over honey and fire, under unit rings
             if (k == ZoneKind.HoneyField) MakeComb();
+            if (k == ZoneKind.FireLane) { capA = Child("CapStart", Shapes.ZoneCap(), mat, 0f); capB = Child("CapEnd", Shapes.ZoneCap(), mat, 0f); }
             if (k == ZoneKind.BombFuse || warn)
             {
                 // the inner fill grows to the rim (or the end of the line) as the time runs out
@@ -512,10 +515,16 @@ namespace BAM.Art
             age = 0f; emitT = 0f;
             transform.position = new Vector3(c.x, warn ? 0.04f : 0.03f, c.z);
             transform.rotation = Quaternion.LookRotation(dir);
+            if (pushBody != null) { pushBody.gameObject.SetActive(false); pushHead.gameObject.SetActive(false); }
             if (length > 0f)
             {
                 shapeF.sharedMesh = Shapes.ZoneStrip();
                 shape.localScale = new Vector3(radius, 1f, length);
+                if (capA != null)
+                {
+                    capA.localRotation = Quaternion.Euler(0f, 180f, 0f); capA.localScale = new Vector3(radius, 1f, radius);
+                    capB.localPosition = new Vector3(0f, 0f, length); capB.localScale = new Vector3(radius, 1f, radius);
+                }
             }
             else
             {
@@ -659,6 +668,24 @@ namespace BAM.Art
                 edgeMat[i].renderQueue = 2992 + i;
                 edge[i] = Child("Edge" + i, EdgeMesh(i), edgeMat[i], 0.007f + i * 0.001f);
             }
+        }
+
+        public override void SetPush(float len)
+        {
+            if (len <= 0f) return;
+            if (pushBody == null)
+            {
+                var pm = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                pm.renderQueue = 2992; // over the keg's growing fuse fill
+                pm.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r, baseColor.g, baseColor.b, 0.85f));
+                pushBody = Child("PushBody", Shapes.AimBody(), pm, 0.008f); pushHead = Child("PushHead", Shapes.AimHead(), pm, 0.008f);
+            }
+            // as the drag aim's push arrow (Hud): 0.12 half wide, the head 0.3 wide and 0.3 long, its point len from the centre
+            float head = Mathf.Min(0.3f, len * 0.45f);
+            pushBody.localScale = new Vector3(0.24f, 1f, len - head);
+            pushHead.localPosition = new Vector3(0f, 0.008f, len - head);
+            pushHead.localScale = new Vector3(0.6f, 1f, head);
+            pushBody.gameObject.SetActive(true); pushHead.gameObject.SetActive(true);
         }
 
         Transform Child(string name, Mesh mesh, Material m, float y)

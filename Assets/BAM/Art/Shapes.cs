@@ -78,6 +78,23 @@ namespace BAM.Art
             return Store(301, "Zone Strip");
         }
 
+        /// <summary>Half of ZoneCircle on the +z side (radius 1): ZoneStrip's round end, so a strip hit as a capsule is drawn as one.</summary>
+        public static Mesh ZoneCap()
+        {
+            if (Cached(305, out Mesh m)) return m;
+            b.Clear();
+            const int Seg = 20;
+            for (int i = 0; i < Seg; i++)
+            {
+                float a0 = Mathf.PI * (1f - (float)i / Seg), a1 = Mathf.PI * (1f - (float)(i + 1) / Seg);
+                Vector3 d0 = new Vector3(Mathf.Cos(a0), 0f, Mathf.Sin(a0)), d1 = new Vector3(Mathf.Cos(a1), 0f, Mathf.Sin(a1)), up = new Vector3(0f, 0.002f, 0f);
+                b.Color(Pal.WhiteSoft).Triangle(Vector3.zero, d0 * 0.94f, d1 * 0.94f);
+                b.Color(Pal.White).Triangle(d0 * 0.92f + up, d0 + up, d1 + up);
+                b.Triangle(d0 * 0.92f + up, d1 + up, d1 * 0.92f + up);
+            }
+            return Store(305, "Zone Cap");
+        }
+
         /// <summary>Tyra's Arrow Volley on the ground (precision TYRA-09): a soft fan of radius 1 from the origin along +z, +-half
         /// radians, with a bright line along each of the n arrows' paths. Scaled by her reach and turned the volley's way.</summary>
         public static Mesh VolleyFan(float half, int n)
