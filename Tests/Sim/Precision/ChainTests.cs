@@ -36,6 +36,23 @@ namespace BAM.Sim
             return (lo + hi) * 0.5f;
         }
 
+        // Map.AimFor (Sim/Aim.cs, AIM fix) by reflection so the suite still builds on a main without it: the line the caster at
+        // (7.5, 28) would see drawn, aimed at ang with drag share k. False when AimFor does not exist yet.
+        static readonly System.Reflection.MethodInfo PAimForM = typeof(Match).GetMethod("AimFor");
+        static bool PAimFor(HeroId hero, float ang, float k, out float len, out float tip, out float half)
+        {
+            len = tip = half = float.NaN;
+            if (PAimForM == null) return false;
+            var m = PMake(hero, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Bram, hero == HeroId.Tikta ? HeroId.Tyra : HeroId.Tikta, hero == HeroId.Knut ? HeroId.Bonk : HeroId.Knut });
+            var s = m.Player;
+            for (int i = 0; i < m.Heroes.Count; i++) if (m.Heroes[i] != s) POff(m.Heroes[i]);
+            PPlace(s, 7.5f, 28);
+            object a = PAimForM.Invoke(m, new object[] { s, ang, k });
+            var t = a.GetType();
+            len = (float)t.GetField("Length").GetValue(a); tip = (float)t.GetField("Tip").GetValue(a); half = (float)t.GetField("Half").GetValue(a);
+            return true;
+        }
+
         static void PrecGeometry()
         {
             const float Up = -SimMath.PI / 2, Tol = 0.05f;
@@ -45,10 +62,13 @@ namespace BAM.Sim
                 float along = Math.Min(2.5f, d.DragReach * 0.5f);
                 float reach = PEdge(a => PDragHits(hero, HeroId.Bram, Up, 1, 7.5f, 28 - a, out _, out _), 0.8f, d.DragReach + 2f);
                 float width = PEdge(w => PDragHits(hero, HeroId.Bram, Up, 1, 7.5f + w, 28 - along, out _, out _), 0f, 2.5f);
-                float wantReach = d.DragReach + er, wantWidth = d.DragWidth + er;
+                // the drawn arrow: Map.AimFor (Length + Tip, Half) once the AIM fix is in, else HDef.DragReach/DragWidth as Hud.Aim drew it
+                float arrowLen = d.DragReach, arrowHalf = d.DragWidth; string src = "DragReach/DragWidth";
+                if (PAimFor(hero, Up, 1, out float aLen, out float aTip, out float aHalf)) { arrowLen = aLen + aTip; arrowHalf = aHalf; src = $"Map.AimFor (length {F(aLen)} + tip {F(aTip)})"; }
+                float wantReach = arrowLen + er, wantWidth = arrowHalf + er;
                 bool ok = Math.Abs(reach - wantReach) <= Tol && Math.Abs(width - wantWidth) <= Tol;
                 Verdict($"SpecialPreview_Line_{hero}", "geometry", ok, "P1",
-                    $"aim arrow {F(d.DragReach)} long, {F(d.DragWidth)} half wide; sim hits a Bram (r {F(er)}) out to {F(reach)} along (arrow+r {F(wantReach)}, off {F(reach - wantReach)}) and {F(width)} across (arrow+r {F(wantWidth)}, off {F(width - wantWidth)})");
+                    $"aim arrow from {src}: {F(arrowLen)} long, {F(arrowHalf)} half wide; sim hits a Bram (r {F(er)}) out to {F(reach)} along (arrow+r {F(wantReach)}, off {F(reach - wantReach)}) and {F(width)} across (arrow+r {F(wantWidth)}, off {F(width - wantWidth)})");
             }
             foreach (var (hero, foe) in new[] { (HeroId.Bram, HeroId.Knut), (HeroId.Hilde, HeroId.Bram) })
             {

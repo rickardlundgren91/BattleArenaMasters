@@ -92,7 +92,7 @@ namespace BAM.Sim
             {
                 ("Math", PrecMath), ("Targeting", PrecTargeting), ("Walls", PrecWalls), ("Hits", PrecHits),
                 ("Interrupts", PrecInterrupts), ("Input", PrecInput), ("Geometry", PrecGeometry), ("Release", PrecRelease),
-                ("BotMatches", PrecBotMatches), ("Determinism", PrecDeterminism), ("Lockstep", PrecLockstep), ("Scale", PrecScale), ("Tyra", PrecTyra), ("BramKnut", PrecBramKnut), ("Shots", PrecShots),
+                ("BotMatches", PrecBotMatches), ("Determinism", PrecDeterminism), ("Lockstep", PrecLockstep), ("Scale", PrecScale), ("Tyra", PrecTyra), ("BramKnut", PrecBramKnut), ("Shots", PrecShots), ("Aim", PrecAim),
             };
             foreach (var t in tests)
             {
