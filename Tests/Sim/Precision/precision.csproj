@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- BAM Precision Test Suite (issue #2, part 8): headless checks of the chain input -> sim tick -> shot -> hit -> events, offline and
+       online lockstep. bash Tests/Sim/Precision/run.sh (needs .NET 8). Not part of the Unity project; test-only. -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><LangVersion>9</LangVersion><Nullable>disable</Nullable><ImplicitUsings>disable</ImplicitUsings><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/BAM/Sim/**/*.cs" Exclude="../../../Assets/BAM/Sim/**/Editor/**" />
+    <Compile Include="../../../Assets/BAM/Online/Mp/MpWire.cs" />
+    <Compile Include="../../../Assets/BAM/Online/Mp/MpLockstep.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>
