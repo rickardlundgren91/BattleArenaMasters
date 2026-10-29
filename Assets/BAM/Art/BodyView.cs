@@ -94,6 +94,11 @@ namespace BAM.Art
         bool bowHero;
         float stanceW;
         float drAtk, drCast, drHit, drAtkFrom, drCastFrom, drUpA, drUpC;
+        // (2026-10-29, ANIM-11..13) where the idle stands the hips (hip heights), the spot a drifting clip is held over; the flinch's
+        // size (big or small hit), its length and its clip's blow and settle
+        Vector2 restHips;
+        bool restSet, hitBig;
+        float hitWin = 0.3f, hitBlow = -1f, hitTo = -1f;
         bool squared;
         Transform hipsT, spineT, chestT;
         Vector3 travelV;
@@ -724,6 +729,18 @@ namespace BAM.Art
             hitA = 0f;
             status.Ripple();
             if (clips != null) { clips[CHit].SetTime(0.0); clips[CHit].SetTime(0.0); upHit.SetTime(0.0); upHit.SetTime(0.0); }
+            // (ANIM-13) a big hit flinches harder and longer than a small one, and the flinch clip's own jolt (its measured blow: Moa's,
+            // Blast's and Hilde's 0.6 s in, after the old 0.3 s window had closed) lands at the flinch's peak
+            hitBig = big;
+            hitWin = big ? 0.5f : 0.3f;
+            hitBlow = hitTo = -1f;
+            AnimationClip hcl = clips != null ? clips[CHit].GetAnimationClip() : null;
+            ClipInfo hci = hcl != null && hcl != clips[CIdle].GetAnimationClip() && AnimFix.BlowTiming ? Info(hcl) : null;
+            if (hci != null && hci.Blow > 0f)
+            {
+                hitBlow = hci.Blow;
+                hitTo = Mathf.Min(hcl.length, hci.Settle > hci.Blow ? hci.Settle : hci.Blow * 2f);
+            }
             hitLen = big ? 0.25f : 0.14f;
             recoil = big ? 1f : 0.6f;
             flashColor = big ? new Color(1f, 0.55f, 0.35f) : new Color(1f, 0.45f, 0.4f); // a short red blink on every hit (MLBB analysis 7)
@@ -1070,8 +1087,23 @@ namespace BAM.Art
                 if (hitA >= 0f)
                 {
                     hitA += dt;
-                    wHit = Mathf.Sin(Mathf.Clamp01(hitA / 0.3f) * Mathf.PI) * 0.6f;
-                    if (hitA >= 0.3f) hitA = -1f;
+                    if (AnimFix.BlowTiming)
+                    {
+                        // the clip runs to its blow over the first half of the flinch and on to where it is back up over the second
+                        float f = Mathf.Clamp01(hitA / hitWin);
+                        wHit = Mathf.Sin(f * Mathf.PI) * (hitBig ? 0.9f : 0.55f);
+                        if (hitBlow > 0f)
+                        {
+                            double ht = f < 0.5f ? hitBlow * f * 2f : hitBlow + (hitTo - hitBlow) * (f * 2f - 1f);
+                            clips[CHit].SetTime(ht); upHit.SetTime(ht);
+                        }
+                        if (hitA >= hitWin) hitA = -1f;
+                    }
+                    else
+                    {
+                        wHit = Mathf.Sin(Mathf.Clamp01(hitA / 0.3f) * Mathf.PI) * 0.6f;
+                        if (hitA >= 0.3f) hitA = -1f;
+                    }
                 }
             }
             lastAtkW = wAtk; lastCastW = wCast;
@@ -1090,12 +1122,14 @@ namespace BAM.Art
             if (uSum > 1e-4f) { upper.SetInputWeight(0, uA / uSum); upper.SetInputWeight(1, uC / uSum); upper.SetInputWeight(2, uH / uSum); }
             SetLayered(upW > 1e-4f);
             if (layered) layers.SetInputWeight(1, upW);
-            drAtk = wAtk; drCast = wCast; drHit = wHit; drAtkFrom = atkSeg ? atkFrom : atkStart; drCastFrom = castSeg ? castFrom : 0f;
             drUpA = upW > 1e-4f && uSum > 1e-4f ? upW * uA / uSum : 0f;
             drUpC = Bow && upW > 1e-4f && uSum > 1e-4f ? upW * uC / uSum : 0f;
             if (upW > 0f) { wAtk -= uA; wCast -= uC; wHit -= uH; }
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
+            // (ANIM-11/12) only the share played on the whole body walks it away: the upper-body layer leaves the hips to the stride
+            // (Unity run 1: Bram swinging on the strafe, Bonk and Blast on the move, the body pushed off by the drift it never made)
+            drAtk = wAtk; drCast = wCast; drHit = wHit; drAtkFrom = atkSeg ? atkFrom : atkStart; drCastFrom = castSeg ? castFrom : 0f;
             float rest = 1f - over;
             float runK = Stride(dt);
             mixer.SetInputWeight(CIdle, rest * (1f - moveW) * (1f - stanceW));
@@ -1142,12 +1176,14 @@ namespace BAM.Art
             model.localPosition = Quaternion.Euler(0f, aimYaw, 0f) * new Vector3(-d.x * k.x, 0f, -d.y * k.z);
         }
 
-        // the track is kept in hip heights, so a clip measured on one rig holds another in place by that rig's own size
+        // the track is kept in hip heights, so a clip measured on one rig holds another in place by that rig's own size. (ANIM-11..13)
+        // Held over where the idle stands the hips, not over the clip's own first played frame: Bram's, Bonk's and Blast's specials
+        // start their played part with the hips already 0.2-0.6 m out (Blast crouched down-left), which the old start never took off.
         Vector2 Drift(int c, float from)
         {
             AnimationClip clip = clips[c].GetAnimationClip();
             if (clip == null || !clipInfo.TryGetValue(clip, out ClipInfo ci) || ci.Hips == null) return Vector2.zero;
-            return (HipsAt(ci, (float)clips[c].GetTime()) - HipsAt(ci, from)) * (hipsH > 1e-4f ? hipsH : 1f);
+            return (HipsAt(ci, (float)clips[c].GetTime()) - (restSet ? restHips : HipsAt(ci, from))) * (hipsH > 1e-4f ? hipsH : 1f);
         }
 
         // which way the arrow points at the full draw of clip c (degrees, left negative), 0 if not measured
@@ -1245,7 +1281,16 @@ namespace BAM.Art
                 AnimationClip cl = clips[c].GetAnimationClip();
                 if (cl != null && cl != idle && !clipInfo.ContainsKey(cl) && !measureList.Contains(cl)) measureList.Add(cl);
             }
+            // the idle too, for the spot its hips stand on (its mean over the clip, the sway averaged out)
+            if (idle != null && !clipInfo.ContainsKey(idle)) measureList.Add(idle);
             Measure(anim, measureList, hipsH);
+            if (idle != null && clipInfo.TryGetValue(idle, out ClipInfo ici) && ici.Hips != null && ici.Hips.Length > 0)
+            {
+                Vector2 sum = Vector2.zero;
+                foreach (Vector2 h in ici.Hips) sum += h;
+                restHips = sum / ici.Hips.Length;
+                restSet = true;
+            }
         }
 
         ClipInfo Info(AnimationClip c)
