@@ -93,7 +93,7 @@ namespace BAM.Art
         AnimationClipPlayable stance;
         bool bowHero;
         float stanceW;
-        float drAtk, drCast, drHit, drAtkFrom, drCastFrom;
+        float drAtk, drCast, drHit, drAtkFrom, drCastFrom, drUpA;
         bool squared;
         Transform hipsT, spineT, chestT;
         Vector3 travelV;
@@ -1011,6 +1011,7 @@ namespace BAM.Art
             // menu's alike, on one graph, not at the first swing in the middle of a fight
             if (!clipsInfo && AnimFix.BlowTiming && anim.isActiveAndEnabled) MeasureClips();
             if (AnimFix.BlowTiming) InPlace();
+            if (AnimFix.UpperSwing) UpperTurn();
             else model.localPosition = Vector3.zero; // switched off live (Animation Check): nothing left held over
             bool life = AnimFix.Life;
             float wAtk = 0f, wCast = 0f, wHit = 0f, wDeath = 0f;
@@ -1079,6 +1080,7 @@ namespace BAM.Art
             SetLayered(upW > 1e-4f);
             if (layered) layers.SetInputWeight(1, upW);
             drAtk = wAtk; drCast = wCast; drHit = wHit; drAtkFrom = atkSeg ? atkFrom : atkStart; drCastFrom = castSeg ? castFrom : 0f;
+            drUpA = upW > 1e-4f && uSum > 1e-4f ? upW * uA / uSum : 0f;
             if (upW > 0f) { wAtk -= uA; wCast -= uC; wHit -= uH; }
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
@@ -1143,6 +1145,40 @@ namespace BAM.Art
             return clip != null && clipInfo.TryGetValue(clip, out ClipInfo ci) ? ci.AimL : 0f;
         }
 
+        // AnimFix.UpperSwing (ANIM-05, Unity run 1 2026-10-29): the upper-body layer takes the swing's spine and arms but not its hips,
+        // so a swing whose whole body turns into the blow (Bonk's overhead slam, Bram's too: the hips 135 degrees round at the blow)
+        // swung its arms from hips still facing the target and the weapon landed beside or behind the hero on the move (Bram 17-62,
+        // Bonk 9-51 degrees off the line to the target, Tyra's bow hand to the side). The hips' turn the clip has at the frame on
+        // screen, by the swing's share of the upper layer, goes back on: some on the hips (the legs step round with it, as standing)
+        // and the rest up the spine, so the blow lands where it does standing. Same frame and weight the pose was evaluated with.
+        const float UpperTurnHips = 0.4f;
+        void UpperTurn()
+        {
+            if (drUpA < 1e-3f || hipsT == null || spineT == null) return;
+            AnimationClip clip = upAtk.GetAnimationClip();
+            if (clip == null || !clipInfo.TryGetValue(clip, out ClipInfo ci) || ci.Yaw == null) return;
+            float deg = YawAt(ci, (float)upAtk.GetTime()) * drUpA;
+            if (Mathf.Abs(deg) < 0.05f) return;
+            Vector3 up = transform.up;
+            hipsT.rotation = Quaternion.AngleAxis(deg * UpperTurnHips, up) * hipsT.rotation;
+            float rest = deg * (1f - UpperTurnHips);
+            if (chestT != null)
+            {
+                spineT.rotation = Quaternion.AngleAxis(rest * 0.6f, up) * spineT.rotation;
+                chestT.rotation = Quaternion.AngleAxis(rest * 0.4f, up) * chestT.rotation;
+            }
+            else spineT.rotation = Quaternion.AngleAxis(rest, up) * spineT.rotation;
+        }
+
+        static float YawAt(ClipInfo ci, float t)
+        {
+            int n = ci.Yaw.Length;
+            if (n < 2 || ci.Step <= 0f) return n > 0 ? ci.Yaw[0] : 0f;
+            float f = Mathf.Clamp(t / ci.Step, 0f, n - 1);
+            int i = Mathf.Min((int)f, n - 2);
+            return Mathf.LerpAngle(ci.Yaw[i], ci.Yaw[i + 1], f - i);
+        }
+
         static Vector2 HipsAt(ClipInfo ci, float t)
         {
             int n = ci.Hips.Length;
@@ -1160,7 +1196,7 @@ namespace BAM.Art
         // slam 1.9 s, Knut's 2.1, Tikta's 1.5; -1 if never, Tyra's shot ends drawn), and for a bow the full draw (Draw: the bow hand
         // at its highest from 10 % on) with which way the arrow points there (AimL: degrees from straight ahead, left negative), and
         // which hand is the fast one at the blow (Right; the hand a shot leaves from, Muzzle)
-        sealed class ClipInfo { public float Blow = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public bool Right = true; public Vector2[] Hips; }
+        sealed class ClipInfo { public float Blow = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public bool Right = true; public Vector2[] Hips; public float[] Yaw; }
         static readonly Dictionary<AnimationClip, ClipInfo> clipInfo = new Dictionary<AnimationClip, ClipInfo>();
         static readonly List<AnimationClip> measureList = new List<AnimationClip>();
 
@@ -1196,6 +1232,7 @@ namespace BAM.Art
             if (hips == null || lh == null || rh == null) return;
             Transform head = an.GetBoneTransform(HumanBodyBones.Head);
             Transform lf = an.GetBoneTransform(HumanBodyBones.LeftFoot), rf = an.GetBoneTransform(HumanBodyBones.RightFoot);
+            Transform lul = an.GetBoneTransform(HumanBodyBones.LeftUpperLeg), rul = an.GetBoneTransform(HumanBodyBones.RightUpperLeg);
             float hs = hipsH > 1e-4f ? hipsH : 1f;
             Transform[] bones = SaveBones(root, out Vector3[] lp, out Quaternion[] lr);
             PlayableGraph g = PlayableGraph.Create("BAM clip info");
@@ -1217,6 +1254,7 @@ namespace BAM.Art
                     var L = new Vector3[n];
                     var R = new Vector3[n];
                     var pose = new float[n * 16];
+                    var yaw = lul != null && rul != null ? new float[n] : null;
                     for (int i = 0; i < n; i++)
                     {
                         cp.SetTime(step * i); g.Evaluate(0f);
@@ -1229,9 +1267,16 @@ namespace BAM.Art
                         PoseOf(pose, o + 9, lf != null ? root.InverseTransformPoint(lf.position) - h : Vector3.zero, hs);
                         PoseOf(pose, o + 12, rf != null ? root.InverseTransformPoint(rf.position) - h : Vector3.zero, hs);
                         pose[o + 15] = h.y / hs;
+                        if (yaw != null)
+                        {
+                            Vector3 a = root.InverseTransformPoint(rul.position) - root.InverseTransformPoint(lul.position);
+                            a.y = 0f;
+                            yaw[i] = a.sqrMagnitude > 1e-8f ? Vector3.SignedAngle(Vector3.right, a, Vector3.up) : 0f;
+                        }
                     }
                     ci.Step = step;
                     ci.Hips = track;
+                    ci.Yaw = yaw;
                     float best = 0f;
                     for (int i = 1; i < n - 1; i++)
                     {
