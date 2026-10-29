@@ -50,5 +50,8 @@ namespace BAM.Sim
         public byte Kind;
         public bool Big;
         public DmgKind Dmg;
+        /// <summary>The flying shot (Proj.Serial, IsShot) whose update sent this event, 0 for none: the view marks exactly the shot that
+        /// hit (two shots of one kind from one shooter can end in the same tick, Tyra's volley). Metadata only: no rule reads it.</summary>
+        public int Shot;
     }
 }

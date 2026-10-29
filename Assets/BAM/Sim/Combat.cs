@@ -324,6 +324,7 @@ namespace BAM.Sim
             {
                 var p = projBuf[i];
                 if (p.Done) continue;
+                emitShot = p.IsShot ? p.Serial : 0;
                 if (p.Mode == ProjMode.Auto && p.Tgt != null && !p.Tgt.Alive && !p.Fizzle) { RetargetAuto(p); if (p.Done) continue; }
                 p.T += dt;
                 if (p.T < 0)
@@ -360,6 +361,7 @@ namespace BAM.Sim
                     case ProjMode.Echo: EchoUpdate(p, dt); break;
                 }
             }
+            emitShot = 0;
             int w = 0;
             for (int i = 0; i < Projs.Count; i++)
             {

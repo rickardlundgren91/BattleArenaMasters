@@ -518,8 +518,11 @@ namespace BAM.Sim
         internal void Emit(EventType type, Unit a, Unit b, float v = 0, byte kind = 0, bool big = false, float x = 0, float y = 0, DmgKind dk = DmgKind.Auto)
         {
             if (Events.Count >= 2048) return; // a safety net only: the game reads events every tick
-            Events.Add(new SimEvent { Type = type, A = a, B = b, ASerial = a != null ? a.Serial : 0, BSerial = b != null ? b.Serial : 0, V = v, Kind = kind, Big = big, X = x, Y = y, Dmg = dk });
+            Events.Add(new SimEvent { Type = type, A = a, B = b, ASerial = a != null ? a.Serial : 0, BSerial = b != null ? b.Serial : 0, V = v, Kind = kind, Big = big, X = x, Y = y, Dmg = dk, Shot = emitShot });
         }
+
+        /// <summary>The shot being updated (UpdateProjectiles), stamped on every event it sends (SimEvent.Shot).</summary>
+        int emitShot;
 
         // ---------- projectiles ----------
         internal Proj NewProj(ProjMode mode, Unit src, float x, float y)

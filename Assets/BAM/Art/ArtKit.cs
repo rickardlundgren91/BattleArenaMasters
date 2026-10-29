@@ -92,6 +92,14 @@ namespace BAM.Art
         public virtual void SetTether(Transform anchor) { }
         /// <summary>The shot hit something: its splash plays when it ends. Shots never marked end in a small fizzle (a miss).</summary>
         public virtual void MarkHit() { }
+        /// <summary>The shot hurt someone earlier and flew on (Tyra's volley passes through): it ends quietly, no splash, no fizzle.</summary>
+        public virtual void MarkSpent() { }
+        /// <summary>How far along its flight a homing shot is (0..1) by the rules, so an arc lands when the shot does, not by the clock.</summary>
+        public virtual void SetProgress(float k) { }
+        /// <summary>Where the shooter's hand or weapon is at the release: the look starts there and eases onto the rules' path.</summary>
+        public virtual void LaunchFrom(Vector3 muzzle) { }
+        /// <summary>A ghost thrown high (Bram's Anvil Drop hammer): the arc's top in tiles over the flight, whatever its kind.</summary>
+        public virtual void SetLob(float height) { }
     }
 
     public abstract class ZoneView : MonoBehaviour

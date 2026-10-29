@@ -22,6 +22,11 @@ namespace BAM.Art
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
         bool melee, launched, mirror, struck, arc, hit, honey, boulder;
+        bool spent;                  // it hurt someone earlier and flew on: ends without a splash or a fizzle
+        float prog = -1f;            // the rules' share of the flight done (SetProgress), -1 = by the clock
+        Vector3 launchOff;           // the hand's offset from the rules' path at the release, eased out over LaunchEase
+        bool launchEase;
+        const float LaunchEase = 0.08f;
         float roll; // Bonk's boulder: degrees rolled so far, on screen
         Color arcColor;
         static Texture2D arcTex, boulderTex, dustTrailTex;
@@ -212,7 +217,7 @@ namespace BAM.Art
             flight = Mathf.Max(0.05f, flightTime);
             age = 0f; spin = 0f; sparkT = 0f; trailFxT = 0f;
             launched = true;
-            hit = false;
+            hit = false; spent = false; prog = -1f; launchEase = false;
             Vector3 d = b - a; d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : transform.forward;
             float dist = d.magnitude;
@@ -234,10 +239,20 @@ namespace BAM.Art
         // the heroes' blades get the big arc; the wolf a smaller one, minions small (recipe: they must not fill the lane)
         static float ArcScale(ProjKind k) => k == ProjKind.FennSlash || k == ProjKind.KnutHit ? 1.6f : k == ProjKind.WolfBite ? 1.0f : 0.8f;
 
-        // skillshots can miss: their big splash only plays when the game says they hit
-        static bool CanMiss(ProjKind k) => k == ProjKind.TyraBolt || k == ProjKind.TyraVolley || k == ProjKind.TiktaNeedleSpecial || k == ProjKind.BramHammerSpecial;
-
+        // every shot can miss (a wall, a target that died, a volley arrow past everyone): its splash plays only when the game says
+        // this very shot hit; one that hit earlier and flew on ends quietly (precision SHOT-01/03, VIS-04, TYRA-07)
         public override void MarkHit() => hit = true;
+        public override void MarkSpent() => spent = true;
+        public override void SetProgress(float k) => prog = Mathf.Clamp01(k);
+        public override void SetLob(float height) => lob = Mathf.Max(0f, height);
+
+        public override void LaunchFrom(Vector3 muzzle)
+        {
+            if (melee) return;
+            launchOff = muzzle - vis.position;
+            launchEase = true;
+            vis.position = muzzle;
+        }
 
         public override void SetTether(Transform anchor)
         {
@@ -314,8 +329,9 @@ namespace BAM.Art
             if (boulder) roll -= Vector3.Dot(d, ArtDriver.CamRot * Vector3.right) / 0.55f * Mathf.Rad2Deg; // rolls without slipping
             lastPos = p;
             spin += dt * 900f;
-            float t = Mathf.Clamp01(age / flight);
+            float t = prog >= 0f ? prog : Mathf.Clamp01(age / flight);
             Place(t);
+            if (launchEase) { float w = 1f - Mathf.Clamp01(age / LaunchEase); vis.position += launchOff * w; launchEase = w > 0f; }
             if (melee)
             {
                 // the swing arc sweeps and fades over a short moment, however long the hit takes
@@ -379,8 +395,8 @@ namespace BAM.Art
             // the shot came and went inside one hitch frame and was never drawn, so every attack still shows its hit
             if (launched && !melee && kind != ProjKind.BlastBomb && kind != ProjKind.HildeKeg && kind != ProjKind.HildeBurst && kind != ProjKind.KnutAnchor)
             {
-                if (CanMiss(kind) && !hit) Fx.Fizzle(kind, vis.position, team);
-                else Fx.Impact(kind, vis.position, team);
+                if (hit) Fx.Impact(kind, vis.position, team);
+                else if (!spent) Fx.Fizzle(kind, vis.position, team);
                 // Tyra's bolt (Rickard 2026-10-28, tester Benny: "pilen borde ha mer ljus och effekter"): his spikes fly on the way
                 // it went, and a short light pillar stands where it struck
                 if (kind == ProjKind.TyraBolt && hit)

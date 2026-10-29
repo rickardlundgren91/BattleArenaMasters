@@ -63,10 +63,10 @@ namespace BAM.Game
             public ProjectileView V;
             public bool Melee;
             public float LastT, LastX, LastY;
-            public int LaunchFrame = -1;   // Time.frameCount when its view was made
             // a ghost is drawn without the rules: a shot that ended before it was seen, a melee slash finishing its swing, a lob
             public bool Ghost;
             public bool Hit;               // the rules hit with it (MarkHit given)
+            public bool EverHit;           // it hurt someone while flying on (Tyra's volley passes through): ends quietly
             public Vector3 From, To;
             public float Age, Flight, Linger;
             public bool Fresh;             // a ghost started this frame: it starts aging next frame
@@ -78,7 +78,7 @@ namespace BAM.Game
             public ZoneView V;
         }
 
-        struct Pending { public int A; public Unit Src, Tgt; public ProjKind Kind; }
+        struct Pending { public int A; public Unit Src, Tgt; public ProjKind Kind; public bool Hit; public Vector3 At; }
 
         const float MinionLinger = 0.9f;   // the death animation finishes after the rules drop a minion
         const float SlashLinger = 0.22f;   // a melee slash finishes its sweep after the hit
@@ -97,12 +97,14 @@ namespace BAM.Game
         readonly List<Pending> pending = new List<Pending>(32);
         readonly Stack<UnitRec> unitRecPool = new Stack<UnitRec>(64);
         readonly Stack<ShotRec> shotRecPool = new Stack<ShotRec>(64);
-        // the attacker and shot kind of every Hit this tick: a shot the rules drop in the same tick landed, so its look plays
-        // its splash (ProjectileView.MarkHit); a shot dropped without one fizzles as a miss
-        readonly HashSet<int> hitKeys = new HashSet<int>();
-        readonly Dictionary<int, Vector3> hitAt = new Dictionary<int, Vector3>(); // where this tick's hits landed, by HitKey
-        // the volley's arrows are TyraArrow in the rules (their Hit events say so): key them as that
-        static int HitKey(int srcSerial, ProjKind kind) => srcSerial * 64 + (int)(kind == ProjKind.TyraVolley ? ProjKind.TyraArrow : kind);
+        // this tick's hits and wall stops by the shot that made them (SimEvent.Shot): a shot the rules drop in the same tick landed,
+        // so exactly that shot plays its splash (ProjectileView.MarkHit) where it hit; a shot dropped without one fizzles as a miss.
+        // Keyed by shot, not shooter + kind: Tyra's five volley arrows end in one tick (precision SHOT-01, TYRA-07, TIKTA-02)
+        readonly Dictionary<int, Vector3> shotHitAt = new Dictionary<int, Vector3>();
+        readonly Dictionary<int, Vector3> shotStopAt = new Dictionary<int, Vector3>();
+        readonly List<SimEvent> shotHits = new List<SimEvent>(16); // each shot's first Hit this tick, for shots the view never saw
+        readonly HashSet<int> droppedNow = new HashSet<int>();
+        const float EndFlight = 0.05f; // a dropped shot flies the last bit to where the rules ended it before its splash (SHOT-04)
         readonly Stack<ZoneRec> zoneRecPool = new Stack<ZoneRec>(16);
         int step;
         int lastWave;
@@ -188,7 +190,7 @@ namespace BAM.Game
         {
             step++;
             pending.Clear();
-            hitKeys.Clear(); hitAt.Clear();
+            shotHitAt.Clear(); shotStopAt.Clear(); shotHits.Clear();
             var ev = m.Events;
             for (int i = 0; i < ev.Count; i++) { tickNow = ev[i].Type == EventType.Damage && IsTick(ev, i); OnEvent(ev[i]); }
             if (!bridgeShown && m.Tut.BridgeOpen) BuildArena();
@@ -262,6 +264,7 @@ namespace BAM.Game
                 {
                     if (!shotBySerial.TryGetValue(p.Serial, out ShotRec s)) s = AddShot(p);
                     s.Seen = step;
+                    if (shotHitAt.ContainsKey(p.Serial)) s.EverHit = true;
                     s.LastT = p.T; s.LastX = p.X; s.LastY = p.Y;
                     if (s.V == null && p.T >= 0f) LaunchView(s, p);
                 }
@@ -269,34 +272,59 @@ namespace BAM.Game
                 {
                     if (!zoneBySerial.TryGetValue(p.Serial, out ZoneRec z)) z = AddZone(p);
                     z.Seen = step;
+                    // a warning that follows its caster (Tikta's line while her needles are in her hand, TIKTA-01)
+                    if (p.IsWarning && (p.X != p.PX || p.Y != p.PY)) { Vector3 w = Coords.World(p.X, p.Y); var tr = z.V.transform; tr.position = new Vector3(w.x, tr.position.y, w.z); }
                 }
             }
 
             // shots the rules dropped this tick
+            droppedNow.Clear();
             for (int i = shots.Count - 1; i >= 0; i--)
             {
                 var s = shots[i];
                 if (s.Ghost || s.Seen == step) continue;
                 shotBySerial.Remove(s.Serial);
+                droppedNow.Add(s.Serial);
+                s.Hit = shotHitAt.TryGetValue(s.Serial, out Vector3 hitAt);
+                // where the rules ended it: on what it hit, at the wall, else its own last spot (its Proj is pooled, not yet reused)
+                Vector3 end = s.Hit ? hitAt : shotStopAt.TryGetValue(s.Serial, out Vector3 stop) ? stop
+                    : s.P != null ? Coords.World(s.P.X, s.P.Y) : Coords.World(s.LastX, s.LastY);
                 s.P = null;
-                s.Hit = hitKeys.Contains(HitKey(s.SrcSerial, s.Kind));
-                if (s.Hit && s.V != null) s.V.MarkHit();
+                if (s.V != null) { if (s.Hit) s.V.MarkHit(); else if (s.EverHit) s.V.MarkSpent(); }
                 if (s.V == null)
                 {
                     // it left the hand and landed inside one tick, so it was never drawn: show the flight now
-                    // (its last seen spot is still in the hand, so it flies to where it hit, not shooter to shooter)
-                    if (s.LastT + Rules.Tick >= 0f)
-                    {
-                        Vector3 to = s.Hit && hitAt.TryGetValue(HitKey(s.SrcSerial, s.Kind), out Vector3 ha) ? ha : Coords.World(s.LastX, s.LastY);
-                        StartGhost(s, From(s.SrcSerial, s.LastX, s.LastY), to, 0.1f, s.Melee ? SlashLinger : 0f);
-                    }
+                    // (its last seen spot is still in the hand, so it flies to where it ended, not shooter to shooter)
+                    if (s.LastT + Rules.Tick >= 0f) { StartGhost(s, From(s.SrcSerial, s.LastX, s.LastY), end, 0.1f, s.Melee ? SlashLinger : 0f); ReleaseSound(s.SrcSerial, s.Kind == ProjKind.TyraBolt ? ProjMode.Bolt : s.Kind == ProjKind.TyraVolley ? ProjMode.Volley : ProjMode.Auto); }
                     else { shots.RemoveAt(i); FreeShot(s); } // cancelled in the hand (stun, death): nothing flew
                 }
                 else if (s.Melee) StartGhost(s, s.V.transform.position, s.V.transform.position, 0f, SlashLinger);
-                // launched and dropped inside the same frame (60 Hz ticks at 30 fps, point blank): it was never drawn, so fly it
-                // the last bit as a 0.06 s ghost instead of releasing it unseen (every attack must be seen)
-                else if (s.LaunchFrame == Time.frameCount) StartGhost(s, s.V.transform.position, Coords.World(s.LastX, s.LastY), 0.06f, 0f);
-                else { ArtKit.Release(s.V); shots.RemoveAt(i); FreeShot(s); }
+                // drawn: it sits a tick or two short of where the rules ended it (skillshots stop at their hit box, up to a tile in
+                // front of the target), so it flies that last bit before its splash, which then plays on the hit (SHOT-04, TYRA-06);
+                // this also shows a shot launched and dropped inside one frame (60 Hz ticks at 30 fps)
+                else StartGhost(s, s.V.transform.position, end, EndFlight, 0f);
+            }
+
+            // a shot the view never saw (born and ended inside this tick) that hit: its AttackStart's ghost flies to the hit, and
+            // one with no AttackStart (Tikta's first drag needle point blank, SHOT-06) gets a ghost of its own, so every attack shows
+            for (int k = 0; k < shotHits.Count; k++)
+            {
+                var e = shotHits[k];
+                if (droppedNow.Contains(e.Shot) || shotBySerial.ContainsKey(e.Shot) || e.A == null) continue;
+                Vector3 at = Coords.World(e.X, e.Y);
+                bool paired = false;
+                for (int i = 0; i < pending.Count && !paired; i++)
+                {
+                    var pd = pending[i];
+                    if (pd.A != e.A.Serial || pd.Kind != (ProjKind)e.Kind || pd.Hit) continue;
+                    pd.Hit = true; pd.At = at; pending[i] = pd; paired = true;
+                }
+                if (paired) continue;
+                var s = shotRecPool.Count > 0 ? shotRecPool.Pop() : new ShotRec();
+                Init(s, null, 0, (ProjKind)e.Kind, e.A.Team, e.A.Serial);
+                s.Hit = true;
+                shots.Add(s);
+                StartGhost(s, DrawnAt(e.A), at, 0.1f, s.Melee ? SlashLinger : 0f);
             }
 
             // an attack whose shot started and ended inside this very tick never showed up in Projs
@@ -306,10 +334,11 @@ namespace BAM.Game
                 if (pd.A == 0) continue;
                 var s = shotRecPool.Count > 0 ? shotRecPool.Pop() : new ShotRec();
                 Init(s, null, 0, pd.Kind, pd.Src.Team, pd.Src.Serial);
-                s.Hit = hitKeys.Contains(HitKey(pd.Src.Serial, pd.Kind));
+                s.Hit = pd.Hit;
                 shots.Add(s);
-                Vector3 to = pd.Tgt != null ? Coords.Of(pd.Tgt) : Coords.Of(pd.Src);
+                Vector3 to = pd.Hit ? pd.At : pd.Tgt != null ? Coords.Of(pd.Tgt) : Coords.Of(pd.Src);
                 StartGhost(s, Coords.Of(pd.Src), to, 0.1f, s.Melee ? SlashLinger : 0f);
+                ReleaseSound(pd.Src.Serial, ProjMode.Auto);
             }
 
             for (int i = zones.Count - 1; i >= 0; i--)
@@ -342,7 +371,7 @@ namespace BAM.Game
             s.P = p; s.Serial = serial; s.Kind = kind; s.Team = team; s.SrcSerial = src; s.V = null; s.Ghost = false;
             s.Melee = kind == ProjKind.FennSlash || kind == ProjKind.KnutHit || kind == ProjKind.WolfBite || kind == ProjKind.MeleeMinionHit
                 || kind == ProjKind.BonkClub || kind == ProjKind.OakenFist;
-            s.Age = 0f; s.Flight = 0f; s.Linger = 0f; s.LastT = -1f; s.Hit = false;
+            s.Age = 0f; s.Flight = 0f; s.Linger = 0f; s.LastT = -1f; s.Hit = false; s.EverHit = false;
         }
 
         void FreeShot(ShotRec s) { s.P = null; s.V = null; shotRecPool.Push(s); }
@@ -354,9 +383,7 @@ namespace BAM.Game
         {
             var v = ArtKit.CreateProjectile(s.Kind, Side(p.Team)); // s.Kind: the volley's arrows wear their own look
             s.V = v;
-            s.LaunchFrame = Time.frameCount;
             Vector3 from = Coords.World(p.PX, p.PY), to;
-            if (p.Kind == ProjKind.HildeShell) from = FromMuzzle(s.SrcSerial, from);
             float flight;
             if (p.Mode == ProjMode.Auto && p.Tgt != null)
             {
@@ -372,6 +399,8 @@ namespace BAM.Game
             }
             v.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
             v.Launch(from, to, flight);
+            if (MuzzleOf(s.SrcSerial, out Vector3 mz)) v.LaunchFrom(mz); // from the hand or weapon, easing onto the rules' path (SHOT-02)
+            ReleaseSound(s.SrcSerial, p.Mode);
             if (p.Mode == ProjMode.Hook && p.Src != null) v.SetTether(ViewOf(p.Src));
         }
 
@@ -383,6 +412,7 @@ namespace BAM.Game
                 s.V = ArtKit.CreateProjectile(s.Kind, Side(s.Team));
                 s.V.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
                 s.V.Launch(from, to, Mathf.Max(flight, 0.05f));
+                if (!s.Melee && MuzzleOf(s.SrcSerial, out Vector3 mz)) s.V.LaunchFrom(mz);
                 if (s.Hit) s.V.MarkHit();
             }
         }
@@ -468,7 +498,8 @@ namespace BAM.Game
                         towerRunSerial = a.Serial; towerRunAt = m.Time;
                         if (towerRun >= 2) { Sound(SfxId.TowerHot, a, 0.9f); break; }
                     }
-                    if (a.Kind != UnitKind.Tower || e.B == m.Player) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
+                    // Tyra's twang plays when her arrow leaves the bow, not at the draw (ReleaseSound, TYRA-03/04)
+                    if ((a.Kind != UnitKind.Tower || e.B == m.Player) && !(a.Kind == UnitKind.Hero && a.Hero == HeroId.Tyra)) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
                     break;
                 }
                 case EventType.Hit:
@@ -477,12 +508,12 @@ namespace BAM.Game
                     var kind = (ProjKind)e.Kind;
                     Vector3 at = Coords.World(e.X, e.Y);
                     V(b)?.PlayHit(e.Big);
-                    if (e.A != null) { int hk = HitKey(e.A.Serial, kind); hitKeys.Add(hk); hitAt[hk] = at; }
+                    if (e.Shot != 0 && !shotHitAt.ContainsKey(e.Shot)) { shotHitAt[e.Shot] = at; shotHits.Add(e); } // its own hit comes first
                     if (kind == ProjKind.BonkSlam && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f); // the slam stuns
                     // Bram's bounces get their own gold line; Tyra's bolt and Tikta's needles carry the special's look in their own
                     // impact, so they add only the small hit (fx review 2026-10-26, P1-2/P1-3)
                     FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash
-                        : kind == ProjKind.BramHammerSpecial ? FxKind.Bounce
+                        : kind == ProjKind.BramHammerSpecial ? (e.Shot != 0 ? FxKind.Bounce : FxKind.HitBig) // the tap's flying hammer bounces; the anvil (no shot) lands
                         : kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial ? FxKind.Hit
                         : e.Big ? FxKind.HitBig : FxKind.Hit;
                     float hs = (b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f) * (e.A != null && e.A.Kind == UnitKind.Minion ? 0.6f : 1f); // VIS-03
@@ -504,6 +535,7 @@ namespace BAM.Game
                 }
                 case EventType.Blocked:
                     ArtKit.PlayFx(FxKind.Hit, Coords.World(e.X, e.Y), 0.6f);
+                    if (e.Shot != 0) shotStopAt[e.Shot] = Coords.World(e.X, e.Y);
                     break;
                 case EventType.Damage:
                     // special and passive damage without a shot of its own (zones, splashes) still flinches the target; a burn or
@@ -557,11 +589,12 @@ namespace BAM.Game
                     if ((HeroId)e.Kind == HeroId.Tyra && !e.Big)
                     {
                         ArtKit.PlayVolleyDraw(Coords.Of(a), Coords.World(e.X, e.Y) - Coords.Of(a), a.Range, TyraS.VolleyWindup);
-                        Sound(SfxId.TyraDraw, a, 1f);
                     }
                     // Blast's tap bomb is a ground fuse in the rules; draw the lob onto it so the throw is seen
                     if ((HeroId)e.Kind == HeroId.Blast && !e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
                     // so are Hilde's kegs: the big one (drag) and the small quick one (tap)
+                    // Bram's Anvil Drop: his hammer goes up high and comes down on the red circle as it lands (BRAM-04)
+                    if ((HeroId)e.Kind == HeroId.Bram && e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BramHammerSpecial, BramS.DropDelay, 2f);
                     if ((HeroId)e.Kind == HeroId.Hilde) LobGhost(a, Coords.World(e.X, e.Y), e.Big ? ProjKind.HildeKeg : ProjKind.HildeBurst, e.Big ? 0.4f : 0.3f);
                     break;
                 }
@@ -691,16 +724,26 @@ namespace BAM.Game
         // Hilde's shell and kegs leave her cannon's mouth (Speltest CannonMouthOf), on the ground under it as every shot starts
         Vector3 FromMuzzle(int srcSerial, Vector3 from)
         {
-            if (unitBySerial.TryGetValue(srcSerial, out UnitRec r) && r.V != null && r.V.Muzzle(out Vector3 at)) { from.x = at.x; from.z = at.z; }
+            if (MuzzleOf(srcSerial, out Vector3 at)) { from.x = at.x; from.z = at.z; }
             return from;
         }
 
-        void LobGhost(Unit src, Vector3 to, ProjKind kind, float flight)
+        // the shooter's hand or weapon tip now, where its art knows it (UnitView.Muzzle; the rest start at the body as before)
+        bool MuzzleOf(int srcSerial, out Vector3 at)
+        {
+            at = default;
+            return unitBySerial.TryGetValue(srcSerial, out UnitRec r) && r.V != null && r.V.Muzzle(out at);
+        }
+
+        // arc >= 0: the lob's height whatever the kind (a hammer flies flat as a shot); a lob lands quietly, its blast is the rules' own
+        void LobGhost(Unit src, Vector3 to, ProjKind kind, float flight, float arc = -1f)
         {
             var s = shotRecPool.Count > 0 ? shotRecPool.Pop() : new ShotRec();
             Init(s, null, 0, kind, src.Team, src.Serial);
             shots.Add(s);
             StartGhost(s, FromMuzzle(src.Serial, DrawnAt(src)), to, flight, 0f);
+            if (arc >= 0f) s.V.SetLob(arc);
+            s.V.MarkSpent();
         }
 
         // Speltest HeroJuice.cs hit confirm: the player's hit (or its wolf's) landing on an enemy hero gives a short tick, a dull thud for
@@ -734,6 +777,25 @@ namespace BAM.Game
             if (tag && k.Team == Mine) BamAudio.Play(SfxId.MultiKill, 0.9f);
         }
 
+        // Tyra's twang when the arrow really leaves the bow (the rules release it 0.18 s after the auto's AttackStart, 0.25 s into the
+        // volley and 0.33 s into the bolt; the clips peak at 0.05 s): the auto's sound, the special's release once per volley (TYRA-03/04)
+        readonly Dictionary<int, int> volleySoundStep = new Dictionary<int, int>();
+        void ReleaseSound(int srcSerial, ProjMode mode)
+        {
+            if (!unitBySerial.TryGetValue(srcSerial, out UnitRec r) || r.U == null) return;
+            var a = r.U;
+            if (a.Kind != UnitKind.Hero || a.Hero != HeroId.Tyra) return;
+            if (!m.IsVisibleTo(a, Mine)) return; // a hidden Tyra stays unheard: shooting does not reveal, only a hit does
+            if (mode == ProjMode.Auto) { Sound(SfxId.AttackTyra, a, 0.8f); return; }
+            if (mode != ProjMode.Bolt && mode != ProjMode.Volley) return;
+            if (mode == ProjMode.Volley)
+            {
+                if (volleySoundStep.TryGetValue(srcSerial, out int at) && at == step) return; // five arrows, one twang
+                volleySoundStep[srcSerial] = step;
+            }
+            Sound(SfxId.TyraRelease, a, 1f);
+        }
+
         void Sound(SfxId id, Unit a, float volume)
         {
             if (id == SfxId.None) return;
@@ -758,7 +820,7 @@ namespace BAM.Game
             {
                 case HeroId.Bram: return SfxId.BramHammerThrow;
                 case HeroId.Fenn: return dragged ? SfxId.FennWolfThrow : SfxId.FennWolfCall;
-                case HeroId.Tyra: return SfxId.TyraRelease;
+                case HeroId.Tyra: return SfxId.TyraDraw; // the draw creak; the twang plays at the release (ReleaseSound)
                 case HeroId.Moa: return dragged ? SfxId.MoaField : SfxId.MoaShield;
                 case HeroId.Knut: return SfxId.KnutAnchorThrow;
                 case HeroId.Tikta: return SfxId.TiktaNeedles;
@@ -827,6 +889,15 @@ namespace BAM.Game
                 {
                     var p = s.P;
                     s.V.transform.position = Coords.Lerp(p.PX, p.PY, p.X, p.Y, alpha);
+                    // a homing shot's arc (Blast's bomb) by the share of the way it has flown to where its target is now, so it
+                    // comes down on the target even when the target walks (SHOT-05)
+                    if (p.Mode == ProjMode.Auto && p.Tgt != null && p.Launched && p.Speed > 0f)
+                    {
+                        float x = p.PX + (p.X - p.PX) * alpha, y = p.PY + (p.Y - p.PY) * alpha;
+                        float done = Mathf.Sqrt((x - p.OX) * (x - p.OX) + (y - p.OY) * (y - p.OY));
+                        float left = Mathf.Sqrt((p.Tgt.X - x) * (p.Tgt.X - x) + (p.Tgt.Y - y) * (p.Tgt.Y - y));
+                        if (done + left > 1e-3f) s.V.SetProgress(done / (done + left));
+                    }
                 }
             }
         }
