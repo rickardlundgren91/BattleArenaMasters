@@ -207,6 +207,7 @@ namespace BAM.Art
                 r.receiveShadows = false;
                 ghostMats = new[] { opaque, o };
                 ghostTint = new Color(0.62f, 1f, 0.96f, 1f);
+                if (d.Kind == RigKind.Wolf) wolfNose = 1f; // the still Meshy wolf, about 2 tiles nose to tail
             }
             else
             {
@@ -225,7 +226,9 @@ namespace BAM.Art
         }
 
         AnimationClipPlayable wolfWalk;
+        float wolfNose = 0.45f;                       // how far its nose is ahead of the 0.2-tile disc it stands on (tiles; the code wolf)
         float leapK = -1f, leapLen, leapY, wolfTilt;  // the throw (SetLeap): progress 0..1, below 0 on the ground
+        float room = 9f, pull;                        // free ground ahead (SetRoom) and how far the body draws back from a wall
 
         // Fenn's wolf as old Speltest draws it (View3DWolf.cs): Rickard's rigged Meshy wolf on the body bone, turned so hips to head
         // points forward, about 2 tiles nose to tail, see-through turquoise like the rest of the ghost, its walk played as it runs
@@ -252,6 +255,7 @@ namespace BAM.Art
                 float s = 2.0f / (kb.size.z * 1.12f);
                 t.localScale = new Vector3(s, s, s);
                 t.localPosition = new Vector3(-kb.center.x * s, -d.Pivots[Models.WolfBody].y - kb.min.y * s + 0.03f, -kb.center.z * s);
+                wolfNose = (kb.max.z - kb.center.z + kb.size.z * 0.06f) * s; // the head bones' end plus the mesh past them (the 1.12)
             }
             Texture2D tex = Resources.Load<Texture2D>("BAMArt/Wolf/Wolf_Tex");
             Material o = ArtMaterials.Instance(ArtMaterials.UnlitFade);
@@ -512,7 +516,7 @@ namespace BAM.Art
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
-            leapK = -1f; leapY = wolfTilt = 0f; atkCut = castCut = -1f;
+            leapK = -1f; leapY = wolfTilt = pull = 0f; room = 9f; atkCut = castCut = -1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
             model.localScale = Vector3.one;
@@ -536,6 +540,8 @@ namespace BAM.Art
         public override void SetMoving(bool isMoving, float speed) { moving = isMoving; speed01 = Mathf.Clamp(speed, 0f, 2f); }
 
         public override void SetLeap(float progress, float length) { leapK = progress; leapLen = length; }
+
+        public override void SetRoom(float ahead) { room = ahead; }
 
         public override void Interrupt(bool swing)
         {
@@ -1736,8 +1742,12 @@ namespace BAM.Art
                 if (r >= 1f) atkT = -1f;
             }
             if (castT >= 0f) { castT += dt; headX = -35f * Mathf.Sin(Mathf.Clamp01(castT / 0.5f) * Mathf.PI); if (castT > 0.5f) castT = -1f; }
+            // FENN-06: its nose is about a tile ahead of the 0.2-tile disc it stands on, so a wall right in front of it would swallow
+            // its head; the body draws back until the nose meets the wall (at once when a wall comes, slowly back when it goes)
+            float want = Mathf.Max(0f, wolfNose + Mathf.Max(0f, lunge) - 0.05f - room);
+            pull = want > pull ? want : Mathf.MoveTowards(pull, want, 1.5f * dt);
             float stride = leap ? 0f : moveW;
-            bones[Models.WolfBody].localPosition = def.Pivots[Models.WolfBody] + new Vector3(0f, Mathf.Abs(Mathf.Cos(phase * 1.2f)) * 0.04f * stride + 0.04f + leapY, lunge);
+            bones[Models.WolfBody].localPosition = def.Pivots[Models.WolfBody] + new Vector3(0f, Mathf.Abs(Mathf.Cos(phase * 1.2f)) * 0.04f * stride + 0.04f + leapY, lunge - pull);
             bones[Models.WolfBody].localRotation = Quaternion.Euler(Mathf.Sin(phase * 1.2f) * 4f * stride - recoil * 10f + wolfTilt, 0f, 0f);
             bones[Models.WolfHead].localRotation = Quaternion.Euler(headX, 0f, 0f);
             bones[Models.WolfFL].localRotation = Quaternion.Euler(-s, 0f, 0f);

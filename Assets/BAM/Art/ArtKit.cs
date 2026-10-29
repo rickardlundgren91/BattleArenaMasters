@@ -90,6 +90,9 @@ namespace BAM.Art
         /// <summary>Fenn's thrown wolf in the air: how far along its throw it is (0..1) and the throw's length in tiles; progress below 0
         /// = on the ground. It leaps over the flight (FENN-07).</summary>
         public virtual void SetLeap(float progress, float length) { }
+        /// <summary>Free ground in front of the unit along its facing, in tiles: a long body (Fenn's wolf, about 2 tiles on a 0.2-tile
+        /// disc) draws back from a wall instead of putting its head in it (FENN-06).</summary>
+        public virtual void SetRoom(float ahead) { }
         /// <summary>Where a hero's shot leaves its hand now (world space, at its height), for the shot's first drawn point (SHOT-02):
         /// Hilde's cannon mouth, the arrow on Tyra's bow, Blast's bomb, the head of a held weapon (Bram's hammer, Knut's anchor, the
         /// needle in the fist Tikta throws with), Moa's casting hand, Bonk's boulder between his hands. False for the rest (minions,

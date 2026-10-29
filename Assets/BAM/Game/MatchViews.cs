@@ -628,7 +628,8 @@ namespace BAM.Game
                     break;
                 }
                 case EventType.Interrupt:
-                    if (e.A != null) BamAudio.PlayAt(SfxId.Stunned, Coords.Of(e.A));
+                    // the cut swing or cast stops in the picture too (BONK-01/CHAINMAP-03); only a stun cuts the auto attack
+                    if (e.A != null) { BamAudio.PlayAt(SfxId.Stunned, Coords.Of(e.A)); V(e.A)?.Interrupt(e.A.Has(St.Stun)); }
                     break;
                 case EventType.LevelUp:
                     if (m.Player != null && m.Player.Alive) ArtKit.PlayFx(FxKind.LevelUp, Coords.Of(m.Player), 1f, 0);
@@ -953,6 +954,7 @@ namespace BAM.Game
             // swing or special keeps its own direction; and it turns smoothly, not at 900 degrees a second
             bool fight = AnimFix.SquaredFacing && hero && !aim && Fighting(u);
             float face = fight ? SimMath.Atan2(u.Target.Y - u.Y, u.Target.X - u.X) : u.Facing;
+            if (aim && hero && u.Hero == HeroId.Bonk && ClubLanding(u, out float cx, out float cy)) face = SimMath.Atan2(cy - u.Y, cx - u.X);
             Quaternion want = Quaternion.LookRotation(Coords.Dir(face));
             if (AnimFix.SquaredFacing && hero) r.Rot = Quaternion.RotateTowards(Quaternion.Slerp(r.Rot, want, 1f - Mathf.Exp(-14f * dt)), want, 60f * dt);
             else r.Rot = Quaternion.RotateTowards(r.Rot, want, 900f * dt);
@@ -966,7 +968,7 @@ namespace BAM.Game
             float speed01 = 0f;
             if (moving && u.BaseSpeed > 0f) speed01 = Mathf.Sqrt((u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY)) / Rules.Tick / u.BaseSpeed;
             v.SetMoving(moving, moving ? Mathf.Max(0.5f, speed01) : 0f);
-            if (u.Kind == UnitKind.Wolf) WolfLook(u, v);
+            if (u.Kind == UnitKind.Wolf) WolfLook(u, v, alpha);
 
             float hp01 = u.MaxHp > 0f ? Mathf.Clamp01(u.Hp / u.MaxHp) : 0f;
             float sh01 = u.MaxHp > 0f ? Mathf.Clamp01(u.ShieldAmount / u.MaxHp) : 0f;
@@ -993,8 +995,38 @@ namespace BAM.Game
             if (vis != r.Vis) { r.Vis = vis; v.SetVisibility(vis); }
         }
 
-        // Fenn's thrown wolf leaps over its flight: how far along its red strip it is, cut short at the prey it turned onto (FENN-07)
-        void WolfLook(Unit w, UnitView v)
+        // BONK-03: where Bonk's club comes down if it lands now, as BonkSmash (Hero3.cs) moves its circle at the landing: with him as
+        // he walks, then after its target at most SmashFollow tiles. Drawn, he turns to it through the wind-up instead of swinging
+        // down the line he began on while the cracks open up to half a tile beside it, then snapping 25-48 degrees round
+        bool ClubLanding(Unit h, out float x, out float y)
+        {
+            x = y = 0f;
+            var list = m.Projs;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var p = list[i];
+                if (p.Done || p.Mode != ProjMode.Smash || p.Src != h || p.T >= 0f) continue;
+                x = p.X + h.X - p.OX; y = p.Y + h.Y - p.OY;
+                var t = p.Tgt;
+                if (t != null && t.Alive && !t.Has(St.Untargetable))
+                {
+                    float d = SimMath.Dist(h, t);
+                    if (d <= h.Range + t.R && d > 1e-4f && m.Map.LosClear(h.X, h.Y, t.X, t.Y))
+                    {
+                        float ahead = Mathf.Min(BonkS.SmashAhead, d);
+                        float nx = h.X + (t.X - h.X) / d * ahead, ny = h.Y + (t.Y - h.Y) / d * ahead, mv = SimMath.Hypot(nx - x, ny - y);
+                        if (mv > BonkS.SmashFollow) { nx = x + (nx - x) / mv * BonkS.SmashFollow; ny = y + (ny - y) / mv * BonkS.SmashFollow; }
+                        x = nx; y = ny;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        // Fenn's wolf is drawn about 2 tiles long on a 0.2-tile disc: in a throw it leaps (how far along its red strip it is, cut short
+        // at the prey it turned onto, FENN-07), and a wall right in front of it pulls its body back so its head stays out (FENN-06)
+        void WolfLook(Unit w, UnitView v, float alpha)
         {
             float k = -1f, len = 0f;
             if (w.Wolf == WolfMode.Fly)
@@ -1014,6 +1046,7 @@ namespace BAM.Game
                 }
             }
             v.SetLeap(k, len);
+            v.SetRoom(m.Map.ShotReach(Mathf.Lerp(w.PX, w.X, alpha), Mathf.Lerp(w.PY, w.Y, alpha), w.Facing, 1.2f));
         }
 
         // a hero in a fight: it swung at its target within about one swing's time, the target alive, seen by the player (facing it must
