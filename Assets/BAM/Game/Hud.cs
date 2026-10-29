@@ -148,6 +148,7 @@ namespace BAM.Game
             specialQueued = false;
             CancelSpellTouch();
             if (heartButton != null) heartButton.Release();
+            ReleaseSignalButtons();
             holding = false; wheelPick = -1;
         }
 

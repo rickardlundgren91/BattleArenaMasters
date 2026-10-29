@@ -14,10 +14,11 @@ namespace BAM.Game
     /// finger) opens a wheel of emotes above the button, and letting go on one sends it (anywhere else sends nothing). The emote
     /// shows above the hero for 2 s as a white bubble (the heart) or a white pill with the word, and the button waits 2 s before
     /// the next one. A random other hero answers with a heart 60 % of the time, 0.6 to 1.6 s later. The heart and GG are seen by
-    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. The wheel's last two
-    /// slots are the team signals (old HudSignal.cs and the K3 wheel; Rickard 2026-10-29 "Attack och defend"): ATTACK (red) and
-    /// DEFEND (blue) go to the rules through PlayerInput (Signals.cs), so bot teammates follow them and online teammates see them;
-    /// the word shows above the hero for 2 s to its own team. Not offered without a teammate.
+    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. Above the heart sit the
+    /// two team signal buttons (old HudSignal.cs; Rickard 2026-10-29 "Attack och defend", then own buttons rather than wheel
+    /// slots): ATTACK (red, crossed swords) and DEFEND (blue, shield). A tap goes to the rules through PlayerInput (Signals.cs),
+    /// so bot teammates follow it and online teammates see it; the word shows above the hero for 2 s to its own team. Not shown
+    /// without a teammate.
     /// </summary>
     sealed partial class Hud
     {
@@ -46,7 +47,10 @@ namespace BAM.Game
         CanvasGroup heartGroup;
         EmoteButton heartButton;
         readonly EmoteMark[] emoteMarks = new EmoteMark[8];
-        readonly EmoteSlot[] wheelSlots = new EmoteSlot[Emotes.Length + 2];
+        readonly EmoteSlot[] wheelSlots = new EmoteSlot[Emotes.Length];
+        readonly RectTransform[] sigRoot = new RectTransform[2];
+        readonly CanvasGroup[] sigGroup = new CanvasGroup[2];
+        readonly EmoteButton[] sigButton = new EmoteButton[2];
         readonly EmoteMark[] signalMarks = new EmoteMark[8];
         readonly float[] signalHeard = new float[8];
         TeamSignal pendingSignal;
@@ -90,6 +94,29 @@ namespace BAM.Game
             heartButton.Down = HeartDown;
             heartButton.Move = HeartMove;
             heartButton.Up = HeartUp;
+
+            // the team signal buttons (drawSignalButtons): a round plate, a light edge and a white sign
+            for (int k = 0; k < 2; k++)
+            {
+                bool atk = k == 0;
+                var rt = UiKit.NewRect(atk ? "SignalAttack" : "SignalDefend", safe);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                sigGroup[k] = rt.gameObject.AddComponent<CanvasGroup>();
+                var sp = UiKit.Fill(rt, atk ? SignalAttack : SignalDefend, UiKit.Circle);
+                sp.raycastTarget = true;
+                UiKit.Fill(rt, atk ? Hex(0xffb3b9) : Hex(0xb3d4ff), UiKit.CircleRing).raycastTarget = false;
+                var icon = UiKit.Fill(rt, Color.white, SignalSprite(atk));
+                icon.raycastTarget = false;
+                icon.preserveAspect = true;
+                icon.rectTransform.anchorMin = new Vector2(0.18f, 0.18f);
+                icon.rectTransform.anchorMax = new Vector2(0.82f, 0.82f);
+                icon.rectTransform.offsetMin = icon.rectTransform.offsetMax = Vector2.zero;
+                var kind = atk ? TeamSignal.Attack : TeamSignal.Defend;
+                sigButton[k] = rt.gameObject.AddComponent<EmoteButton>();
+                sigButton[k].Down = _ => PlayerSignal(kind);
+                sigRoot[k] = rt;
+                rt.gameObject.SetActive(false);
+            }
 
             // the wheel, above everything else in the HUD while it is open
             wheelRoot = UiKit.NewRect("EmoteWheel", safe);
@@ -167,6 +194,8 @@ namespace BAM.Game
         /// <summary>The signal picked on the wheel since the last tick, once.</summary>
         TeamSignal TakeSignal() { var s = pendingSignal; pendingSignal = TeamSignal.None; return s; }
 
+        void ReleaseSignalButtons() { for (int k = 0; k < 2; k++) if (sigButton[k] != null) sigButton[k].Release(); }
+
         bool BotCanEmote(int i)
         {
             var h = m.Heroes[i];
@@ -200,8 +229,7 @@ namespace BAM.Game
             HeartMove(at);
             holding = false;
             bool quick = Time.unscaledTime - heldAt < WheelOpenTime && (holdNow - holdFrom).magnitude <= SafeW * 0.04f;
-            if (wheelPick >= Emotes.Length) PlayerSignal((TeamSignal)(wheelPick - Emotes.Length + 1));
-            else if (wheelPick >= 0) PlayerEmote(wheelPick);
+            if (wheelPick >= 0) PlayerEmote(wheelPick);
             else if (quick) PlayerEmote(0); // a short tap: the heart
             wheelPick = -1;
         }
@@ -249,6 +277,18 @@ namespace BAM.Game
                 heartGroup.alpha = EmoteReady ? 1f : 0.5f;
             }
 
+            // the signal buttons: above the heart, the lower one ATTACK (SIGNAL_BTN: W * (0.1 + 0.09 i) up, radius W * 0.038)
+            bool sigs = button && SignalsShown;
+            for (int k = 0; k < 2; k++)
+            {
+                if (sigRoot[k].gameObject.activeSelf != sigs) sigRoot[k].gameObject.SetActive(sigs);
+                if (!sigs) continue;
+                float r = SafeW * 0.038f;
+                sigRoot[k].sizeDelta = new Vector2(2f * r, 2f * r);
+                sigRoot[k].localPosition = HeartCentre() + new Vector2(0f, SafeW * (0.1f + 0.09f * k));
+                sigGroup[k].alpha = SignalReady ? 0.9f : 0.45f;
+            }
+
             bool wheel = WheelShown;
             if (wheelRoot.gameObject.activeSelf != wheel) { wheelRoot.gameObject.SetActive(wheel); if (wheel) wheelRoot.SetAsLastSibling(); }
             if (wheel)
@@ -258,19 +298,15 @@ namespace BAM.Game
                 wheelRoot.localPosition = c;
                 wheelRoot.sizeDelta = new Vector2(back, back);
                 float alpha = EmoteReady ? 1f : 0.5f;
-                bool signals = SignalsShown, sigReady = SignalReady;
                 for (int i = 0; i < wheelSlots.Length; i++)
                 {
                     var s = wheelSlots[i];
-                    bool sig = i >= Emotes.Length;
-                    if (s.Root.gameObject.activeSelf != (!sig || signals)) s.Root.gameObject.SetActive(!sig || signals);
-                    if (sig && !signals) continue;
                     bool on = wheelPick == i;
                     float rr = sr * (on ? 1.18f : 1f);
                     s.Root.anchoredPosition = SlotCentre(i) - c;
                     s.Root.sizeDelta = new Vector2(2f * rr * 1.12f, 2f * rr * 1.12f);
                     s.Pick.enabled = on;
-                    LayoutEmote(s.Mark, i, rr, sig ? (sigReady ? 1f : 0.5f) : alpha);
+                    LayoutEmote(s.Mark, i, rr, alpha);
                 }
             }
 
@@ -416,6 +452,60 @@ namespace BAM.Game
                 mk.Shadow.rectTransform.sizeDelta = box;
                 mk.Shadow.rectTransform.anchoredPosition = new Vector2(0f, -r * 0.08f);
             }
+        }
+
+        // drawSignalButtons' signs, white: crossed swords with crossguards (ATTACK) or a shield (DEFEND)
+        static readonly Sprite[] signalSprites = new Sprite[2];
+        static Sprite SignalSprite(bool atk)
+        {
+            int idx = atk ? 0 : 1;
+            if (signalSprites[idx] != null) return signalSprites[idx];
+            const int n = 96;
+            float r = n * 0.5f, cx = n / 2f, cy = n / 2f;
+            var shield = new System.Collections.Generic.List<Vector2>();
+            if (!atk)
+            {
+                float w = r * 0.62f, t = cy - r * 0.62f;
+                shield.Add(new Vector2(cx - w, t)); shield.Add(new Vector2(cx + w, t)); shield.Add(new Vector2(cx + w, cy));
+                AddQuad(shield, new Vector2(cx + w, cy), new Vector2(cx + w * 0.9f, cy + r * 0.5f), new Vector2(cx, cy + r * 0.72f));
+                AddQuad(shield, new Vector2(cx, cy + r * 0.72f), new Vector2(cx - w * 0.9f, cy + r * 0.5f), new Vector2(cx - w, cy));
+            }
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = atk ? "BAM.Hud.SignalAttack" : "BAM.Hud.SignalDefend", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    int hits = 0;
+                    for (int sy = 0; sy < 4; sy++)
+                        for (int sx = 0; sx < 4; sx++)
+                        {
+                            var p = new Vector2(x + (sx + 0.5f) / 4f, n - (y + (sy + 0.5f) / 4f)); // y down, as the old canvas
+                            if (atk ? InSwords(p, cx, cy, r) : Inside(shield, p)) hits++;
+                        }
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)(hits * 255 / 16));
+                }
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            signalSprites[idx] = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+            return signalSprites[idx];
+        }
+
+        // two blades from the lower corners to the upper ones, each with a crossguard near its grip (SegDist: HudOverhead.cs)
+        static bool InSwords(Vector2 p, float cx, float cy, float r)
+        {
+            for (int sgn = -1; sgn <= 1; sgn += 2)
+            {
+                Vector2 a = new Vector2(cx - sgn * r * 0.62f, cy + r * 0.62f), b = new Vector2(cx + sgn * r * 0.56f, cy - r * 0.56f);
+                if (SegDist(p, a, b) < r * 0.09f) return true;
+                Vector2 g = new Vector2(cx - sgn * r * 0.34f, cy + r * 0.34f); float k = r * 0.2f;
+                if (SegDist(p, g + new Vector2(-k, -sgn * k), g + new Vector2(k, sgn * k)) < r * 0.07f) return true;
+            }
+            return false;
+        }
+
+        static void AddQuad(System.Collections.Generic.List<Vector2> pts, Vector2 a, Vector2 c, Vector2 b)
+        {
+            for (int i = 1; i <= 16; i++) { float t = i / 16f, u = 1f - t; pts.Add(u * u * a + 2f * u * t * c + t * t * b); }
         }
 
         // drawHeart: two bezier lobes meeting at a point at the bottom, filled
