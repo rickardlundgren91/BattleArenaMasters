@@ -76,6 +76,9 @@ namespace BAM.Art
         public bool AlwaysSide;
         /// <summary>AlwaysSide: degrees its face is turned from straight out towards the front, and how far its back sits off the hand (share of its height).</summary>
         public float Turn, Off;
+        /// <summary>Not AlwaysSide: on the move, how far its centre sits out from the hand (share of its height; the old game's 0.3 threw
+        /// Fenn's out far from his arm in the run, Unity run 1 2026-10-29).</summary>
+        public float WalkOut = 0.3f;
     }
 
     /// <summary>A cannon riding the right shoulder like a bazooka, barrel forward, the right fist on its rear grip (old
@@ -134,25 +137,33 @@ namespace BAM.Art
             var g = new GearDef[(int)HeroId.Oaken + 1];
             // at rest the sword raised across beside his head (Rickard's own Weapon Tuner hold 2026-10-28 20:49 CET, after a tester
             // found the upright hold beside the helmet odd on the menu stage and the lowered pick B looked worse to him in Unity), so
-            // Reset Fenn gives this hold and not the bind grip across the shield
+            // Reset Fenn gives this hold and not the bind grip across the shield. On the move the sword trails back at his side, a little
+            // below level, and the shield rides close to his arm (Unity run 1 2026-10-29: in the run his torso turns to the front and the
+            // rest hold pointed the blade straight ahead like a lance, the shield thrown far out; coordinator's go on the recommended
+            // pick A of bam-work/art/rigg-anim/spring/fenn-spring-val.png for Rickard, 2026-10-29; Clay-Fenn, redo if Original-Fenn stays)
             g[(int)HeroId.Fenn] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f, HoldUp = 45f, HoldOut = 62f, Turn = new Vector3(-33f, 55f, 0f) } },
-                Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f },
+                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f, HoldUp = 45f, HoldOut = 62f, Turn = new Vector3(-33f, 55f, 0f), Run = new Hold { Up = -20f, Out = 155f } } },
+                Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f, WalkOut = 0.08f },
             };
             // arms out as in the old game (MX_ARM_SPREAD 22) and, at rest, the hammer on his right shoulder as Bonk carries his club
             // (Rickard 2026-10-27: hanging from a straight arm "inte så naturlig pose", and it flipped round into the swing); his
             // overhead strike (HeroArtImport) lifts it straight off the shoulder. Held at the end of the shaft, standing steep behind
             // his head (Rickard's pick 2026-10-28, option C of bam-work/art/rigg-anim/vila/bram-hammare-val.png: held a third of the
-            // way up, the shaft's end stuck down between his legs, "heltokig")
+            // way up, the shaft's end stuck down between his legs, "heltokig"). The fist sits a little outside the shoulder and the head
+            // leans out to his right, so facing the camera the hammer no longer hides his face (Unity run 1 2026-10-29; pick B of
+            // bam-work/art/rigg-anim/spring/bram-spring-val.png; WeaponTune.json beats this until Rickard presses Reset Bram)
             g[(int)HeroId.Bram] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.7f, Grip = 0.08f, HoldUp = 65f, HoldOut = 170f, Follow = 0.1f } },
+                Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.7f, Grip = 0.08f, HoldUp = 60f, HoldOut = 145f, Follow = 0.1f } },
                 ArmSpread = 22f,
                 Shoulder = true,
+                CarryAt = new Vector3(0.11f, 0.12f, -0.04f),
             };
-            // held by the shank just under the ring, so it hangs from the fist with the flukes down (Rickard 2026-10-16/19)
-            g[(int)HeroId.Knut] = new GearDef { Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f } } };
+            // held by the shank just under the ring, so it hangs from the fist with the flukes down (Rickard 2026-10-16/19); hung straight
+            // down at his right side, the flukes out, since in the fist's own grip it lay slanted in front of his thighs (Unity run 1
+            // 2026-10-29; pick A of bam-work/art/rigg-anim/spring/knut-spring-val.png; WeaponTune.json beats this until Reset Knut)
+            g[(int)HeroId.Knut] = new GearDef { Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f, HoldUp = 80f, HoldOut = -90f } } };
             // with her own clips the staff along the forearm hung beside the fist and the crest, face out at the side, read as a
             // torch from the front (Rickard 2026-10-26: "moa håller inte i sina vapen"): the staff now stands up through her right
             // fist, face to the front, and the crest sits on her left hand turned half to the front; (2026-10-28) it stays up through
@@ -192,13 +203,14 @@ namespace BAM.Art
             // ha sina gamla vapen, typ två daggers"); at rest the blades point down along her forearms, since her guard idle holds
             // a fist at her mouth and out of the thumb side the needle stuck into her face; (2026-10-28) they keep that aim through her
             // swing, following half of her hand, instead of flipping 100-150 degrees into the fist's own grip (pointing at her face at
-            // the wind-up, across her body after the blow) at every swing
+            // the wind-up, across her body after the blow) at every swing; on the move they point back along her forearms, away from her
+            // thighs (Unity run 1 2026-10-29: the right one ran down through her thigh; pick A of bam-work/art/rigg-anim/spring/tikta-spring-val.png)
             g[(int)HeroId.Tikta] = new GearDef
             {
                 Weapons = new[]
                 {
-                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true },
-                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } },
+                    new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } },
                 },
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
@@ -206,10 +218,12 @@ namespace BAM.Art
             // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
             // (Rickard 2026-10-26: "klubban ska vara för stor för honom"), carried on his right shoulder at rest: the arm bends, the
             // fist in front of the shoulder, the club leaning back over it (Rickard 2026-10-26: "ha vapen naturligt på axeln", as in
-            // the "Bonk has arrived" picture); only turning the club, it stood in front of his face, behind his back or in his pelt
+            // the "Bonk has arrived" picture); only turning the club, it stood in front of his face, behind his back or in his pelt. On the
+            // move it stands up over the shoulder, leaning out a little (Unity run 1 2026-10-29: lying back nearly level it read as a pole
+            // from the match camera; pick B of bam-work/art/rigg-anim/spring/bonk-spring-val.png)
             g[(int)HeroId.Bonk] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f } },
+                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f } } },
                 Shoulder = true,
             };
             // her cannon (Rickard's Meshy model) on her right shoulder like a bazooka, barrel forward, her right fist on its rear grip,
@@ -643,13 +657,14 @@ namespace BAM.Art
                 if ((W.Thrown || hideHeld) && (hideSide == 0 || hideSide > 0 != W.Left)) t.localScale = bindS[i] * show;
                 else if (t.localScale != bindS[i]) t.localScale = bindS[i]; // a held weapon put back by a swing during its throw
                 float rest = dead ? 0f : 1f - Mathf.Clamp01(actW);
+                float rw = W.Run.On ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(moveW)) : 0f;
+                if (W.SwingAim) rw *= rest; // a SwingAim weapon swings from its rest aim, not its run hold (Tikta's needles point back in the run)
                 if (W.HoldUp == 0f || dead) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
                 else if (OnMenu && W.Menu.On) HoldAngle(i, W, rest, W.MenuSign, W.Menu.Up, W.Menu.Out); // a tapped swing plays the fist's grip
                 else if (AnimFix.FixedGrip)
                 {
                     // the rest hold, and the run's eased in as the hero moves (Tyra's bow at her side)
                     RestHold(i, W, rest, new Hold { Up = W.HoldUp, Out = W.HoldOut, Turn = W.RestTurn }, laxSign[i]);
-                    float rw = W.Run.On ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(moveW)) : 0f;
                     if (rw > 0.001f)
                     {
                         Quaternion ra = t.rotation;
@@ -663,10 +678,13 @@ namespace BAM.Art
                 else HoldAngle(i, W, rest, 0);
                 // Rickard's Turn is tuned on the rest hold, so with FixedGrip it goes as the rest aim goes: through a swing the weapon
                 // is in the fist's own grip (Fenn's -33/55 left his blade end-on to the match camera at the blow, 2026-10-28); a
-                // SwingAim weapon keeps its rest aim and its Turn, a weapon without a rest aim and a dead hero's keep the Turn whole
+                // SwingAim weapon keeps its rest aim and its Turn, a weapon without a rest aim and a dead hero's keep the Turn whole;
+                // a run hold is set without it, so it goes out as the run hold comes in (on Fenn's run hold his -33/55 tipped the blade
+                // forward like a lance again, Blender renders 2026-10-29 checked against Unity run 1)
                 if (W.Turn != Vector3.zero)
                 {
                     float tw = !AnimFix.FixedGrip || W.HoldUp == 0f || dead || (W.SwingAim && rested) ? 1f : rest;
+                    if (AnimFix.FixedGrip && !dead && W.HoldUp != 0f) tw *= 1f - rw;
                     if (tw > 0.001f) TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.Turn), tw));
                 }
                 float sw = dead ? 0f : Mathf.Clamp01(atkW);
@@ -1050,7 +1068,7 @@ namespace BAM.Art
             Quaternion stand = Quaternion.AngleAxis(-20f, fw.up) * Quaternion.LookRotation(fw.forward, fw.up);
             Quaternion walk = Quaternion.LookRotation(side, fw.up);
             Vector3 pStand = sHand.position + fw.forward * (D * 0.15f) + side * (D * 0.05f);
-            Vector3 pWalk = sHand.position + side * (D * 0.3f);
+            Vector3 pWalk = sHand.position + side * (D * sDef.WalkOut);
             sAnchor.SetPositionAndRotation(Vector3.Lerp(pStand, pWalk, w), Quaternion.Slerp(stand, walk, w));
         }
     }
