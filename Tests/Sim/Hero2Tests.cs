@@ -150,6 +150,37 @@ namespace BAM.Sim
             b.BlastChainReadyAt = 0; m.Ignite(b, e1, 100); b.Alive = false;
             m.BombBlast(bomb); any = false; foreach (var p in m.Projs) if (p.Mode == ProjMode.ChainBlast && !p.Done) any = true;
             Check(!any, "no chain from a dead Blast");
+            BlastWalls();
+        }
+
+        // BAM wall rule for Chain Reaction (precision audit CHAIN-01/02) and a bot's bomb led into a wall (BLAST-04). The wall
+        // column x = 3..4 runs down rows 4..10; (3, 10) is its last tile, so its corner can be seen round.
+        static void BlastWalls()
+        {
+            var m = Make(HeroId.Blast, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Bram, HeroId.Knut, HeroId.Tikta });
+            var b = m.Player; var e1 = m.Foe(HeroId.Bram); var e2 = m.Foe(HeroId.Knut); var e3 = m.Foe(HeroId.Tikta);
+            Place(b, 6.5f, 7.5f); Place(e1, 2.6f, 7.5f); Place(e2, 2.0f, 8.4f); Place(e3, 12, 30);
+            m.Ignite(b, e1, 100);
+            var bomb = m.NewProj(ProjMode.Bomb, b, 4.1f, 7.5f); bomb.Kind = ProjKind.BlastBomb; bomb.Dmg = 1; bomb.Done = true;
+            m.BombBlast(bomb);
+            bool any = false; foreach (var p in m.Projs) if (p.Mode == ProjMode.ChainBlast && !p.Done) any = true;
+            Check(!any && Near(m.ChainLeft(b), 0), "CHAIN-01: a burning hero behind a wall from the bomb sets off no chain");
+
+            Place(e1, 4.32f, 10.6f); Place(e3, 3.5f, 11.3f); float h3 = e3.Hp;
+            var c = m.NewProj(ProjMode.ChainBlast, b, e1.X, e1.Y); c.Kind = ProjKind.BlastChain; c.Tgt = e1; c.Radius = BlastChainS.Radius; c.Dmg = 20; c.Done = true;
+            m.ChainBlast(c);
+            Check(!m.Map.LosClear(c.X, c.Y, e3.X, e3.Y) && Near(h3, e3.Hp), "CHAIN-02: the chain's blast does not reach round a wall corner");
+            Place(e3, 4.32f, 11.5f); h3 = e3.Hp;
+            c = m.NewProj(ProjMode.ChainBlast, b, e1.X, e1.Y); c.Kind = ProjKind.BlastChain; c.Tgt = e1; c.Radius = BlastChainS.Radius; c.Dmg = 20; c.Done = true;
+            m.ChainBlast(c);
+            Check(h3 - e3.Hp > 0, "the chain still hits in the open");
+
+            // a bot leading a hero who runs into the wall: the bomb lands on him, not inside the wall
+            Place(e1, 4.35f, 7.5f); Place(e2, 12, 30); e1.MoVx = -12; e1.MoVy = 0; e1.MoInit = true;
+            b.Charge = b.HDef.MaxCharge; b.BlastChainReadyAt = 99;
+            Check(b.Bot != null && m.TryCastSpecial(b, float.NaN, 0), "a bot Blast taps");
+            Proj bm = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Bomb && !p.Done && p.Src == b) bm = p;
+            Check(bm != null && !m.Map.WallAt(bm.X, bm.Y), $"BLAST-04: a bot's led bomb never lands inside a wall ({bm?.X:0.00}, {bm?.Y:0.00})");
         }
 
         public static int RunHero2Tests()

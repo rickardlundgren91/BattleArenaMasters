@@ -795,6 +795,7 @@ namespace BAM.Sim
             if (l.Count == 0) return false;
             var t = PickRandom(l);
             LeadAim(h, t, Flight.Const, BlastS.Delay * 0.5f, 0, out float ax, out float ay);
+            if (Map.WallAt(ax, ay)) { ax = t.X; ay = t.Y; } // a bot's lead into a wall: a bomb there would reach nobody (BLAST-04)
             h.Facing = SimMath.Atan2(ay - h.Y, ax - h.X); AddStatus(h, St.Casting, 0.25f); AddStatus(h, St.Disarm, 0.25f);
             var b = NewProj(ProjMode.Bomb, h, ax, ay);
             b.Kind = ProjKind.BlastBomb; b.T = -BlastS.Delay; b.Radius = BlastS.Radius; b.Dur = BlastS.Delay; b.Dmg = dmg * BlastS.DamageCoeff;

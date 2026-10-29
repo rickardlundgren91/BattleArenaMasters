@@ -536,7 +536,7 @@ namespace BAM.Art
                 laneLit = 0;
                 int sc = Mathf.Clamp(Mathf.RoundToInt(length / 0.9f), 1, 8);
                 for (int i = 0; i < sc; i++)
-                    Fx.Pic("tx_fx_blast_scorch", center + dir * (length * (i + 0.5f) / sc), new Color(1f, 1f, 1f, 0.75f), radius * 3f, duration + 0.6f);
+                    Fx.Pic("tx_fx_blast_scorch", center + dir * (length * (i + 0.5f) / sc), new Color(1f, 1f, 1f, 0.75f), radius * 2.5f, duration + 0.6f); // his mark reaches 0.8 of the picture: edge on the hit half width (BLAST-05)
             }
             else if (kind == ZoneKind.HoneyField)
             {

@@ -79,6 +79,8 @@ namespace BAM.Sim
         // Blast dead when the bomb lands: no new chain; a chain already set off still goes off.
         // BAM's line-ups never repeat a hero, so "burns from this Blast" is the one burn's owner (the old per-Blast shares of a shared
         // burn pool only matter with two Blasts on one team).
+        // BAM wall rule (Rickard 2026-10-28, as Supernova): a hero behind a wall from the bomb can't set it off, and the chain's
+        // blast only reaches units with a clear line from its spot (precision audit CHAIN-01/02, 2026-10-29).
 
         /// <summary>Seconds until Blast's Chain Reaction is ready again (0 = ready).</summary>
         public float ChainLeft(Unit blast) => blast == null ? 0 : Math.Max(0, blast.BlastChainReadyAt - Time);
@@ -101,7 +103,7 @@ namespace BAM.Sim
                 var u = Units[i];
                 if (!u.Alive || u.Kind != UnitKind.Hero || u.IsClone || u.Team == h.Team || u.Has(St.Untargetable) || u.Has(St.Invulnerable)) continue;
                 float d = SimMath.Dist(u, bomb.X, bomb.Y);
-                if (d > r + u.R || !BurnsFrom(u, h)) continue;
+                if (d > r + u.R || !BurnsFrom(u, h) || !Map.LosClear(bomb.X, bomb.Y, u.X, u.Y)) continue;
                 if (d < best || d == best && u.Serial < trig.Serial) { best = d; trig = u; }
             }
             if (trig == null) return;
@@ -122,7 +124,7 @@ namespace BAM.Sim
             {
                 var u = Units[i];
                 if (u == p.Tgt || !u.Alive || u.Team == p.Team || u.IsClone || !(u.Kind == UnitKind.Hero || u.Kind == UnitKind.Minion)) continue;
-                if (u.Has(St.Untargetable) || u.Has(St.Invulnerable) || SimMath.Dist(u, p.X, p.Y) > p.Radius + u.R) continue;
+                if (u.Has(St.Untargetable) || u.Has(St.Invulnerable) || SimMath.Dist(u, p.X, p.Y) > p.Radius + u.R || !Map.LosClear(p.X, p.Y, u.X, u.Y)) continue;
                 areaBuf.Add(u);
             }
             for (int i = 0; i < areaBuf.Count; i++) if (areaBuf[i].Alive) SpecialHit(h, areaBuf[i], p.Dmg, ProjKind.BlastChain, true, dk, DmgFlags.NoIgnite);

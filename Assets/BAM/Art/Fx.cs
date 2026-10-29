@@ -897,7 +897,7 @@ namespace BAM.Art
                     break;
                 case FxKind.Explosion:
                     Flash(mid, 0.4f * size, 1.2f * size, new Color(1f, 1f, 1f, 0.95f), 0.08f); // the white core first; rings end on the real radius
-                    if (!Pic("tx_fx_blast_explosion", mid, Color.white, 2.6f * size, 0.45f)) // his own fireball (2026-10-27)
+                    if (!Pic("tx_fx_blast_explosion", mid, Color.white, 2.0f * size, 0.45f)) // his own fireball (2026-10-27); 2.0: swollen (x1.15), 95 % of it inside the radius (BLAST-05)
                         Pic("tx_wow_warrior_impact", mid, new Color(1f, 0.6f, 0.25f, 1f), 2.2f * size, 0.25f);
                     Ring(p, 0.3f * size, 1.0f * size, (Color)heroAccent[(int)HeroId.Blast], 0.4f, 0.6f);
                     Pow(mid, 1, C(Pal.FireCore), 1.8f * size, 0.22f);
