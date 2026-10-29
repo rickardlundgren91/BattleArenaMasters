@@ -694,7 +694,7 @@ namespace BAM.Game
                         at = Coords.World(lx, ly);
                     }
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
-                    SfxId boom = pk == ProjKind.BlastBomb || pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.BlastExplosion : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
+                    SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.HildeKegBlast : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
                         : pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? SfxId.BramAnvil // Bram's Anvil Drop: Speltest's anvil (bramsmash), BRAM-04
                         : pk == ProjKind.KnutSlam ? SfxId.KnutSlam : SfxId.None; // Knut's Anchor Slam: Rickard's own clip (KNUT-03)
@@ -717,7 +717,8 @@ namespace BAM.Game
                 case EventType.Knock:
                     if (e.B != null && m.IsVisibleTo(e.B, Mine))
                     {
-                        BamAudio.PlayAt(SfxId.BonkKnock, Coords.Of(e.B));
+                        ProjKind kk = (ProjKind)e.Kind;
+                        BamAudio.PlayAt(kk == ProjKind.HildeKeg || kk == ProjKind.HildeBurst ? SfxId.HildeKnock : SfxId.BonkKnock, Coords.Of(e.B));
                         ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(e.B), 0.45f, Side(e.B.Team));
                     }
                     break;

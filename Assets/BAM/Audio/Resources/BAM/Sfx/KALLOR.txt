@@ -14,3 +14,4 @@ LastHit <- lasthit | MultiKill <- streak | TowerHot <- towerHot | TowerUnderAtta
 SpellRecall <- teleport | SpellBlink <- blink, SpellShield <- shield (both cut to 1.2 s with a 0.3 s fade, as Speltest's MAXLEN cuts blink)
 Ordered and made by Rickard 2026-10-29 (ElevenLabs, his own; trimmed, faded, peak -1 dB): WolfBite (wolf snarl lunge, take 3) | CloneVanish (soft poof) | KnutSlam (anchor into stone) | ShieldBlock (hit soaked by a shield)
 Stunned (Rickard 2026-10-29, ElevenLabs, his own): only the first 0.75 s of his clip, as he asked (a stun or root cutting a special)
+Hilde's own (Rickard 2026-10-29, ElevenLabs): HildeKegBlast (both kegs going off, was Blast's explosion) | HildeKnock (a hero shoved by her keg, was Bonk's knock)
