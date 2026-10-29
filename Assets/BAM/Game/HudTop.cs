@@ -391,6 +391,7 @@ namespace BAM.Game
             timeText = TopLabel(pill, Color.white, TextAnchor.MiddleCenter);
             levelText = TopLabel(pill, LevelCream, TextAnchor.MiddleCenter);
             var lv = UiKit.NewRect("LevelBar", pill);
+            lv.gameObject.AddComponent<Canvas>(); // its fill grows every frame: rebuilt alone, not the whole top bar (PERF-02)
             levelBack = lv.gameObject.AddComponent<Image>();
             levelBack.color = new Color(1f, 1f, 1f, 0.14f);
             levelBack.raycastTarget = false;
@@ -696,9 +697,13 @@ namespace BAM.Game
 
         void BuildFloats()
         {
+            // the rising numbers move every frame: on a canvas of their own, so the rest of the HUD is not rebuilt with them (PERF-02)
+            var layer = UiKit.NewRect("Floats", canvasRect);
+            UiKit.Stretch(layer);
+            layer.gameObject.AddComponent<Canvas>();
             for (int i = 0; i < floats.Length; i++)
             {
-                var t = UiKit.Label(canvasRect, "", 50, TextAnchor.MiddleCenter, Color.white);
+                var t = UiKit.Label(layer, "", 50, TextAnchor.MiddleCenter, Color.white);
                 t.rectTransform.anchorMin = t.rectTransform.anchorMax = t.rectTransform.pivot = new Vector2(0.5f, 0.5f);
                 t.rectTransform.sizeDelta = new Vector2(220f, 90f);
                 t.raycastTarget = false;

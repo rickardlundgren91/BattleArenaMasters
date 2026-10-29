@@ -183,14 +183,20 @@ namespace BAM.Art
 
         static void Warm()
         {
-            // a full 3v3 wave keeps about 30 minions alive; most are melee and ranged
+            // a wave is 2 melee + 1 ranged per team (+1 siege every third) every 16 s; a pushed lane can stack two or three waves
+            // (PERF-06), so enough views that a long match never builds one in the middle of a fight
             for (int t = 0; t < 2; t++)
             {
-                WarmBodies(MinionKind.Melee, t, 6);
-                WarmBodies(MinionKind.Ranged, t, 6);
-                WarmBodies(MinionKind.Siege, t, 2);
+                WarmBodies(MinionKind.Melee, t, 8);
+                WarmBodies(MinionKind.Ranged, t, 8);
+                WarmBodies(MinionKind.Siege, t, 3);
                 WarmProjectiles(ProjKind.RangedMinionShot, t, 8);
                 WarmProjectiles(ProjKind.MeleeMinionHit, t, 8);
+                // one of every hero shot and ground zone, so a hero's first arrow, bomb or field does not build its look (textures,
+                // materials, meshes) mid-fight (PERF-04); the pool grows from there if a fight needs more
+                foreach (ProjKind k in System.Enum.GetValues(typeof(ProjKind)))
+                    if (k != ProjKind.RangedMinionShot && k != ProjKind.MeleeMinionHit) WarmProjectiles(k, t, 1);
+                foreach (ZoneKind z in System.Enum.GetValues(typeof(ZoneKind))) Release(CreateZone(z, t));
             }
         }
 

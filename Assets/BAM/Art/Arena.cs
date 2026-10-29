@@ -247,6 +247,14 @@ namespace BAM.Art
             bool G(int x, int y) => x >= 0 && y >= 0 && x < w && y < h && info.Tile(x, y) == TGrass;
             const int N = 5;
             GameObject holder = null;
+            // PERF-01: 124 tiles drawn one by one cost about 120 draw calls. Each 3 x 2 block of tiles is also merged into one
+            // still mesh that is drawn while no tile in it fades or leans; BushField swaps a block to its own tiles only then.
+            var chunkOf = new System.Collections.Generic.Dictionary<int, int>();
+            var chunkV = new System.Collections.Generic.List<System.Collections.Generic.List<Vector3>>();
+            var chunkN = new System.Collections.Generic.List<System.Collections.Generic.List<Vector3>>();
+            var chunkUv = new System.Collections.Generic.List<System.Collections.Generic.List<Vector2>>();
+            var chunkT = new System.Collections.Generic.List<System.Collections.Generic.List<int>>();
+            var tileChunk = new System.Collections.Generic.List<int>(128);
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
@@ -280,8 +288,33 @@ namespace BAM.Art
                     var go = Add(holder, "Bush", mesh, leafMat, true, false); // receive shadows, cast none (thousands of leaves in the shadow pass)
                     go.isStatic = false; // it leans
                     go.transform.localPosition = mid0;
+
+                    int key = (y / 2) * 64 + x / 3;
+                    if (!chunkOf.TryGetValue(key, out int c))
+                    {
+                        c = chunkV.Count; chunkOf[key] = c;
+                        chunkV.Add(new System.Collections.Generic.List<Vector3>(2048)); chunkN.Add(new System.Collections.Generic.List<Vector3>(2048));
+                        chunkUv.Add(new System.Collections.Generic.List<Vector2>(2048)); chunkT.Add(new System.Collections.Generic.List<int>(3072));
+                    }
+                    int b0 = chunkV[c].Count;
+                    for (int i = 0; i < v.Count; i++) chunkV[c].Add(v[i] + mid0); // the tile's own leaves, where the tile stands
+                    chunkN[c].AddRange(n); chunkUv[c].AddRange(uv);
+                    for (int i = 0; i < t.Count; i++) chunkT[c].Add(t[i] + b0);
+                    tileChunk.Add(c);
                 }
-            if (holder != null) holder.AddComponent<BushField>().Init(holder.transform, leafMat, leafFaded);
+            if (holder == null) return;
+            var chunkHolder = new GameObject("Bush blocks");
+            chunkHolder.transform.SetParent(root.transform, false);
+            var blocks = new Renderer[chunkV.Count];
+            for (int c = 0; c < chunkV.Count; c++)
+            {
+                var mesh = new Mesh { name = "Bush block" };
+                mesh.SetVertices(chunkV[c]); mesh.SetNormals(chunkN[c]); mesh.SetUVs(0, chunkUv[c]); mesh.SetTriangles(chunkT[c], 0);
+                mesh.RecalculateBounds();
+                mesh.UploadMeshData(true);
+                blocks[c] = Add(chunkHolder, "Bush block", mesh, leafMat, true, false).GetComponent<Renderer>();
+            }
+            holder.AddComponent<BushField>().Init(holder.transform, leafMat, leafFaded, blocks, tileChunk);
         }
 
         static void EnsureLeafMats()

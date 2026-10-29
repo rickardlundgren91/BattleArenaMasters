@@ -36,6 +36,9 @@ namespace BAM.Audio
         // 1 for synth clips; for a recorded file, the gain that brings it to the synth clips' loudness
         static readonly float[] clipGain = new float[SfxRecipes.Count];
         static readonly bool[] isFile = new bool[SfxRecipes.Count];
+        // looked at once: a muted synth sound with no recorded file stays without a clip (nothing to render or keep in memory)
+        static readonly bool[] built = new bool[SfxRecipes.Count];
+        static float[] gainBuf; // FileGain's sample buffer, reused across files and dropped once every clip is built
         static SfxSynth synth;
         static int nextBuild = 1;
         static double buildMs;
@@ -65,6 +68,7 @@ namespace BAM.Audio
             for (int i = 0; i < SfxRecipes.Count; i++) { info[i] = SfxRecipes.Info((SfxId)i); lastStart[i] = -100f; lastVol[i] = 0f; }
             Array.Clear(clips, 0, clips.Length);
             Array.Clear(isFile, 0, isFile.Length);
+            Array.Clear(built, 0, built.Length);
             Array.Clear(voiceEnd, 0, Voices);
             nextBuild = 1; buildMs = 0;
             synth = new SfxSynth();
@@ -178,7 +182,7 @@ namespace BAM.Audio
             // A recorded clip in Resources/BAM/Sfx still plays.
             if (SfxMute.IsMuted(id))
             {
-                if (clips[k] == null) Build(k);
+                if (!built[k]) Build(k);
                 if (!isFile[k]) return;
             }
             float v = volume, raw = volume;
@@ -238,6 +242,7 @@ namespace BAM.Audio
         static AudioClip Build(int k)
         {
             var sw = Stopwatch.StartNew();
+            built[k] = true;
             // a recorded clip dropped in Resources/BAM/Sfx/<SfxId name> replaces the synth recipe (Rickard's own AI clips)
             var file = Resources.Load<AudioClip>(SfxFolder + ((SfxId)k).ToString());
             if (file != null)
@@ -250,6 +255,7 @@ namespace BAM.Audio
             }
             clipGain[k] = 1f;
             isFile[k] = false;
+            if (SfxMute.IsMuted((SfxId)k)) { buildMs += sw.Elapsed.TotalMilliseconds; return null; } // silent anyway: no synth render
             var data = SfxRecipes.Render(synth, (SfxId)k);
             var clip = AudioClip.Create("bam_" + (SfxId)k, data.Length, 1, SfxSynth.Rate, false);
             clip.SetData(data, 0);
@@ -268,7 +274,8 @@ namespace BAM.Audio
             int n = c.samples * c.channels;
             if (n <= 0 || n > 44100 * 2 * 4) return level;
             if (c.loadType != AudioClipLoadType.DecompressOnLoad) return level; // GetData would fail (and log) on a compressed clip
-            var d = new float[n];
+            if (gainBuf == null || gainBuf.Length < n) gainBuf = new float[Math.Max(n, 44100)];
+            var d = gainBuf;
             if (!c.GetData(d, 0)) return level;
             float peak = 0f;
             for (int i = 0; i < n; i++) { float a = Math.Abs(d[i]); if (a > peak) peak = a; }
@@ -282,8 +289,9 @@ namespace BAM.Audio
 
         static void BuildNext()
         {
-            while (nextBuild < SfxRecipes.Count && clips[nextBuild] != null) nextBuild++;
+            while (nextBuild < SfxRecipes.Count && built[nextBuild]) nextBuild++;
             if (nextBuild < SfxRecipes.Count) Build(nextBuild++);
+            if (AllBuilt) gainBuf = null;
             if (AllBuilt) UnityEngine.Debug.Log($"[BAM.Audio] {SfxRecipes.Count - 1} sounds built in {buildMs:F0} ms");
         }
 

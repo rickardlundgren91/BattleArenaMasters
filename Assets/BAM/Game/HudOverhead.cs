@@ -36,6 +36,7 @@ namespace BAM.Game
             overRoot = UiKit.NewRect("Overhead", canvasRect);
             UiKit.Stretch(overRoot);
             overRoot.SetAsFirstSibling(); // under the HUD
+            overRoot.gameObject.AddComponent<Canvas>(); // follows the heroes every frame: rebuilt alone, not the whole HUD (PERF-02)
             for (int i = 0; i < overheads.Length; i++)
             {
                 var o = new Overhead();

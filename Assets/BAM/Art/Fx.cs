@@ -220,7 +220,7 @@ namespace BAM.Art
             rot.x = new ParticleSystem.MinMaxCurve(-8f, 8f);
             rot.y = new ParticleSystem.MinMaxCurve(-8f, 8f);
             rot.z = new ParticleSystem.MinMaxCurve(-8f, 8f);
-            for (int i = 0; i < 24; i++) free.Push(NewBurst());
+            for (int i = 0; i < 48; i++) free.Push(NewBurst()); // headroom so a six-hero fight does not build new ones (and their materials) mid-fight (PERF-06)
         }
 
         static void RickardSystems()
