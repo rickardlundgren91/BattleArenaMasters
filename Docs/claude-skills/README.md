@@ -26,6 +26,6 @@ The combined Master Skill content is in `Docs/claude-skills/BAM_MASTER_SKILL_CLA
 5. Optional future tool: [CoplayDev MCP for Unity](https://github.com/CoplayDev/unity-mcp). It's a separate third-party integration, **not** part of this patch and **not installed**.
 
 ## Constraints and current scope
-This rebuilt Unity project currently targets an offline seven-hero internal test. It is *not* the old XYZ 10-hero online game. Maintain seeded D1 and LOS, real Tap/Drag mechanics, the approved Fenn behaviors and Rickard's rule that all attacks must remain visible. Follow art, performance, team ownership, licensing and build safety constraints in `Docs/ARCHITECTURE.md`.
+This is the rebuilt Unity project, *not* the old XYZ game. The skills deliberately do not hardcode heroes or scope; they read `HeroCatalog.cs`, `Assets/BAM/Online/` and the current code, because docs can lag. Maintain seeded D1 and LOS, real Tap/Drag mechanics, the approved Fenn behaviors and Rickard's rule that all attacks must remain visible. Follow art, performance, team ownership, licensing and build safety constraints in `Docs/ARCHITECTURE.md`.
 
 This change includes **only text documentation and Skill instructions**. It does not alter C#, assets, scenes, animation, ProjectSettings or the published website. No compilecheck, Unity test, Android test or Skill-run was performed as part of this sharing task. Draft PR is for Rickard and Simon to approve; **do not merge without new explicit authorization**.
