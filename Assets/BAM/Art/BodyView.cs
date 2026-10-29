@@ -93,7 +93,7 @@ namespace BAM.Art
         AnimationClipPlayable stance;
         bool bowHero;
         float stanceW;
-        float drAtk, drCast, drHit, drAtkFrom, drCastFrom, drUpA;
+        float drAtk, drCast, drHit, drAtkFrom, drCastFrom, drUpA, drUpC;
         bool squared;
         Transform hipsT, spineT, chestT;
         Vector3 travelV;
@@ -535,7 +535,7 @@ namespace BAM.Art
         public void ResetState()
         {
             moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
-            atkCarry = castCarry = lastAtkW = lastCastW = 0f; drAtk = drCast = drHit = 0f;
+            atkCarry = castCarry = lastAtkW = lastCastW = 0f; drAtk = drCast = drHit = drUpA = drUpC = 0f;
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
@@ -945,6 +945,7 @@ namespace BAM.Art
             if (gear != null)
             {
                 gear.Floor = Preview ? float.NegativeInfinity : transform.position.y; // ANIM-08/09: weapons stay above the ground
+                if (bowHero && !Preview) BowOffLegs();
                 gear.Tick(dt, moveW, gearAct, gearAtk, dead);
             }
             if (dead) AnimateDeath(dt);
@@ -1019,8 +1020,8 @@ namespace BAM.Art
             // menu's alike, on one graph, not at the first swing in the middle of a fight
             if (!clipsInfo && AnimFix.BlowTiming && anim.isActiveAndEnabled) MeasureClips();
             if (AnimFix.BlowTiming) InPlace();
-            if (AnimFix.UpperSwing) UpperTurn();
             else model.localPosition = Vector3.zero; // switched off live (Animation Check): nothing left held over
+            if (AnimFix.UpperSwing) UpperTurn();
             bool life = AnimFix.Life;
             float wAtk = 0f, wCast = 0f, wHit = 0f, wDeath = 0f;
             if (dead)
@@ -1076,7 +1077,9 @@ namespace BAM.Art
             lastAtkW = wAtk; lastCastW = wCast;
             if (bowHero) Stance(dt);
             float wStance = stanceW * (1f - moveW); // about how much of the stance shows (the clips over it take their share below)
-            gearAct = wAtk + wCast + wStance; gearAtk = wAtk + wStance;
+            // (Tyra_11) her cast is a shot too: on the move, with no stance under it, the bow stood in the fist's own grip, level over
+            // her head; it turns upright with its belly to the target as in her shot
+            gearAct = wAtk + wCast + wStance; gearAtk = wAtk + wStance + (Bow ? wCast : 0f);
             aimYaw = Bow ? -(AimOf(CAttack) * Mathf.Min(1f, wAtk + wStance) + AimOf(CCast) * wCast) : 0f;
             // on the move the swing (with UpperSwing also the cast and the flinch) goes to the upper-body layer and the legs keep their
             // stride, as Speltest's layers 1 and 2; standing, the whole body plays it
@@ -1089,6 +1092,7 @@ namespace BAM.Art
             if (layered) layers.SetInputWeight(1, upW);
             drAtk = wAtk; drCast = wCast; drHit = wHit; drAtkFrom = atkSeg ? atkFrom : atkStart; drCastFrom = castSeg ? castFrom : 0f;
             drUpA = upW > 1e-4f && uSum > 1e-4f ? upW * uA / uSum : 0f;
+            drUpC = Bow && upW > 1e-4f && uSum > 1e-4f ? upW * uC / uSum : 0f;
             if (upW > 0f) { wAtk -= uA; wCast -= uC; wHit -= uH; }
             float over = wAtk + wCast + wHit + wDeath;
             if (over > 1f) { wAtk /= over; wCast /= over; wHit /= over; wDeath /= over; over = 1f; }
@@ -1153,6 +1157,22 @@ namespace BAM.Art
             return clip != null && clipInfo.TryGetValue(clip, out ClipInfo ci) ? ci.AimL : 0f;
         }
 
+        // Tyra_02/05: on the move her bow keeps out of her legs (HeldGear.OffLegs), all of it once she runs
+        Transform[] legBones;
+        Animator legAnim;
+        void BowOffLegs()
+        {
+            if (legAnim != anim) { legAnim = anim; legBones = null; } // a rebuilt model has new bones
+            if (legBones == null && anim != null && anim.isHuman)
+                legBones = new[]
+                {
+                    anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg), anim.GetBoneTransform(HumanBodyBones.LeftLowerLeg), footL,
+                    anim.GetBoneTransform(HumanBodyBones.RightUpperLeg), anim.GetBoneTransform(HumanBodyBones.RightLowerLeg), footR,
+                };
+            gear.Legs = legBones;
+            gear.LegsW = dead ? 0f : moveW;
+        }
+
         // AnimFix.UpperSwing (ANIM-05, Unity run 1 2026-10-29): the upper-body layer takes the swing's spine and arms but not its hips,
         // so a swing whose whole body turns into the blow (Bonk's overhead slam, Bram's too: the hips 135 degrees round at the blow)
         // swung its arms from hips still facing the target and the weapon landed beside or behind the hero on the move (Bram 17-62,
@@ -1160,12 +1180,11 @@ namespace BAM.Art
         // screen, by the swing's share of the upper layer, goes back on: some on the hips (the legs step round with it, as standing)
         // and the rest up the spine, so the blow lands where it does standing. Same frame and weight the pose was evaluated with.
         const float UpperTurnHips = 0.4f;
+        // Tyra's cast as well (Tyra_11, Unity run 1): her volley is shot side on like her arrows, and on the run it went off square
         void UpperTurn()
         {
-            if (drUpA < 1e-3f || hipsT == null || spineT == null) return;
-            AnimationClip clip = upAtk.GetAnimationClip();
-            if (clip == null || !clipInfo.TryGetValue(clip, out ClipInfo ci) || ci.Yaw == null) return;
-            float deg = YawAt(ci, (float)upAtk.GetTime()) * drUpA;
+            if ((drUpA < 1e-3f && drUpC < 1e-3f) || hipsT == null || spineT == null) return;
+            float deg = ClipYaw(upAtk, drUpA) + ClipYaw(upCast, drUpC);
             if (Mathf.Abs(deg) < 0.05f) return;
             Vector3 up = transform.up;
             hipsT.rotation = Quaternion.AngleAxis(deg * UpperTurnHips, up) * hipsT.rotation;
@@ -1176,6 +1195,13 @@ namespace BAM.Art
                 chestT.rotation = Quaternion.AngleAxis(rest * 0.4f, up) * chestT.rotation;
             }
             else spineT.rotation = Quaternion.AngleAxis(rest, up) * spineT.rotation;
+        }
+
+        static float ClipYaw(AnimationClipPlayable p, float w)
+        {
+            if (w < 1e-3f) return 0f;
+            AnimationClip clip = p.GetAnimationClip();
+            return clip != null && clipInfo.TryGetValue(clip, out ClipInfo ci) && ci.Yaw != null ? YawAt(ci, (float)p.GetTime()) * w : 0f;
         }
 
         static float YawAt(ClipInfo ci, float t)

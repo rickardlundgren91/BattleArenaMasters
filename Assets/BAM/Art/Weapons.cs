@@ -386,6 +386,10 @@ namespace BAM.Art
         /// <summary>The ground's height under the hero (world y): no weapon's end goes below it (ANIM-08/09). Off (negative
         /// infinity) on the menu stage.</summary>
         public float Floor = float.NegativeInfinity;
+        /// <summary>The legs a carried weapon keeps out of (hip, knee and ankle, left then right; null for none) and by how much
+        /// (0..1, the hero's share on the move): Tyra's bow at her side (Tyra_02/05).</summary>
+        public Transform[] Legs;
+        public float LegsW;
         // AboveGround: the way across the ground each weapon's end rested last frame (zero while it is above it)
         Vector3[] lowDir;
 
@@ -661,6 +665,7 @@ namespace BAM.Art
                 if (AnimFix.FixedGrip && W.SwingTurn != Vector3.zero && sw > 0.001f)
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
                 if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
+                if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
             }
             if (sAnchor != null) ShieldFace(moveW);
@@ -741,6 +746,41 @@ namespace BAM.Art
                 }
                 float y = Mathf.Clamp(floor - g.y, -L, L);
                 Vector3 want = h.normalized * Mathf.Sqrt(L * L - y * y) + Vector3.up * y;
+                Quaternion q = Quaternion.FromToRotation(v, want);
+                t.SetPositionAndRotation(g + q * (t.position - g), q * t.rotation);
+            }
+        }
+
+        // Tyra_02/05 (Unity measuring run 1, 2026-10-29): at twice her speed, and strafing with her hips turned the way she runs, her
+        // legs swung out through the bow she carries upright at her side (its lower limb through her thigh). An end of the weapon
+        // within a leg's thickness of a leg (hip to knee to ankle) is turned away about the grip, straight out from that leg across
+        // the ground, by LegsW; the length and the grip stay, so the other limb leans in a little the other way
+        const float LegClear = 0.06f;
+        void OffLegs(int i)
+        {
+            Transform t = wT[i];
+            if (t.localScale.y < 1e-4f || Legs.Length < 6) return;
+            float r = LegClear * figH;
+            Vector3 g = t.TransformPoint(gripL[i]);
+            for (int e = 0; e < 2; e++)
+            {
+                Vector3 end = t.TransformPoint(new Vector3(shaftC[i].x, e == 0 ? 0f : meshH[i], shaftC[i].z));
+                float d = r;
+                Vector3 near = end;
+                for (int k = 0; k < 5; k++)
+                {
+                    if (k == 2 || Legs[k] == null || Legs[k + 1] == null) continue; // hip-knee and knee-ankle of each leg
+                    Vector3 a = Legs[k].position, ab = Legs[k + 1].position - a;
+                    Vector3 c = a + ab * Mathf.Clamp01(ab.sqrMagnitude > 1e-8f ? Vector3.Dot(end - a, ab) / ab.sqrMagnitude : 0f);
+                    float dk = (end - c).magnitude;
+                    if (dk < d) { d = dk; near = c; }
+                }
+                if (d >= r) continue;
+                Vector3 away = end - near;
+                away.y = 0f;
+                if (away.sqrMagnitude < 1e-8f) away = root.right * (defs[i].Left ? -1f : 1f);
+                Vector3 v = end - g, want = end + away.normalized * ((r - d) * Mathf.Clamp01(LegsW)) - g;
+                if (v.sqrMagnitude < 1e-8f || want.sqrMagnitude < 1e-8f) continue;
                 Quaternion q = Quaternion.FromToRotation(v, want);
                 t.SetPositionAndRotation(g + q * (t.position - g), q * t.rotation);
             }
