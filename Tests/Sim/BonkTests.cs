@@ -27,6 +27,13 @@ namespace BAM.Sim
             Check(Near(a.MaxHp - a.Hp, 50 * a.TakenMult) && Near(c.MaxHp - c.Hp, 50 * c.TakenMult) && far.Hp == far.MaxHp, "the slam hits the target and the enemy beside it, not one behind Bonk");
             Place(a, x + 1.6f, y); Place(c, x, y + 1.5f); Place(far, x - 4, y);
 
+            // he walks back through his wind-up: the circle walks with him, so the club lands in front of him, not where the
+            // swing began (BONK-02: it landed 2.95 tiles from him), and a target he walked away from is missed
+            b.Facing = 0; m.BonkSwing(b, a, 50, false); sm = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Smash && !p.Done) sm = p;
+            for (int k = 0; k * Rules.Tick < b.HDef.SpawnDelay + 0.05f && !sm.Done; k++) { b.X -= b.HDef.Speed * Rules.Tick; m.UpdateProjectiles(Rules.Tick); }
+            Check(Near(SimMath.Hypot(sm.X - b.X, sm.Y - b.Y), BonkS.SmashAhead, 0.02f) && a.Hp == a.MaxHp, $"the club lands {SimMath.Hypot(sm.X - b.X, sm.Y - b.Y):0.00} tiles in front of a walking Bonk");
+            Place(b, x, y); Place(a, x + 1.6f, y); Place(c, x, y + 1.5f); Place(far, x - 4, y);
+
             // Ground Slam: a wind-up, then everyone round him takes the hit and a stun; nobody in reach: no cast
             b.Charge = b.HDef.MaxCharge;
             Check(m.TryCastSpecial(b, float.NaN, 0), "the slam casts with enemies in reach");

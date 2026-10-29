@@ -91,9 +91,12 @@ namespace BAM.Game
                             float dx = e.X - p.X, dy = e.Y - p.Y;
                             if (dx * dx + dy * dy < 36f)
                             {
-                                // MLBB-weight (Rickard 2026-10-26 "känns inte mäktig"): a real shake and a short hit-stop on the slam
-                                AddTrauma(k == ProjKind.BonkSlam ? 0.55f : e.Big ? 0.4f : 0.22f);
-                                if (k == ProjKind.BonkSlam || e.Big) Stop(k == ProjKind.BonkSlam ? 0.08f : 0.06f);
+                                // MLBB-weight (Rickard 2026-10-26 "känns inte mäktig"): a real shake and a short hit-stop on the slam.
+                                // A club swing that hit nobody shakes as a plain one and never stops: a hit-stop reads as a hit (BONK-11)
+                                bool landed = k == ProjKind.BonkSlam;
+                                for (int j = 0; j < i && !landed; j++) landed = ev[j].Type == EventType.Hit && ev[j].A == e.A && (ProjKind)ev[j].Kind == ProjKind.BonkClub;
+                                AddTrauma(k == ProjKind.BonkSlam ? 0.55f : e.Big && landed ? 0.4f : 0.22f);
+                                if (landed && (k == ProjKind.BonkSlam || e.Big)) Stop(k == ProjKind.BonkSlam ? 0.08f : 0.06f);
                             }
                         }
                         break;

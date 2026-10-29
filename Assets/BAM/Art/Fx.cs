@@ -954,7 +954,7 @@ namespace BAM.Art
                     {
                         // the dust ring's middle sits at 0.64 of the picture's half width: sized so it lands on the radius
                         Emit1(bShock, new Vector3(p.x, 0.07f, p.z), Color.white, 3.1f * size, 0.6f, Random.value * 360f);
-                        Emit1(bShock, new Vector3(p.x, 0.06f, p.z), new Color(1f, 1f, 1f, 0.55f), 3.1f * 1.3f * size, 1.1f, Random.value * 360f);
+                        Emit1(bShock, new Vector3(p.x, 0.06f, p.z), new Color(1f, 1f, 1f, 0.55f), 3.1f * size, 1.1f, Random.value * 360f); // the slower one ends on the radius too (BONK-06: it rolled 0.3 past the hit)
                     }
                     else Ring(p, 0.25f * size, size, new Color(0.92f, 0.82f, 0.62f, 0.9f), 0.32f, 1.1f);
                     if (bDust != null) Burst(bDust, p + Vector3.up * 0.2f, 6 + Mathf.RoundToInt(3f * size), new Color32(255, 250, 240, 235), 0.75f * size, 2.4f * size, 1f, 0.5f, 0.45f * size);

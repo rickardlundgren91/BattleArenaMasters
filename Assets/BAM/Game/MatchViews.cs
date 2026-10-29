@@ -614,8 +614,9 @@ namespace BAM.Game
                     // Bram's Anvil Drop and Knut's Anchor Slam (Simon's reworks) get their own heroes' blows, not Blast's fireball
                     FxKind ek = pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? FxKind.AnvilStrike : pk == ProjKind.KnutSlam ? FxKind.AnchorHit
                         : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : pk == ProjKind.OakenSlam ? FxKind.OakenSlam : own ? FxKind.KegBlast : FxKind.Explosion;
-                    // Bonk: his auto slam (a power swing a size bigger) and Ground Slam, both the club into the ground
-                    float esize = pk == ProjKind.BlastChain ? Mathf.Max(0.1f, e.V) : bonk ? Mathf.Max(0.1f, e.V) * (pk == ProjKind.BonkClub && e.Big ? 1.3f : 1f) : size;
+                    // Bonk: his auto slam and Ground Slam, both the club into the ground, drawn at the true hit radius (a power swing
+                    // is no wider in the rules, so it is told by its sound and shake, not a bigger ring: BONK-06)
+                    float esize = pk == ProjKind.BlastChain || bonk ? Mathf.Max(0.1f, e.V) : size;
                     if (own) esize = Mathf.Max(0.1f, e.V);
                     ArtKit.PlayFx(ek, at, esize, e.A != null ? Side(e.A.Team) : 0, HeroOf(e.A));
                     SfxId boom = pk == ProjKind.BlastBomb || pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.BlastExplosion : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom

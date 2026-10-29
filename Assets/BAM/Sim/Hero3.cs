@@ -53,7 +53,7 @@ namespace BAM.Sim
             float d = SimMath.Dist(u, tgt), ahead = Math.Min(BonkS.SmashAhead, d), ca = SimMath.Cos(u.Facing), sa = SimMath.Sin(u.Facing);
             var p = NewProj(ProjMode.Smash, u, u.X + ca * ahead, u.Y + sa * ahead);
             p.Kind = ProjKind.BonkClub; p.Tgt = tgt; p.Dmg = dmg; p.T = -u.HDef.SpawnDelay; p.Dur = u.HDef.SpawnDelay; p.Radius = BonkS.SmashRadius;
-            p.Big = big; p.OnHit = true; p.Ang = u.Facing;
+            p.Big = big; p.OnHit = true; p.Ang = u.Facing; p.OX = u.X; p.OY = u.Y; // where he stood: the circle walks with him (BONK-02)
             Emit(EventType.AttackStart, u, tgt, u.HDef.SpawnDelay, (byte)ProjKind.BonkClub, big);
         }
 
@@ -63,8 +63,13 @@ namespace BAM.Sim
         {
             var h = p.Src;
             if (h == null || !h.Alive) return;
+            // he may walk during the wind-up: the circle keeps its place in front of him, so the club lands where his arms reach,
+            // never left behind where the swing began (precision audit BONK-02, 2026-10-29: it landed up to 2.95 tiles from him)
+            p.X += h.X - p.OX; p.Y += h.Y - p.OY;
             // the club follows its target through the wind-up, at most SmashFollow tiles (closed-test feedback; Rickard chose 0.5 on
-            // a card 2026-10-28): a target that barely moved is hit, one that ran away can still dodge the giant's slow swing
+            // a card 2026-10-28): a target that barely moved is hit, one that ran away can still dodge the giant's slow swing. It
+            // follows the point SmashAhead in front of him on the line to the target, so a sidestep is followed and a straight
+            // retreat is not (BONK-10: measured, kept as Rickard chose)
             var t = p.Tgt;
             if (t != null && t.Alive && !t.Has(St.Untargetable))
             {
