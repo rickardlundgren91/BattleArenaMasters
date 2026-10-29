@@ -611,7 +611,7 @@ namespace BAM.Online.Mp
 
         public MatchConfig Config => cfg;
         public bool Turned => turned;
-        public int Backlog => Lockstep.Backlog;
+        public int Backlog => Lockstep.Excess;
         public void Submit(in PlayerInput input) => Lockstep.Submit(in input);
         public bool Next(Match m, PlayerInput[] inputs)
         {
@@ -650,7 +650,7 @@ namespace BAM.Online.Mp
             ended = true;
             // one line to compare between phones after a test: same version and seed, how far it got, waits, and why it stopped being shared
             Debug.Log("[BAM.Online] match over: version " + Application.version + ", seed " + cfg.Seed + ", seat " + cfg.LocalSeat + "/" + cfg.Seats.Length
-                + ", ticks " + Lockstep.Stepped + ", waits " + stalls + " (longest " + Mathf.RoundToInt(longestStall * 1000) + " ms)"
+                + ", ticks " + Lockstep.Stepped + (Lockstep.Host ? "" : ", buffer " + Lockstep.Buffer) + ", waits " + stalls + " (longest " + Mathf.RoundToInt(longestStall * 1000) + " ms)"
                 + ", net test " + MpNetTest.Current.name
                 + (Lockstep.Problem != null ? ", problem: " + Lockstep.Problem : "") + (quit ? ", left" : ""));
             MpRoom.MatchEnded(this, quit);

@@ -17,7 +17,7 @@ namespace BAM.Core
         void Submit(in PlayerInput input);
         /// <summary>The next tick's controls for every seat (and any seat turned into a bot, done on m). False = not known yet.</summary>
         bool Next(Match m, PlayerInput[] inputs);
-        /// <summary>Ticks known and waiting; the game steps faster while it is more than a few.</summary>
+        /// <summary>Ticks waiting beyond what this phone keeps in hand against network jitter; the game steps a little faster while it is above 1.</summary>
         int Backlog { get; }
         /// <summary>After every step.</summary>
         void AfterStep(Match m);

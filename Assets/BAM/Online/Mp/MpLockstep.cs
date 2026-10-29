@@ -17,7 +17,12 @@ namespace BAM.Online.Mp
     sealed class MpLockstep
     {
         public const int HashEvery = 30;      // frames between fingerprints (half a second)
-        const int Prebuffer = 2;              // a guest that ran dry waits for this many frames, so a late packet costs one pause, not many
+        // A guest keeps a few frames in hand against the network's unevenness (a jitter buffer). It was a fixed 2 with a jump of up
+        // to 4 extra ticks as soon as 4 were waiting: on Rickard's phones (2026-10-29) the guest ran dry ~1 frame in 7 and then leapt,
+        // "a few steps, then it jumps and lags, over and over". Now the buffer grows by one each time it runs dry and shrinks again
+        // after ~5 s with frames to spare; the game catches up one tick at a time (Excess). Costs a few ticks of extra delay.
+        const int MinBuffer = 2, MaxBuffer = 10, ShrinkAfter = 300;
+        int buffer = 3, calm, spare = int.MaxValue;
         const int Cap = 2048;                 // frames kept: a guest further behind than this (34 s) has lost the match anyway
         const int MaxPresses = 4;
 
@@ -65,6 +70,10 @@ namespace BAM.Online.Mp
 
         /// <summary>Frames known and not yet stepped.</summary>
         public int Backlog => (int)(built - stepped);
+        /// <summary>Guest: frames beyond the buffer it keeps in hand (the game steps a little faster while this is above 1). Host: 0.</summary>
+        public int Excess => Host || solo || waiting ? 0 : Math.Max(0, Backlog - buffer);
+        /// <summary>Guest: frames it keeps in hand now.</summary>
+        public int Buffer => buffer;
         public long Stepped => stepped;
         /// <summary>Host: frames made so far, and the first frame of the message Send is sending now.</summary>
         public long Built => built;
@@ -232,8 +241,11 @@ namespace BAM.Online.Mp
                 else if (!solo)
                 {
                     long have = built - stepped;
-                    if (waiting) { if (have < Prebuffer) return false; waiting = false; }
-                    if (have <= 0) { waiting = true; return false; }
+                    if (waiting) { if (have < buffer) return false; waiting = false; calm = 0; spare = int.MaxValue; }
+                    if (have <= 0) { waiting = true; if (buffer < MaxBuffer) buffer++; return false; }
+                    // a long calm with frames to spare all along: keep one less in hand (less delay)
+                    if (have - 1 < spare) spare = (int)(have - 1);
+                    if (++calm >= ShrinkAfter) { if (spare >= 2 && buffer > MinBuffer) buffer--; calm = 0; spare = int.MaxValue; }
                 }
             }
             if (stepped >= built) return false;

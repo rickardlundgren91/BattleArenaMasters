@@ -43,7 +43,7 @@ namespace BAM.Game
         PlayerInput[] netInputs;
         string netStatus;
         // a guest that fell behind steps up to this many extra ticks a frame to catch up
-        const int NetCatchUp = 4, NetBacklogOk = 3;
+        const int NetCatchUp = 4, NetFarBehind = 12;
         // the guided match is two matches with one hero: the training island, then the first battle in the arena (Rickard 2026-10-26: one hero all through, Tyra)
         float islandSeconds;
         // the first start shows Home this long before the guided match takes over (its picture zooms in and fades, Hud.Dissolve)
@@ -273,9 +273,11 @@ namespace BAM.Game
                 PlayerInput input = paused ? PlayerInput.None : hud.TakeInput();
                 net.Submit(in input);
                 if (net.Next(match, netInputs) && NetStep()) break;
-                while (net.Backlog > NetBacklogOk && extra < NetCatchUp && net.Next(match, netInputs)) { extra++; if (NetStep()) break; }
                 if (over) break;
             }
+            // behind the host: one extra tick a frame (barely seen), several only when far behind (after a long hiccup)
+            int allow = net.Backlog > NetFarBehind ? NetCatchUp : net.Backlog > 1 ? 1 : 0;
+            while (!over && extra < allow && net.Next(match, netInputs)) { extra++; if (NetStep()) break; }
             if (acc >= Rules.Tick) acc = 0f;
             netDraw = Mathf.Min(netDraw, Rules.Tick);
             net.Flush();
