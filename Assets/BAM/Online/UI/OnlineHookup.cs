@@ -38,6 +38,16 @@ namespace BAM.Online.UI
             catch (System.Exception e) { Debug.LogWarning("[BAM.Online] " + what + ": " + e); }
         }
 
+        // "+25 Rating", "-10 Rating", "+0 Rating"; a win against Easy or Normal bots over their cap: "Max Rating from Easy bots"
+        static string RatingText()
+        {
+            int r = Progress.LastRating;
+            string kind = Progress.LastRatingKind;
+            if (r == 0 && Progress.LastWon && kind != Progress.Players && Progress.RatingCapOf(kind) > 0 && Progress.Shown.rating >= Progress.RatingCapOf(kind))
+                return "Max Rating from " + kind + " bots";
+            return (r < 0 ? "-" + (-r) : "+" + r) + " Rating";
+        }
+
         static MatchGain LastGain()
         {
             var t = Progress.Shown;
@@ -46,6 +56,7 @@ namespace BAM.Online.UI
             return new MatchGain
             {
                 Xp = Progress.LastXp, Rating = Progress.LastRating, Level = t.level, LevelBefore = Progress.LastLevelBefore,
+                RatingText = RatingText(),
                 FirstWin = Progress.LastFirstWin,
                 LevelProgress = max || need <= 0 ? 1f : (float)have / need,
                 LevelText = max ? "Max level" : have + " / " + need + " XP",

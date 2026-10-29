@@ -349,7 +349,7 @@ namespace BAM.UI
             if (!on) return;
             if (g.Unlocked != null) resUnlock.text = "NEW HERO UNLOCKED: " + g.Unlocked.ToUpperInvariant();
             bool up = g.Level > g.LevelBefore;
-            resXp.text = "+" + g.Xp + " XP  ·  +" + g.Rating + " Rating" + (g.FirstWin ? "  (first win today)" : "");
+            resXp.text = "+" + g.Xp + " XP  ·  " + (g.RatingText ?? "+" + g.Rating + " Rating") + (g.FirstWin ? "  (first win today)" : "");
             resLevel.text = (up ? "LEVEL UP! " : "") + "Level " + g.Level + " · " + g.LevelText;
             resLevel.color = up ? ResLevelUp : ResSub;
             resXpPart = Mathf.Clamp01(g.LevelProgress);

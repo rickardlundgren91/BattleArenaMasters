@@ -32,19 +32,22 @@ namespace BAM.Online
         {
             if (sending || Account.State != Account.Status.Ready) return;
             var list = Progress.Pending;
-            if (list.Count == 0) return;
+            if (list.Count == 0 && Progress.Waiting == 0) return;
             sending = true;
+            if (list.Count > 0) askTries = 0;
             try
             {
-                while (list.Count > 0 && Account.State == Account.Status.Ready)
+                do
                 {
+                    // an empty list only asks about matches against players that wait for the other side's report
                     int n = Math.Min(SendBatch, list.Count), before = list.Count;
                     var batch = list.GetRange(0, n);
                     var ans = await Call<ReportAnswer>("ReportMatch", new Dictionary<string, object> { { "matches", batch } }, "done");
                     var done = new HashSet<string>(ans.done ?? new List<string>());
-                    Progress.ServerAnswered(ans.totals, done);
+                    Progress.ServerAnswered(ans.totals, done, ans.waiting);
                     if (done.Count == 0 || list.Count >= before) break;   // nothing taken (or only ids we no longer have): try again later instead of looping
                 }
+                while (list.Count > 0 && Account.State == Account.Status.Ready);
             }
             catch (Exception e)
             {
@@ -54,6 +57,21 @@ namespace BAM.Online
             {
                 sending = false;
             }
+            if (Progress.Waiting > 0) _ = AskAgain(); else askTries = 0;
+        }
+
+        // the other side of a match against players usually reports within seconds of this phone: ask again after 20 s, 1 and
+        // 3 minutes, then only with the next match or sign-in (the server counts it as a bot match after 30 minutes)
+        static bool asking;
+        static int askTries;
+        static readonly int[] AskAfter = { 20000, 60000, 180000 };
+        static async Task AskAgain()
+        {
+            if (asking || askTries >= AskAfter.Length) return;
+            asking = true;
+            try { await Task.Delay(AskAfter[askTries++]); }
+            finally { asking = false; }
+            if (Progress.Waiting > 0) await SendPending();
         }
 
         /// <summary>Asks the server to give this player the name. Answers null when it is taken or not allowed (reason says why).</summary>
@@ -127,7 +145,7 @@ namespace BAM.Online
         }
 
         [Serializable, Preserve] class MeAnswer { public string name; public Totals totals; }
-        [Serializable, Preserve] class ReportAnswer { public Totals totals; public List<string> done; }
+        [Serializable, Preserve] class ReportAnswer { public Totals totals; public List<string> done; public int waiting = -1; }
         [Serializable, Preserve] class FindAnswer { public string playerId; }
         [Serializable, Preserve] class OkAnswer { public bool ok; }
     }

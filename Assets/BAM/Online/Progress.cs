@@ -20,7 +20,23 @@ namespace BAM.Online
         // Keep these equal to Cloud/Scripts/ReportMatch.js
         public const int MaxLevel = 30;
         public const int XpWin = 100, XpLoss = 60, XpKill = 5, XpFightMax = 60, XpFirstWin = 50;
-        public const int RatingWin = 20, RatingLoss = 8;
+        // Rating by opponent (Rickard 2026-10-29): a win gives Easy +4, Normal +10, Hard +25, real players +50; a loss takes
+        // 0, 0, 10 and 20. Easy and Normal stop giving Rating at 299 and 699 (Ember, Rift). Never under 0.
+        public const string Players = "Players";
+        static readonly string[] RatingKinds = { "Easy", "Normal", "Hard", Players };
+        static readonly int[] RatingWin = { 4, 10, 25, 50 }, RatingLoss = { 0, 0, -10, -20 }, RatingCap = { 299, 699, 0, 0 };
+
+        /// <summary>What a match changes the Rating by, the same way as ReportMatch.js ratingChange.</summary>
+        public static int RatingChange(int rating, string kind, bool won)
+        {
+            int k = Math.Max(0, Array.IndexOf(RatingKinds, kind));
+            if (!won) return Math.Max(RatingLoss[k], -Math.Max(0, rating));
+            return RatingCap[k] > 0 ? Math.Max(0, Math.Min(RatingWin[k], RatingCap[k] - rating)) : RatingWin[k];
+        }
+        public static int RatingWinOf(string kind) => RatingWin[Math.Max(0, Array.IndexOf(RatingKinds, kind))];
+        public static int RatingLossOf(string kind) => -RatingLoss[Math.Max(0, Array.IndexOf(RatingKinds, kind))];
+        public static int RatingCapOf(string kind) => RatingCap[Math.Max(0, Array.IndexOf(RatingKinds, kind))];
+        static string KindOf(MatchReport m) => string.IsNullOrEmpty(m.vs) ? m.difficulty : Players;
         public const int MinSeconds = 45;
         const int MaxPending = 50;
 
@@ -41,7 +57,17 @@ namespace BAM.Online
 
         /// <summary>What the last counted match gave, for the result card (Speltest Progression.lastXp etc.). Zero XP = nothing.</summary>
         public static int LastXp, LastRating, LastLevelBefore;
-        public static bool LastFirstWin;
+        public static bool LastFirstWin, LastWon;
+        /// <summary>What the last match counted as for Rating: "Easy", "Normal", "Hard" or <see cref="Players"/>.</summary>
+        public static string LastRatingKind;
+
+        /// <summary>Set by the online room when a match against players of the other team starts: the match's seed and this
+        /// player's team, so the server can match both sides' reports. Taken (and cleared) by <see cref="MatchEnded"/>.</summary>
+        public static string NextVs;
+        public static int NextTeam;
+
+        /// <summary>Matches against players the server is still waiting to hear from the other side about.</summary>
+        internal static int Waiting;
 
         // XP to go from level l to l + 1: 100, 150, 200 ... (level 5 after ~9 matches, 10 after ~35, 30 after ~300)
         public static int XpToNext(int l) => 100 + 50 * (l - 1);
@@ -106,23 +132,32 @@ namespace BAM.Online
         {
             Load();
             LastXp = LastRating = 0;
-            if (!Counts(r)) return;
+            string vs = NextVs; int team = NextTeam;
+            NextVs = null;
+            // leaving a match against players still counts it as lost for Rating (no XP), so the other side gets its win
+            bool quitVs = vs != null && r.Quit && !r.Tutorial;
+            if (!Counts(r) && !quitVs) return;
             var m = new MatchReport
             {
                 id = Guid.NewGuid().ToString("N"),
                 at = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                won = r.Won,
+                won = r.Won && !quitVs,
                 seconds = (int)r.Seconds,
                 kills = r.Kills,
                 deaths = r.Deaths,
                 hero = r.Hero.ToString(),
                 difficulty = r.Difficulty.ToString(),
+                vs = vs ?? "",
+                team = team,
+                quit = quitVs,
             };
             var before = shown;
             long day = m.at / 86400;
-            LastFirstWin = m.won && before.winDay != day;
-            LastXp = XpFor(m.won, m.kills, LastFirstWin);
-            LastRating = m.won ? RatingWin : RatingLoss;
+            LastFirstWin = !m.quit && m.won && before.winDay != day;
+            LastXp = m.quit ? 0 : XpFor(m.won, m.kills, LastFirstWin);
+            LastRatingKind = KindOf(m);
+            LastWon = m.won;
+            LastRating = RatingChange(before.rating, LastRatingKind, m.won);
             LastLevelBefore = before.level;
             pending.Add(m);
             if (pending.Count > MaxPending) pending.RemoveAt(0);
@@ -135,10 +170,11 @@ namespace BAM.Online
         internal static List<MatchReport> Pending { get { Load(); return pending; } }
 
         /// <summary>The server counted (or refused) these matches: drop them and take its totals.</summary>
-        internal static void ServerAnswered(Totals totals, ICollection<string> doneIds)
+        internal static void ServerAnswered(Totals totals, ICollection<string> doneIds, int waiting = -1)
         {
             Load();
             if (totals != null) server = totals;
+            if (waiting >= 0) Waiting = waiting;
             if (doneIds != null && doneIds.Count > 0)
                 for (int i = pending.Count - 1; i >= 0; i--)
                     if (doneIds.Contains(pending[i].id)) pending.RemoveAt(i);
@@ -161,11 +197,12 @@ namespace BAM.Online
         /// <summary>One match added to totals, the same way as ReportMatch.js. Used for matches the server has not seen yet.</summary>
         public static void Apply(Totals t, MatchReport m)
         {
+            t.rating += RatingChange(t.rating, KindOf(m), m.won && !m.quit);
+            if (m.quit) return;   // a match against players that was left: only its Rating
             long day = m.at / 86400;
             bool firstWin = m.won && t.winDay != day;
             t.xp += XpFor(m.won, m.kills, firstWin);
             if (firstWin) t.winDay = day;
-            t.rating += m.won ? RatingWin : RatingLoss;
             t.matches++;
             if (m.won) { t.wins++; t.streak++; if (t.streak > t.bestStreak) t.bestStreak = t.streak; }
             else { t.losses++; t.streak = 0; }
@@ -181,6 +218,7 @@ namespace BAM.Online
         static void Recount()
         {
             shown = server.Copy();
+            shown.rating = Math.Max(0, shown.rating + shown.pend);   // matches against players the server waits to confirm
             for (int i = 0; i < pending.Count; i++) Apply(shown, pending[i]);
             shown.level = LevelOf(shown.xp);
             Changed?.Invoke();
@@ -208,6 +246,7 @@ namespace BAM.Online
                 pending.Clear();
             }
             shown = server.Copy();
+            shown.rating = Math.Max(0, shown.rating + shown.pend);
             for (int i = 0; i < pending.Count; i++) Apply(shown, pending[i]);
         }
 
@@ -229,6 +268,9 @@ namespace BAM.Online
         public bool won;
         public int seconds, kills, deaths;
         public string hero, difficulty;
+        public string vs;          // against players: "v" + the match's seed, the same on every phone in it; "" against bots
+        public int team;           // with vs: this player's team (0 or 1)
+        public bool quit;          // with vs: the player left before the end (counts only as a Rating loss)
     }
 
     /// <summary>A player's totals. Same shape as the "bam-progress" protected Cloud Save item and the public profile.</summary>
@@ -236,6 +278,7 @@ namespace BAM.Online
     public class Totals
     {
         public int xp, level = 1, rating, matches, wins, losses, kills, deaths, streak, bestStreak;
+        public int rs, pend;   // Rating season; Rating from matches against players that wait for the other side's report
         public long seconds, winDay = -1;
         public List<HeroTotals> heroes = new List<HeroTotals>();
 

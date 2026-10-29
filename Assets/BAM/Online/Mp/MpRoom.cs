@@ -331,6 +331,11 @@ namespace BAM.Online.Mp
         internal static void MatchEnded(MpMatchNet n, bool quit)
         {
             if (n != net) return;
+            // a match with a player on the other team counts for Rating as a match against players; the game reports it right
+            // after this (GameFlow.SendEnd), and Progress takes the seed as the match's name both sides send to the server
+            var cfg = n.Config; int myTeam = cfg.Seats[cfg.LocalSeat].Team; bool rival = false;
+            foreach (var s in cfg.Seats) if (s.Team != myTeam) rival = true;
+            Progress.NextVs = rival ? "v" + cfg.Seed : null; Progress.NextTeam = myTeam;
             if (quit && relay != null)
             {
                 w.Begin(IsHost ? MpMsg.MatchOver : MpMsg.LeftMatch);

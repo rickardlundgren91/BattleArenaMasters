@@ -2,6 +2,7 @@
 // see is what the server counted (Speltest showed what the other phone said about itself).
 const { DataApi } = require("@unity-services/cloud-save-1.4");
 const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
+const SEASON = 2;   // keep equal to ReportMatch.js
 
 module.exports = async ({ params, context }) => {
   const { projectId } = context;
@@ -11,7 +12,7 @@ module.exports = async ({ params, context }) => {
   const got = await data.getProtectedItems(projectId, id, ["bam-name", "bam-progress"]);
   const item = k => (got.data.results.find(r => r.key === k) || {}).value;
   const t = item("bam-progress") || null;
-  if (t) { delete t.winDay; }
+  if (t) { delete t.winDay; delete t.pend; if (t.rs !== SEASON) t.rating = 0; }   // an old season's Rating shows as 0
   let rank = 0;
   try {
     const lb = new LeaderboardsApi(context);

@@ -31,6 +31,8 @@ namespace BAM.UI
     public struct MatchGain
     {
         public int Xp, Rating, Level, LevelBefore;
+        /// <summary>The Rating part of the line: "+25 Rating", "-10 Rating", or why there is none ("Max Rating from Easy bots").</summary>
+        public string RatingText;
         public bool FirstWin;
         /// <summary>0..1 into the current level, and its text: "40 / 150 XP" or "Max level".</summary>
         public float LevelProgress;
