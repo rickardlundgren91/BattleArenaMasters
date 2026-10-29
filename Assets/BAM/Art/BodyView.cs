@@ -776,6 +776,10 @@ namespace BAM.Art
                 // start at its own speed, the body sinking from 0.6 s and faded out from 0.8 to 1.3 s. Ours faded from 2.0 s, so the
                 // clip's first stagger stood 1.3 s at full height before anything happened (Unity measuring run 1, 2026-10-29)
                 if (imported && IsHero && !Preview) { deathFadeAt = HeroFadeAt; deathFade = HeroFade; }
+                // ANIM-07: a minion's as Speltest's (View3DWorld minions: deadT 0.6 s): it tips over to its side, sinks half a tile and
+                // fades over 0.6 s, a puff of dust where it lands. Ours stood through its Dying clip's first 1.3 s and faded from 2 s
+                // (Unity measuring run 2, 2026-10-29)
+                else if (imported && !IsHero && !Preview && def.Kind == RigKind.Humanoid) { deathFadeAt = 0f; deathFade = MinionDie; minionLanded = false; }
             }
             else
             {
@@ -1762,7 +1766,8 @@ namespace BAM.Art
         static float Back(float t) { t -= 1f; return 1f + t * t * (2.7f * t + 1.7f); }
         static float Smooth(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
 
-        const float HeroSinkAt = 0.6f, HeroSink = 0.9f, HeroFadeAt = 0.8f, HeroFade = 0.5f;
+        const float HeroSinkAt = 0.6f, HeroSink = 0.9f, HeroFadeAt = 0.8f, HeroFade = 0.5f, MinionDie = 0.6f;
+        bool minionLanded;
 
         void AnimateDeath(float dt)
         {
@@ -1779,6 +1784,21 @@ namespace BAM.Art
                     Vector3 lp = model.localPosition;
                     lp.y -= Mathf.Max(0f, deathT - HeroSinkAt) * HeroSink / Mathf.Max(1e-4f, transform.lossyScale.y);
                     model.localPosition = lp;
+                }
+                else if (!IsHero && !Preview && def.Kind == RigKind.Humanoid)
+                {
+                    // ANIM-07 (Speltest View3DWorld): over to its side by 85 degrees in the first 45 % of the 0.6 s, sinking 0.5 tiles in the rest
+                    float k = Mathf.Clamp01(deathT / MinionDie), fall = Mathf.Clamp01(k / 0.45f);
+                    model.localRotation = Quaternion.Euler(0f, 0f, -85f * fall * fall);
+                    Vector3 lp = model.localPosition;
+                    lp.y -= Mathf.Clamp01((k - 0.45f) / 0.55f) * 0.5f / Mathf.Max(1e-4f, transform.lossyScale.y);
+                    model.localPosition = lp;
+                    if (fall >= 1f && !minionLanded)
+                    {
+                        minionLanded = true;
+                        if (renderersOn && vis >= 0.99f)
+                            Fx.Dust(transform.position + transform.right * 0.35f + new Vector3(0f, 0.05f, 0f), 6, new Color32(217, 204, 184, 115), 0.42f, 1f, 0.4f, 0.25f, 0.1f);
+                    }
                 }
             }
             else if (def.Kind == RigKind.Target)
