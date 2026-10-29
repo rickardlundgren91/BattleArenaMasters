@@ -1535,7 +1535,9 @@ namespace BAM.Art
             float runK = Mathf.Clamp01((rel - walkSpd) / (top - walkSpd));
             float reach = !Preview && (uint)HeroIndex < (uint)RunReach.Length ? RunReach[HeroIndex] : 1f;
             float stride = Mathf.Lerp(walkSpd * wLen, runSpd * reach * rLen, runK), len = Mathf.Lerp(wLen, rLen, runK);
-            float rate = Mathf.Clamp(rel / Mathf.Max(0.05f, stride), 0.6f / len, 1.8f / len);
+            // at slowest half the clip's own pace: Fenn's, Tyra's and Moa's runs need 0.52-0.57 of it at their match speed, and held at
+            // 0.6 their planted feet slipped back 6-14 % (Unity run 2)
+            float rate = Mathf.Clamp(rel / Mathf.Max(0.05f, stride), 0.5f / len, 1.8f / len);
             // backing off with its legs turned round (LegsFollow), the stride plays backwards
             float back = AnimFix.LegsFollow && legDir < 0 && legW > 0.5f ? -1f : 1f;
             if (moveW > 0.01f) gaitPh = Mathf.Repeat(gaitPh + dt * rate * back, 1f);
@@ -1547,8 +1549,9 @@ namespace BAM.Art
         // the run's stride in a match against GroundSpeed's measure of it, by HeroId (Unity run 2026-10-29 on Rickard's PC, ANIM-01):
         // played at the measured speed, the planted foot slipped back 7-31 % of the way the body went (the clip ran too fast for the
         // ground), Hilde's was carried 24 % forward. The same run clip lands differently on each rig with its foot IK, so it goes by
-        // hero; measure again when a hero's model or run clip changes
-        static readonly float[] RunReach = { 1.106f, 1.24f, 1.313f, 1.233f, 1.073f, 1.184f, 1.218f, 1.319f, 0.757f, 1.147f };
+        // hero; measure again when a hero's model or run clip changes. Run 2 (2026-10-29): Fenn's is Original-Fenn's (Clay-Fenn's was
+        // 1.24), Moa's and Hilde's from their slip at 1x and 2x
+        static readonly float[] RunReach = { 1.106f, 1.11f, 1.313f, 1.28f, 1.073f, 1.184f, 1.218f, 1.319f, 0.84f, 1.147f };
 
         // a view built under the hidden pool root can't play its clips yet: measured the first frame it is out
         void MeasureGait(AnimationClip walk, AnimationClip run)
@@ -1641,7 +1644,10 @@ namespace BAM.Art
             float s = Mathf.Max(1e-4f, transform.lossyScale.y);
             Vector3 mp = model.localPosition;
             float want = (transform.position.y + footRef - (low - mp.y * s)) / s * w; // the lift that puts the foot on its mark
-            groundY = groundSet ? Mathf.Lerp(groundY, want, Mathf.Min(1f, Mathf.Max(dt, 1f / 60f) * 8f)) : want;
+            // up at once and down eased, so a hop in a blow still leaves the ground: eased both ways, a foot under its mark stayed under
+            // while the lift caught up (Unity run 2: Bram's blows out of his raised idle and Bonk's landings sank the feet 0.23-0.28
+            // tiles). With w 0 (on the move, dead) it only eases, so a dead hero's lift settles over the fall
+            groundY = !groundSet || (w > 0f && want > groundY) ? want : Mathf.Lerp(groundY, want, Mathf.Min(1f, Mathf.Max(dt, 1f / 60f) * 8f));
             groundSet = true;
             mp.y = groundY;
             model.localPosition = mp;
