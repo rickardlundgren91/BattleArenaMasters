@@ -413,8 +413,11 @@ namespace BAM.Art
                 // sized so the painted rock ends where the rules stop a hero (Rickard 2026-10-26: at 2.6 a hero walking into its side went in
                 // and vanished behind it): the picture's rock fills ~95% of its width, the rules' edge is RockR + the hero's radius
                 float rad = Mathf.Max(0.3f, r.z), sh = rad * 2.05f, sw = sh * ar;
-                var foot = new Vector3(r.x, 0.02f, r.y - rad * 1.35f);
-                Vector3 up = new Vector3(0f, sh / CY, 0f), half = new Vector3(sw * 0.5f, 0f, 0f);
+                // the foot on the boulder's side nearest the camera: turned online (COORDS-01) that is the north side, and the
+                // picture faces the other way (half flipped keeps the winding toward the camera and the picture unmirrored)
+                float near = info.Turned ? -1f : 1f;
+                var foot = new Vector3(r.x, 0.02f, r.y - near * rad * 1.35f);
+                Vector3 up = new Vector3(0f, sh / CY, 0f), half = new Vector3(near * sw * 0.5f, 0f, 0f);
                 int b = v.Count;
                 v.Add(foot - half); v.Add(foot - half + up); v.Add(foot + half + up); v.Add(foot + half);
                 uv.Add(new Vector2(0f, 0f)); uv.Add(new Vector2(0f, 1f)); uv.Add(new Vector2(1f, 1f)); uv.Add(new Vector2(1f, 0f));
@@ -423,7 +426,7 @@ namespace BAM.Art
             var mesh = new Mesh { name = "Arena rocks" };
             mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
             var n = new Vector3[v.Count];
-            for (int i = 0; i < n.Length; i++) n[i] = new Vector3(0f, 0.82f, -0.5724f); // lit like it faces the camera
+            for (int i = 0; i < n.Length; i++) n[i] = new Vector3(0f, 0.82f, info.Turned ? 0.5724f : -0.5724f); // lit like it faces the camera
             mesh.normals = n;
             mesh.RecalculateBounds();
             var mat = ArtMaterials.Instance(ArtMaterials.LitClip);

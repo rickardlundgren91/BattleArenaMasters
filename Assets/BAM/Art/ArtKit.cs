@@ -32,6 +32,9 @@ namespace BAM.Art
         /// <summary>Island only: the bridge and lane (rows 17+) rise 3 units into place over 0.9 s instead of standing there.
         /// Set it when the arena is rebuilt because the bridge opened.</summary>
         public bool LaneRises;
+        /// <summary>Online, top team: the camera looks from the other end of the map (MatchCamera turns half a circle), so the
+        /// pictures that stand toward the camera (the middle boulders) stand on the boulder's other side.</summary>
+        public bool Turned;
 
         public int Tile(int tx, int ty) => Tiles[ty * Width + tx];
         /// <summary>World centre of tile (tx, ty), ty counted from the top row.</summary>

@@ -142,6 +142,7 @@ namespace BAM.Game
             bridgeShown = !Island || m.Tut.BridgeOpen;
             var info = ArenaInfoOf(m.Map, bridgeShown ? int.MaxValue : IslandPlatformRows, !Island);
             info.Island = Island;
+            info.Turned = Coords.Turned;
             info.LaneRises = Island && rebuild; // the opened bridge and lane rise into place
             arena = ArtKit.BuildArena(info);
         }
