@@ -1,5 +1,7 @@
 # Brief: menus, settings and the consent dialog ("Gör menyerna och inställningarna")
 
+_Written for the 7-hero offline MVP; current scope in `Docs/DECISIONS.md`._
+
 You are a helper thread in the BAM Unity rebuild. Read `Docs/ARCHITECTURE.md`, `Docs/CONTRACTS.md` (UI section) and
 `Docs/DECISIONS.md` in `/mnt/project-files/bam-unity/` first. Your folders: `Assets/BAM/UI/` (BAM.UI) and
 `Assets/BAM/Fonts/`. Effort: medium.

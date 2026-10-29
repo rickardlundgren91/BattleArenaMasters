@@ -12,6 +12,7 @@
 ## 1. Skapa appen
 1. Öppna https://play.google.com/console och klicka **Skapa app** (Create app).
 2. **Appnamn:** `Battle Arena Masters`
+   **Paketnamn** (om Play frågar): `com.battlearenamasters.game`, exakt så. Kan aldrig ändras.
 3. **Standardspråk:** `Engelska (USA) – en-US`
 4. **App eller spel:** **Spel**. **Kostnadsfri eller betald:** **Kostnadsfri** (går inte att ändra till betald senare).
 5. Kryssa i båda deklarationerna (riktlinjer för utvecklare och amerikanska exportlagar).
@@ -80,47 +81,82 @@ Nya privata konton måste köra en **sluten test med minst 12 testare som varit 
 innan man kan ansöka om produktion. Intern testning räknas inte. Klockan börjar först när testarna kan gå med, alltså
 efter att Google har godkänt den slutna versionen, så starta så tidigt som möjligt.
 
-**Innan:** allt i steg 4 (Appinnehåll) och steg 5 (Butiksinformation, med skärmdumpar) måste vara ifyllt. Den slutna
-testen granskas av Google, och Data safety krävs här (den behövs inte för bara intern testning).
+**Innan:** allt i steg 4 (Appinnehåll) och steg 5 (Butiksinformation, med skärmdumpar) måste vara ifyllt. KLART 26 okt
+för 0.1. Men 0.2 har konton och onlinespel, så några rutor måste göras om: se **0.2** nedan.
 
-**a. Testargrupp (enklast med en Google-grupp, då kan spelarna gå med själva):**
-1. Gå till https://groups.google.com, inloggad med kontot som ska äga gruppen > **Skapa grupp**.
-2. **Gruppnamn:** `BAM Testers`. **Gruppens e-post:** t.ex. `bam-testers` (blir `bam-testers@googlegroups.com`) > **Nästa**.
-3. **Vem kan söka efter gruppen:** Alla på webben. **Vem kan gå med i gruppen:** **Alla kan be om att få gå med**
-   (du godkänner) eller **Vem som helst kan gå med** (enklast) > **Nästa** > hoppa över att lägga till medlemmar > **Skapa grupp**.
-4. Spelare går med via gruppens länk (`https://groups.google.com/g/bam-testers`) med samma Google-konto som de har i Play.
+**a. Testargrupp: KLAR 26 okt.** Gruppen är `bam-playtesters@googlegroups.com` (https://groups.google.com/g/bam-playtesters).
+Kolla bara att **Gruppinställningar > Vem kan se medlemmar** står på **Gruppchefer**, så att testarna inte ser varandras Gmail.
 
-(Alternativ: en e-postlista i Play Console som i steg 2, men då måste du skriva in varje adress själv.)
+**0.2. NYTT: gör de här innan du skickar till granskning (d)**
+
+1. **Hemsidan.** Säg till mig så mergar jag PR #12. Kolla sedan att https://battlearenamasters.com/privacy säger
+   "Last updated: 27 October 2026" och att https://battlearenamasters.com/delete-account öppnas.
+2. **Inloggningen för testarna (Google Cloud, inte Play Console).** Öppna https://console.cloud.google.com inloggad som
+   support@, välj projektet **bamcloudgame** > **Google Auth Platform** > **Målgrupp** (Audience) > **Publicera app** >
+   **Bekräfta**. Står det redan **I produktion** är det klart. Utan det får alla som inte står på listan Testanvändare
+   "Fel 403: access_denied" när de loggar in.
+3. **Datasäkerhet:** **Policy och program > Appinnehåll > Datasäkerhet > Hantera**.
+   - *Datainsamling och säkerhet:* samlar in data **Ja**. Krypterad under överföring **Ja**.
+     Kontoskapande: kryssa bara **OAuth**. Bocka ur "Min app tillåter inte att användare skapar konto".
+     **Webbadress för att radera konto:** `https://battlearenamasters.com/delete-account`.
+     Kan användare begära att data raderas utan att radera kontot: **Ja**.
+   - *Datatyper:* behåll de fem från 0.1 (**Ungefärlig plats**, **Appinteraktioner**, **Diagnostik**, **Annan
+     prestandadata för appar**, **Enhets-id eller andra id:n**) och kryssa **också** i:
+     **Personuppgifter > Namn**, **Personuppgifter > Användar-id:n**, **Appaktivitet > Andra åtgärder**.
+   - *Varje ny datatyp* (Namn, Användar-id:n, Andra åtgärder): **Samlas in** (inte delas), **inte** tillfälligt behandlad,
+     **Användarna kan välja**. Syfte:
+     - Namn: **Appfunktioner** + **Kontohantering**
+     - Användar-id:n: **Appfunktioner** + **Kontohantering** + **Bedrägeriförebyggande, säkerhet och efterlevnad**
+     - Andra åtgärder: **Appfunktioner** + **Bedrägeriförebyggande, säkerhet och efterlevnad**
+     - Appinteraktioner (finns redan, syfte Analys): lägg till **Appfunktioner** + **Bedrägeriförebyggande, säkerhet och efterlevnad**
+     - De övriga behåller bara **Analys**.
+   - **Spara.** Hela facit på engelska: `data-safety.md`.
+4. **Innehållsklassificering:** **Appinnehåll > Innehållsklassificering > Redigera** (eller **Starta ny enkät**). Svara
+   som förut, men på **Kan användare interagera eller utbyta innehåll** svarar du **Ja**. Följdfrågor: chatt **Nej**,
+   delar plats **Nej**, digitala köp **Nej**. **Skicka** > **Använd klassificering**.
+5. **Åtkomst till appen:** **Appinnehåll > Åtkomst till appen > Hantera**. Välj **Alla eller vissa funktioner är
+   begränsade** > **Lägg till instruktioner**. Namn: `Online play (optional)`. Användarnamn och lösenord: lämna tomma
+   (eller kryssa "Inga inloggningsuppgifter krävs" om rutan finns). Övrig information, klistra in:
+   ```
+   The whole game can be played offline against bots without signing in. Online features (friends, invites,
+   online matches, Top 100) need a sign-in with Google Play Games: Settings > Account > Sign in, or the profile chip
+   on the home screen. Any Google account works. We do not use our own usernames or passwords.
+   ```
+   **Spara.**
+6. **Målgrupp och innehåll:** ändra inget (13–15, 16–17, 18+). Frågar Play om användarinteraktion: inget chattande, bara
+   spelarnamn, vänförfrågningar och matcher.
+7. **Butiksinformation** (steg 5): byt **Kort beskrivning** och **Fullständig beskrivning** mot de nya i
+   `store-listing.md` (den gamla säger "Offline – no account" och "seven heroes"). **Butiksinställningar > Taggar**: lägg
+   till **Flerspelare**. Nya skärmdumpar från onlinemenyn är bra men inget krav.
 
 **b. Skapa det slutna spåret:**
 1. Vänstermenyn: **Testa och släpp** > **Testning** > **Sluten testning** (Closed testing).
 2. Det finns redan ett spår som heter **Closed testing - Alpha**: klicka **Hantera spår** (Manage track).
-   (Eller **Skapa spår** om du vill ha ett eget namn.)
-3. Fliken **Länder/regioner** > **Lägg till länder/regioner** > kryssa **Sverige** och de länder där dina testare bor
-   (eller alla) > **Lägg till**.
-4. Fliken **Testare** > välj **Google-grupper** > skriv `bam-testers@googlegroups.com` > **Spara ändringar**.
+3. Fliken **Länder/regioner** > **Lägg till länder/regioner** > kryssa **alla** (eller minst där testarna bor) > **Lägg till**.
+4. Fliken **Testare** > välj **Google-grupper** > skriv `bam-playtesters@googlegroups.com` > **Spara ändringar**.
    **Feedback-URL eller e-postadress:** `support@battlearenamasters.com`.
-5. Under **Hur testare går med** finns en **opt-in-länk** (play.google.com/apps/testing/...). Den skickar du till spelarna
-   efter att de gått med i gruppen. Där trycker de **Bli testare** och laddar sedan ned spelet från Play.
+5. Under **Hur testare går med** finns en **opt-in-länk** (play.google.com/apps/testing/...). Den kan du kopiera redan nu,
+   men den fungerar först när Google har godkänt versionen. Skicka den till mig, så lägger jag den på hemsidan.
 
-**c. Versionen:**
-- **Enklast:** gå till **Intern testning** > fliken **Versioner** > vid din version klickar du **Befordra version** >
-  **Sluten testning - Alpha** (Promote release). Samma AAB används, du behöver inte bygga om.
-- **Eller ny AAB:** i spåret **Sluten testning** > **Skapa ny version** > dra in en ny AAB från Unity (versionskoden
-  måste vara högre än alla tidigare uppladdade).
-- Skriv versionskommentarer (från `store-listing.md`) > **Nästa** > **Spara**.
+**c. Versionen: 0.2.0 (6)**
+- Gå till **Intern testning** > fliken **Versioner** > vid **0.2.0 (6)** klickar du **Befordra version** >
+  **Sluten testning - Alpha**. Samma AAB, du behöver inte bygga om.
+- Versionskommentarer: klistra in "Closed test release notes 0.2" från `store-listing.md` (med `<en-US>`-raderna)
+  > **Nästa** > **Spara**.
 
 **d. Skicka till granskning:**
 1. Vänstermenyn: **Publiceringsöversikt** (Publishing overview).
-2. Under **Ändringar som inte har skickats för granskning** klickar du **Skicka X ändringar för granskning** > bekräfta.
-3. Första granskningen av en ny app kan ta **några dagar** (ibland upp till en vecka). Du får mejl när den är klar.
+2. Under **Ändringar som inte har skickats för granskning** ska du se: sluten version, Datasäkerhet,
+   Innehållsklassificering, Åtkomst till appen och Butiksinformation. Klicka **Skicka X ändringar för granskning** > bekräfta.
+3. Första granskningen kan ta **några dagar** (ibland upp till en vecka). Du får mejl när den är klar.
+   Avvisar Google för att granskaren inte kunde logga in: säg till, då publicerar vi Play Games-tjänsterna.
 
-**e. Under de 14 dagarna:**
-- Håll **minst 12 testare** anmälda hela tiden; skaffa gärna 15–20 så att det finns marginal om någon hoppar av.
-  En testare som lämnar och går med igen börjar om på sina 14 dagar.
-- Be testarna spela några gånger och ge feedback (Discord eller mejl). Google frågar om det när du ansöker.
-- Efter 14 dagar: **Översikt** (Dashboard) > **Ansök om produktion** (Apply for production). Formuläret frågar hur du
-  hittade testarna, vad de tyckte, vad du ändrade och varför spelet är redo. Svaret kommer oftast inom 7 dagar.
+**e. När den är godkänd och under de 14 dagarna:**
+- Skicka opt-in-länken till mig (hemsidan) och posta i Discord. Testarna: gå med i gruppen > öppna länken > **Bli testare** > installera.
+- Logga in med ett testkonto som **inte** finns på din Play Games-testarlista och kolla att inloggningen fungerar.
+- Håll **minst 12 testare** anmälda hela tiden; skaffa gärna 15–20. En testare som lämnar börjar om på sina 14 dagar.
+- Be testarna spela några gånger, också online, och ge feedback. Google frågar om det när du ansöker.
+- Efter 14 dagar: **Översikt** (Dashboard) > **Ansök om produktion** (Apply for production).
 
 ## Senare: nya versioner
 Bygg en ny AAB i Unity (versionskoden höjs automatiskt) > **Intern testning** > **Skapa ny version** > dra in filen >

@@ -1,6 +1,6 @@
 # BAM Unity rebuild: architecture and working rules
 
-Battle Arena Masters (BAM) is Rickard's portrait mobile MOBA: 3v3 against bots, one map, seven heroes. This is a clean
+Battle Arena Masters (BAM) is Rickard's portrait mobile MOBA: 3v3 against bots or online, one map, eight playable heroes plus two coming (`HeroCatalog.All` / `Coming`). This is a clean
 rebuild in Unity 6.6 of the old game (the ABC2 Unity port in `rickardlundgren91/XYZ`), with only what the first
 Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
 
@@ -12,7 +12,7 @@ Google Play internal test needs. Every scope decision is in `Docs/DECISIONS.md`.
 2. **Ask Rickard** for anything you need from him (a decision, an account, a click in Unity) instead of doing it halfway.
    Write to him in Swedish, short and simple. He is not a programmer; give exact clicks.
 3. **Safe for Google Play:** only assets with clear rights (made in code by us, or OFL/CC0 with the license recorded in
-   `Docs/LICENSES.md`); no data leaves the phone unless the player said yes (analytics with consent); offline game.
+   `Docs/LICENSES.md`); no data leaves the phone unless the player said yes (analytics with consent); bot matches work offline without an account; online play needs Google Play Games sign-in (see `Docs/play/privacy-policy.md`).
 4. Old game assets (Rickard chose "Ja, använd dem" on 2026-10-25): his own hero models (made with Tripo or Meshy, rigged
    on Mixamo), Mixamo animations, and his arena and tutorial-island textures may be used. Check each file in the old
    register (`bam-ref/xyz/LICENSES/ASSETS.md`, `assets.csv`) first: take only files whose origin is Rickard's own (Tripo,

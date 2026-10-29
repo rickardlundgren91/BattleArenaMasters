@@ -1,6 +1,6 @@
 # Battle Arena Masters (BAM): read this first
 
-BAM is Rickard's portrait mobile MOBA (3v3 against bots, seven heroes), rebuilt in Unity 6.6 (6000.6.5f1, URP 17.6)
+BAM is Rickard's portrait mobile MOBA (3v3 against bots or other players online, eight playable heroes; Hilde and Oaken wait as heroes 9 and 10), rebuilt in Unity 6.6 (6000.6.5f1, URP 17.6)
 for Google Play. **This repository is the player version.** The rule book is `Docs/ARCHITECTURE.md` (hard rules,
 assemblies, owners, hand-overs); scope decisions are in `Docs/DECISIONS.md`, interfaces in `Docs/CONTRACTS.md`, work
 orders per area in `Docs/briefs/`, asset rights in `Docs/LICENSES.md`. Read ARCHITECTURE.md before changing anything.

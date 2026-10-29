@@ -4,13 +4,13 @@ Rickard answered 36 decision cards; this is the scope of the first Google Play i
 before going beyond it.
 
 ## Game
-- 3v3 against bots, offline. One map: BAM_OriginalArena_v1_2 (15 x 35 tiles, mirrored, one tower per team, middle rocks).
-- Seven heroes: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast. Numbers as in the old game; balance later.
+- 3v3 against bots (offline). Since 0.2 (2026-10-27) also online (Google Play Games sign-in, Unity Lobby + Relay, lockstep): PLAY WITH FRIENDS by invite, online-now list, ONLINE MATCH queue (group 1-3 vs 1-3, bots fill), friends and blocking. One map: BAM_OriginalArena_v1_2 (15 x 35 tiles, mirrored, one tower per team, middle rocks).
+- Heroes: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk (playable); Hilde and Oaken coming (`HeroCatalog.Coming`). Unlock by level: Bram/Fenn/Tyra at start, Moa 2, Knut 4, Tikta 6, Blast 8, Bonk 10, heroes 9/10 at 12/14.
 - Special: tap = automatic target, drag = aim. All passives in.
 - Auto attacks: D1 (random valid target among all reachable visible enemies), line of sight (no shots over walls).
 - Minions, towers, match rules and grass as in the old game. No buff/core spots, no items.
 - Bots: Easy, Normal, Hard.
-- Everything else from the old game is out: online, friends, voice, progression, shop, talents, WoW modes, RL.
+- Still out: voice, shop, talents, WoW modes, RL, tournaments (Rickard 2026-10-29). In since 0.2: online, friends, levels, rating by opponent (season 2 reset), team signals ATTACK/DEFEND.
 
 ## Rule changes against the old game
 - **Fenn's wolf can be thrown:** tap = it follows Fenn and bites enemies near him; drag = it is thrown up to 6 tiles

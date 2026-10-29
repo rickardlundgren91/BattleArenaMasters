@@ -1,5 +1,7 @@
 # Brief: the game's graphics, made in code ("Gör spelets grafik i kod")
 
+_Written for the 7-hero offline MVP; current scope in `Docs/DECISIONS.md`._
+
 You are a helper thread in the BAM Unity rebuild. Read `Docs/ARCHITECTURE.md`, `Docs/CONTRACTS.md` (Art section) and
 `Docs/DECISIONS.md` in `/mnt/project-files/bam-unity/` first. Your folders: `Assets/BAM/Art/` (BAM.Art) and
 `Assets/BAM/Art/Editor/` (make an editor-only asmdef BAM.Art.Editor if you need editor code). Effort: medium.

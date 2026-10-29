@@ -98,7 +98,7 @@ at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, 
   Easy). The game sets `BamSettings.TutorialDone` (finished or skipped) and, the first time, `BamSettings.TutorialCard`
   (Home's "Tutorial done · Next: your first match" card; a tap or the first finished bot match clears it) and picks
   Tyra vs Easy unless `BamSettings.PickedBefore`.
-- Heroes: a card grid of the seven heroes from `HeroCatalog`; tapping a card saves `BamSettings.LastHero`; the chosen
+- Heroes: a card grid of the heroes in `HeroCatalog.All` (locked ones show their unlock level); tapping a card saves `BamSettings.LastHero`; the chosen
   hero's texts and 1-3 bars sit under the grid. No Start button there.
 - Settings: sound volume, graphics Low/High, left-handed controls, share anonymous usage data (on/off, writes
   `BamSettings.AnalyticsConsent`), privacy policy (opens `BamInfo.PrivacyPolicyUrl` when set), licenses

@@ -21,12 +21,13 @@ Play Console: **Policy and programs > App content > Content rating > Start quest
 | Language (profanity, crude humour) | **No** | |
 | Controlled substances (drugs, alcohol, tobacco) | **No** | |
 | Gambling / simulated gambling / loot boxes | **No** | |
-| Users can interact or exchange content | **No** | Offline, bots only, no chat. |
+| Users can interact or exchange content | **Yes** (since 0.2) | Online matches with and against other players, friend requests, invites, public player names. No chat, no voice, no images. |
 | Shares the user's location with other users | **No** | |
 | Digital purchases | **No** | |
 | Unrestricted internet access (web browser) | **No** | The privacy policy link opens the phone's own browser; that is fine to answer No. |
 
-Expected result (not guaranteed): PEGI 7 (mild fantasy violence), ESRB Everyone 10+ or Everyone, USK 6.
+0.2 (2026-10-27): redo the questionnaire with "users interact" = Yes; the age ratings should stay about the same, with an extra "Users Interact" notice.
+0.1 result (2026-10-26): PEGI 3, ESRB Everyone (fantasy violence), USK 6 (comic violence), ACB General, IARC Generic 3+. Redo the questionnaire before any version with chat, friends or other player interaction.
 Click **Save**, then **Submit** and **Apply rating**.
 
 ## Target audience and content

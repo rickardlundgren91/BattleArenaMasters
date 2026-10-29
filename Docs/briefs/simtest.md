@@ -1,5 +1,7 @@
 # Brief: test the rules with bot matches ("Testa reglerna med botmatcher")
 
+_Written for the 7-hero offline MVP; current scope in `Docs/DECISIONS.md`._
+
 You are a helper thread in the BAM Unity rebuild. Read `Docs/ARCHITECTURE.md` and this brief in
 `/mnt/project-files/bam-unity/` first. Effort: medium (Opus). Your folders: `/mnt/project-files/bam-tools/simrunner/`
 (the runner) and `/mnt/project-files/bam-work/simtest/` (builds, results, scripts).

@@ -6,12 +6,12 @@ Default language: English (United States) – en-US.
 | Field | Text |
 |---|---|
 | App name (max 30) | Battle Arena Masters |
-| Short description (max 80) | Fast 3v3 hero battles against bots. Pick a hero, push the lane, smash the tower! |
+| Short description (max 80) | Fast 3v3 hero battles. Team up with friends or bots and smash the enemy tower! |
 | App icon | `Docs/play/store-icon-512.png` (512x512) |
 | Feature graphic | `Docs/play/feature-graphic-1024x500.png` (1024x500) |
 | Phone screenshots | At least 2, portrait, from the real game (9:16, e.g. 1080x1920). Take them when the game runs. |
 | App category | Game > **Action** |
-| Tags | MOBA, Action, Arena, Multiplayer is **not** a valid tag (offline). |
+| Tags | MOBA (Multiplayer online battle arena), Action, Arena, Multiplayer (since 0.2, online play). |
 | Contact email | support@battlearenamasters.com |
 | Website | https://battlearenamasters.com |
 | Privacy policy | https://battlearenamasters.com/privacy |
@@ -25,7 +25,7 @@ Battle Arena Masters is a fast, bite-sized arena brawler for your phone. Two tea
 minions, and one tower each side. Destroy the enemy tower before they destroy yours.
 
 PICK YOUR HERO
-Seven heroes, each with an auto attack, a special ability and a passive:
+Eight heroes, each with an auto attack, a special ability and a passive:
 • Bram the Anvil – throws his huge hammer from range
 • Fenn the Pack Runner – a swift fighter with a spectral wolf at his side
 • Tyra the Longshot – an archer who hits from very far away
@@ -33,14 +33,17 @@ Seven heroes, each with an auto attack, a special ability and a passive:
 • Knut the Anchor – a big tank who drags enemies in with his anchor
 • Tikta the Needle Wing – a tiny, deadly assassin
 • Blast the Pyromaniac – bombs, fire and a lot of noise
+• Bonk the Caveman – a huge stone club and boulders that roll over anything
 
 SIMPLE TO PLAY, HARD TO MASTER
 Move with one thumb. Tap your special to fire it at the best target, or drag to aim it yourself. Hide in the grass,
 fight around the walls, lead minion waves into the enemy tower and outplay the other team.
 
-PLAY ANYWHERE
-• 3v3 matches against bots on Easy, Normal or Hard
-• Offline – no account, no internet needed
+PLAY WITH FRIENDS, OR ALONE
+• Sign in with Google Play Games to play with and against your friends online
+• Online matches: your group against another group, bots fill the empty seats
+• Friends list, levels, Rating and a Top 100
+• Or play offline against bots on Easy, Normal or Hard, no account needed
 • No ads and no in-app purchases
 • A short guided match teaches you the basics
 • Left-handed controls and Low/High graphics for every phone
@@ -57,6 +60,20 @@ First internal test of Battle Arena Masters.
 • Short guided tutorial match
 • Settings: sound, graphics, left-handed controls, usage data
 Please report bugs, crashes and anything that feels unfair to support@battlearenamasters.com.
+</en-US>
+```
+
+## Closed test release notes 0.2 (paste in "Release notes")
+
+```
+<en-US>
+Battle Arena Masters 0.2: online play!
+• Sign in with Google Play Games and pick a unique player name
+• Play with and against your friends, or join an online match
+• Friends list, invites, levels, Rating and a Top 100
+• Eight heroes, including the new Bonk
+• You can still play offline against bots
+Report bugs and anything that feels unfair to support@battlearenamasters.com or in our Discord.
 </en-US>
 ```
 
