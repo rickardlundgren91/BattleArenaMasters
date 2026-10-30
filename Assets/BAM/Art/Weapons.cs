@@ -73,6 +73,10 @@ namespace BAM.Art
         /// inside the fist; the weapon's own aim is not changed, so the silhouette stays. 0 = off (only Tyra: her bow turned 86-180
         /// degrees in her fist between rest and shot, Simon's audit on issue #5).</summary>
         public float WristMax;
+        /// <summary>Weapon Tuner "Close hand" (Rickard 2026-10-30: "kunna göra så hon stänger händerna"): 0 = the fingers as the clip
+        /// has them, 1 = curled round the weapon's shaft (each finger joint bends up to <see cref="HeldGear.FistBend"/> degrees on
+        /// top of the clip, towards the shaft; the thumb half as much).</summary>
+        public float Fist;
     }
 
     /// <summary>An off-hand shield in front of the left hand (old MX_SHIELD).</summary>
@@ -325,6 +329,8 @@ namespace BAM.Art
         {
             public float Len, Grip, HoldUp, HoldOut;
             public Vector3 Offset, Turn;
+            public float Fist;
+            public float MenuUp, MenuOut; // the menu's own hold (Tyra's bow on Home); MenuUp 0 (an older file) leaves the code's
         }
 
         public static GearDef[] Apply(GearDef[] g)
@@ -353,7 +359,8 @@ namespace BAM.Art
             for (int w = 0; w < h.Weapons.Length && w < d.Weapons.Length; w++)
             {
                 Weapon s = h.Weapons[w]; WeaponDef t = d.Weapons[w];
-                t.Len = s.Len; t.Grip = s.Grip; t.HoldUp = s.HoldUp; t.HoldOut = s.HoldOut; t.Offset = s.Offset; t.Turn = s.Turn;
+                t.Len = s.Len; t.Grip = s.Grip; t.HoldUp = s.HoldUp; t.HoldOut = s.HoldOut; t.Offset = s.Offset; t.Turn = s.Turn; t.Fist = s.Fist;
+                if (s.MenuUp != 0f && t.Menu.On) t.Menu = new Hold { Up = s.MenuUp, Out = s.MenuOut, Turn = t.Menu.Turn };
             }
         }
 
@@ -366,7 +373,7 @@ namespace BAM.Art
             for (int w = 0; w < n; w++)
             {
                 WeaponDef s = d.Weapons[w];
-                h.Weapons[w] = new Weapon { Len = s.Len, Grip = s.Grip, HoldUp = s.HoldUp, HoldOut = s.HoldOut, Offset = s.Offset, Turn = s.Turn };
+                h.Weapons[w] = new Weapon { Len = s.Len, Grip = s.Grip, HoldUp = s.HoldUp, HoldOut = s.HoldOut, Offset = s.Offset, Turn = s.Turn, MenuUp = s.Menu.Up, MenuOut = s.Menu.Out, Fist = s.Fist };
             }
             return h;
         }
@@ -395,6 +402,7 @@ namespace BAM.Art
         // weapons
         WeaponDef[] defs;
         Transform[] wT, hand, index;
+        Transform[][] fing; // per weapon: its hand's finger joints, 3 per finger, thumb first (null where the rig has none)
         Vector3[] bindP, gripL;
         Quaternion[] bindR;
         Vector3[] bindS;
@@ -467,7 +475,7 @@ namespace BAM.Art
             var fd = new List<Material>();
             int nw = g.Weapons != null ? g.Weapons.Length : 0;
             h.defs = new WeaponDef[nw];
-            h.wT = new Transform[nw]; h.hand = new Transform[nw]; h.index = new Transform[nw];
+            h.wT = new Transform[nw]; h.hand = new Transform[nw]; h.index = new Transform[nw]; h.fing = new Transform[nw][];
             h.bindP = new Vector3[nw]; h.gripL = new Vector3[nw]; h.bindR = new Quaternion[nw]; h.bindS = new Vector3[nw];
             h.palmL = new Vector3[nw]; h.handleV = new Vector3[nw]; h.shaftC = new Vector3[nw];
             h.meshH = new float[nw]; h.handS = new float[nw]; h.placedLen = new float[nw]; h.placedGrip = new float[nw];
@@ -538,6 +546,9 @@ namespace BAM.Art
             t.rotation = Quaternion.LookRotation(fingers.normalized, handle);
             if (W.Twist != 0f) t.rotation *= Quaternion.AngleAxis(W.Twist, Vector3.up);
             wT[i] = t; hand[i] = hd; index[i] = ix;
+            int f0 = (int)(W.Left ? HumanBodyBones.LeftThumbProximal : HumanBodyBones.RightThumbProximal);
+            fing[i] = new Transform[15];
+            for (int k = 0; k < 15; k++) fing[i][k] = an.GetBoneTransform((HumanBodyBones)(f0 + k));
             if (W.Support >= 0f)
             {
                 // the other side's arm (a left-hand weapon is supported by the right hand)
@@ -757,6 +768,7 @@ namespace BAM.Art
                 if (W.WristMax > 0f && !gone) Wrist(i, W, liveW);
                 LockGrip(i);
                 if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
+                if (W.Fist > 0.001f && !gone) CloseHand(i, W.Fist * liveW);
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
                 if (supHand[i] != null && !dead && W.SupportW > 0.001f && t.localScale.y > 1e-4f) SupportHand(i, W);
@@ -771,6 +783,37 @@ namespace BAM.Art
         /// where the idle held it, restGrip). The bind placement lays the mesh's axis, not the shaft's centre, in the fist, and HoldAngle
         /// slides the grip across the shaft only, so without the lock the grip sat up to 3 % of the hero's height off the palm and slid
         /// along the shaft as the hand turned (Simon's audit on issue #5). Measured before the lock (GripErr), then removed by a shift.</summary>
+        /// <summary>Degrees each finger joint bends at <see cref="WeaponDef.Fist"/> 1.</summary>
+        internal const float FistBend = 70f;
+
+        // the fingers curled towards the weapon's shaft, on top of the clip (each frame from the clip's own pose, so nothing adds up)
+        void CloseHand(int i, float k)
+        {
+            Transform t = wT[i];
+            Transform[] f = fing[i];
+            if (f == null || t.localScale.y < 1e-4f) return;
+            Vector3 g = t.TransformPoint(gripL[i]), ax = t.up;
+            for (int n = 0; n < 5; n++)
+            {
+                Transform a = f[n * 3], b = f[n * 3 + 1];
+                if (a == null || b == null) continue;
+                Vector3 dir = b.position - a.position;
+                if (dir.sqrMagnitude < 1e-10f) continue;
+                // towards the nearest point of the shaft, across the finger: the palm's side, whichever hand and rig
+                Vector3 onShaft = g + ax * Vector3.Dot(a.position - g, ax);
+                Vector3 toShaft = Vector3.ProjectOnPlane(onShaft - a.position, dir);
+                if (toShaft.sqrMagnitude < 1e-10f) continue;
+                Vector3 axis = Vector3.Cross(dir, toShaft).normalized;
+                Quaternion q = Quaternion.AngleAxis(FistBend * k * (n == 0 ? 0.5f : 1f), axis);
+                for (int j = 0; j < 3; j++)
+                {
+                    Transform bone = f[n * 3 + j];
+                    if (bone == null) break;
+                    bone.rotation = q * bone.rotation;
+                }
+            }
+        }
+
         void LockGrip(int i)
         {
             Transform t = wT[i];
