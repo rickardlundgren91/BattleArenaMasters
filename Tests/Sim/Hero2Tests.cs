@@ -20,7 +20,7 @@ namespace BAM.Sim
             return m;
         }
         Unit Foe(HeroId h) { for (int i = 0; i < Heroes.Count; i++) if (Heroes[i].Hero == h && Heroes[i].Team != Player.Team) return Heroes[i]; return null; }
-        static void Place(Unit u, float x, float y) { u.X = u.PX = x; u.Y = u.PY = y; u.Hp = u.MaxHp; u.ClearStatuses(); }
+        static void Place(Unit u, float x, float y) { u.X = u.PX = x; u.Y = u.PY = y; u.Hp = u.MaxHp; u.ClearStatuses(); u.KnockFreeAt = -99; } // a fresh setup: no knockback cooldown left over
         bool HasEvent(EventType t) { foreach (var e in Events) if (e.Type == t) return true; return false; }
         float AutoHit(Unit s, Unit t)
         {
@@ -219,7 +219,7 @@ namespace BAM.Sim
 
         public static int RunHero2Tests()
         {
-            Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Signals(); FennWolf(); Fenn2(); Blinks();
+            Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown();
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;
         }

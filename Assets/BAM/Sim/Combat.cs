@@ -31,6 +31,9 @@ namespace BAM.Sim
             return false;
         }
 
+        /// <summary>A unit knocked back less than Rules.KnockCooldown s ago is not knocked again (it still takes the hit).</summary>
+        public bool KnockImmune(Unit u) => Time < u.KnockFreeAt;
+
         /// <summary>Adds a status; control on a CC-immune hero is ignored (-1). A stun or root on a hero cuts its special.</summary>
         internal int AddStatus(Unit u, St type, float dur, float v = 0, float amount = 0, Unit by = null, bool queen = false)
         {
@@ -154,7 +157,7 @@ namespace BAM.Sim
 
             // a hero
             u.Deaths++; u.RespawnT = RespawnTime(u); u.DiedAt = Time;
-            u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0; u.KnockKeg = null; u.KnockRoll = null;
+            u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0; u.KnockKeg = null; u.KnockRoll = null; u.KnockFreeAt = -99;
             u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
             int kt = Teams.Other(u.Team);

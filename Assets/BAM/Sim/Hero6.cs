@@ -90,11 +90,11 @@ namespace BAM.Sim
                 if (!u.Alive) continue;
                 bool free = CcImmune(u);
                 SpecialHit(h, u, p.Dmg, p.Kind, true);
-                if (u.Kind != UnitKind.Hero || !u.Alive || free) continue;
+                if (u.Kind != UnitKind.Hero || !u.Alive || free || KnockImmune(u)) continue;
                 InterruptSpecial(u);
                 // a slide into a wall hurts as Hilde's keg does (Speltest's K5 wallSlam), but only her keg stuns: this crash has none to give
                 if (wall == null) wall = new KegCrash { By = h, Stunned = true };
-                float time = OakenS.QuakeKnock / OakenS.KnockSpeed;
+                float time = OakenS.QuakeKnock / OakenS.KnockSpeed; u.KnockFreeAt = Time + Rules.KnockCooldown;
                 u.KnockVX = ca * OakenS.KnockSpeed; u.KnockVY = sa * OakenS.KnockSpeed; u.KnockT = time; u.KnockKeg = wall; u.KnockRoll = null;
                 Emit(EventType.Knock, h, u, time, (byte)p.Kind, true, u.X + ca * OakenS.QuakeKnock, u.Y + sa * OakenS.QuakeKnock);
             }

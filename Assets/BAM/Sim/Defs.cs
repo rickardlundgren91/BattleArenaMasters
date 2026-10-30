@@ -142,6 +142,7 @@ namespace BAM.Sim
         public const float TowerOutOfCombat = 10, TowerRegenBelow = 0.25f, TowerRegenAmount = 0.01f, TowerRegenTick = 1;
         public const float GrassSight = 2.5f, RevealTime = 4;
         public const float AmbushBonus = 0.3f;
+        public const float KnockCooldown = 2; // a hero (or minion) knocked back cannot be knocked again for 2 s from that knock's start (Rickard 2026-10-30)
         public const float AssistWindow = 5;
         public const float SpecialBuffer = 0.25f;
         public const float SiegeVsTower = 2;

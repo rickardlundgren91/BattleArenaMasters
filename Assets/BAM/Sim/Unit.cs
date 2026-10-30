@@ -93,6 +93,7 @@ namespace BAM.Sim
         internal int TiktaCastId, TiktaBonusCast;                   // Tikta 2.0: her casts counted, the cast that already had its Deathmark bonus
         public float BlastChainReadyAt;                             // Blast 2.0: Chain Reaction is ready again at this time
         internal float KnockVX, KnockVY, KnockT;                    // a knockback slide (Bonk's boulder, Hilde's keg): velocity and time left
+        internal float KnockFreeAt = -99;                           // Rules.KnockCooldown: no new knockback before this time
         internal KegCrash KnockKeg;                                 // Hilde: the keg blast behind this slide (Wall Crash), null for any other
         internal BonkRoll KnockRoll;                                // Bonk: the Boulder Toss that sent this pin sliding (it knocks on others), null for any other
         internal int PassHits;                                      // Bram: hits towards the next Backlash; Bonk: swings towards the next power hit

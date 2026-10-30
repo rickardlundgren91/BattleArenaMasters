@@ -9,8 +9,8 @@ namespace BAM.Sim
     /// Slam: a short wind-up where he stands, then every enemy hero and minion round him (clear line, not towers) takes a hit and a
     /// short stun. Drag, Boulder Toss, bowled (Rickard 2026-10-30 "mer bowling aktig"): after a short wind-up a boulder rolls along
     /// the aimed line; the first enemy hero or minion it meets is hit and sent flying like a pin, off the side the boulder struck,
-    /// with a short stun, and the boulder glances off the other way, slower, and rolls on to the next (at most three; walls stop
-    /// it). A pin that slides into another enemy knocks that one on too, for less. Nobody is hit twice by one throw. Passive,
+    /// with a short stun, and the boulder glances off the other way, slower, and rolls on to the next (at most two; walls stop
+    /// it). A pin that slides into another enemy knocks that one on too, for less. At most three enemies per throw, each once. Passive,
     /// Heavy Club: every 4th swing is a power hit.</summary>
     public static class BonkS
     {
@@ -23,7 +23,7 @@ namespace BAM.Sim
         /// hit, so it rolls behind its pin), NextBallCoeff of its damage, and rolls at least CarryOn tiles on (never past
         /// BoulderReach + CarryOn). A pin knocks the enemy it slides into PinKnock tiles on, for PinCoeff of the throw's damage, with no stun
         /// beyond the slide itself.</summary>
-        public const int BallPins = 3, MaxPins = 6;
+        public const int BallPins = 2, MaxPins = 3; // Rickard 2026-10-30 "lite buggad med många targets": 3 and 6 were too many
         public const float PinSpread = 1.05f, BallDeflect = 0.45f, BallSlow = 0.85f, HeadOnSlow = 0.25f, NextBallCoeff = 0.6f, CarryOn = 2.0f;
         public const float PinKnock = 1.0f, PinCoeff = 0.4f;
         /// <summary>The slam auto attack: the wind-up (the HeroDef's SpawnDelay), the circle's centre this far in front of him
@@ -220,6 +220,8 @@ namespace BAM.Sim
         /// roll: the Boulder Toss behind it, so the sliding pin knocks on the enemies it meets.</summary>
         void Knock(Unit src, Unit u, float ang, float dist, float stun, BonkRoll roll)
         {
+            if (KnockImmune(u)) { if (stun > 0) AddStatus(u, St.Stun, stun, 0, 0, src); return; } // knocked too lately: the stun alone
+            u.KnockFreeAt = Time + Rules.KnockCooldown;
             float sp = dist / BonkS.KnockTime;
             u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime; u.KnockKeg = null; u.KnockRoll = roll;
             if (stun > 0) AddStatus(u, St.Stun, stun, 0, 0, src);
@@ -227,7 +229,8 @@ namespace BAM.Sim
         }
 
         /// <summary>A pin sliding from Boulder Toss bumps into the enemies (its own team) it touches with a clear line: each not yet
-        /// hurt by this throw takes PinCoeff of the throw's damage and is knocked on (no stun), away from the pin, and bumps others in turn.</summary>
+        /// hurt by this throw takes PinCoeff of the throw's damage and is knocked on (no stun), away from the pin; it bumps nobody
+        /// further (one step of chain, so a crowd does not scatter at once).</summary>
         void PinBumps(Unit u)
         {
             var roll = u.KnockRoll; var src = roll.By;
@@ -240,7 +243,7 @@ namespace BAM.Sim
                 roll.Add(o);
                 bool free = CcImmune(o);
                 SpecialHit(src, o, roll.Dmg * BonkS.PinCoeff, ProjKind.BonkBoulder, true);
-                if (o.Alive && !free) Knock(src, o, SimMath.Atan2(dy, dx), BonkS.PinKnock, 0, roll);
+                if (o.Alive && !free) Knock(src, o, SimMath.Atan2(dy, dx), BonkS.PinKnock, 0, null); // it slides on but bumps nobody else
             }
         }
 

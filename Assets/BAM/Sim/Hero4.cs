@@ -71,7 +71,7 @@ namespace BAM.Sim
                 if (!u.Alive) continue;
                 bool hero = u.Kind == UnitKind.Hero, free = CcImmune(u);
                 SpecialHit(h, u, p.Dmg * (hero ? heroC : otherC), p.Kind, big, dk);
-                if (!hero || !u.Alive || free) continue;
+                if (!hero || !u.Alive || free || KnockImmune(u)) continue;
                 float dx, dy;
                 if (big) { dx = SimMath.Cos(p.Ang); dy = SimMath.Sin(p.Ang); }
                 else
@@ -83,7 +83,7 @@ namespace BAM.Sim
                 }
                 InterruptSpecial(u); // a knockback cuts a special under way
                 if (crash == null) crash = new KegCrash { By = h };
-                float time = knock / HildeS.KnockSpeed;
+                float time = knock / HildeS.KnockSpeed; u.KnockFreeAt = Time + Rules.KnockCooldown;
                 u.KnockVX = dx * HildeS.KnockSpeed; u.KnockVY = dy * HildeS.KnockSpeed; u.KnockT = time; u.KnockKeg = crash; u.KnockRoll = null;
                 Emit(EventType.Knock, h, u, time, (byte)p.Kind, big, u.X + dx * knock, u.Y + dy * knock);
             }
