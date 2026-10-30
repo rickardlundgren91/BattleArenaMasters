@@ -649,32 +649,59 @@ namespace BAM.Game
             canvas.gameObject.SetActive(false);
         }
 
-        // A bold down-pointing V from two rounded bars, gold with a dark edge.
+        // A bold down-pointing arrow (shaft and pointed head), gold with a dark edge. It was a V of two rounded bars, which
+        // a tester read as a little yellow butterfly on the ground (Cajsa, 2026-10-30).
         static RectTransform MakeChevron(RectTransform parent)
         {
             var rt = UiKit.NewRect("Chevron", parent);
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0f);
-            rt.sizeDelta = new Vector2(90f, 70f);
-            for (int i = 0; i < 2; i++)
-            {
-                var bar = UiKit.NewRect("Bar", rt);
-                bar.anchorMin = bar.anchorMax = new Vector2(0.5f, 0f);
-                bar.pivot = new Vector2(0.5f, 0f);
-                bar.sizeDelta = new Vector2(24f, 66f);
-                bar.anchoredPosition = Vector2.zero;
-                bar.localRotation = Quaternion.Euler(0f, 0f, i == 0 ? 38f : -38f);
-                var img = bar.gameObject.AddComponent<Image>();
-                img.sprite = UiKit.Rounded;
-                img.type = Image.Type.Sliced;
-                img.color = UiKit.Gold;
-                img.raycastTarget = false;
-                var o = bar.gameObject.AddComponent<Outline>();
-                o.effectColor = new Color(0.05f, 0.05f, 0.15f, 0.9f);
-                o.effectDistance = new Vector2(3f, -3f);
-            }
+            rt.sizeDelta = new Vector2(84f, 105f);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = ArrowSprite;
+            img.raycastTarget = false;
             rt.gameObject.SetActive(false);
             return rt;
+        }
+
+        static Sprite arrowSprite;
+        static Sprite ArrowSprite { get { if (arrowSprite == null) arrowSprite = MakeArrowSprite(); return arrowSprite; } }
+
+        // drawn once: the arrow's shape in gold, a dark navy edge round it, soft (2 x 2 samples) at the edges
+        static Sprite MakeArrowSprite()
+        {
+            const int W = 128, H = 160;
+            const float Edge = 9f, HeadH = 72f, HeadHalf = 60f, ShaftHalf = 20f, Top = H - 4f, Tip = 4f, Mid = W / 2f;
+            var gold = UiKit.Gold;
+            var dark = new Color(0.05f, 0.05f, 0.15f, 1f);
+            var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color[W * H];
+            // how far inside the arrow a point is (negative outside): the head is a triangle with its tip at the bottom
+            float Inside(float x, float y)
+            {
+                float dx = Mathf.Abs(x - Mid);
+                float headTop = Tip + HeadH;
+                float slope = HeadHalf / HeadH, norm = Mathf.Sqrt(1f + slope * slope);
+                float head = Mathf.Min(headTop - y, ((y - Tip) * slope - dx) / norm);
+                float shaft = Mathf.Min(Mathf.Min(Top - y, y - (headTop - 1f)), ShaftHalf - dx);
+                return Mathf.Max(head, shaft);
+            }
+            for (int y = 0; y < H; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    Color sum = Color.clear;
+                    for (int sy = 0; sy < 2; sy++)
+                        for (int sx = 0; sx < 2; sx++)
+                        {
+                            float d = Inside(x + 0.25f + 0.5f * sx, y + 0.25f + 0.5f * sy);
+                            if (d >= Edge) sum += gold;
+                            else if (d >= 0f) sum += dark;
+                        }
+                    px[y * W + x] = sum / 4f;
+                }
+            tex.SetPixels(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0f), 100f);
         }
 
         static readonly Color GlassOrange = Hex(0xff8a1f), GlassOrangeHi = Hex(0xffb35a);
