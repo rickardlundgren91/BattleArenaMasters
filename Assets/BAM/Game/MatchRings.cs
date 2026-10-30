@@ -59,7 +59,7 @@ namespace BAM.Game
         public void Begin(Match match, MatchViews matchViews)
         {
             m = match; views = matchViews;
-            autoTarget = null; autoAt = swingAt = -99f;
+            autoTarget = null; autoAt = swingAt = -99f; blowAt = -99f;
             Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash);
             blinkOn = false;
             aimOn = false;
@@ -129,10 +129,11 @@ namespace BAM.Game
             }
             // the range ring flashes on the blow itself, when the charge ring is full (below), not at the start of the wind-up
             bool winding = Winding(m.Player, out _);
-            if (wasWinding && !winding) swingAt = Time.time;
+            if (wasWinding && !winding) { swingAt = Time.time; blowAt = m.Time; }
             wasWinding = winding;
         }
         bool wasWinding;
+        float blowAt = -99f; // the rules' time of the player's last blow (its swing's release)
 
         // Rickard 2026-10-30 ("uppladdning före", all heroes): the charge ring is full on the blow, the frame the swing lands, not
         // on the rules' attack timer, which starts the wind-up (Bonk's 0.7 s swing began only once the ring was full). It counts
@@ -140,9 +141,12 @@ namespace BAM.Game
         // that is winding up, on to its release. The swing itself and the timer are the rules' own; only the ring is drawn later.
         float Charge(Unit p)
         {
-            float cd = Mathf.Max(0.05f, p.AttackCd), wind = p.HDef != null ? p.HDef.SpawnDelay : 0f;
+            float cd = Mathf.Max(0.05f, p.AttackCd);
             if (Winding(p, out float left)) return Mathf.Clamp01(1f - left / cd);
-            return Mathf.Clamp01((p.AtkTimer - wind) / cd);
+            // between blows: the time since the last one over the cooldown, so it grows out to the range in one go and is full (gone)
+            // while the attack is ready; AtkTimer starts over at every wind-up and when nobody is in reach, so it stopped short of
+            // the range (Rickard 2026-10-30: "timercirkeln går inte hela vägen ut till gubbens range")
+            return Mathf.Clamp01((m.Time - blowAt) / cd);
         }
 
         // the player's auto attack still in the hand: how long until it is released (Bonk's club lands then; a shot leaves)
