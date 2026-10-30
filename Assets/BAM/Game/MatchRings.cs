@@ -145,8 +145,12 @@ namespace BAM.Game
             if (Winding(p, out float left)) return Mathf.Clamp01(1f - left / cd);
             // between blows: the time since the last one over the cooldown, so it grows out to the range in one go and is full (gone)
             // while the attack is ready; AtkTimer starts over at every wind-up and when nobody is in reach, so it stopped short of
-            // the range (Rickard 2026-10-30: "timercirkeln går inte hela vägen ut till gubbens range")
-            return Mathf.Clamp01((m.Time - blowAt) / cd);
+            // the range (Rickard 2026-10-30: "timercirkeln går inte hela vägen ut till gubbens range").
+            // With nobody in reach it keeps pulsing in the attack's rhythm, one grow-out per cooldown, though no blow comes (Rickard
+            // 2026-10-30: "Utan target ska den pulsera men inte slå"); the old one stood still, full. Drawn only: the rules' timer is
+            // untouched, and a target stepping in still starts the swing at once.
+            float since = m.Time - blowAt;
+            return since < cd ? Mathf.Clamp01(since / cd) : (since % cd) / cd;
         }
 
         // the player's auto attack still in the hand: how long until it is released (Bonk's club lands then; a shot leaves)
