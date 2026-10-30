@@ -64,6 +64,7 @@ namespace BAM.UI
             Init();
             ClearStack();
             Push(mainMenu);
+            CheckForUpdate(); // once per start: a newer version on Google Play (UpdateNotice.cs)
             // Rickard: Byte Strike for all music for now (BamAudio plays it for Menu until a menu track exists); after a
             // match the same loop goes on where it was
             BamAudio.PlayMusic(MusicId.Menu);
@@ -216,8 +217,8 @@ namespace BAM.UI
             Flow.Game.StartMatch(setup);
         }
 
-        /// <summary>Per-frame work (from UiRoot): only the hint bubble's bob. No allocations.</summary>
-        internal static void Tick() => TickHint();
+        /// <summary>Per-frame work (from UiRoot): the hint bubble's bob and the update notice. No allocations.</summary>
+        internal static void Tick() { TickHint(); TickUpdateNotice(); }
 
         // ---- shared screen pieces ----
 
