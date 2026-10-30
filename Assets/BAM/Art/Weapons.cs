@@ -92,6 +92,9 @@ namespace BAM.Art
         /// <summary>Not AlwaysSide: on the move, how far its centre sits out from the hand (share of its height; the old game's 0.3 threw
         /// Fenn's out far from his arm in the run, Unity run 1 2026-10-29).</summary>
         public float WalkOut = 0.3f;
+        /// <summary>Weapon Tuner (Rickard 2026-10-30: "gör också så jag kan ändra fenns sköld", "likadant med moas"): turned about
+        /// its centre in its own axes, then shifted in the hero's axes (share of the hero's height), on top of the code's placing.</summary>
+        public Vector3 Twist, Shift;
     }
 
     /// <summary>A cannon riding the right shoulder like a bazooka, barrel forward, the right fist on its rear grip (old
@@ -314,7 +317,15 @@ namespace BAM.Art
             public Weapon[] Weapons;
             public float ArmSpread;
             public Vector3 CarryAt, Elbow;
+            public Shield Shield; // Fenn's and Moa's; Dia 0 (an older file) leaves the code's numbers
             public Cannon Cannon; // Hilde's; Len 0 (an older file, or a hero without one) leaves the code's numbers
+        }
+
+        [System.Serializable]
+        internal sealed class Shield
+        {
+            public float Dia;
+            public Vector3 Twist, Shift;
         }
 
         [System.Serializable]
@@ -354,6 +365,7 @@ namespace BAM.Art
         {
             d.ArmSpread = h.ArmSpread;
             d.CarryAt = h.CarryAt; d.Elbow = h.Elbow;
+            if (d.Shield != null && h.Shield != null && h.Shield.Dia > 0f) { d.Shield.Dia = h.Shield.Dia; d.Shield.Twist = h.Shield.Twist; d.Shield.Shift = h.Shield.Shift; }
             if (d.Cannon != null && h.Cannon != null && h.Cannon.Len > 0f) { d.Cannon.Len = h.Cannon.Len; d.Cannon.Offset = h.Cannon.Offset; d.Cannon.Turn = h.Cannon.Turn; }
             if (h.Weapons == null || d.Weapons == null) return;
             for (int w = 0; w < h.Weapons.Length && w < d.Weapons.Length; w++)
@@ -367,6 +379,7 @@ namespace BAM.Art
         internal static Hero From(string name, GearDef d)
         {
             var h = new Hero { Name = name, ArmSpread = d.ArmSpread, CarryAt = d.CarryAt, Elbow = d.Elbow };
+            if (d.Shield != null) h.Shield = new Shield { Dia = d.Shield.Dia, Twist = d.Shield.Twist, Shift = d.Shield.Shift };
             if (d.Cannon != null) h.Cannon = new Cannon { Len = d.Cannon.Len, Offset = d.Cannon.Offset, Turn = d.Cannon.Turn };
             int n = d.Weapons != null ? d.Weapons.Length : 0;
             h.Weapons = new Weapon[n];
@@ -412,7 +425,7 @@ namespace BAM.Art
         // shield
         ShieldDef sDef;
         Transform sAnchor, sModel, sHand;
-        float sMeshH, sMeshD;
+        float sMeshH, sMeshD, sPlacedDia;
         // arms turned out after the clips
         GearDef gdef;
         Transform armR, armL, elbR, elbL;
@@ -598,7 +611,9 @@ namespace BAM.Art
             float k = S.Dia * H / sMeshH / Mathf.Max(1e-6f, sAnchor.lossyScale.y);
             sModel.localScale = new Vector3(k, k, k);
             sModel.localPosition = -mesh.bounds.center * k; // the model's bottom is at y = 0: centre it on the anchor
+            sCenter = mesh.bounds.center; sPlacedDia = S.Dia;
         }
+        Vector3 sCenter;
 
         // as MxCannon: on the chest bone, laid along the chest's own axes in the bind pose (up from the hips to the head, right
         // across the shoulders, forward from those), its seat that far from the right shoulder joint; then slid back towards the
@@ -1262,6 +1277,21 @@ namespace BAM.Art
         // MxShieldFace: standing, held up in front close to the arm; on the move, carried at the left side, face turned outwards
         // (an AlwaysSide shield sits on the hand instead)
         void ShieldFace(float moveW)
+        {
+            if (sDef.Dia != sPlacedDia && sDef.Dia > 0f)
+            {
+                // the tuner's Size, live
+                float k = sModel.localScale.y * sDef.Dia / Mathf.Max(1e-4f, sPlacedDia);
+                sModel.localScale = new Vector3(k, k, k);
+                sModel.localPosition = -sCenter * k;
+                sPlacedDia = sDef.Dia;
+            }
+            PlaceShield(moveW);
+            if (sDef.Twist != Vector3.zero) sAnchor.rotation *= Quaternion.Euler(sDef.Twist);
+            if (sDef.Shift != Vector3.zero) sAnchor.position += root.TransformDirection(sDef.Shift) * figH;
+        }
+
+        void PlaceShield(float moveW)
         {
             Transform fw = root;
             float D = sModel.lossyScale.y * sMeshH;
