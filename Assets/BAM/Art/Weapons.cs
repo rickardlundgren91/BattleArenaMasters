@@ -123,6 +123,10 @@ namespace BAM.Art
         public CannonDef Cannon;
         /// <summary>Degrees both upper arms are turned out from the sides after the clips, so a broad body's arms do not cut through it (old MX_ARM_SPREAD).</summary>
         public float ArmSpread;
+        /// <summary>Weapon Tuner (Rickard 2026-10-30: "måste kunna ta ut hennes högerhand och arm från ansiktet", Tikta): each arm
+        /// turned at rest on top of the clip, in degrees: x = the upper arm out from the side, y = the upper arm forward, z = the
+        /// elbow bent more (negative = straighter). Eased out while a swing or cast plays, so those play as made.</summary>
+        public Vector3 RightArm, LeftArm;
         /// <summary>Degrees added to <see cref="ArmSpread"/> in code only (the Weapon Tuner and WeaponTune.json leave it alone), so
         /// hands that hang close to the legs stay off the thighs as the idle sways (Tyra, ANIM-24).</summary>
         public float HandsOff;
@@ -317,6 +321,7 @@ namespace BAM.Art
             public Weapon[] Weapons;
             public float ArmSpread;
             public Vector3 CarryAt, Elbow;
+            public Vector3 RightArm, LeftArm; // 0 (an older file) = the clip's arms
             public Shield Shield; // Fenn's and Moa's; Dia 0 (an older file) leaves the code's numbers
             public Cannon Cannon; // Hilde's; Len 0 (an older file, or a hero without one) leaves the code's numbers
         }
@@ -364,6 +369,7 @@ namespace BAM.Art
         internal static void Copy(Hero h, GearDef d)
         {
             d.ArmSpread = h.ArmSpread;
+            d.RightArm = h.RightArm; d.LeftArm = h.LeftArm;
             d.CarryAt = h.CarryAt; d.Elbow = h.Elbow;
             if (d.Shield != null && h.Shield != null && h.Shield.Dia > 0f) { d.Shield.Dia = h.Shield.Dia; d.Shield.Twist = h.Shield.Twist; d.Shield.Shift = h.Shield.Shift; }
             if (d.Cannon != null && h.Cannon != null && h.Cannon.Len > 0f) { d.Cannon.Len = h.Cannon.Len; d.Cannon.Offset = h.Cannon.Offset; d.Cannon.Turn = h.Cannon.Turn; }
@@ -378,7 +384,7 @@ namespace BAM.Art
 
         internal static Hero From(string name, GearDef d)
         {
-            var h = new Hero { Name = name, ArmSpread = d.ArmSpread, CarryAt = d.CarryAt, Elbow = d.Elbow };
+            var h = new Hero { Name = name, ArmSpread = d.ArmSpread, CarryAt = d.CarryAt, Elbow = d.Elbow, RightArm = d.RightArm, LeftArm = d.LeftArm };
             if (d.Shield != null) h.Shield = new Shield { Dia = d.Shield.Dia, Twist = d.Shield.Twist, Shift = d.Shield.Shift };
             if (d.Cannon != null) h.Cannon = new Cannon { Len = d.Cannon.Len, Offset = d.Cannon.Offset, Turn = d.Cannon.Turn };
             int n = d.Weapons != null ? d.Weapons.Length : 0;
@@ -428,7 +434,7 @@ namespace BAM.Art
         float sMeshH, sMeshD, sPlacedDia;
         // arms turned out after the clips
         GearDef gdef;
-        Transform armR, armL, elbR, elbL;
+        Transform armR, armL, elbR, elbL, wriR, wriL;
         // the right arm bent to carry the weapon on the shoulder
         Transform carryUp, carryLo, carryHand;
         // the cannon on the chest, where it sits and which way it kicks (chest space), the right arm that holds it
@@ -502,6 +508,8 @@ namespace BAM.Art
             h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             h.elbR = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
             h.elbL = an.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+            h.wriR = an.GetBoneTransform(HumanBodyBones.RightHand);
+            h.wriL = an.GetBoneTransform(HumanBodyBones.LeftHand);
             if (g.Shoulder)
             {
                 h.carryUp = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -729,6 +737,7 @@ namespace BAM.Art
                 if (backIn < 0f) { backIn = -1f; show = 1f; }
             }
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
+            ArmTune(dead ? 0f : 1f - Mathf.Clamp01(actW));
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
             // a death lets go of the rest hold over a quarter of a second instead of in one frame: at the blow that killed him Bram's
             // hammer jumped about 155 degrees into the fist's own grip in one frame (WeaponDebug, Rickard's Unity 2026-10-30); a
@@ -1056,6 +1065,25 @@ namespace BAM.Art
             if (armL != null) armL.rotation = Quaternion.AngleAxis(-spread * Hang(armL, elbL), fwd) * armL.rotation;
         }
 
+        // the tuner's RightArm/LeftArm at rest (w), in the hero's own axes: out from the side, forward, then the elbow's bend
+        void ArmTune(float w)
+        {
+            if (w <= 0.001f) return;
+            if (gdef.RightArm != Vector3.zero) ArmTune(armR, elbR, wriR, gdef.RightArm * w, 1f);
+            if (gdef.LeftArm != Vector3.zero) ArmTune(armL, elbL, wriL, gdef.LeftArm * w, -1f);
+        }
+
+        void ArmTune(Transform up, Transform lo, Transform hd, Vector3 a, float side)
+        {
+            if (up == null || lo == null) return;
+            up.rotation = Quaternion.AngleAxis(-a.y, root.right) * Quaternion.AngleAxis(a.x * side, root.forward) * up.rotation;
+            if (a.z == 0f || hd == null) return;
+            Vector3 u = lo.position - up.position, l = hd.position - lo.position;
+            Vector3 axis = Vector3.Cross(u, l);
+            if (axis.sqrMagnitude < 1e-10f) axis = side * root.right; // a straight arm bends forward
+            lo.rotation = Quaternion.AngleAxis(-a.z, axis.normalized) * lo.rotation;
+        }
+
         // AnimFix.ArmRoom: 1 for an upper arm hanging down (up to 45 degrees off, as in the run), less as it rises, 0 from level up
         float Hang(Transform up, Transform lo)
         {
@@ -1123,6 +1151,7 @@ namespace BAM.Art
         public void SampleRest()
         {
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
+            ArmTune(1f);
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(1f);
             for (int i = 0; i < wT.Length; i++)
             {
