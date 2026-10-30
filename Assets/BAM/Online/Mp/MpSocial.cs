@@ -23,6 +23,8 @@ namespace BAM.Online.Mp
 
         /// <summary>Short lines for a toast ("Anna said no thanks").</summary>
         public static event Action<string> Say;
+        /// <summary>The lockstep protocol (MpWire), for Social.GameVersion.</summary>
+        public static int Protocol => MpMsg.Protocol;
 
         /// <summary>"Show me as online": others see this phone in their list and can invite it.</summary>
         public static bool ShowMe
@@ -48,7 +50,7 @@ namespace BAM.Online.Mp
             if (n.t == "inv" && !string.IsNullOrEmpty(n.code))
             {
                 string who = MpPresence.CleanName(n.name);
-                if (!string.IsNullOrEmpty(n.v) && n.v != Application.version) { Say?.Invoke(who + " invited you, but has game version " + n.v + " (you have " + Application.version + ")"); return; }
+                if (!string.IsNullOrEmpty(n.v) && n.v != Social.GameVersion) { Say?.Invoke(who + " invited you, but has game version " + n.v + " (you have " + Social.GameVersion + ")"); return; }
                 var me = MpPresence.Backend != null ? MpPresence.Backend.Me : "";
                 MpPresence.Offer(new PresenceRow { Id = "note", Owner = from, Name = who, InvCode = n.code, InvMode = n.mode, InvAt = n.at, InvTo = me });
             }
@@ -62,7 +64,7 @@ namespace BAM.Online.Mp
         static void SendInviteNote(string id)
         {
             noted[id] = MpRoom.Code;
-            _ = Social.SendNote(id, new Social.Note { t = "inv", code = MpRoom.Code, mode = MpRoom.Mode, name = MpRoom.MyName, v = Application.version, at = (long)MpPresence.Clock() });
+            _ = Social.SendNote(id, new Social.Note { t = "inv", code = MpRoom.Code, mode = MpRoom.Mode, name = MpRoom.MyName, v = Social.GameVersion, at = (long)MpPresence.Clock() });
         }
 
         internal static void Tick(float dt)
@@ -135,7 +137,7 @@ namespace BAM.Online.Mp
                 var f = friend.Value;
                 if (r == null && f.Presence == Social.Presence.Playing) return f.Name + " is in a match.";
                 if (r == null && f.Presence == Social.Presence.Offline) return f.Name + " does not have the game open right now.";
-                if (!string.IsNullOrEmpty(f.Version) && f.Version != Application.version) return f.Name + " has game version " + f.Version + ", you have " + Application.version + ". Both need the same version from Google Play.";
+                if (!string.IsNullOrEmpty(f.Version) && f.Version != Social.GameVersion) return f.Name + " has game version " + f.Version + ", you have " + Social.GameVersion + ". Both need the same version from Google Play.";
             }
             else
             {

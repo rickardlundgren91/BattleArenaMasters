@@ -297,8 +297,8 @@ namespace BAM.Online.UI
             foreach (var f in Social.Friends)
             {
                 if (f.Presence == Social.Presence.Offline || MpPresence.Find(f.PlayerId) != null) continue;
-                string why = !string.IsNullOrEmpty(f.Version) && f.Version != Application.version
-                    ? " has version " + f.Version + ", you have " + Application.version + ". Both need the same version from Google Play."
+                string why = !string.IsNullOrEmpty(f.Version) && f.Version != Social.GameVersion
+                    ? " has version " + f.Version + ", you have " + Social.GameVersion + ". Both need the same version from Google Play."
                     : " is online but not here yet: their game may still be connecting, or Show me as online is off on their phone.";
                 if (sb.Length > 0) sb.Append(' ');
                 sb.Append(f.Name).Append(why);

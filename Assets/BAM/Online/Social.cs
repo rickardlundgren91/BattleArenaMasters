@@ -18,6 +18,13 @@ namespace BAM.Online
     /// </summary>
     public static class Social
     {
+        /// <summary>
+        /// The game version friends compare: the app version and the online protocol, e.g. "0.2.0 (10)". Every build since the closed
+        /// test says 0.2.0, so the protocol (MpWire, set by OnlineHookup) is what tells two builds apart.
+        /// </summary>
+        public static string GameVersion => Application.version + (Protocol > 0 ? " (" + Protocol + ")" : "");
+        public static int Protocol;
+
         public enum Relation { None, Friends, Incoming, Outgoing, Blocked }
         public enum Presence { Offline, Online, Playing }
 
@@ -220,7 +227,7 @@ namespace BAM.Online
             bool want = inMatch;
             try
             {
-                await FriendsService.Instance.SetPresenceAsync(want ? Availability.Busy : Availability.Online, new Activity { v = Application.version });
+                await FriendsService.Instance.SetPresenceAsync(want ? Availability.Busy : Availability.Online, new Activity { v = GameVersion });
                 sentInMatch = want;
             }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] presence: " + e.Message); }
