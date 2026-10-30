@@ -890,7 +890,7 @@ namespace BAM.Game
                 case HeroId.Fenn: return dragged ? SfxId.FennWolfThrow : SfxId.FennWolfCall;
                 case HeroId.Tyra: return SfxId.TyraDraw; // the draw creak; the twang plays at the release (ReleaseSound)
                 case HeroId.Moa: return dragged ? SfxId.MoaField : SfxId.MoaShield;
-                case HeroId.Knut: return SfxId.KnutAnchorThrow;
+                case HeroId.Knut: return dragged ? SfxId.KnutAnchorThrow : SfxId.KnutSlamWindup; // the hook's clink only on the drag; the slam's landing sounds on its Explosion
                 case HeroId.Tikta: return SfxId.TiktaNeedles;
                 case HeroId.Blast: return dragged ? SfxId.BlastFireLane : SfxId.BlastBombThrow;
                 case HeroId.Bonk: return dragged ? SfxId.BonkBoulderThrow : SfxId.BonkSlamWindup; // the slam's landing sounds on its Explosion

@@ -35,5 +35,7 @@ namespace BAM.Audio
         KnutSlam,
         // Hilde's keg going off and the hero it shoves (HILDE-01): Rickard's own clips made for them 2026-10-29
         HildeKegBlast, HildeKnock,
+        // Knut's Anchor Slam wind-up (tap): Rickard's own clip ordered 2026-10-30, silent until it exists
+        KnutSlamWindup,
     }
 }
