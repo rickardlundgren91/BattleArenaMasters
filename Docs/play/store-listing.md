@@ -77,33 +77,19 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
-## Closed test release notes 0.3.2 (version code 14, paste in "Release notes")
-
-```
-<en-US>
-Battle Arena Masters 0.3.2
-• Your whole party on Home: friends stand next to your hero, PLAY together, Leave party
-• Party mode: play together or against each other
-• Tyra's aimed bolt now flies until it hits something
-• New sounds: tower shots, Sprint, Fenn's wolf throw, Moa's field, Blast's fire and more
-Old versions can't play online with this one, so please update.
-Report bugs to support@battlearenamasters.com or in our Discord.
-</en-US>
-```
-
-## Closed test release notes 0.3.1 (version code 13, paste in "Release notes")
+## Closed test release notes 0.3.1 (versions 13 and 14 in one, paste in "Release notes")
 
 ```
 <en-US>
 Battle Arena Masters 0.3.1
+• Your party on Home: PLAY together or against each other
 • Blast's special swapped: tap for a fire strip, drag to aim the bomb
-• Shots and aims now stop exactly at walls and boulders
-• An enemy tower's whole area turns red while it shoots at you
-• Online: player names over heroes, the host picks the bots' level
-• Hitting minions no longer stops your regen
-• Clearer weapon holds and hit effects
+• Tyra's aimed bolt flies until it hits something
+• Shots stop exactly at walls; tower areas turn red
+• Player names over heroes; hitting minions no longer stops regen
+• New sounds and clearer hit effects
 Old versions can't play online with this one, so please update.
-Report bugs to support@battlearenamasters.com or in our Discord.
+Report bugs: support@battlearenamasters.com or Discord.
 </en-US>
 ```
 
