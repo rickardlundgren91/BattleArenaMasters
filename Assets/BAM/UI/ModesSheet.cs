@@ -24,7 +24,8 @@ namespace BAM.UI
         static readonly ModeCard[] modeCards = new ModeCard[3];
         static RectTransform modeSheet, modeExpand, modeSheetPlay;
         static Image modeScrim;
-        static HubChoice modeDifficulty;
+        static HubChoice modeDifficulty, modeParty;
+        static RectTransform modePartyRow;
         static Text modePlaySub;
         static ModesFx modesFx;
 
@@ -36,6 +37,7 @@ namespace BAM.UI
         // what Home's PLAY and the sheet's PLAY start (HubPlayNow)
         static void PlayMode()
         {
+            if (TestParty == null && OnlineHooks.PartyPlay != null && OnlineHooks.PartyPlay()) return; // a party: the leader's PLAY starts it (HomeParty.cs)
             if (homeMode == Mode.Training) StartTutorial();
             else if (homeMode == Mode.HeroTest) StartHeroTest((HeroId)BamSettings.LastHero);
             else StartBotMatch();
@@ -43,6 +45,10 @@ namespace BAM.UI
 
         /// <summary>HERO TEST (the old herotest): the hero against dummies at level 1; its own bar changes hero and level.</summary>
         static void StartHeroTest(HeroId hero) => StartMatch(new MatchSetup { Hero = hero, HeroTest = true, Level = 1 });
+
+        static PartyView Party() => CurrentParty();
+        const float PartyRowH = 17.5f * Cw;
+        static float ExpNow => ExpH + (Party() != null ? PartyRowH : 0);
 
         static string PlaySubFor(Mode m, bool withDifficulty) =>
             m == Mode.Classic ? "3V3 · VS BOTS" + (withDifficulty ? " · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant() : "") : ModeTitle(m);
@@ -98,8 +104,23 @@ namespace BAM.UI
             Stretched(segs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
             modeDifficulty = new HubChoice(segs, DifficultyNames, i =>
             {
-                BamSettings.LastDifficulty = (Difficulty)i;
+                // in a party the leader picks the bots for everyone (MpRoom.SetDiff); the others are told and the choice goes back
+                if (TestParty != null) TestParty.Bots = (Difficulty)i;
+                else if (Party() != null) OnlineHooks.PartyBots?.Invoke((Difficulty)i);
+                else BamSettings.LastDifficulty = (Difficulty)i;
                 RefreshHome();
+                RefreshModes();
+            }, true);
+
+            // in a party, under it: TOGETHER (the party against bots) or AGAINST EACH OTHER, the leader's pick as the bots
+            modePartyRow = UiKit.NewRect("Party", modeExpand);
+            var partyLabel = Treb(modePartyRow, "PARTY", 2.7f, UiKit.TextDim);
+            Stretched(partyLabel.rectTransform, 0, 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
+            var psegs = UiKit.NewRect("Mode", modePartyRow);
+            Stretched(psegs, 0, 4.5f * Cw, 0, 12 * Cw);
+            modeParty = new HubChoice(psegs, new[] { "TOGETHER", "AGAINST EACH OTHER" }, i =>
+            {
+                if (TestParty != null) TestParty.Mode = i; else OnlineHooks.PartyMode?.Invoke(i);
                 RefreshModes();
             }, true);
 
@@ -235,13 +256,17 @@ namespace BAM.UI
         static void RefreshModes()
         {
             if (modeSheet == null) return;
-            modeDifficulty.Set((int)BamSettings.LastDifficulty);
+            var party = Party();
+            modeDifficulty.Set((int)(party != null ? party.Bots : BamSettings.LastDifficulty));
+            modePartyRow.gameObject.SetActive(party != null);
+            if (party != null) { modeParty.Set(party.Mode); Stretched(modePartyRow, 0, ExpH, 0, PartyRowH); }
+            float expH = ExpNow;
             float y = 6 * Cw + 11 * Cw;
             for (int i = 0; i < modeCards.Length; i++)
             {
                 var c = modeCards[i];
                 bool on = c.Id == homeMode, open = on && c.Id == Mode.Classic;
-                float oh = OptH + (open ? ExpH : 0);
+                float oh = OptH + (open ? expH : 0);
                 Stretched(c.Rect, SheetX, y, SheetX, oh);
                 c.On.SetActive(on);
                 c.Off.SetActive(!on);
@@ -252,16 +277,16 @@ namespace BAM.UI
                 if (open)
                 {
                     modeExpand.gameObject.SetActive(true);
-                    Stretched(modeExpand, SheetX + 3 * Cw, y + OptH, SheetX + 3 * Cw, ExpH);
+                    Stretched(modeExpand, SheetX + 3 * Cw, y + OptH, SheetX + 3 * Cw, expH);
                 }
                 y += oh + OptGap;
             }
             if (homeMode != Mode.Classic) modeExpand.gameObject.SetActive(false);
             y = LayoutOnlineRows(y);
             Stretched(modeSheetPlay, SheetX, y + Cw, SheetX, 14 * Cw);
-            modePlaySub.text = PlaySubFor(homeMode, false);
+            modePlaySub.text = party != null ? "WITH YOUR PARTY" : PlaySubFor(homeMode, false);
             float rows = SheetModes.Length + OnlineRowCount;
-            modeSheet.sizeDelta = new Vector2(0, 19 * Cw + rows * OptH + (rows - 1) * OptGap + (homeMode == Mode.Classic ? ExpH : 0) + 4 * Cw + 13 * Cw + 6 * Cw + 6 * Cw);
+            modeSheet.sizeDelta = new Vector2(0, 19 * Cw + rows * OptH + (rows - 1) * OptGap + (homeMode == Mode.Classic ? expH : 0) + 4 * Cw + 13 * Cw + 6 * Cw + 6 * Cw);
         }
 
         // HubModeIcon: the mode's sign on a dark rounded square of size s (classic the robot, training two open pages,

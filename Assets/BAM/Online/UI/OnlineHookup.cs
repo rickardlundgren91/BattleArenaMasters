@@ -33,6 +33,12 @@ namespace BAM.Online.UI
             OnlineHooks.LastGain = LastGain;
             OnlineHooks.HeroLockLevel = id => Progress.HeroOpen(id) ? 0 : Progress.HeroLevel(id);
             OnlineHooks.Level = () => Progress.Shown.level;
+            OnlineHooks.Party = OnlineMenu.Party;
+            OnlineHooks.PartyPlay = OnlineMenu.PartyPlay;
+            OnlineHooks.LeaveParty = OnlineMenu.LeaveParty;
+            OnlineHooks.PartyBots = OnlineMenu.PartyBots;
+            OnlineHooks.PartyMode = OnlineMenu.PartyMode;
+            OnlineHooks.Paint = OnlineUi.Paint;
         }
 
         static void Safe(string what, System.Action a)

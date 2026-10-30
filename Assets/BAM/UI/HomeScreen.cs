@@ -12,7 +12,7 @@ namespace BAM.UI
     // HubTopBar3/HubModeBtn, MenuHome.cs PlayButton, MenuButtonFx.cs), Rickard 2026-10-26: "precis som i andra projektet".
     // The old code drew in cw units (cw(v) = v % of the width). Here everything is built once at a design width of 1080
     // (cw = 10.8) in two groups scaled to the frame's width: the top bar from the top, and the hero and the bottom row
-    // from the top of the tab bar. Left out until the features exist: currencies, rank, bell, party places and the name tag.
+    // from the top of the tab bar. Left out until the features exist: currencies, rank and bell. The party places and the name tags: HomeParty.cs.
     public static partial class Screens
     {
         static HomeFx homeFx;
@@ -54,7 +54,7 @@ namespace BAM.UI
             homePortraitImg.enabled = homePortraitImg.texture != null;
             homeName.text = info.Name;
             homeTitle.text = info.Title;
-            playSub.text = PlaySubFor(homeMode, true);
+            playSub.text = HomePlaySub();
             if (homeModeShown != (int)homeMode)
             {
                 homeModeShown = (int)homeMode;
@@ -70,7 +70,7 @@ namespace BAM.UI
         static readonly Dictionary<string, Texture2D> pictures = new Dictionary<string, Texture2D>();
         static RectTransform homeBackdrop;
         static RawImage homeBg;
-        static Image homeTopFade, homeBottomFade, homeBottomFill, homeEdgeL, homeEdgeR, homeMidFade;
+        static Image homeTopFade, homeBottomFade, homeBottomFill, homeEdgeL, homeEdgeR, homeMidFade, homeSky, homeMelt;
         static float homePlatY, homeBrowY; // the platform's middle and the bottom row's top, up from the frame's bottom
 
         static void BuildHomeBackground(RectTransform body)
@@ -89,6 +89,12 @@ namespace BAM.UI
             homeBg.texture = Picture("home_bg");
             homeBg.raycastTarget = false;
             UiKit.Fill(bgRt, new Color(10 / 255f, 14 / 255f, 40 / 255f, 0.2f)).name = "Shade";
+            // zoomed out for a party (HomeParty.cs) the painting's top edge can come into view: the dark sky above it, and the
+            // edge melting into it (HomeBg, dy > 0)
+            var sky = new Color(14 / 255f, 18 / 255f, 48 / 255f); // HUB_BG0
+            homeSky = FadePart(screen, null, sky);
+            homeMelt = FadePart(screen, fadeV, sky);
+            homeSky.enabled = homeMelt.enabled = false;
             var edge = new Color(6 / 255f, 9 / 255f, 30 / 255f, 0.5f);
             homeEdgeL = FadePart(screen, fadeH, edge);
             homeEdgeR = FadePart(screen, fadeH, edge);
@@ -149,6 +155,19 @@ namespace BAM.UI
             SetPart(homeBottomFill, 0, fb + cw * 30 - 1, W, Mathf.Max(0, H - fb - cw * 30 + 1));
         }
 
+        /// <summary>The sky over the painting while it is zoomed out (scale = its scale now) so far that its top edge shows.</summary>
+        static void LayoutSky(float scale)
+        {
+            if (homeSky == null) return;
+            var r = homeBg.rectTransform;
+            float W = homeBackdrop.rect.width, top = -r.anchoredPosition.y - 0.786f * r.sizeDelta.y * scale;
+            bool show = top > 0;
+            homeSky.enabled = homeMelt.enabled = show;
+            if (!show) return;
+            SetPart(homeSky, 0, 0, W, top + 1);
+            SetPart(homeMelt, 0, top - 1, W, W * 0.18f + 1);
+        }
+
         // Places a fade part by its top edge (y measured down from the screen's top), centred at x.
         static void SetPart(Image img, float x, float top, float w, float h)
         {
@@ -175,9 +194,9 @@ namespace BAM.UI
         /// Builds Home's pieces, lays them out when the frame changes and runs the old per-frame motion: the breathing
         /// background, the turning rune circle, the aura and its motes, and PLAY's glow, shine and spring. No allocations.
         /// </summary>
-        sealed class HomeFx : MonoBehaviour
+        sealed partial class HomeFx : MonoBehaviour
         {
-            RectTransform body, top, low;
+            RectTransform body, top, low, stage; // stage: the heroes on the platform, zoomed out with the party (HomeParty.cs)
             CanvasGroup rune, aura;
             readonly RectTransform[] marks = new RectTransform[12];
             readonly Image[] moteCore = new Image[7], moteGlow = new Image[7];
@@ -193,12 +212,16 @@ namespace BAM.UI
                 this.body = body;
                 top = Group("Top", 1);
                 low = Group("Low", 0);
+                stage = UiKit.NewRect("Stage", low);
+                At(stage, 540, FeetY, 1080, 1800, 0.5f, FeetY / 1800f); // the same rect as low, scaled around the hero's feet
+                BuildPartySlots(); // the party members first: they stand behind the player's hero
                 BuildStage();
                 BuildRow();
                 OnlineFriendsPill(low, BrowBottom + BrowH); // online builds only
-                OnlineInvitePills(low, FeetY, HeroH); // online builds only
+                invitePills = OnlineInvitePills(low, FeetY, HeroH); // online builds only
                 BuildTopBar();
                 BuildTutCard();
+                BuildPartyTags();
                 top.SetAsLastSibling(); // the top bar over the hero
                 Layout();
             }
@@ -226,6 +249,7 @@ namespace BAM.UI
                 homeBrowY = NavH + (BrowBottom + BrowH) * s;
                 LayoutHomeBackground();
                 homeStage.Frame();
+                FrameParty();
             }
 
             // ---- the hero on the platform: spotlight, rune circle, aura, ring back, the model, ring front ----
@@ -233,7 +257,7 @@ namespace BAM.UI
             void BuildStage()
             {
                 // The gold rune circle on the ground. HubSpot3's spotlight cone is left out: Rickard found the light triangle ugly (2026-10-28).
-                rune = UiKit.NewRect("Rune", low).gameObject.AddComponent<CanvasGroup>();
+                rune = UiKit.NewRect("Rune", stage).gameObject.AddComponent<CanvasGroup>();
                 rune.blocksRaycasts = false;
                 var runeRt = (RectTransform)rune.transform;
                 At(runeRt, 540, FeetY, 0, 0);
@@ -259,7 +283,7 @@ namespace BAM.UI
                 }
 
                 // HubAura3: a soft mint glow on the ground and seven motes of light rising
-                aura = UiKit.NewRect("Aura", low).gameObject.AddComponent<CanvasGroup>();
+                aura = UiKit.NewRect("Aura", stage).gameObject.AddComponent<CanvasGroup>();
                 aura.blocksRaycasts = false;
                 var auraRt = (RectTransform)aura.transform;
                 At(auraRt, 540, FeetY, 0, 0);
@@ -267,39 +291,39 @@ namespace BAM.UI
                 for (int i = 0; i < 7; i++)
                 {
                     float r = (0.45f + 0.35f * ((i * 0.57f) % 1f)) * Cw;
-                    moteGlow[i] = Img(low, "MoteGlow", UiKit.Circle, Color.clear);
+                    moteGlow[i] = Img(stage, "MoteGlow", UiKit.Circle, Color.clear);
                     At(moteGlow[i].rectTransform, 540, FeetY, r * 4.8f, r * 4.8f);
-                    moteCore[i] = Img(low, "Mote", UiKit.Circle, Color.clear);
+                    moteCore[i] = Img(stage, "Mote", UiKit.Circle, Color.clear);
                     At(moteCore[i].rectTransform, 540, FeetY, r * 2, r * 2);
                 }
 
                 // HubRing3: a soft shadow, the contact shadow under the feet and the back half of the mint ring
                 float ringX = 0.3f * HeroH, ringY = 0.075f * HeroH;
-                var shadow = Img(low, "Shadow", HomeArt.RingShadow, Color.white);
+                var shadow = Img(stage, "Shadow", HomeArt.RingShadow, Color.white);
                 At(shadow, 540, FeetY, 2 * ringX * 1.1f, 2 * ringY * 1.4f);
-                var contact = Img(low, "Contact", HomeArt.ContactShadow, Color.white);
+                var contact = Img(stage, "Contact", HomeArt.ContactShadow, Color.white);
                 At(contact, 540, FeetY, 2 * ringX * 0.55f, 2 * ringY * 0.75f);
-                var ringBack = UiKit.NewRect("RingBack", low);
+                var ringBack = UiKit.NewRect("RingBack", stage);
                 At(ringBack, 540, FeetY, 0, 0);
                 Half(Ellipse(ringBack, ringX, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), true);
                 Half(Ellipse(ringBack, ringX, 0.65f * Cw, UiKit.Primary, 0), true);
 
                 // the hero: Rickard's 3D model on a picture as wide as the screen (HubHero3), so no weapon is cut off
-                homeHero = UiKit.HeroBadge(low, HeroId.Bram);
+                homeHero = UiKit.HeroBadge(stage, HeroId.Bram);
                 At(homeHero, 540, FeetY + 0.3f * HeroH, 0.6f * HeroH, 0.6f * HeroH);
-                var pic = UiKit.NewRect("Hero3D", low);
+                var pic = UiKit.NewRect("Hero3D", stage);
                 At(pic, 540, FeetY - 0.1f * HeroH, 1080, 1.35f * HeroH, 0.5f, 0);
                 var picture = pic.gameObject.AddComponent<RawImage>();
                 picture.raycastTarget = false;
                 picture.enabled = false;
 
-                var ringFront = UiKit.NewRect("RingFront", low);
+                var ringFront = UiKit.NewRect("RingFront", stage);
                 At(ringFront, 540, FeetY, 0, 0);
                 Half(Ellipse(ringFront, ringX, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), false);
                 Half(Ellipse(ringFront, ringX, 0.65f * Cw, UiKit.Primary, 0), false);
 
                 // a tap on the hero opens Heroes; a drag sideways turns him (the old hubHero button, cw(40) wide)
-                var hit = UiKit.NewRect("HeroHit", low);
+                var hit = UiKit.NewRect("HeroHit", stage);
                 At(hit, 540, FeetY - 8 * Cw, 40 * Cw, HeroH + 10 * Cw, 0.5f, 0);
                 hit.gameObject.AddComponent<Image>().color = Color.clear;
                 homeStage = hit.gameObject.AddComponent<HeroStage>();
@@ -539,8 +563,9 @@ namespace BAM.UI
             {
                 float t = Time.unscaledTime, cw = Cw;
                 float br = 0.5f - 0.5f * Mathf.Cos(t * Mathf.PI * 2 / 3f);
-                float s = 1 + 0.012f * Mathf.Sin(t * 0.45f);
+                float s = (1 + 0.012f * Mathf.Sin(t * 0.45f)) * PartyTick();
                 homeBg.rectTransform.localScale = new Vector3(s, s, 1);
+                LayoutSky(s);
 
                 rune.alpha = 0.45f + 0.25f * br;
                 float rx = 0.4f * HeroH * 0.93f, ry = 0.1f * HeroH * 0.93f;

@@ -77,15 +77,19 @@ namespace BAM.UI
         /// <summary>
         /// Speltest MenuHome3.HubTeam3 / HubInvitePill3 (ONE_PLAY): an empty party place on each side of the hero is a small glassy
         /// "+ INVITE" pill, cw(34) out from the middle, at 0.42 of a side hero's height over its feet (cw(10) behind the player's).
-        /// A tap opens the invite panel: friends first, then everyone online (Rickard 2026-10-30).
+        /// A tap opens the invite panel: friends first, then everyone online (Rickard 2026-10-30). In a party HomeParty.cs moves
+        /// them with the zoom and hides the one whose place a party member has taken. Null offline.
         /// </summary>
-        static void OnlineInvitePills(RectTransform low, float feetY, float heroH)
+        static RectTransform[] OnlineInvitePills(RectTransform low, float feetY, float heroH)
         {
-            if (OnlineHooks.OpenInvite == null) return;
-            float sideH = heroH * 0.7f, cy = feetY + 10 * Cw + sideH * 0.42f, h = 7 * Cw;
+            if (OnlineHooks.OpenInvite == null) return null;
+            // HubGhost3: the pill at 0.42 of the empty figure's height (0.86 of a side hero's) over its feet
+            float sideH = heroH * 0.7f, cy = feetY + 10 * Cw + sideH * 0.86f * 0.42f, h = 7 * Cw;
+            var pills = new RectTransform[2];
             for (int side = -1; side <= 1; side += 2)
             {
                 var rt = UiKit.NewRect(side < 0 ? "Invite Left" : "Invite Right", low);
+                pills[side < 0 ? 0 : 1] = rt;
                 var label = Treb(rt, "INVITE", 2.6f, new Color(243 / 255f, 244 / 255f, 1f, 0.92f));
                 float w = label.preferredWidth + h + 3 * Cw;
                 Mid(rt, 0, 0, 540 + side * 34 * Cw, cy, w + 4 * Cw, h + 6 * Cw); // a touch area a little bigger than the pill
@@ -117,6 +121,7 @@ namespace BAM.UI
                 b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); OnlineHooks.OpenInvite?.Invoke(); });
                 rt.gameObject.AddComponent<ButtonFx>();
             }
+            return pills;
         }
 
         /// <summary>The badge follows the number of friends online (asked twice a second).</summary>

@@ -109,6 +109,8 @@ namespace BAM.Online.UI
         // ---------- toasts (MenuHome.Toast) ----------
         static string hubToast; static float hubToastT;
         internal static void Toast(string t) { hubToast = t; hubToastT = Now; }
+        /// <summary>A toast is showing: drawn over Home too, where no online page is open (the party's notices).</summary>
+        internal static bool ToastLive => hubToast != null && Now - hubToastT < 2.4f;
         static void DrawToast()
         {
             if (hubToast == null || Now - hubToastT >= 2.4f) return;
@@ -248,6 +250,7 @@ namespace BAM.Online.UI
             Social.Tick();
             if (page == "friends") HubFriends();
             else if (page == "invite") HubInvite();
+            else if (page == "leaveparty") HubLeaveConfirm3();
             else if (page != null)
             {
                 HubPage();

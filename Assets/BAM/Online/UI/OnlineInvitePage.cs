@@ -49,17 +49,8 @@ namespace BAM.Online.UI
             for (int i = 0; i < ml.Count; i++) Text(ml[i], ix, y + cw(1.8f) + i * cw(3.8f), Treb(Min11(cw(2.8f))), HUB_DIM);
             y += ml.Count * cw(3.8f) + cw(2);
 
-            // the room button at the bottom once someone was invited or joined
+            // no room button: the party shows on Home, beside the player's hero (OnlineParty.cs)
             float listBot = pbot - cw(3);
-            if (MpRoom.State != MpRoom.Phase.Off)
-            {
-                float bh = cw(10), by = pbot - cw(3) - bh, dy = Down("hubInvRoom") ? cw(0.4f) : 0;
-                int n = MpRoom.Members.Count;
-                ctx.fillStyle = VGrad(by + dy, by + dy + bh, "#2fae5b", "#24a050"); ctx.beginPath(); ctx.roundRect(ix, by + dy, iw, bh, cw(3)); ctx.fill();
-                Text(n > 1 ? "GO TO ROOM (" + n + " IN) ›" : "GO TO ROOM ›", ix + iw / 2, by + dy + bh / 2, Lil(cw(3.6f)), "#fff", "center");
-                Btn("hubInvRoom", ix, by, iw, bh, () => Go("mp"));
-                listBot = by - cw(2);
-            }
 
             // friends first: the ones you can invite, then online, then offline (Rickard: "viktigast och först friends")
             invFriends.Clear(); invFriends.AddRange(Social.Friends);

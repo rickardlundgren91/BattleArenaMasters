@@ -102,6 +102,8 @@ namespace BAM.UI
         public float FeetAt = 0.07f, HeroFill = 0.75f;
         /// <summary>Degrees the hero slowly turns either way on his own (old Speltest: 0.25 rad on Home, 0.35 on the hero page).</summary>
         public float Sway = 14f;
+        /// <summary>Where the hero faces before any drag (180 = straight at the camera); a party member on Home turns toward the middle.</summary>
+        public float Yaw { get => yaw; set => yaw = value; }
 
         Camera cam;
         RenderTexture rt;

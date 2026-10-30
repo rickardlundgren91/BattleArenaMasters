@@ -291,9 +291,10 @@ namespace BAM.Online.UI
             if (MpRoom.State == MpRoom.Phase.Match && MpPresence.Invite != null) MpPresence.Invite = null;
             if (pendingMode >= 0 && MpRoom.IsHost && MpRoom.State == MpRoom.Phase.Lobby) { MpRoom.SetMode(pendingMode); pendingMode = -1; }
             if (MpRoom.State == MpRoom.Phase.Off) pendingMode = -1;
-            // a match started: the page gives way; the match is over and the menus are back: the room again
-            if (MpRoom.State == MpRoom.Phase.Match && page == "mp") Close();
-            if (MpRoom.WantPage && Flow.Game != null && !Flow.Game.InMatch) { MpRoom.WantPage = false; Close(); Go("mp"); }
+            // a match started: the page gives way; the match is over and the menus are back: Home, where the party is
+            if (MpRoom.State == MpRoom.Phase.Match && (page == "mp" || page == "leaveparty" || page == "invite")) Close();
+            if (MpRoom.WantPage && Flow.Game != null && !Flow.Game.InMatch) { MpRoom.WantPage = false; Close(); }
+            PartyTick();
         }
 
         // ---------- Online now (the old Menu.MpOnline) ----------
@@ -360,7 +361,7 @@ namespace BAM.Online.UI
         {
             var why = MpSocial.Invite(playerId, name, createMode);
             Toast(why ?? "Invite sent to " + name);
-            if (why == null && page != "mp" && page != "invite") Go("mp"); // the invite panel stays: more can be invited, GO TO ROOM is at its bottom
+            // the invite panel stays open: more can be invited; the party shows on Home
         }
 
         // ---------- the invite card (the old Menu.DrawInvite): covers everything, ACCEPT joins the inviter's room ----------
@@ -384,7 +385,7 @@ namespace BAM.Online.UI
             float bw = pw * 0.6f, bx = cx - bw / 2, by = py + th + lh * 5.2f;
             float oy = Down("invOk") ? 1.5f : 0; ctx.fillStyle = "#1fb46a"; ctx.fillRect(bx, by + oy, bw, bh);
             Text("ACCEPT", cx, by + oy + bh / 2, Lil(bh * 0.45f), "#fff", "center");
-            Btn("invOk", bx, by, bw, bh, () => { MpSocial.Accept(r); if (page != "mp") { Close(); Go("mp"); } });
+            Btn("invOk", bx, by, bw, bh, () => { MpSocial.Accept(r); Close(); }); // into the party on Home
             by += bh + pw * 0.04f; oy = Down("invNo") ? 1.5f : 0;
             ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fillRect(bx, by + oy, bw, bh);
             Text("NO THANKS", cx, by + oy + bh / 2, Lil(bh * 0.45f), "#fff", "center");

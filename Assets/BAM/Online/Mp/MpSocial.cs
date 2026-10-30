@@ -112,6 +112,9 @@ namespace BAM.Online.Mp
         /// <summary>Has this player the game open (same version), and what are they doing? null when not.</summary>
         public static PresenceRow Find(string playerId) => MpPresence.Find(playerId);
 
+        /// <summary>An invite to our room is still waiting for an answer (Home's PLAY waits for it).</summary>
+        public static bool Inviting => MpPresence.Invited.Count > 0 || pending.Count > 0 || notePending.Count > 0;
+
         /// <summary>Is this player invited to our room right now?</summary>
         public static bool IsInvited(string playerId) => MpPresence.Invited.Contains(playerId) || pending.Contains(playerId)
             || notePending.Contains(playerId) || noted.TryGetValue(playerId, out var c) && c == MpRoom.Code;

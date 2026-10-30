@@ -29,6 +29,40 @@ namespace BAM.UI
         public static Func<int> Searching;
         /// <summary>The account level now.</summary>
         public static Func<int> Level;
+
+        /// <summary>The party on Home (Speltest MenuHome3.HubTeam3): null when this phone is not in a room with friends.</summary>
+        public static Func<PartyView> Party;
+        /// <summary>PLAY while in a party: the leader starts the match, the others are told to wait. False: not in a party, play as usual.</summary>
+        public static Func<bool> PartyPlay;
+        /// <summary>LEAVE PARTY on Home: asks first (Speltest HubLeaveConfirm3).</summary>
+        public static Action LeaveParty;
+        /// <summary>The party's bots and mode, from the mode sheet (only the leader can change them).</summary>
+        public static Action<BAM.Sim.Difficulty> PartyBots;
+        public static Action<int> PartyMode;
+        /// <summary>A small picture the online side draws with the old menu code into the given rect: "tag0" (the player's name tag
+        /// with crown and pencil), "tag1", "tag2" (the party members' name tags) and "leave" (the LEAVE PARTY pill).</summary>
+        public static Func<RectTransform, string, RectTransform> Paint;
+    }
+
+    /// <summary>What Home shows of the party: up to two other players beside the player's hero (Speltest PartyMembers).</summary>
+    public sealed class PartyView
+    {
+        /// <summary>This phone leads the party (it made the room): its PLAY starts the match.</summary>
+        public bool Leader;
+        /// <summary>0 together against bots, 1 against each other.</summary>
+        public int Mode;
+        public BAM.Sim.Difficulty Bots;
+        /// <summary>How many of Mates are filled (0 to 2).</summary>
+        public int Count;
+        public readonly PartyMate[] Mates = new PartyMate[2];
+    }
+
+    public struct PartyMate
+    {
+        public string Name;
+        public BAM.Sim.HeroId Hero;
+        /// <summary>Back on Home (not still in the last match): the ring is mint, else grey.</summary>
+        public bool Ready;
     }
 
     /// <summary>The account XP line on the result card (Speltest HudV3 drawResult): "+160 XP (first win today)", the level bar.</summary>

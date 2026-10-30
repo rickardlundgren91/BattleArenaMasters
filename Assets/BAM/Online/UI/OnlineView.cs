@@ -102,7 +102,7 @@ namespace BAM.Online.UI
 
         void OnGUI()
         {
-            if (Event.current.type != EventType.Repaint || OnlineMenu.page == null && !OnlineMenu.InviteShown) return;
+            if (Event.current.type != EventType.Repaint || OnlineMenu.page == null && !OnlineMenu.InviteShown && !OnlineMenu.ToastLive) return;
             var f = Frame(out float dpr);
             ctx.Begin(f.x, Screen.height - f.yMax, FrameCss, f.height / dpr, dpr);
             try { OnlineMenu.Draw(ctx, FrameCss, f.height / dpr); }
@@ -116,7 +116,7 @@ namespace BAM.Online.UI
         }
 
         // ---------- the Home chip ----------
-        internal void AddChip(RawImage image) { chips.Add(new Chip { image = image }); chipDirty = true; }
+        internal void AddChip(RawImage image, string piece = null) { chips.Add(new Chip { image = image, piece = piece }); chipDirty = true; }
 
         void LateUpdate()
         {
@@ -146,7 +146,7 @@ namespace BAM.Online.UI
             }
             var prev = RenderTexture.active;
             ctx.Begin(c.rt);
-            try { OnlineMenu.DrawChip(ctx, pw, ph); }
+            try { if (c.piece != null) OnlineMenu.DrawPiece(ctx, c.piece, pw, ph); else OnlineMenu.DrawChip(ctx, pw, ph); }
             finally { ctx.End(); RenderTexture.active = prev; }
         }
 
@@ -155,7 +155,7 @@ namespace BAM.Online.UI
             foreach (var c in chips) if (c.rt != null) c.rt.Release();
         }
 
-        sealed class Chip { public RawImage image; public RenderTexture rt; }
+        sealed class Chip { public RawImage image; public RenderTexture rt; public string piece; }
 
         /// <summary>The blocker's touches, in frame pixels. The drag threshold is off so a page scrolls from the first pixel.</summary>
         sealed class Touches : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler, IInitializePotentialDragHandler, IScrollHandler

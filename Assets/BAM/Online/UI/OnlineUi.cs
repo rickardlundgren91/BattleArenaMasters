@@ -33,6 +33,8 @@ namespace BAM.Online.UI
             BAM.Online.Mp.MpSocial.Say += OnlineMenu.Toast;
         }
         static void Dirty() { if (view != null) view.chipDirty = true; }
+        /// <summary>The Home chip and the party's pictures are drawn again.</summary>
+        internal static void Repaint() => Dirty();
 
         /// <summary>True while an online page covers the menus.</summary>
         public static bool IsOpen => OnlineMenu.page != null || OnlineMenu.InviteShown;
@@ -58,8 +60,8 @@ namespace BAM.Online.UI
             return n;
         }
         public static void OpenAccount() { Init(); OnlineMenu.Close(); OnlineMenu.Go("account"); }
-        /// <summary>Play with friends: the room page (create a room or join one with a code; BAM.Online.Mp).</summary>
-        public static void OpenPlayFriends() { Init(); OnlineMenu.Close(); OnlineMenu.Go("mp"); }
+        /// <summary>Play with friends: the invite panel; the party itself is on Home (OnlineParty.cs).</summary>
+        public static void OpenPlayFriends() => OpenInvite();
         /// <summary>ONLINE MATCH from Home: straight into the queue, on the room page (CANCEL leaves the queue).</summary>
         public static void OnlineMatch()
         {
@@ -104,6 +106,19 @@ namespace BAM.Online.UI
             b.navigation = new Navigation { mode = Navigation.Mode.None };
             b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); OpenProfile(); });
             view.AddChip(raw);
+            return rt;
+        }
+
+        /// <summary>A party picture for Home (OnlineHooks.Paint): a name tag ("tag0" the player's, "tag1", "tag2") or "leave".</summary>
+        public static RectTransform Paint(RectTransform parent, string piece)
+        {
+            Init();
+            var rt = UiKit.NewRect("Online " + piece, parent);
+            UiKit.Stretch(rt);
+            var raw = rt.gameObject.AddComponent<RawImage>();
+            raw.color = Color.white;
+            raw.raycastTarget = false;
+            view.AddChip(raw, piece);
             return rt;
         }
     }
