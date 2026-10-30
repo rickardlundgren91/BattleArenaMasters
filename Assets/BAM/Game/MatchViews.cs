@@ -46,6 +46,8 @@ namespace BAM.Game
             public bool Dead;
             public float Hp01 = -1f, Shield01 = -1f, Vis = -1f, Linger;
             public int Level;
+            public float MaxHp = -1f, Energy = -2f; // shown on the bar: the notches' max health, the special charge row
+            public bool Ready;
             public StatusFlags Flags;
             public float Channel = -1f;    // the recall channel shown, -1 none
             public bool Sprint;
@@ -240,7 +242,7 @@ namespace BAM.Game
             }
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
-            r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff;
+            r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.MaxHp = -1f; r.Energy = -2f; r.Ready = false; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff;
             r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
             r.Bar = null;
             foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
@@ -994,6 +996,15 @@ namespace BAM.Game
             float sh01 = u.MaxHp > 0f ? Mathf.Clamp01(u.ShieldAmount / u.MaxHp) : 0f;
             if (Mathf.Abs(hp01 - r.Hp01) > 0.0005f || Mathf.Abs(sh01 - r.Shield01) > 0.0005f) { r.Hp01 = hp01; r.Shield01 = sh01; v.SetHealth(hp01, sh01); }
             if (u.Kind == UnitKind.Hero && u.Level != r.Level) { r.Level = u.Level; v.SetLevel(u.Level); }
+            if (u.Kind == UnitKind.Hero)
+            {
+                // MLBB bars: a notch every 100 HP and the special's charge as the row under the bar; a clone shows its owner's
+                // charge, so an enemy's decoy reads exactly like Fenn
+                if (Mathf.Abs(u.MaxHp - r.MaxHp) > 0.5f) { r.MaxHp = u.MaxHp; v.SetMaxHp(u.MaxHp); }
+                Unit who = u.IsClone && u.Owner != null ? u.Owner : u;
+                float en = who.Charge01; bool ready = who.SpecialReady;
+                if (Mathf.Abs(en - r.Energy) > 0.002f || ready != r.Ready) { r.Energy = en; r.Ready = ready; v.SetEnergy(en, ready); }
+            }
 
             var flags = u.Flags;
             if (u.Team != Mine) flags &= ~StatusFlags.Illusion; // the enemy's clone looks exactly like Fenn

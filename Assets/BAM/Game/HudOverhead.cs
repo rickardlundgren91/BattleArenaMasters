@@ -11,18 +11,23 @@ namespace BAM.Game
     /// (white with a dark edge), a thin crossed-out eye over a hero of the player's team while the enemy cannot see it (fading in
     /// and out over about 0.15 s), a small pulsing diamond by another hero's bar while its special is ready
     /// (HudTelegraph.cs drawCharged), the interrupt window as a bar under the health bar (drawChannel),
-    /// and the player's special charge as a small orange bar under its own bar. Placed each frame over the art's 3D bars.
+    /// and (MLBB, 2026-10-30) a round level badge over the left end of every hero's bar. The special's charge is the thin row
+    /// in the 3D bar itself (HealthBar). Placed each frame over the art's 3D bars.
     /// </summary>
     sealed partial class Hud
     {
         static readonly Color NameAlly = Hex(0x9fd4ff), NameFoe = Hex(0xff9aa4);
         static readonly Color EyeStroke = Hex(0xdfe9e6), EyeEdge = Hex(0x08101a);
+        /// <summary>MLBB's round level badge by the bar (Rickard chooses on 2026-10-30; he had the old 7-segment level removed 2026-10-28).</summary>
+        const bool LevelBadge = true;
 
         sealed class Overhead
         {
             public RectTransform Root;
             public Text Name;
-            public Image Eye, Diamond, ChanBack, ChanFill, ChargeBack, ChargeFill;
+            public Image Eye, Diamond, ChanBack, ChanFill, BadgeRim, Badge;
+            public Text Level;
+            public int LevelShown = -1;
             public Outline NameEdge, DiamondEdge;   // kept from the build, so no GetComponent every frame
             public float EyeA;
         }
@@ -68,9 +73,16 @@ namespace BAM.Game
                 o.ChanBack = Plain(o.Root, "ChannelBack", new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.85f));
                 o.ChanFill = Plain(o.ChanBack.rectTransform, "Fill", Color.white);
                 o.ChanFill.rectTransform.anchorMin = o.ChanFill.rectTransform.anchorMax = o.ChanFill.rectTransform.pivot = new Vector2(0f, 0.5f);
-                o.ChargeBack = Plain(o.Root, "ChargeBack", new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.85f));
-                o.ChargeFill = Plain(o.ChargeBack.rectTransform, "Fill", GlassOrange);
-                o.ChargeFill.rectTransform.anchorMin = o.ChargeFill.rectTransform.anchorMax = o.ChargeFill.rectTransform.pivot = new Vector2(0f, 0.5f);
+                // the level badge: a black disc in a pale rim, the number in Lilita
+                o.BadgeRim = Plain(o.Root, "LevelRim", new Color(0.9f, 0.91f, 0.93f, 1f));
+                o.BadgeRim.sprite = UiKit.Circle;
+                o.Badge = Plain(o.BadgeRim.rectTransform, "Level", new Color(0.06f, 0.06f, 0.08f, 1f));
+                o.Badge.sprite = UiKit.Circle;
+                o.Badge.enabled = true;
+                o.Badge.rectTransform.anchorMin = Vector2.zero; o.Badge.rectTransform.anchorMax = Vector2.one;
+                o.Level = UiKit.Label(o.Badge.rectTransform, "", 20, TextAnchor.MiddleCenter, Color.white);
+                UiKit.Stretch(o.Level.rectTransform);
+                o.Level.raycastTarget = false;
                 o.Root.gameObject.SetActive(false);
                 overheads[i] = o;
             }
@@ -150,22 +162,18 @@ namespace BAM.Game
                     o.DiamondEdge.effectColor = ally ? new Color(0.85f, 1f, 0.93f, 0.9f) : new Color(1f, 0.85f, 0.85f, 0.9f);
                 }
 
-                // the special's charge under your own hero's bar (Brawl Stars idea 3, Rickard 2026-10-26: a small marker under the
-                // hero that says whether the special is ready): orange filling up, bright and pulsing once it is ready
-                bool bar0 = u == m.Player;
-                if (o.ChargeBack.enabled != bar0) { o.ChargeBack.enabled = bar0; o.ChargeFill.enabled = bar0; }
-                float under = -ts * 0.12f - 6f;
-                if (bar0)
+                // MLBB's level badge over the bar's left end (the special's charge is the row in the 3D bar, HealthBar)
+                if (o.BadgeRim.enabled != LevelBadge) o.BadgeRim.enabled = LevelBadge;
+                if (LevelBadge)
                 {
-                    float k = u.Charge01, cw = bw * ts * 0.8f;
-                    bool ready = u.SpecialReady;
-                    o.ChargeBack.rectTransform.sizeDelta = new Vector2(cw + 2f, 7f);
-                    o.ChargeBack.rectTransform.anchoredPosition = new Vector2(0f, under);
-                    o.ChargeFill.rectTransform.anchoredPosition = new Vector2(1f, 0f);
-                    o.ChargeFill.rectTransform.sizeDelta = new Vector2(cw * k, 5f);
-                    o.ChargeFill.color = ready ? Color.Lerp(GlassOrange, GlassOrangeHi, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f)) : new Color(GlassOrange.r, GlassOrange.g, GlassOrange.b, 0.7f);
-                    under -= 9f;
+                    float d = ts * 0.27f, rim = Mathf.Max(1.5f, ts * 0.025f);
+                    o.BadgeRim.rectTransform.sizeDelta = new Vector2(d, d);
+                    o.BadgeRim.rectTransform.anchoredPosition = new Vector2(-bw * ts * 0.5f - d * 0.3f, -ts * 0.03f);
+                    o.Badge.rectTransform.offsetMin = new Vector2(rim, rim); o.Badge.rectTransform.offsetMax = new Vector2(-rim, -rim);
+                    if (o.LevelShown != who.Level) { o.LevelShown = who.Level; o.Level.text = who.Level.ToString(); }
+                    o.Level.fontSize = Mathf.Max(8, Mathf.RoundToInt(d * 0.62f));
                 }
+                float under = -ts * 0.17f - 4f; // under the bar and its charge row
 
                 // the interrupt window (drawChannel): a small bar under the health bar empties as it closes, orange and
                 // blinking on an enemy (stun it now), pale on your own team

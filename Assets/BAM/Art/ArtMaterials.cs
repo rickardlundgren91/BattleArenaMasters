@@ -30,6 +30,9 @@ namespace BAM.Art
         /// <summary>Additive unlit palette: glows, flashes, slashes.</summary>
         public static Material UnlitAdd;
         public static Material ParticleAdd, ParticleAlpha;
+        /// <summary>Unlit palette drawn last and with no depth test: health bars, which a body or a raised weapon must never hide
+        /// or cut through (Rickard 2026-10-30, MLBB bars float over everything).</summary>
+        public static Material Overlay;
 
         static bool ready;
 
@@ -48,6 +51,11 @@ namespace BAM.Art
             // Overlays draw after the world so rings and bars are never hidden by a decal or zone.
             UnlitFade.renderQueue = 3000;
             UnlitAdd.renderQueue = 3050;
+            Overlay = Instance(Unlit);
+            Overlay.name = "BAM_Overlay (BAM)";
+            Overlay.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
+            Overlay.SetFloat("_ZWrite", 0f);
+            Overlay.renderQueue = 4000;
         }
 
         static Material Make(string asset, string shader, bool transparent, bool additive, Texture tex, bool clip = false)

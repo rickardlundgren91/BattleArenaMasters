@@ -19,6 +19,8 @@ namespace BAM.Art
         /// <summary>The prop leaves the hand when the attack releases (Bram's hammer, Blast's bomb) and comes back a moment later.</summary>
         public bool ThrowsProp;
         public float Height, Radius, BarWidth;
+        /// <summary>Health bar height in tiles: heroes and towers thicker than minions (MLBB).</summary>
+        public float BarThick = 0.1f;
         public bool Ghost;
         /// <summary>Rickard's imported model and clips; null = the model built in code.</summary>
         public HeroArt Art;
@@ -92,7 +94,8 @@ namespace BAM.Art
                 default: d = Blast(team); break;
             }
             d.Mesh = b.ToSkinnedMesh("Hero " + hero + " t" + team, d.Pivots);
-            d.BarWidth = 0.95f;
+            d.BarWidth = 1.1f; // MLBB-wide (was 0.95 before the 2026-10-30 MLBB bars)
+            d.BarThick = 0.13f;
             d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + hero);
             if (d.Art == null && hero >= HeroId.Bonk) Debug.LogError("[BAM.Art] " + hero + " has no HeroArt (run BAM > Art > Build Hero Art): showing a stand-in figure");
             if (d.Art != null)
@@ -132,6 +135,7 @@ namespace BAM.Art
             d = prop != null ? BuildTowerProp(team, prop) : BuildTower(team);
             d.Mesh = b.ToSkinnedMesh("Tower t" + team, d.Pivots);
             d.BarWidth = 1.6f;
+            d.BarThick = 0.13f;
             cache[k] = d;
             return d;
         }
