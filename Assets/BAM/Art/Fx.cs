@@ -147,7 +147,7 @@ namespace BAM.Art
         static bool ownWisp;
         // Bonk's own pictures (Rickard 2026-10-26, coloured with alpha, drawn alpha-blended): cracks and a dust ring flat on the
         // ground, dust puffs and a 4x4 sheet of stone chips (null when missing: GroundSmash then uses the shared helpers)
-        static ParticleSystem bCrack, bShock, bDust, bRocks;
+        static ParticleSystem bCrack, bShock, bDust, bRocks, bramCrater;
         // Hilde's own powder puff for her keg's knockback (Rickard 2026-10-29, O-012; null when missing: Dust stands in)
         static ParticleSystem hDust;
         static ParticleSystem.EmitParams ep;
@@ -403,6 +403,9 @@ namespace BAM.Art
             Texture2D t;
             if ((t = RickardFx.Load("tx_fx_bonk_crack")) != null)
                 RetextureAlpha(bCrack = Flat(MakeSystem("BAM Bonk Cracks", ArtMaterials.ParticleAlpha, 0f, 1f, 1f, 24)), t, false);
+            // Rickard's crater for Bram's Anvil Drop (2026-10-30; his picture had its checkerboard painted in, keyed out here)
+            if ((t = RickardFx.Load("tx_fx_bram_crater")) != null)
+                RetextureAlpha(bramCrater = Flat(MakeSystem("BAM Bram Craters", ArtMaterials.ParticleAlpha, 0f, 1f, 1f, 12)), t, false);
             if ((t = RickardFx.Load("tx_fx_bonk_shockwave")) != null)
             {
                 bShock = Flat(MakeSystem("BAM Bonk Dust Rings", ArtMaterials.ParticleAlpha, 0f, 1f, 1f, 24));
@@ -979,7 +982,7 @@ namespace BAM.Art
                 case FxKind.AnvilDrop:
                 {
                     // Bram's Anvil Drop lands (Rickard 2026-10-30 "BRAMS DRA SKILL MÅSTE SYNAS MER"): was the passive's small blow, now
-                    // a big white flash, his spark fan twice as tall, rays, Bonk's cracks held for the 1.5 s stun, a dust ring rolling
+                    // a big white flash, his spark fan twice as tall, rays, his glowing crater held for the 1.5 s stun, a dust ring rolling
                     // out to the true radius with his forge ring on it, stone thrown and stars over the middle. size = the hit radius
                     Color32 m = heroMain[(int)HeroId.Bram], a = heroAccent[(int)HeroId.Bram];
                     Flash(mid, 0.35f * size, 1.4f * size, new Color(1f, 1f, 1f, 0.95f), 0.1f);
@@ -987,7 +990,9 @@ namespace BAM.Art
                     PicUpright("tx_fx_bram_anvil", p + Vector3.up * (0.2f + 0.9f * size), (Color)a, 3.2f * size, 0.45f);
                     Rays(mid, (Color)a, 2.2f * size, 0.3f);
                     Ring(p, 0.3f * size, 1.15f * size, new Color(1f, 1f, 1f, 0.7f), 0.18f, 0.6f); // a fast white punch past the edge
-                    if (bCrack != null) Emit1(bCrack, new Vector3(p.x, 0.03f, p.z), Color.white, 2.6f * 0.95f * size, 1.6f, Random.value * 360f);
+                    // his glowing crater (rim at 0.4 of the picture, so it lands on the radius), held through the 1.5 s stun
+                    if (bramCrater != null) Emit1(bramCrater, new Vector3(p.x, 0.03f, p.z), Color.white, 2.5f * size, 1.8f, Random.value * 360f);
+                    else if (bCrack != null) Emit1(bCrack, new Vector3(p.x, 0.03f, p.z), Color.white, 2.6f * 0.95f * size, 1.6f, Random.value * 360f);
                     else Crack(p, 0.9f * size, 1.6f);
                     if (bShock != null) Emit1(bShock, new Vector3(p.x, 0.07f, p.z), Color.white, 3.1f * size, 0.6f, Random.value * 360f);
                     ImpactRing(p, size, (Color)m, 0.5f);
