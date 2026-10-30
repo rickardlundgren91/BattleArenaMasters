@@ -55,7 +55,7 @@ namespace BAM.Art
             Set(AimOk, 0xffffff); Set(AimBad, 0xff3030); Set(Range, 0xffffff); Set(ShadowSoft, 0x000000, 70);
             Set(WhiteSoft, 0xffffff, 70); Set(WhiteMid, 0xffffff, 150);
             Set(BarPlayerHi, 0xb4f5b7); Set(BarPlayerLo, 0x3fb846); Set(BarAllyHi, 0xa9d2ff); Set(BarAllyLo, 0x2f7fd6);
-            Set(BarEnemyHi, 0xffa7a7); Set(BarEnemyLo, 0xd23434); Set(BarEnergy, 0xdfe8f2); Set(BarEnergyReady, 0xffe58a);
+            Set(BarEnemyHi, 0xffa7a7); Set(BarEnemyLo, 0xd23434); Set(BarEnergy, 0xffa21c); Set(BarEnergyReady, 0xffe58a); // BAM orange, not MLBB white (Rickard 2026-10-30)
         }
 
         static void Set(int i, int rgb, byte a = 255) =>
