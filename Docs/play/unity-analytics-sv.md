@@ -28,6 +28,10 @@ Projektet är redan kopplat till sitt eget Unity Cloud-projekt. Skapa inget nytt
 | `tutorialStep` | `stepIndex` (INTEGER), `stepName` (STRING) |
 
 4. Klicka **Save** / **Publish** på varje händelse.
+5. Slå på reglaget **Enabled** (längst till höger i listan) för alla tre. En avslagen händelse tas inte emot alls och
+   syns inte ens som ogiltig. (Så var det fram till 30 okt 2026: ingen match kom in, bara Unitys egna händelser.)
+6. Kontroll efter en match med "Yes, share": siffran under **Valid Events** räknas upp inom ett par timmar. Hamnar
+   den under **Invalid Events** stämmer någon parametertyp inte med tabellen ovan.
 
 ## 3. Säg till när det är klart
 Skriv i tråden när händelserna är skapade. Data syns i **Analytics > Dashboards** några timmar efter att någon spelat
