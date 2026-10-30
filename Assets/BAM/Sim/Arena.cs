@@ -273,6 +273,15 @@ namespace BAM.Sim
         /// what the aim and the red warning draw for a bolt, hook, needle or boulder (AIM-01).</summary>
         public float ShotReach(float x, float y, float ang, float reach) => Reach(x, y, SimMath.Cos(ang), SimMath.Sin(ang), reach, true);
 
+        /// <summary>How far from (x, y) along ang the arena's edge is, at most reach (0 when (x, y) is outside).</summary>
+        public float EdgeReach(float x, float y, float ang, float reach)
+        {
+            float ca = SimMath.Cos(ang), sa = SimMath.Sin(ang), d = reach;
+            if (ca > 1e-6f) d = Math.Min(d, (W - x) / ca); else if (ca < -1e-6f) d = Math.Min(d, -x / ca);
+            if (sa > 1e-6f) d = Math.Min(d, (H - y) / sa); else if (sa < -1e-6f) d = Math.Min(d, -y / sa);
+            return Math.Max(0, d);
+        }
+
         // the last free distance along (ca, sa): 0.3 tile steps (the last one exactly at reach), then five halvings between free and blocked
         float Reach(float x, float y, float ca, float sa, float reach, bool shot)
         {

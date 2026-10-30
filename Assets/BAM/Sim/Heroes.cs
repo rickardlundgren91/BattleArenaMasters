@@ -43,12 +43,15 @@ namespace BAM.Sim
         public const float CloneDamage = 0;
     }
 
-    /// <summary>Tyra, Pinpoint Bolt (the drag): a short draw, then a heavy bolt that stops in the first enemy it meets. The tap is
-    /// Arrow Volley and the passive Featherstep (Hero5.cs).</summary>
+    /// <summary>Tyra, Pinpoint Bolt (the drag): a short draw, then a heavy bolt that flies on until it hits something: the first
+    /// enemy it meets, an enemy tower or a wall (or it leaves the arena). The tap is Arrow Volley and the passive Featherstep (Hero5.cs).</summary>
     public static class TyraS
     {
-        /// <summary>The bolt's length: 2 x (her attack range 4 + 0.5), as the old boltLen; also the tap's reach.</summary>
+        /// <summary>The bolt's old length: 2 x (her attack range 4 + 0.5), as the old boltLen. Since 2026-10-30 (Rickard: "tyras pil ska
+        /// fortsätta tills den träffar något") only how far the bots look for a bolt target and fear hers; the bolt flies Flight.</summary>
         public const float Length = 2 * (4f + 0.5f);
+        /// <summary>How far the bolt flies at most: longer than the arena's diagonal, so in practice to the first hit, wall or the edge.</summary>
+        public const float Flight = 40;
         public const float Windup = 0.35f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.35f;
         /// <summary>Arrow Volley (the tap since 2026-10-28, XYZ 2026-10-25): after a short draw, five arrows fanned +-HalfAngle round a
         /// random enemy hero or minion within her attack range; they fly as far as her range, through enemies, and the volley hurts
@@ -485,17 +488,36 @@ namespace BAM.Sim
         bool CastTyra(Unit h, float dmg)
         {
             if (!Aimed(h, out float ang, out _)) return CastVolley(h, dmg); // the tap: Arrow Volley (Hero5.cs)
-            castX = h.X + SimMath.Cos(ang) * TyraS.Length; castY = h.Y + SimMath.Sin(ang) * TyraS.Length;
+            float len = Map.EdgeReach(h.X, h.Y, ang, TyraS.Flight); // it flies on to the arena's edge if nothing stops it first
+            castX = h.X + SimMath.Cos(ang) * len; castY = h.Y + SimMath.Sin(ang) * len;
             h.Facing = ang;
             var p = NewProj(ProjMode.Bolt, h, h.X, h.Y);
-            p.Kind = ProjKind.TyraBolt; p.T = -TyraS.Windup; p.Ang = ang; p.Travel = TyraS.Length; p.Dmg = dmg * TyraS.DamageCoeff; p.Speed = TyraS.Speed; p.Radius = TyraS.Hitbox;
+            p.Kind = ProjKind.TyraBolt; p.T = -TyraS.Windup; p.Ang = ang; p.Travel = len; p.Dmg = dmg * TyraS.DamageCoeff; p.Speed = TyraS.Speed; p.Radius = TyraS.Hitbox;
             // as long as the bolt really flies (to the first wall) and only while it does (TYRA-02)
-            WarnOf(WarnLine(h, ang, Map.ShotReach(h.X, h.Y, ang, TyraS.Length), TyraS.Hitbox, TyraS.Windup + TyraS.Length / TyraS.Speed), p);
+            float reach = BoltReach(h, ang);
+            WarnOf(WarnLine(h, ang, reach, TyraS.Hitbox, TyraS.Windup + reach / TyraS.Speed), p);
             AddStatus(h, St.Casting, TyraS.Windup); AddStatus(h, St.Disarm, TyraS.Windup); Channel(h, TyraS.Windup);
             return true;
         }
 
-        /// <summary>Tyra's bolt flies straight and stops in the first enemy (or wall) it meets.</summary>
+        /// <summary>How far Tyra's bolt aimed at ang flies with no hero or minion in the way: to the first wall, enemy tower or the
+        /// arena's edge (what the aim and the red warning draw).</summary>
+        internal float BoltReach(Unit h, float ang)
+        {
+            float ca = SimMath.Cos(ang), sa = SimMath.Sin(ang), len = Map.ShotReach(h.X, h.Y, ang, Map.EdgeReach(h.X, h.Y, ang, TyraS.Flight));
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (u.Kind != UnitKind.Tower || !u.Alive || u.Team == h.Team) continue;
+                float dx = u.X - h.X, dy = u.Y - h.Y, along = dx * ca + dy * sa, side = Math.Abs(dy * ca - dx * sa), rr = u.R + TyraS.Hitbox;
+                if (along <= 0 || side >= rr) continue;
+                len = Math.Min(len, Math.Max(0, along - (float)Math.Sqrt(rr * rr - side * side)));
+            }
+            return len;
+        }
+
+        /// <summary>Tyra's bolt flies straight and stops in the first enemy, enemy tower (no damage: specials never hurt towers) or wall
+        /// it meets.</summary>
         void BoltUpdate(Proj p, float dt)
         {
             // the wall first, then the enemies, as the volley's arrows (precision TYRA-11); the last step stops on the reach
@@ -505,9 +527,10 @@ namespace BAM.Sim
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                if (!Hurtable(p.Src, u) || u.Team == p.Team || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue;
+                bool tower = u.Kind == UnitKind.Tower && u.Alive && u.Team != p.Team;
+                if (!tower && !Hurtable(p.Src, u) || u.Team == p.Team || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue;
                 p.Done = true;
-                SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
+                if (tower) Blocked(p, p.X, p.Y); else SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
                 return;
             }
             if (p.D >= p.Travel - 1e-5f) p.Done = true;

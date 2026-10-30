@@ -60,13 +60,17 @@ namespace BAM.Sim
             {
                 var d = Defs.Hero(hero); float er = Defs.Hero(HeroId.Bram).Radius;
                 float along = Math.Min(2.5f, d.DragReach * 0.5f);
-                float reach = PEdge(a => PDragHits(hero, HeroId.Bram, Up, 1, 7.5f, 28 - a, out _, out _), 0.8f, d.DragReach + 2f);
+                // Tyra's bolt has no reach since 2026-10-30, it flies to the arena's edge (y 0 here, 28 tiles up): a Bram 20 tiles up
+                // is hit, and the drawn line ends on the edge
+                bool tyra = hero == HeroId.Tyra;
+                float reach = tyra ? (PDragHits(hero, HeroId.Bram, Up, 1, 7.5f, 8, out _, out _) ? 28 + er : float.NaN)
+                    : PEdge(a => PDragHits(hero, HeroId.Bram, Up, 1, 7.5f, 28 - a, out _, out _), 0.8f, d.DragReach + 2f);
                 float width = PEdge(w => PDragHits(hero, HeroId.Bram, Up, 1, 7.5f + w, 28 - along, out _, out _), 0f, 2.5f);
                 // the drawn arrow: Map.AimFor (Length + Tip, Half) once the AIM fix is in, else HDef.DragReach/DragWidth as Hud.Aim drew it
                 float arrowLen = d.DragReach, arrowHalf = d.DragWidth; string src = "DragReach/DragWidth";
                 if (PAimFor(hero, Up, 1, out float aLen, out float aTip, out float aHalf)) { arrowLen = aLen + aTip; arrowHalf = aHalf; src = $"Map.AimFor (length {F(aLen)} + tip {F(aTip)})"; }
-                float wantReach = arrowLen + er, wantWidth = arrowHalf + er;
-                bool ok = Math.Abs(reach - wantReach) <= Tol && Math.Abs(width - wantWidth) <= Tol;
+                float wantReach = tyra ? 28 + er : arrowLen + er, wantWidth = arrowHalf + er;
+                bool ok = Math.Abs(reach - wantReach) <= Tol && Math.Abs(width - wantWidth) <= Tol && (!tyra || Math.Abs(aLen - 28) <= Tol);
                 Verdict($"SpecialPreview_Line_{hero}", "geometry", ok, "P1",
                     $"aim arrow from {src}: {F(arrowLen)} long, {F(arrowHalf)} half wide; sim hits a Bram (r {F(er)}) out to {F(reach)} along (arrow+r {F(wantReach)}, off {F(reach - wantReach)}) and {F(width)} across (arrow+r {F(wantWidth)}, off {F(width - wantWidth)})");
             }

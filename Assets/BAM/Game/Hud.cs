@@ -382,7 +382,7 @@ namespace BAM.Game
             // the MLBB-style indicator (AimIndicator.cs); cancelling dims it grey and drops the hit marks
             if (a.Shape == AimShape.Line)
             {
-                aimLook.Range(hero, d.DragReach, ready, cancel);
+                if (p.Hero != HeroId.Tyra) aimLook.Range(hero, d.DragReach, ready, cancel); // Tyra's bolt has no reach: it flies until it hits something
                 aimLook.Line(hero, dir, a.Length, a.Half, a.Tip, a.Back, ready, cancel, dt);
                 if (!cancel) rings.SetAim(true, a);
             }

@@ -37,7 +37,7 @@ namespace BAM.Sim
             k = SimMath.Clamp(k, 0, 1);
             switch (h.Hero)
             {
-                case HeroId.Tyra: Line(ref a, Map.ShotReach(h.X, h.Y, ang, TyraS.Length), TyraS.Hitbox, true); break;
+                case HeroId.Tyra: Line(ref a, BoltReach(h, ang), TyraS.Hitbox, true); break; // to the first wall, enemy tower or the edge
                 case HeroId.Knut: Line(ref a, Map.ShotReach(h.X, h.Y, ang, KnutS.HookDistance), KnutS.HookRadius, true); break;
                 case HeroId.Tikta: Line(ref a, Map.ShotReach(h.X, h.Y, ang, TiktaS.LineReach), TiktaS.LineHitbox, true); break;
                 case HeroId.Bonk: Line(ref a, Map.ShotReach(h.X, h.Y, ang, BonkS.BoulderReach), BonkS.BoulderHitbox, true); break;

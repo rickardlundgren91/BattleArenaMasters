@@ -108,7 +108,8 @@ namespace BAM.Sim
                 float ang = (float)(rnd.NextDouble() * Math.PI * 2);
                 PPlace(s, sx, sy);
                 var info = m.AimFor(s, ang, 1);
-                if (info.Length >= s.HDef.DragReach - 1e-3f) continue; // only casts a wall cuts
+                float full = hero == HeroId.Tyra ? map.EdgeReach(sx, sy, ang, TyraS.Flight) : s.HDef.DragReach; // Tyra's bolt: to the arena's edge
+                if (info.Length >= full - 1e-3f) continue; // only casts a wall cuts
                 foreach (var u in m.Heroes) if (u != s) POff(u);
                 s.Charge = s.HDef.MaxCharge; m.AddStatus(s, St.Disarm, 1e6f);
                 float strip = -1, blocked = -1, speed = 0;
