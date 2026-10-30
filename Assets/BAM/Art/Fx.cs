@@ -165,6 +165,7 @@ namespace BAM.Art
             public bool Flat, Linear; // Linear: grows at an even pace (a fuse), not easing out
             public Material TeleMat, SpikeMat;
             public float Aspect = 1f; // width over height of a standing picture (his 2:1 hit spikes)
+            public bool Dim; // fades by brightness: the palette material is additive (One One) and never sees the colour's alpha
         }
 
         static readonly List<Blob> live = new List<Blob>(32);
@@ -670,7 +671,16 @@ namespace BAM.Art
             live[live.Count - 1].Linear = linear;
         }
 
-        public static void Flash(Vector3 pos, float r0, float r1, Color c, float life) => Spawn(Shapes.Ball(), pos, r0, r1, c, life, false, 0);
+        // the white core of a hit (Rickard 2026-10-30 "när knut slår blir det en textur utan effekt i en millisekund"): on the
+        // additive palette material its alpha did nothing, so a flat white ball 0.8 tiles across stood for three frames and was
+        // gone without fading; it now fades out by brightness
+        public static void Flash(Vector3 pos, float r0, float r1, Color c, float life)
+        {
+            Spawn(Shapes.Ball(), pos, r0, r1, c, life, false, 0);
+            Blob bu = live[live.Count - 1];
+            bu.Dim = true;
+            Apply(bu, 0f);
+        }
 
         static Texture2D spikesTex;
         static bool spikesLoaded;
@@ -784,6 +794,7 @@ namespace BAM.Art
                 : matKind == 4 && bu.SpikeMat != null ? bu.SpikeMat : bu.PalMat;
             bu.Linear = false;
             bu.Aspect = 1f;
+            bu.Dim = false;
             bu.R.sharedMaterial = bu.Mat;
             bu.T.rotation = Quaternion.identity;
             bu.F.sharedMesh = mesh;
@@ -801,6 +812,7 @@ namespace BAM.Art
             bu.T.localScale = bu.Flat ? new Vector3(s, 1f, s) : new Vector3(s * bu.Aspect, s, s);
             Color c = bu.Col;
             c.a = bu.A0 * (1f - t);
+            if (bu.Dim) { float k = c.a; c = new Color(bu.Col.r * k, bu.Col.g * k, bu.Col.b * k, 1f); }
             if (bu.Mat == bu.TeleMat) { float k = bu.Linear ? 0.55f + 0.45f * t : 0.8f + 0.2f * Mathf.Sin(bu.Age * 40f); c = new Color(bu.Col.r * k, bu.Col.g * k, bu.Col.b * k, 1f); } // additive: brightness is strength
             bu.Mat.SetColor(ArtMaterials.BaseColor, c);
         }
