@@ -175,12 +175,23 @@ namespace BAM.Sim
             m.ChainBlast(c);
             Check(h3 - e3.Hp > 0, "the chain still hits in the open");
 
-            // a bot leading a hero who runs into the wall: the bomb lands on him, not inside the wall
-            Place(e1, 4.35f, 7.5f); Place(e2, 12, 30); e1.MoVx = -12; e1.MoVy = 0; e1.MoInit = true;
-            b.Charge = b.HDef.MaxCharge; b.BlastChainReadyAt = 99;
-            Check(b.Bot != null && m.TryCastSpecial(b, float.NaN, 0), "a bot Blast taps");
-            Proj bm = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Bomb && !p.Done && p.Src == b) bm = p;
-            Check(bm != null && !m.Map.WallAt(bm.X, bm.Y), $"BLAST-04: a bot's led bomb never lands inside a wall ({bm?.X:0.00}, {bm?.Y:0.00})");
+            // the bomb is the drag since 2026-10-30: aimed into the wall at any length, it lands off the wall (BLAST-04)
+            Place(e1, 4.35f, 7.5f); Place(e2, 12, 30);
+            bool offWall = true; string at = "";
+            for (int i = 1; i <= 20; i++)
+            {
+                b.Charge = b.HDef.MaxCharge; b.BlastChainReadyAt = 99; m.Projs.Clear();
+                Check(m.TryCastSpecial(b, SimMath.PI, i / 20f), "a dragged Blast throws the bomb");
+                Proj bm = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Bomb && !p.Done && p.Src == b) bm = p;
+                if (bm == null || m.Map.WallAt(bm.X, bm.Y)) { offWall = false; at = $"{bm?.X:0.00}, {bm?.Y:0.00}"; }
+            }
+            Check(offWall, $"BLAST-04: an aimed bomb never lands inside a wall ({at})");
+
+            // the tap is the fire strip, aimed at an enemy in reach with a clear line
+            Place(e1, 8.5f, 7.5f); b.Charge = b.HDef.MaxCharge; m.Projs.Clear();
+            Check(m.TryCastSpecial(b, float.NaN, 0), "a tapping Blast lays the strip");
+            Proj lane = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.FireLane && p.Src == b) lane = p;
+            Check(lane != null && Math.Abs(lane.Ang) < 0.05f, $"the tap strip points at the enemy in reach ({lane?.Ang:0.00})");
 
             // BLAST-05: the explosion's look is drawn only where the blast reaches; on open ground it is the blast itself
             float r = m.BlastLookDisc(7.5f, 14.5f, BlastS.Radius, 0.5f, out float ox, out float oy);

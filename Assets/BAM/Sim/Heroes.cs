@@ -93,11 +93,11 @@ namespace BAM.Sim
         public const float PoisonPerSecond = 0.1f, PoisonDuration = 2;
     }
 
-    /// <summary>Blast, Supernova. Tap: a bomb thrown (over walls) at a random enemy in reach that explodes 0.5 s later. Drag:
-    /// a strip of fire for 2 s that hurts enemies in it every 0.5 s. Passive: everything she hits burns for 15 % more over 2 s.</summary>
+    /// <summary>Blast, Supernova. Tap: a strip of fire for 2 s at a random enemy in reach that hurts enemies in it every 0.5 s.
+    /// Drag: a bomb thrown (over walls) onto the aimed spot that explodes 0.5 s later (swapped by Rickard 2026-10-30). Passive: everything she hits burns for 15 % more over 2 s.</summary>
     public static class BlastS
     {
-        public const float Reach = 4.5f, Delay = 0.5f, Radius = 1.5f, DamageCoeff = 1.45f;
+        public const float Reach = 4.5f, Delay = 0.5f, Radius = 1.5f, DamageCoeff = 1.2f; // 1.45 -> 1.2 when the bomb became the aimed drag (2026-10-30: Hard 58.6 -> 53.1 %)
         public const float LaneLength = 4.5f, LaneHalfWidth = 0.45f, LaneDuration = 2, LaneTick = 0.5f, LaneCoeff = 0.35f;
         public const float BurnPercent = 0.15f, BurnDuration = 2, BurnTick = 0.25f;
     }
@@ -809,27 +809,31 @@ namespace BAM.Sim
         // ---------- Blast ----------
         bool CastBlast(Unit h, float dmg)
         {
-            if (Aimed(h, out float aa, out _))
-            {   // Inferno Lane: a strip of fire along the aimed line, cut at the first wall
-                float len = Map.LaneReach(h.X, h.Y, aa, BlastS.LaneLength);
+            // Rickard 2026-10-30: a tap lays the fire strip, a drag throws the bomb where it is aimed (the old game had them the other way)
+            float x, y; Unit t = null;
+            if (!Aimed(h, out float aa, out float ak))
+            {   // Inferno Lane: a strip of fire at a random enemy hero or minion in reach with a clear line, cut at the first wall
+                var l = EnemiesInRange(h, BlastS.LaneLength, Pick.HeroOrMinion, true, spBuf); // no hero first (Simon's tap rule)
+                if (l.Count == 0) return false;
+                t = PickRandom(l);
+                float la = SimMath.Atan2(t.Y - h.Y, t.X - h.X), len = Map.LaneReach(h.X, h.Y, la, BlastS.LaneLength);
                 var p = NewProj(ProjMode.FireLane, h, h.X, h.Y);
-                p.Kind = ProjKind.BlastFire; p.Ang = aa; p.D = len; p.Dmg = dmg * BlastS.LaneCoeff; p.Radius = BlastS.LaneHalfWidth; p.Dur = BlastS.LaneDuration;
-                h.Facing = aa; h.AimT = Time + 0.3f; AddStatus(h, St.Casting, 0.25f); AddStatus(h, St.Disarm, 0.25f);
-                castX = h.X + SimMath.Cos(aa) * len; castY = h.Y + SimMath.Sin(aa) * len;
+                p.Kind = ProjKind.BlastFire; p.Ang = la; p.D = len; p.Dmg = dmg * BlastS.LaneCoeff; p.Radius = BlastS.LaneHalfWidth; p.Dur = BlastS.LaneDuration;
+                h.Facing = la; h.AimT = Time + 0.3f; AddStatus(h, St.Casting, 0.25f); AddStatus(h, St.Disarm, 0.25f);
+                castX = h.X + SimMath.Cos(la) * len; castY = h.Y + SimMath.Sin(la) * len; castTgt = t;
                 return true;
             }
-            // Supernova: thrown in an arc (no clear line needed) at a random enemy hero or minion in reach, no hero first (Simon's tap rule)
-            var l = EnemiesInRange(h, BlastS.Reach, Pick.HeroOrMinion, false, spBuf);
-            if (l.Count == 0) return false;
-            var t = PickRandom(l);
-            LeadAim(h, t, Flight.Const, BlastS.Delay * 0.5f, 0, out float ax, out float ay);
-            if (Map.WallAt(ax, ay)) { ax = t.X; ay = t.Y; } // a bot's lead into a wall: a bomb there would reach nobody (BLAST-04)
-            h.Facing = SimMath.Atan2(ay - h.Y, ax - h.X); AddStatus(h, St.Casting, 0.25f); AddStatus(h, St.Disarm, 0.25f);
-            var b = NewProj(ProjMode.Bomb, h, ax, ay);
+            // Supernova: thrown in an arc (no clear line needed) onto the aimed spot, off a wall tile
+            BombPoint(h, aa, ak, out x, out y);
+            h.Facing = SimMath.Atan2(y - h.Y, x - h.X); AddStatus(h, St.Casting, 0.25f); AddStatus(h, St.Disarm, 0.25f);
+            var b = NewProj(ProjMode.Bomb, h, x, y);
             b.Kind = ProjKind.BlastBomb; b.T = -BlastS.Delay; b.Radius = BlastS.Radius; b.Dur = BlastS.Delay; b.Dmg = dmg * BlastS.DamageCoeff;
-            castX = ax; castY = ay; castTgt = t;
+            castX = x; castY = y; castTgt = t;
             return true;
         }
+
+        /// <summary>Where a dragged Supernova lands: off a wall tile like Bram's anvil, so the blast is not buried in the wall.</summary>
+        public void BombPoint(Unit h, float ang, float k, out float x, out float y) => LandPoint(h, ang, k, BlastS.Reach, out x, out y);
 
         /// <summary>The bomb goes off: every enemy (not towers) within its radius. After Blast's death it still goes off (as passive
         /// damage).</summary>

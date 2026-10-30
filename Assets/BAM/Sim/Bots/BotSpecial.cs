@@ -51,7 +51,7 @@ namespace BAM.Sim
                 case HeroId.Knut: // the slam with an enemy hero well inside it (it has a short wind-up), or a minion pack; the hook is DragPlan's
                     return Foes(KnutS.SlamRadius - 0.4f, true, true, l) > 0 || Foes(KnutS.SlamRadius - 0.3f, false, true, l) >= 3;
                 case HeroId.Tikta: return Foes(TiktaS.Reach, true, los, l) > 0;
-                case HeroId.Blast: return Foes(BlastS.Reach, true, los, l) > 0 || Foes(BlastS.Reach, false, false, l) >= 4;
+                case HeroId.Blast: return Foes(BlastS.LaneLength, true, true, l) > 0 || Foes(BlastS.LaneLength, false, true, l) >= 4; // the tap strip needs a clear line
                 case HeroId.Hilde: // the tower gets the big keg (DragPlan); else the Powder Burst on an enemy hero close by, or any in reach in danger
                     {
                         var tw = TowerOf(Teams.Other(h.Team));
@@ -246,16 +246,22 @@ namespace BAM.Sim
                         return !float.IsNaN(ang);
                     }
                 case HeroId.Blast:
-                    {   // Inferno Lane through an enemy hero when the strip also covers two more enemies
-                        float len = BlastS.LaneLength, hw = BlastS.LaneHalfWidth; int best = 2; var hs = FoeHeroes(h, len - 0.3f);
-                        for (int i = 0; i < hs.Count; i++)
+                    {   // Supernova (the drag since 2026-10-30) on the enemy hero in reach with the most other enemies around it, led by its fuse
+                        float reach = BlastS.Reach, r = BlastS.Radius; var os = FoeHeroes(h, reach + r); var us = M.Units; Unit t = null; int best = -1;
+                        for (int i = 0; i < os.Count; i++)
                         {
-                            var e = hs[i];
-                            if (M.Map.ShotBlocked(h.X, h.Y, e.X, e.Y)) continue;
-                            float a = AngTo(e.X, e.Y); int n = LaneCount(a, M.Map.LaneReach(h.X, h.Y, a, len), hw);
-                            if (n > best) { best = n; ang = a; }
+                            var e = os[i]; if (Dist(h, e) > reach - 0.3f + e.R) continue;
+                            int n = 0;
+                            for (int j = 0; j < us.Count; j++)
+                            {
+                                var u = us[j];
+                                if (u != e && u.Alive && u.Team != h.Team && u.Kind != UnitKind.Tower && Sees(u) && Dist(u, e) <= r) n++;
+                            }
+                            if (n > best || n == best && e.Hp < t.Hp) { best = n; t = e; }
                         }
-                        return !float.IsNaN(ang);
+                        if (t == null) return false;
+                        M.LeadAim(h, t, Match.Flight.Const, BlastS.Delay, 0, out float ax, out float ay);
+                        ang = AngTo(ax, ay); k = SimMath.Clamp(Hyp(ax - h.X, ay - h.Y) / reach, 0, 1); return true;
                     }
             }
             return false;

@@ -41,7 +41,7 @@ namespace BAM.Sim
                 case HeroId.Knut: Line(ref a, Map.ShotReach(h.X, h.Y, ang, KnutS.HookDistance), KnutS.HookRadius, true); break;
                 case HeroId.Tikta: Line(ref a, Map.ShotReach(h.X, h.Y, ang, TiktaS.LineReach), TiktaS.LineHitbox, true); break;
                 case HeroId.Bonk: Line(ref a, Map.ShotReach(h.X, h.Y, ang, BonkS.BoulderReach), BonkS.BoulderHitbox, true); break;
-                case HeroId.Blast: Line(ref a, Map.LaneReach(h.X, h.Y, ang, BlastS.LaneLength), BlastS.LaneHalfWidth, false); a.Back = a.Half; break; // PtSeg: round at both ends
+                case HeroId.Blast: BombPoint(h, ang, k, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = BlastS.Radius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break; // Supernova (the drag since 2026-10-30)
                 case HeroId.Oaken: Line(ref a, Map.LaneReach(h.X, h.Y, ang, OakenS.QuakeRange), OakenS.QuakeHalfWidth, false); a.Tip = 0; a.Los = true; break; // flat ends (OakenQuake)
                 case HeroId.Bram:
                     AnvilPoint(h, ang, k, out a.CX, out a.CY); // the aimed point, off a wall tile as the anvil lands (BRAM-02/03)

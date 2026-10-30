@@ -137,7 +137,7 @@ namespace BAM.Sim
 
             // aimed specials never hit through a wall: random casts toward enemies that the caster has no clear line to
             var rnd = new Random(11); int tries = 0, through = 0; string first = null;
-            var lineHeroes = new[] { HeroId.Tyra, HeroId.Tikta, HeroId.Bonk, HeroId.Knut, HeroId.Oaken, HeroId.Blast };
+            var lineHeroes = new[] { HeroId.Tyra, HeroId.Tikta, HeroId.Bonk, HeroId.Knut, HeroId.Oaken }; // Blast's drag bomb is thrown over walls (2026-10-30)
             var map = new Arena();
             for (int c = 0; c < 20000 && tries < 300; c++)
             {
@@ -158,7 +158,7 @@ namespace BAM.Sim
                 if (hit) { through++; if (first == null) first = $"{hero} at ({F(sx)},{F(sy)}) -> ({F(ex)},{F(ey)})"; }
             }
             Verdict("LOS_AimedSpecialNeverThroughWall", "walls", through == 0 && tries > 50, "P0",
-                $"{tries} drag casts at an enemy behind a wall (Tyra, Tikta, Bonk, Knut, Oaken, Blast): {through} hit it{(first != null ? "; first: " + first : "")}");
+                $"{tries} drag casts at an enemy behind a wall (Tyra, Tikta, Bonk, Knut, Oaken): {through} hit it{(first != null ? "; first: " + first : "")}");
         }
 
         // ---------------------------------------------------------------- hits

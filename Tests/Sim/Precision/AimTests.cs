@@ -94,11 +94,11 @@ namespace BAM.Sim
             Verdict("SpecialPreview_HitSet_EqualsSim", "aim", scenes > 600 && same == scenes, "P1",
                 $"{scenes} random drag scenes (10 heroes, walls about): marked set == hit set in {same}{(sb.Length > 0 ? "; off:" + sb : "")}{(firstBad != null ? "; first: " + firstBad : "")}");
 
-            // 2. a line's drawn end against where the rules really stop it at a wall: Blast's and Oaken's strips exactly (the same
+            // 2. a line's drawn end against where the rules really stop it at a wall: Oaken's strip exactly (the same
             // LaneReach); a shot's Blocked spot (the last free point of its last tick) between one tick's flight short of the drawn end
             // and 0.1 past it (the sight line's sampling)
             int lines = 0, wrong = 0; string badAt = null; var worstBy = new Dictionary<HeroId, float>(); var wrongBy = new Dictionary<HeroId, int>();
-            var lineHeroes = new[] { HeroId.Tyra, HeroId.Knut, HeroId.Tikta, HeroId.Bonk, HeroId.Blast, HeroId.Oaken };
+            var lineHeroes = new[] { HeroId.Tyra, HeroId.Knut, HeroId.Tikta, HeroId.Bonk, HeroId.Oaken }; // Blast's drag is the bomb since 2026-10-30
             for (int c = 0; c < 6000 && lines < 300; c++)
             {
                 var hero = lineHeroes[c % lineHeroes.Length];
@@ -131,7 +131,7 @@ namespace BAM.Sim
                 if (!ok) { wrong++; wrongBy[hero] = (wrongBy.TryGetValue(hero, out int wn) ? wn : 0) + 1; if (badAt == null) badAt = $"{hero} at ({F(sx)},{F(sy)}) ang {F(ang)}: aim {F(info.Length)}, strip {F(strip)}, blocked at {F(blocked)}"; }
             }
             Verdict("SpecialPreview_StopsAtWall", "aim", lines > 100 && wrong == 0, "P1",
-                $"{lines} wall-cut drags (6 line heroes): {wrong} where the aim's end is not where the rules stop ({WrongList(wrongBy)}){(badAt != null ? " (first: " + badAt + ")" : "")}; worst |gap| per hero:{WorstList(worstBy)}");
+                $"{lines} wall-cut drags (5 line heroes): {wrong} where the aim's end is not where the rules stop ({WrongList(wrongBy)}){(badAt != null ? " (first: " + badAt + ")" : "")}; worst |gap| per hero:{WorstList(worstBy)}");
 
             // 3. Anvil Drop's warning stays until the anvil lands, even when Bram dies at once (BRAM-01)
             {

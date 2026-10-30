@@ -635,8 +635,8 @@ namespace BAM.Game
                     {
                         ArtKit.PlayVolleyDraw(Coords.Of(a), Coords.World(e.X, e.Y) - Coords.Of(a), a.Range, TyraS.VolleyWindup);
                     }
-                    // Blast's tap bomb is a ground fuse in the rules; draw the lob onto it so the throw is seen
-                    if ((HeroId)e.Kind == HeroId.Blast && !e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
+                    // Blast's bomb (his drag since 2026-10-30) is a ground fuse in the rules; draw the lob onto it so the throw is seen
+                    if ((HeroId)e.Kind == HeroId.Blast && e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
                     // so are Hilde's kegs: the big one (drag) and the small quick one (tap)
                     // Bram's Anvil Drop: his hammer goes up high and comes down on the red circle as it lands (BRAM-04)
                     if ((HeroId)e.Kind == HeroId.Bram && e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BramHammerSpecial, BramS.DropDelay, 2f);
@@ -893,7 +893,7 @@ namespace BAM.Game
                 case HeroId.Moa: return dragged ? SfxId.MoaField : SfxId.MoaShield;
                 case HeroId.Knut: return dragged ? SfxId.KnutAnchorThrow : SfxId.KnutSlamWindup; // the hook's clink only on the drag; the slam's landing sounds on its Explosion
                 case HeroId.Tikta: return SfxId.TiktaNeedles;
-                case HeroId.Blast: return dragged ? SfxId.BlastFireLane : SfxId.BlastBombThrow;
+                case HeroId.Blast: return dragged ? SfxId.BlastBombThrow : SfxId.BlastFireLane; // tap = fire strip, drag = bomb (2026-10-30)
                 case HeroId.Bonk: return dragged ? SfxId.BonkBoulderThrow : SfxId.BonkSlamWindup; // the slam's landing sounds on its Explosion
                 case HeroId.Hilde: return SfxId.HildeKegThrow; // both kegs (Speltest sp_hilde)
                 case HeroId.Oaken: return SfxId.BonkSlamWindup; // borrowed until he has his own

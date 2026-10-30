@@ -56,7 +56,7 @@ namespace BAM.Sim
         static void PrecGeometry()
         {
             const float Up = -SimMath.PI / 2, Tol = 0.05f;
-            foreach (var hero in new[] { HeroId.Tyra, HeroId.Tikta, HeroId.Knut, HeroId.Blast, HeroId.Bonk, HeroId.Oaken })
+            foreach (var hero in new[] { HeroId.Tyra, HeroId.Tikta, HeroId.Knut, HeroId.Bonk, HeroId.Oaken }) // Blast's drag is the bomb since 2026-10-30 (circle below)
             {
                 var d = Defs.Hero(hero); float er = Defs.Hero(HeroId.Bram).Radius;
                 float along = Math.Min(2.5f, d.DragReach * 0.5f);
@@ -70,7 +70,7 @@ namespace BAM.Sim
                 Verdict($"SpecialPreview_Line_{hero}", "geometry", ok, "P1",
                     $"aim arrow from {src}: {F(arrowLen)} long, {F(arrowHalf)} half wide; sim hits a Bram (r {F(er)}) out to {F(reach)} along (arrow+r {F(wantReach)}, off {F(reach - wantReach)}) and {F(width)} across (arrow+r {F(wantWidth)}, off {F(width - wantWidth)})");
             }
-            foreach (var (hero, foe) in new[] { (HeroId.Bram, HeroId.Knut), (HeroId.Hilde, HeroId.Bram) })
+            foreach (var (hero, foe) in new[] { (HeroId.Bram, HeroId.Knut), (HeroId.Hilde, HeroId.Bram), (HeroId.Blast, HeroId.Bram) })
             {
                 var d = Defs.Hero(hero); float er = Defs.Hero(foe).Radius;
                 // the landing spot at full and half drag, as the indicator puts it: min(reach, max(1.5, k reach)) out
