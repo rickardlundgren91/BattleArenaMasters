@@ -17,6 +17,9 @@ namespace BAM.Sim
         public bool Island;
         /// <summary>A bot plays the player's hero too (headless test matches).</summary>
         public bool PlayerIsBot;
+        /// <summary>Headless tests with PlayerIsBot: that bot counts as the human, so the bots play as they do against a person
+        /// (team play with the leader, slower reactions, held specials; Bots/BotTeam.cs).</summary>
+        public bool BotIsHuman;
         /// <summary>Optional fixed line-ups: 2 allies and 3 enemies. Null = drawn from the other heroes with the seed.</summary>
         public HeroId[] Allies, Enemies;
         /// <summary>Test matches: every hero at slot i of its team's spawn (left to right) instead of the player in the middle.</summary>
@@ -205,7 +208,7 @@ namespace BAM.Sim
         /// <summary>The human the bots of a team follow: its first seat still played by a person (offline: the player).</summary>
         public Unit LeaderOf(int team)
         {
-            for (int i = 0; i < Humans.Count; i++) { var h = Humans[i]; if (h != null && h.Team == team && h.Bot == null) return h; }
+            for (int i = 0; i < Humans.Count; i++) { var h = Humans[i]; if (h != null && h.Team == team && (h.Bot == null || Config.BotIsHuman)) return h; }
             return null;
         }
 

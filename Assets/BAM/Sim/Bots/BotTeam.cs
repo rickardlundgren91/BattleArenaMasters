@@ -10,7 +10,7 @@ namespace BAM.Sim
     // off, go in when I go in"): enemy heroes far from the human are not chased, and a goal outside the ring becomes a spot beside them.
     public sealed partial class BotBrain
     {
-        bool HumanInMatch => !M.Config.PlayerIsBot && M.Tut == null && M.Humans.Count > 0;
+        bool HumanInMatch => (!M.Config.PlayerIsBot || M.Config.BotIsHuman) && M.Tut == null && M.Humans.Count > 0;
 
         /// <summary>The human on this bot's team (null = none, or they are dead).</summary>
         Unit TeamLeader()
@@ -65,10 +65,12 @@ namespace BAM.Sim
             return false;
         }
 
-        /// <summary>The human is pulling out of a fight: low, or walking away from the nearest enemy hero while out of their own range of it.</summary>
+        /// <summary>The human is pulling out of a fight: low, or walking away from the nearest enemy hero while out of their own range
+        /// of it, soon after trading hits with an enemy hero (walking off to the wave or the grass is not pulling out of a fight).</summary>
         bool LeaderBacking(Unit l)
         {
             if (HpR(l) < BotTables.TeamLowHp) return true;
+            if (!FoughtRecently(l, BotTables.TeamBackFightT)) return false;
             Unit e = null; float ed = BotTables.TeamBackR; var us = M.Units;
             for (int i = 0; i < us.Count; i++)
             {
@@ -80,13 +82,41 @@ namespace BAM.Sim
             return away > SpeedOf(l) * 0.5f;
         }
 
-        /// <summary>After the retreat decision: pull back with the human, or don't leave them alone in a fight.</summary>
-        void TeamStay(float hpR)
+        /// <summary>l hit an enemy hero, or was hit by one, in the last t seconds.</summary>
+        bool FoughtRecently(Unit l, float t)
+        {
+            float now = Now;
+            for (int i = 0; i < M.Heroes.Count; i++)
+            {
+                var e = M.Heroes[i];
+                if (e.Team != l.Team && (now - HitAt(e, l) < t || now - HitAt(l, e) < t)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The bot itself is in the fight: an enemy hero hit it a moment ago, or it stands within a seen enemy hero's reach.</summary>
+        bool InTheFight()
+        {
+            var h = H; float now = Now; var us = M.Units;
+            for (int i = 0; i < M.Heroes.Count; i++) { var e = M.Heroes[i]; if (e.Team != h.Team && now - HitAt(h, e) < 1.5f) return true; }
+            for (int i = 0; i < us.Count; i++)
+            {
+                var e = us[i];
+                if (e.Kind == UnitKind.Hero && e.Alive && e.Team != h.Team && !e.IsClone && Sees(e) && Dist(e, h) < e.Range + e.R + h.R + 1.5f) return true;
+            }
+            return false;
+        }
+
+        /// <summary>After the retreat decision: pull back with the human, or don't leave them alone in a fight. Only a bot that is
+        /// in the fight and not winning it pulls back (the leash brings the rest along), and the pull-back has no 2 s hold of its
+        /// own (backWithLeader). Bot analysis 2026-10-30: pulling every bot near the human out with the 2 s hold, also when the
+        /// human only walked off, cost the human's team about a third of its wins on Normal and Hard.</summary>
+        void TeamStay(float hpR, bool winning)
         {
             var h = H; var l = TeamLeader(); if (l == null || Dist(l, h) > 10) return;
             if (LeaderBacking(l))
             {
-                if (!retreat && CountSeenNear(Teams.Other(h.Team), h.Team, null, h.X, h.Y, BotTables.TeamBackR) > 0) { retreat = true; retreatT = Now; }
+                if (!retreat && !winning && InTheFight() && CountSeenNear(Teams.Other(h.Team), h.Team, null, h.X, h.Y, BotTables.TeamBackR) > 0) { retreat = true; retreatT = Now; backWithLeader = true; }
                 return;
             }
             if (!retreat || hpR < BotTables.TeamStayHp || ttk < 4 || Dist(l, h) > 8 || !LeaderInFight(l)) return;

@@ -26,7 +26,7 @@ namespace BAM.Sim
 
         // ---------- the old AI object ----------
         float t, afk = float.NaN, bold = float.NaN, spT = float.NaN, decideIv, lastThinkT = -99;
-        bool retreat, danger, panicked, misjudge, overchase, urgent, chip, following;
+        bool retreat, danger, panicked, misjudge, overchase, urgent, chip, following, backWithLeader;
         float retreatT = -99, ttk = 99, mistakeT = -1, lateRetreat, commitT, commitHp, strafeT, strafe;
         float mdx, mdy, mT = -99;
         float emoteT, spWantT, spHoldT, spHoldL; int seenKills;
@@ -81,7 +81,7 @@ namespace BAM.Sim
         {
             path.Clear(); hasGoal = false; gFollow = null; gHasF = false; kite = null;
             hasStuck = false; hasBlocked = false; t = 0;
-            if (died) { retreat = false; danger = false; focus = null; }
+            if (died) { retreat = false; danger = false; focus = null; backWithLeader = false; }
         }
 
         void SetGoal(float x, float y, float stop = 0, Unit follow = null) { hasGoal = true; gX = x; gY = y; gStop = stop; gFollow = follow; gHasF = false; }
@@ -215,10 +215,11 @@ namespace BAM.Sim
             bool wasRetreat = retreat;
             if (Tier.LowHealth > 0 && hpR < line
                 || (!allyMinionsNear && hpR < Tier.NoMinionLowHealth && fo != null && !winning && foesNear >= matesNear.Count + 1)
-                || (towerOnMe && hpR < Tier.TargetedByTowerLowHealth && !(chip && hpR > 0.3f))) retreat = true;
-            if (towerOnMe && (h.Hp + ShieldOf(h)) / TowerDpsOn(enemyTower, h) < BotTables.TowerBotLeaveS) retreat = true; // the tower's ramp would kill us soon
+                || (towerOnMe && hpR < Tier.TargetedByTowerLowHealth && !(chip && hpR > 0.3f))) { retreat = true; backWithLeader = false; }
+            if (towerOnMe && (h.Hp + ShieldOf(h)) / TowerDpsOn(enemyTower, h) < BotTables.TowerBotLeaveS) { retreat = true; backWithLeader = false; } // the tower's ramp would kill us soon
             if (retreat && !wasRetreat) retreatT = now;
-            bool locked = retreat && now - retreatT < 2;
+            // the bot's own retreat holds at least 2 s; pulling back with the human (TeamStay) only while they pull back
+            bool locked = retreat && !backWithLeader && now - retreatT < 2;
             if (retreat && !locked && hpR >= Math.Min(Tier.HighHealth + TK(4), Math.Max(line + 0.25f, Tier.LowHealth + 0.05f) + TK(4))) retreat = false;
             if (retreat && safety && ttk > 2)
                 for (int i = 0; i < us.Count; i++)
@@ -232,7 +233,7 @@ namespace BAM.Sim
             if (retreat && !locked && safety && hpR > 0.6f && !h.InCombat(now))
                 for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a.Kind == UnitKind.Hero && a.Alive && a != h && a.Team == h.Team && !a.IsClone && now - a.LastCombat < 1 && Dist(a, h) < 8) { retreat = false; break; } }
             bool finish = TowerFinish(enemyTower, hpR, myDps); if (finish) retreat = false;
-            TeamStay(hpR); // don't leave the human alone in a fight
+            TeamStay(hpR, winning); // don't leave the human alone in a fight
             SignalSteer(hpR); // a teammate's ATTACK or DEFEND (BotSignal.cs)
             danger = !retreat && !finish && !(v3 && TK3(33) > 0 && InvulT(h) > 1.5f) && ttk < Tier.TtkDanger * TK(5) && !(commitT > now && ttk > 1.2f);
             var target = retreat ? null : PickHeroTarget(enemyTower, myDps);

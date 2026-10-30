@@ -52,7 +52,8 @@ namespace BAM.Sim
         internal const float ChaseLookT = 1, ChaseCatchT = 2, ChaseLeash = 6, ChaseDropT = 3;
         // team play with the human (old SimTeamplay.cs)
         internal const float TeamJoinR = 12, TeamFightT = 2, TeamReach = 6, TeamStayHp = 0.5f, TeamJoinHp = 0.45f, TeamLowHp = 0.3f,
-            TeamFollowR = 5, TeamFollowStop = 2.5f, TeamIntentR = 8, TeamIntentKeep = 1.5f, TeamLeash = 10, TeamBackR = 8;
+            TeamFollowR = 5, TeamFollowStop = 2.5f, TeamIntentR = 8, TeamIntentKeep = 1.5f, TeamLeash = 10, TeamBackR = 8,
+            TeamBackFightT = 3; // the human walking away counts as pulling out of a fight only this soon after trading hits with an enemy hero
         internal const float HumanReact = 1.3f, SpHoldMax = 6;
         // fair bots (old SimAiFair.cs): a hero out of view this long must be noticed again; aim lead builds up over LeadSeenT
         internal const float NoticeGrace = 0.5f, LeadSeenT = 0.3f;
