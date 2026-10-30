@@ -159,9 +159,12 @@ namespace BAM.Art
                 trail = go.AddComponent<TrailRenderer>();
                 Material tm = TexTrail();
                 trail.sharedMaterial = tm ?? ArtKit.TrailMaterial;
-                trail.time = k == ProjKind.TyraBolt ? 0.3f : k == ProjKind.TowerShot || k == ProjKind.TyraVolley ? 0.22f : 0.16f;
+                // the volley's five arrows (Skill Visibility 2.0): at 18 tiles/s a 0.22 s trail is 4 tiles, her whole range, so every
+                // trail reached back to the bow and the five ran together into one gold wedge; 0.09 s (1.6 tiles) and a thinner line
+                // keep five arrows apart from a tile out (they fly 10 degrees apart: 0.17 tiles apart a tile out, 0.7 at the end)
+                trail.time = k == ProjKind.TyraBolt ? 0.3f : k == ProjKind.TyraVolley ? 0.09f : k == ProjKind.TowerShot ? 0.22f : 0.16f;
                 trail.minVertexDistance = 0.08f;
-                trail.widthMultiplier = k == ProjKind.TyraBolt ? 0.44f : k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : 0.14f; // Tyra's bolt: twice as wide (2026-10-28)
+                trail.widthMultiplier = k == ProjKind.TyraBolt ? 0.44f : k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : k == ProjKind.TyraVolley ? 0.08f : 0.14f; // Tyra's bolt: twice as wide (2026-10-28)
                 trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
                 if (tm != null)
                 {
@@ -261,6 +264,7 @@ namespace BAM.Art
         public override void LaunchFrom(Vector3 muzzle)
         {
             if (melee) return;
+            if (WeaponDebug.On) WeaponDebug.Shot(muzzle, vis.position, dir);
             launchOff = muzzle - vis.position;
             launchEase = true;
             vis.position = muzzle;

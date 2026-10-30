@@ -56,6 +56,19 @@ namespace BAM.Art.Editor
                 "The arms are turned out from a broad body only while they hang; a raised arm in a swing plays as its clip made it.",
                 AnimFix.ArmRoom);
 
+            AnimFix.GripLock = Part("Grip locked in the palm",
+                "After every turn the weapon's grip point is moved into the palm, so it never floats off the fist or slides along "
+                + "the handle. Only a shift: how the weapon is aimed stays. Weapon numbers: BAM > Art > Weapon Debug View.",
+                AnimFix.GripLock);
+            AnimFix.WristTurn = Part("Wrist turns instead of the bow (Tyra)",
+                "Tyra's bow keeps its shot grip in her fist and her wrist turns up to 60 degrees instead, so the bow no longer twists "
+                + "in her hand between standing and shooting. Where the bow points stays the same.",
+                AnimFix.WristTurn);
+            AnimFix.ContactTiming = Part("Weapon meets the target with the number (melee)",
+                "Fenn, Knut, Bonk and Oaken: the weapon reaches its target on the moment the damage number shows, instead of the "
+                + "swing's fastest moment showing a little before it.",
+                AnimFix.ContactTiming);
+
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("All on")) SetAll(true);
             if (GUILayout.Button("All off (as before)")) SetAll(false);
@@ -82,7 +95,7 @@ namespace BAM.Art.Editor
         static void SetAll(bool on)
         {
             AnimFix.FixedGrip = AnimFix.UpperSwing = AnimFix.LegsFollow = AnimFix.SquaredFacing = on;
-            AnimFix.BlowTiming = AnimFix.Life = AnimFix.ArmRoom = on;
+            AnimFix.BlowTiming = AnimFix.Life = AnimFix.ArmRoom = AnimFix.GripLock = AnimFix.WristTurn = AnimFix.ContactTiming = on;
         }
     }
 }

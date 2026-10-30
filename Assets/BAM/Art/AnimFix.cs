@@ -29,5 +29,16 @@ namespace BAM.Art
         /// <summary>The arms turned out from a broad body (ArmSpread, Bram 36 degrees) only as far as they hang at the side; an arm
         /// raised in a swing plays as the clip made it instead of being twisted out (Speltest's ArmRoom left raised arms alone).</summary>
         public static bool ArmRoom = true;
+        /// <summary>Weapon Precision 2.0 (2026-10-30): after every turn of a held weapon its grip point is shifted into the palm
+        /// (HeldGear.LockGrip), so it never floats off the fist or slides along the shaft; a shift only, the silhouette stays.</summary>
+        public static bool GripLock = true;
+        /// <summary>Weapon Precision 2.0 (Rickard's yes 2026-10-30): a weapon with WeaponDef.WristMax (Tyra's bow) keeps the shot's grip
+        /// in the fist and the wrist turns instead (up to WristMax degrees), so it no longer twists in her hand between rest and
+        /// shot; its aim, and so the silhouette, stays.</summary>
+        public static bool WristTurn = true;
+        /// <summary>Rickard 2026-10-30 ("damage nummer kommer innan träffen från vapnet nu"): a melee hero's swing (Fenn, Knut, Bonk,
+        /// Oaken) shows the weapon meeting its target (the clip's Contact: the striking hand braked after its fastest moment) on the
+        /// tick the rules land the blow and its number shows, instead of showing the fastest moment on the release.</summary>
+        public static bool ContactTiming = true;
     }
 }

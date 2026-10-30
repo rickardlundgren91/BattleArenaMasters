@@ -195,6 +195,7 @@ namespace BAM.Game
         {
             if (match == null) return;
             inMatch = false; paused = false;
+            BAM.Art.ArtKit.SetSimClock(-1, 0f);
             hud.End();
             intro.End(cam.Camera);
             views.Dispose();
@@ -230,6 +231,7 @@ namespace BAM.Game
                 {
                     PlayerInput input = hud.TakeInput();
                     match.Step(in input);
+                    BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f); // a swing started by this tick's events counts from this tick
                     Screens.CountEvents(match); // the result card's ratings (damage, healing, shields per hero)
                     views.AfterStep();
                     juice.AfterStep();
@@ -247,6 +249,7 @@ namespace BAM.Game
                 if (acc >= Rules.Tick) acc = 0f;
             }
             float alpha = frozen || over ? 1f : Mathf.Clamp01((net != null ? netDraw : acc) / Rules.Tick);
+            BAM.Art.ArtKit.SetSimClock(match.Ticks, alpha); // the swings' clock (Animation Foundation): blows land on their shots' frame
             views.Frame(alpha, dt, frozen);
             cam.Frame(alpha, dt, over);
             juice.Frame(frozen ? 0f : dt);
@@ -297,6 +300,7 @@ namespace BAM.Game
         bool NetStep()
         {
             match.Step(netInputs);
+            BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f); // a swing started by this tick's events counts from this tick
             netDraw = Mathf.Max(0f, netDraw - Rules.Tick);
             net.AfterStep(match);
             Screens.CountEvents(match);

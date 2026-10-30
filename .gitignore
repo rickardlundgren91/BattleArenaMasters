@@ -73,3 +73,7 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 /UIElementsSchema/
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# dotnet test builds (Tests/*/run.sh)
+Tests/**/obj/
+Tests/**/bin/

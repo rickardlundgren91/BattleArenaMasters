@@ -59,7 +59,7 @@ namespace BAM.Game
         public void Begin(Match match, MatchViews matchViews)
         {
             m = match; views = matchViews;
-            autoTarget = null; autoAt = swingAt = -99f;
+            autoTarget = null; autoAt = swingAt = -99f; blowAt = -99f;
             Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash);
             blinkOn = false;
             aimOn = false;
@@ -125,12 +125,44 @@ namespace BAM.Game
             for (int i = 0; i < ev.Count; i++)
             {
                 var e = ev[i];
-                if (e.Type == EventType.AttackStart && e.A == m.Player)
-                {
-                    swingAt = Time.time;
-                    if (e.B != null) { autoTarget = e.B; autoAt = Time.time; }
-                }
+                if (e.Type == EventType.AttackStart && e.A == m.Player && e.B != null) { autoTarget = e.B; autoAt = Time.time; }
             }
+            // the range ring flashes on the blow itself, when the charge ring is full (below), not at the start of the wind-up
+            bool winding = Winding(m.Player, out _);
+            if (wasWinding && !winding) { swingAt = Time.time; blowAt = m.Time; }
+            wasWinding = winding;
+        }
+        bool wasWinding;
+        float blowAt = -99f; // the rules' time of the player's last blow (its swing's release)
+
+        // Rickard 2026-10-30 ("uppladdning före", all heroes): the charge ring is full on the blow, the frame the swing lands, not
+        // on the rules' attack timer, which starts the wind-up (Bonk's 0.7 s swing began only once the ring was full). It counts
+        // the time to the next blow: from the last blow (the timer at the wind-up) up to the attack cooldown, and through a swing
+        // that is winding up, on to its release. The swing itself and the timer are the rules' own; only the ring is drawn later.
+        float Charge(Unit p)
+        {
+            float cd = Mathf.Max(0.05f, p.AttackCd);
+            if (Winding(p, out float left)) return Mathf.Clamp01(1f - left / cd);
+            // between blows: the time since the last one over the cooldown, so it grows out to the range in one go and is full (gone)
+            // while the attack is ready; AtkTimer starts over at every wind-up and when nobody is in reach, so it stopped short of
+            // the range (Rickard 2026-10-30: "timercirkeln går inte hela vägen ut till gubbens range")
+            return Mathf.Clamp01((m.Time - blowAt) / cd);
+        }
+
+        // the player's auto attack still in the hand: how long until it is released (Bonk's club lands then; a shot leaves)
+        bool Winding(Unit p, out float left)
+        {
+            left = 0f;
+            if (p == null) return false;
+            var ps = m.Projs;
+            for (int i = 0; i < ps.Count; i++)
+            {
+                var q = ps[i];
+                if (q.Src != p || q.Done || q.T >= 0f || (q.Mode != ProjMode.Auto && q.Mode != ProjMode.Smash)) continue;
+                left = -q.T;
+                return true;
+            }
+            return false;
         }
 
         /// <param name="px">World units per screen pixel at the focus (the old rings' widths are in pixels).</param>
@@ -164,19 +196,15 @@ namespace BAM.Game
 
             // the attack charge grows out to the range until the next swing (none while stunned or disarmed)
             bool blocked = p.Has(St.Stun) || p.Has(St.Disarm);
-            float k = blocked ? 0f : Mathf.Clamp01(p.AtkTimer / Mathf.Max(0.05f, p.AttackCd));
+            float k = blocked ? 0f : Charge(p);
             if (k > 0.02f && k < 1f)
             {
                 float cw = 1.5f * px;
                 Show(charge[0], at, r * k + cw / 2f, new Color(1f, 1f, 1f, 0.15f + 0.3f * k), cw);
             }
 
-            // the special's own reach while it is ready, if it differs from the auto range
-            if (p.SpecialReady && p.HDef != null)
-            {
-                float sr = p.HDef.TapReach;
-                if (sr > 0.5f && Mathf.Abs(sr - r) > 0.25f) Show(reach[0], at, sr + 0.6f * px, new Color(1f, 1f, 1f, 0.12f), 1.2f * px);
-            }
+            // (the special's own reach, a third white ring while it was ready, is gone: Rickard 2026-10-30 "det är för många cirklar";
+            // the drag's aim still shows its reach)
 
             // a thick gold ring on who the last auto attack picked: held, then fading over the last 0.4 s
             float age = Time.time - autoAt;
@@ -197,7 +225,7 @@ namespace BAM.Game
                 float br = 0.5f + 0.5f * Mathf.Sin(Time.time * 5f);
                 float rw = 2.5f * px, rr0 = Mathf.Max(0.55f, p.R + 0.35f) + 0.12f; // just outside the green "you" ring
                 Show(ready[0], at, rr0 + rw, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.65f + 0.3f * br), rw);
-                Show(ready[1], at, rr0 + rw + (1f + 2f * br) * px * 2f, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.35f * br), 1.5f * px);
+                // one ring only (its breathing outer twin went with "för många cirklar", Rickard 2026-10-30)
             }
 
             // the dragged special's hit preview: who the rules would hit if let go now (Sim AimTargets: walls, line of sight, only the

@@ -23,15 +23,16 @@ namespace BAM.Art
             b.Color(Pal.Shadow).Disc(new Vector3(0f, 0.002f, 0f), 0.6f, 20);
             // only the player's own hero gets a ring (old View3DMeMark); allies, enemies and towers just the soft shadow, as the old
             // SyncGround (its team rings were removed 2026-10-19)
-            byte c = marker == UnitMarker.Player ? Pal.PlayerRing : (byte)255;
+            // Rickard 2026-10-30 (MLBB): weaker and thinner, half see-through and a third as wide as before (0.2)
+            byte c = marker == UnitMarker.Player ? Pal.PlayerRingSoft : (byte)255;
             if (c != 255)
             {
-                float w = marker == UnitMarker.Player ? 0.2f : 0.13f;
+                float w = marker == UnitMarker.Player ? 0.07f : 0.13f;
                 b.Color(c).Ring(new Vector3(0f, 0.004f, 0f), 1f - w, 1f, 28);
                 if (marker == UnitMarker.Player) // a small arrow in front: which way the player's hero faces
                 {
                     b.M = Matrix4x4.TRS(new Vector3(0f, 0.004f, 1.12f), Quaternion.identity, Vector3.one);
-                    b.Triangle(new Vector3(-0.2f, 0f, 0f), new Vector3(0f, 0f, 0.22f), new Vector3(0.2f, 0f, 0f));
+                    b.Triangle(new Vector3(-0.14f, 0f, 0f), new Vector3(0f, 0f, 0.16f), new Vector3(0.14f, 0f, 0f));
                     b.Reset();
                 }
             }

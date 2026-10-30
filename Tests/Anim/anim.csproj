@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Animation Foundation 1.0: headless checks of the swing/cast timing maths (Art/Anim/AnimTiming.cs) against the rules (BAM.Sim).
+       bash Tests/Anim/run.sh (needs .NET 8). Not part of the Unity project; test-only. -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><LangVersion>9</LangVersion><Nullable>disable</Nullable><ImplicitUsings>disable</ImplicitUsings><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/BAM/Sim/**/*.cs" Exclude="../../Assets/BAM/Sim/**/Editor/**" />
+    <Compile Include="../../Assets/BAM/Art/Anim/AnimTiming.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>

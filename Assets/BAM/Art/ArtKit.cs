@@ -161,6 +161,9 @@ namespace BAM.Art
         OakenGuard = 24,  // Stored Impact takes part of a hit: a stone skin flash in his gold
         OakenStored = 25, // while Stored Impact holds damage for his next punch: a gold glow at his fists (sent every few frames)
         HildeKnock = 26,  // a hero shoved by Hilde's keg: Rickard's powder puff (tx_fx_hilde_knock) where it was hit
+        // Tyra's Arrow Volley read as hers (Skill Visibility 2.0, 2026-10-30)
+        VolleyHit = 27,     // a volley arrow passes through an enemy: the volley's gold star on that enemy (the arrow flies on)
+        VolleyRelease = 28, // the five arrows leave the bow: a short gold flash at the bow, once per volley
     }
 
     public static class ArtKit
@@ -184,6 +187,18 @@ namespace BAM.Art
         /// <summary>The hit-stop feeds the rules' ticks at k of the clock (GameFlow, MatchJuice.Stopping; 1 = normal): the bodies, shots
         /// and effects go as slow, so a swing never lands before its shot leaves (CHAINMAP-07: they ran on at full speed).</summary>
         public static void SetSlow(float k) => slow = Mathf.Clamp01(k);
+
+        static long simTicks = -1;
+        static float simAlpha;
+        /// <summary>The rules' tick count now, -1 outside a match (Animation Foundation: the swings' clock, SetSimClock).</summary>
+        internal static long SimTicks => simTicks;
+        internal static float SimAlpha => simAlpha;
+
+        /// <summary>Every frame of a match, after its ticks (GameFlow): the rules' tick count (Match.Ticks) and the drawn share of the
+        /// next tick (alpha). A hero's swing is then timed on the rules' clock (AnimTiming.SimElapsed), so its blow shows on the frame
+        /// its shot leaves at any frame rate, through hitches, pause, hit-stop and online catch-up. ticks below 0 = no match: the
+        /// swings time themselves by the frame clock as before.</summary>
+        public static void SetSimClock(long ticks, float alpha) { simTicks = ticks; simAlpha = alpha; }
 
         /// <summary>The game was paused or resumed (GameFlow.Pause/Resume): freezes the one-shot effects, particles, zones and shots.</summary>
         public static void SetPaused(bool on)
