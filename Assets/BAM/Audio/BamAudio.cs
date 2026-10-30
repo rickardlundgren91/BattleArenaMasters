@@ -167,6 +167,7 @@ namespace BAM.Audio
         {
             if (!Ready) return;
             musicWant = MusicId.None;
+            BamVoice.Stop();
             for (int i = 0; i < Voices; i++)
             {
                 if (src[i] != null) src[i].Stop();

@@ -160,6 +160,28 @@ namespace BAM.Game
             Trail(play && !opening, tu, p);
             TutTowerBar(arena && m.State != MatchState.Over, tu);
             TutorialEnd(arena && over >= 0f && tu.Done, over, W, H);
+            TutVoice(on, island, opening, line, tu, arena && tu.Done && over > TutOverBanner);
+        }
+
+        // The spoken lines (Rickard 2026-10-30 "röst till tutorial"): each line is said once, when it first shows, from
+        // Resources/BAM/Voice/<key> (BamVoice; silent until his recording is there). The keys are the file names in his order.
+        static readonly string[] IslandVoice = { "TutIsland1_Move", "TutIsland2_Minion", "TutIsland3_Grass", "TutIsland4_Target", "TutIsland5_Pad" };
+        static readonly string[] ArenaVoice = { "TutArena1_Move", "TutArena2_Auto", "TutArena3_Special", "TutArena4_Drag",
+            "TutArena5_Blink", "TutArena6_Fight", "TutArena7_Heal", "TutArena8_Tower" };
+        const string VoiceOpen = "TutArena0_Open", VoiceEnd = "TutArena9_End";
+        readonly System.Collections.Generic.HashSet<string> voiceSaid = new System.Collections.Generic.HashSet<string>();
+        Match voiceMatch;
+
+        void TutVoice(bool on, bool isIsland, bool opening, string arenaLine, Tutorial tu, bool end)
+        {
+            if (!ReferenceEquals(voiceMatch, m)) { voiceMatch = m; voiceSaid.Clear(); }
+            if (!on) return;
+            string key = null;
+            if (isIsland) { if (tu.Line != null && tu.Step >= 0 && tu.Step < IslandVoice.Length) key = IslandVoice[tu.Step]; }
+            else if (end) key = VoiceEnd;
+            else if (opening) key = VoiceOpen;
+            else if (arenaLine != null && tu.Step >= 0 && tu.Step < ArenaVoice.Length) key = ArenaVoice[tu.Step];
+            if (key != null && voiceSaid.Add(key)) BAM.Audio.BamVoice.Say(key);
         }
 
         // The island's line (Rickard 2026-10-26: the bubble covered the action, then "snyggare text"): a dark navy card with a
@@ -568,7 +590,7 @@ namespace BAM.Game
             var skipButton = tutSkip.gameObject.AddComponent<Button>();
             skipButton.targetGraphic = plate;
             skipButton.transition = Selectable.Transition.None;
-            skipButton.onClick.AddListener(() => { BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.UiBack); flow.SkipTutorial(); });
+            skipButton.onClick.AddListener(() => { BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.UiBack); BAM.Audio.BamVoice.Stop(); flow.SkipTutorial(); });
             tutSkipText = UiKit.Label(tutSkip, "Skip", 36, TextAnchor.MiddleCenter, new Color(232f / 255f, 236f / 255f, 1f, 0.7f));
             tutSkipText.raycastTarget = false;
             UiKit.Stretch(tutSkipText.rectTransform);

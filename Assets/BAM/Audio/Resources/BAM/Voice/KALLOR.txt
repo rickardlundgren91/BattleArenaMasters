@@ -1,0 +1,19 @@
+Tutorial voice (Rickard 2026-10-30 "röst till tutorial"), Tyra speaks, Rickard records every file himself.
+Drop <key>.mp3 (or .wav/.ogg) here; no code change. A missing file is silent. Each line is said once, when its text first shows
+(Game/HudTutorial.cs TutVoice -> Audio/BamVoice.cs). Order O-032 in bam-work/orders/ORDERS.md.
+TutIsland1_Move    "Move here with the joystick!"
+TutIsland2_Minion  "You attack automatically! Take down the minion!"
+TutIsland3_Grass   "Hide in the grass! Enemies only see you up close."
+TutIsland4_Target  "You hit a random enemy in reach. Make the leader your only target!"
+TutIsland5_Pad     "Hop on the boost pad to reach the battle!"
+TutArena0_Open     "Destroy the enemy tower!"
+TutArena1_Move     "Walk up the lane with your minions!"
+TutArena2_Auto     "Fight the wave! Tyra attacks automatically."
+TutArena3_Special  "Special ready! Tap it to fire a bolt!"
+TutArena4_Drag     "An enemy hero! Drag special to aim a bolt at Knut!"
+TutArena5_Blink    "He pulled you in! Tap Blink to dash away!"
+TutArena6_Fight    "Now take Knut down!"
+TutArena7_Heal     "Step out of the fight to heal up!"
+TutArena8_Tower    "Destroy the tower with your minions!"
+TutArena9_End      "Tower destroyed! Great job, you're ready for BAM!"
+Sources: (none yet)
