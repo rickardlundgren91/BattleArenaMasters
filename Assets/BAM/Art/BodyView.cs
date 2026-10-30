@@ -27,6 +27,16 @@ namespace BAM.Art
         /// <summary>Heroes in the match now, for the bushes (BushField). Kept by OnEnable/OnDisable, so pooled views drop out.</summary>
         internal static readonly List<BodyView> Heroes = new List<BodyView>(8);
         internal bool IsDead => dead;
+        /// <summary>Animation Foundation 1.0: what this view's swings did (AnimDebugOverlay).</summary>
+        internal readonly AnimProbe Probe = new AnimProbe();
+        /// <summary>For the overlay: the swing's and the cast's time (below 0 = none), the windup, and the blend weights.</summary>
+        internal float DbgAtkT => atkT;
+        internal float DbgCastT => castT;
+        internal float DbgWindup => windup;
+        internal float DbgMoveW => moveW;
+        internal float DbgAtkW => lastAtkW;
+        internal float DbgCastW => lastCastW;
+        internal bool DbgCut => atkCut >= 0f || castCut >= 0f;
         // what the player can actually see of it: an enemy hidden in a bush is still listed but must give nothing away
         internal bool Shown => renderersOn && vis > 0.01f && !dead;
         internal bool IsPlayer => marker == UnitMarker.Player;
@@ -410,6 +420,8 @@ namespace BAM.Art
             AnimationClip idle = art.Idle;
             if (idle == null) { Debug.LogWarning("[BAM.Art] " + art.name + " has no idle clip; the model stands still"); return; }
             var src2 = new[] { art.Idle, art.Run, art.Attack, art.Cast, art.Hit, art.Death, art.Walk != null ? art.Walk : art.Run };
+            Probe.Missing = 0;
+            for (int c = 0; c < src2.Length; c++) if (src2[c] == null) Probe.Missing |= 1 << c; // they play the idle (below)
             Transform hips = anim.GetBoneTransform(HumanBodyBones.Hips);
             hipsH = hips != null ? Mathf.Max(0.05f, anim.transform.InverseTransformPoint(hips.position).y) : 0f;
             MeasureGait(src2[CWalk], src2[CRun]);
@@ -502,6 +514,8 @@ namespace BAM.Art
             Transform l = anim.GetBoneTransform(HumanBodyBones.LeftHand), r = anim.GetBoneTransform(HumanBodyBones.RightHand);
             if (l == null || r == null) return false;
             var h = (HeroId)HeroIndex;
+            // the rules' release as the screen sees it: the game asks this the frame the swing's shot is first drawn
+            if (atkT >= 0f && atkCut < 0f && castT < 0f) Probe.OnRelease(windup, atkT, Time.deltaTime * ArtKit.Slow);
             if (h == HeroId.Bonk) { at = (l.position + r.position) * 0.5f; return true; }
             bool right = ThrowsRight(castT >= 0f && (atkT < 0f || castT < atkT) ? CCast : CAttack);
             if (h != HeroId.Moa && gear != null && gear.ShotFrom(bowHero, right, out at)) return true;
@@ -577,6 +591,7 @@ namespace BAM.Art
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
+            Probe.Reset();
             leapK = -1f; leapY = wolfTilt = pull = 0f; room = 9f; atkCut = castCut = -1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
@@ -620,6 +635,7 @@ namespace BAM.Art
 
         public override void PlayAttack(float w)
         {
+            Probe.OnSwing(atkT >= 0f && atkCut < 0f && atkT < windup);
             windup = Mathf.Max(0.05f, w);
             float now = Time.time;
             if (now - lastAtkAt < 4f) atkGap = now - lastAtkAt; // a fight's swings: how long the recovery may take (BlowSegment)
@@ -663,25 +679,12 @@ namespace BAM.Art
         void BlowSegment(float len)
         {
             ClipInfo ci = Info(clips[CAttack].GetAnimationClip());
-            float start0 = def.Art.AttackStart * len;
-            float blow = ci != null && ci.Blow > 0f ? ci.Blow : def.Art.AttackRelease * len;
-            if (Bow && ci != null && ci.Draw > 0f) blow = ci.Draw;
-            blow = Mathf.Clamp(blow, Mathf.Min(start0 + 0.05f, len), len);
-            float pre = Mathf.Min(blow - start0, Mathf.Clamp(windup * 1.8f, 0.25f, 0.45f));
-            if (pre < 0.02f) return;
-            atkFrom = blow - pre;
-            atkBlow = blow;
-            float to = Mathf.Min(len, Mathf.Min(ci != null && ci.Settle > blow ? ci.Settle : blow + 0.5f, blow + 1.6f));
-            float budget = Mathf.Max(0.3f, atkGap - windup - 0.1f);
-            recRate = Mathf.Clamp((to - blow) / budget, RecoverRate, 2.5f);
-            atkTo = Mathf.Min(to, blow + budget * recRate);
-            atkSpeed = pre / windup;
-            float play = (atkTo - blow) / recRate, rec = Mathf.Max(0.35f, play);
-            atkTotal = windup + rec;
-            // a clip that ends on its blow (Tyra's draw) holds it and lowers in the time left; Tyra holds the release a moment and
-            // hands over to her stance (Stance)
-            atkFade = Mathf.Clamp(Mathf.Max(rec * 0.4f, rec - play), 0.12f, 0.35f);
-            if (Bow) atkFade = Mathf.Max(0.12f, rec - play - 0.06f);
+            // the plan's maths and its formulas are in AnimTiming.PlanAttack (Animation Foundation 1.0, headless-tested)
+            AnimTiming.AttackPlan p = AnimTiming.PlanAttack(windup, len, def.Art.AttackStart, def.Art.AttackRelease,
+                ci != null ? ci.Blow : -1f, ci != null ? ci.Settle : -1f, ci != null ? ci.Draw : -1f, Bow, atkGap);
+            if (!p.Valid) return;
+            atkFrom = p.From; atkBlow = p.Blow; atkTo = p.To; atkSpeed = p.Speed; recRate = p.RecRate;
+            atkTotal = p.Total; atkFade = p.Fade;
             atkSeg = true;
         }
 
@@ -738,21 +741,12 @@ namespace BAM.Art
         // never starts before it
         void CastSegment()
         {
-            float len = clipLen[CCast];
             ClipInfo ci = Info(clips[CCast].GetAnimationClip());
-            float blow = ci != null && ci.Blow > 0f ? ci.Blow : 0.4f * len;
-            if (Bow && ci != null && ci.Draw > 0f) blow = ci.Draw;
-            float lead = CastLead();
-            castFrom = Mathf.Max(0f, blow - lead * CastRate);
-            // played on until the body is back up, as the attack (at most 1.2 s of the clip after its peak)
-            castTo = Mathf.Min(len, ci != null && ci.Settle > blow ? Mathf.Min(ci.Settle, blow + 1.2f) : blow + 0.6f);
-            if (castTo - castFrom < 0.1f) return;
-            castPeak = blow;
-            castPre = lead > 0.01f && blow > castFrom ? (blow - castFrom) / lead : CastRate;
-            castBlowAt = (blow - castFrom) / castPre;
-            float play = castBlowAt + Mathf.Max(0f, castTo - blow) / CastRate;
-            castLen = Mathf.Max(play, castBlowAt + 0.35f);
-            castFade = Mathf.Clamp(Mathf.Max((castLen - castBlowAt) * 0.4f, castLen - play), 0.12f, 0.35f);
+            // the plan's maths and its formulas are in AnimTiming.PlanCast (Animation Foundation 1.0, headless-tested)
+            AnimTiming.CastPlan c = AnimTiming.PlanCast(clipLen[CCast], ci != null ? ci.Blow : -1f, ci != null ? ci.Settle : -1f,
+                ci != null ? ci.Draw : -1f, Bow, CastLead());
+            if (!c.Valid) return;
+            castFrom = c.From; castTo = c.To; castPeak = c.Peak; castPre = c.Pre; castBlowAt = c.BlowAt; castLen = c.Len; castFade = c.Fade;
             castSeg = true;
         }
 
@@ -956,7 +950,7 @@ namespace BAM.Art
                     for (int i = 0; i < shadowRends; i++) rends[i].shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
             }
             idleT += dt;
-            moveW = Mathf.MoveTowards(moveW, moving && !dead ? 1f : 0f, dt * 6f);
+            moveW = AnimTiming.Approach(moveW, moving && !dead ? 1f : 0f, 6f, dt); // idle <-> run in 1/6 s at any frame rate
             if (moving) phase += dt * (7f + 5f * speed01);
 
             if (def.Ghost)
@@ -1092,7 +1086,11 @@ namespace BAM.Art
             {
                 if (atkT >= 0f)
                 {
+                    float atkWas = atkT;
                     atkT += dt;
+                    if (atkCut < 0f && atkWas < windup && atkT >= windup) Probe.OnBlow();
+                    // a swing that outlives its plan (a NaN total the plans never make) ends instead of holding the body forever
+                    if (AnimTiming.Stuck(atkT, atkTotal)) { Probe.Locks++; atkTotal = atkT; }
                     if (life)
                     {
                         // eased in (from where a swing still fading out left it) and out over a quarter of a second, never before
@@ -1118,6 +1116,7 @@ namespace BAM.Art
                 if (castT >= 0f)
                 {
                     castT += dt;
+                    if (AnimTiming.Stuck(castT, castLen)) { Probe.Locks++; castLen = castT; }
                     float castOut = castCut >= 0f ? CutFade : castSeg ? castFade : Mathf.Clamp(castLen - castBlowAt, 0.05f, 0.25f);
                     wCast = life ? Mathf.Min(Mathf.Lerp(castCarry, 1f, Smooth(castT / 0.1f)), Smooth((castLen - castT) / castOut))
                         : Mathf.Min(Mathf.Clamp01(castT / 0.08f), Mathf.Clamp01((castLen - castT) / 0.15f));
@@ -1750,7 +1749,7 @@ namespace BAM.Art
         {
             // as before 2026-10-27: the clip at its own pace, from AttackStart (Bram skips the hammer's dip to the side, so it rises
             // straight off his shoulder)
-            if (atkSeg) return t < windup ? atkFrom + t * atkSpeed : Mathf.Min(atkTo, atkBlow + (t - windup) * recRate);
+            if (atkSeg) return t < windup ? atkFrom + t * atkSpeed : Mathf.Min(atkTo, atkBlow + (t - windup) * recRate); // = AnimTiming.AttackClipTime
             if (!Phased(HeroIndex)) return Mathf.Min(clipLen[CAttack], atkStart + t * atkSpeed);
             float coil = windup - atkSlash;
             if (t < coil) { float w = t / Mathf.Max(1e-4f, coil); return atkRel * 0.7f * (1f - (1f - w) * (1f - w) * (1f - w)); }
