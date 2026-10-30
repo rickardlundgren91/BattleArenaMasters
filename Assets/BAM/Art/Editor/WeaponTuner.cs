@@ -64,6 +64,25 @@ namespace BAM.Art.Editor
                         EditorGUILayout.Slider("  forward", d.Offset.z, -0.5f, 0.5f));
                 }
 
+            if (g.Shield != null)
+            {
+                // Fenn's and Moa's shield on the left hand: placed by the code, these move it on top, live
+                ShieldDef sh = g.Shield;
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField(sh.Model + " (left hand)", EditorStyles.boldLabel);
+                sh.Dia = EditorGUILayout.Slider(new GUIContent("Size", "Diameter as a share of the hero's height"), sh.Dia, 0.1f, 1.2f);
+                EditorGUILayout.LabelField("Extra turn (degrees about its centre)");
+                sh.Twist = new Vector3(
+                    EditorGUILayout.Slider("  x", sh.Twist.x, -180f, 180f),
+                    EditorGUILayout.Slider("  y", sh.Twist.y, -180f, 180f),
+                    EditorGUILayout.Slider("  z", sh.Twist.z, -180f, 180f));
+                EditorGUILayout.LabelField("Extra shift (share of the hero's height)");
+                sh.Shift = new Vector3(
+                    EditorGUILayout.Slider("  right", sh.Shift.x, -0.5f, 0.5f),
+                    EditorGUILayout.Slider("  up", sh.Shift.y, -0.5f, 0.5f),
+                    EditorGUILayout.Slider("  forward", sh.Shift.z, -0.5f, 0.5f));
+            }
+
             if (g.Cannon != null)
             {
                 // Hilde's shoulder cannon (HILDE-04): placed on her shoulder by the code, these move it on top, live
