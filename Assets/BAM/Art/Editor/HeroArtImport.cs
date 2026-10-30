@@ -180,8 +180,8 @@ namespace BAM.Art.Editor
             new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.46f, Start = 0.12f },
             // Tyra stands relaxed with the bow down (Moa's idle) in the menu and the match and raises it only to shoot (Rickard
             // 2026-10-27: her drawn-bow IdleBow in the menu "precis samma som när hon är i spelet"; old Speltest's Home had her in a
-            // relaxed idle too)
-            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Moa/Anim/Idle", Run = "Tyra/Anim/Run", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Walk = "Tyra/Anim/Walk", Height = 1.78f, Release = 0.55f },
+            // relaxed idle too). Since 2026-10-30 her own relaxed idle: Rickard's Mixamo Breathing Idle (9.9 s), no longer Moa's
+            new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Tyra/Anim/Idle", Run = "Tyra/Anim/Run", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Walk = "Tyra/Anim/Walk", Height = 1.78f, Release = 0.55f },
             new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Moa/Anim/Idle", Run = "Moa/Anim/Run", Attack = "Moa/Anim/Attack1", Cast = "Moa/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.73f, Release = 0.4f },
             new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Knut/Anim/Idle", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.85f, Release = 0.45f },
             new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.94f, Release = 0.4f },
@@ -194,8 +194,9 @@ namespace BAM.Art.Editor
             // stretches with his left arm and head). His own Mixamo clips (Orc Idle, Mutant Run, Standing Melee Attack Downward with
             // the club landing at 46 %, Hit Reaction, Dying); the slam borrows Bram's Anvil Strike, since Mixamo's jump attack is
             // airborne for longer than a cast lasts. Idle is Knut's: on Bonk the Orc Idle bent his feet and lifted him off the ground
-            // (Rickard 2026-10-26: "fötterna böjer sig")
-            new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Knut/Anim/Idle", Run = "Bonk/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 2.0f, Release = 0.46f },
+            // (Rickard 2026-10-26: "fötterna böjer sig"). Since 2026-10-30 his own again: Rickard's Orc Idle 1 (7.4 s, downloaded on
+            // Bonk's rig), whose knees bend 13-22 degrees against the old Orc Idle's 23-34 (Rickard's pick: "bonk behöver ny idle")
+            new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Bonk/Anim/IdleOrc1", Run = "Bonk/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 2.0f, Release = 0.46f },
             // Hilde (hero 9) and Oaken (hero 10), 2026-10-28: Speltest's current bodies (Mixamo/Looks/Hilde with Hilde2.jpg, Looks/Oaken
             // with OaknN.jpg) and clips (Resources/Mixamo/Anim/Hilde|Oaken). Hilde's shot is a 0.27 s rifle clip for the shoulder cannon,
             // her cast the keg throw. Oaken walks and runs with the heavy Mutant clips; his attack is a hook punch (the fist is furthest
