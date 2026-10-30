@@ -11,24 +11,19 @@ namespace BAM.Game
     /// (white with a dark edge), a thin crossed-out eye over a hero of the player's team while the enemy cannot see it (fading in
     /// and out over about 0.15 s), a small pulsing diamond by another hero's bar while its special is ready
     /// (HudTelegraph.cs drawCharged), the interrupt window as a bar under the health bar (drawChannel),
-    /// and (MLBB, 2026-10-30) a round level badge over the left end of every hero's bar. The special's charge is the thin row
-    /// in the 3D bar itself (HealthBar). Placed each frame over the art's 3D bars.
+    /// The special's charge is the thin row in the 3D bar itself (HealthBar); no level badge (Rickard 2026-10-28 and again 2026-10-30,
+    /// the HUD top shows the level). Placed each frame over the art's 3D bars.
     /// </summary>
     sealed partial class Hud
     {
         static readonly Color NameAlly = Hex(0x9fd4ff), NameFoe = Hex(0xff9aa4);
         static readonly Color EyeStroke = Hex(0xdfe9e6), EyeEdge = Hex(0x08101a);
-        /// <summary>MLBB's round level badge by the bar: off (Rickard 2026-10-30 chose A "ingen nivåsiffra", as on 2026-10-28; the HUD top
-        /// shows the level). Kept as a switch, not a const, so the badge code still compiles without unreachable-code warnings.</summary>
-        static readonly bool LevelBadge = false;
 
         sealed class Overhead
         {
             public RectTransform Root;
             public Text Name;
-            public Image Eye, Diamond, ChanBack, ChanFill, BadgeRim, Badge;
-            public Text Level;
-            public int LevelShown = -1;
+            public Image Eye, Diamond, ChanBack, ChanFill;
             public Outline NameEdge, DiamondEdge;   // kept from the build, so no GetComponent every frame
             public float EyeA;
         }
@@ -74,16 +69,6 @@ namespace BAM.Game
                 o.ChanBack = Plain(o.Root, "ChannelBack", new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.85f));
                 o.ChanFill = Plain(o.ChanBack.rectTransform, "Fill", Color.white);
                 o.ChanFill.rectTransform.anchorMin = o.ChanFill.rectTransform.anchorMax = o.ChanFill.rectTransform.pivot = new Vector2(0f, 0.5f);
-                // the level badge: a black disc in a pale rim, the number in Lilita
-                o.BadgeRim = Plain(o.Root, "LevelRim", new Color(0.9f, 0.91f, 0.93f, 1f));
-                o.BadgeRim.sprite = UiKit.Circle;
-                o.Badge = Plain(o.BadgeRim.rectTransform, "Level", new Color(0.06f, 0.06f, 0.08f, 1f));
-                o.Badge.sprite = UiKit.Circle;
-                o.Badge.enabled = true;
-                o.Badge.rectTransform.anchorMin = Vector2.zero; o.Badge.rectTransform.anchorMax = Vector2.one;
-                o.Level = UiKit.Label(o.Badge.rectTransform, "", 20, TextAnchor.MiddleCenter, Color.white);
-                UiKit.Stretch(o.Level.rectTransform);
-                o.Level.raycastTarget = false;
                 o.Root.gameObject.SetActive(false);
                 overheads[i] = o;
             }
@@ -163,17 +148,6 @@ namespace BAM.Game
                     o.DiamondEdge.effectColor = ally ? new Color(0.85f, 1f, 0.93f, 0.9f) : new Color(1f, 0.85f, 0.85f, 0.9f);
                 }
 
-                // MLBB's level badge over the bar's left end (the special's charge is the row in the 3D bar, HealthBar)
-                if (o.BadgeRim.enabled != LevelBadge) o.BadgeRim.enabled = LevelBadge;
-                if (LevelBadge)
-                {
-                    float d = ts * 0.27f, rim = Mathf.Max(1.5f, ts * 0.025f);
-                    o.BadgeRim.rectTransform.sizeDelta = new Vector2(d, d);
-                    o.BadgeRim.rectTransform.anchoredPosition = new Vector2(-bw * ts * 0.5f - d * 0.3f, -ts * 0.03f);
-                    o.Badge.rectTransform.offsetMin = new Vector2(rim, rim); o.Badge.rectTransform.offsetMax = new Vector2(-rim, -rim);
-                    if (o.LevelShown != who.Level) { o.LevelShown = who.Level; o.Level.text = who.Level.ToString(); }
-                    o.Level.fontSize = Mathf.Max(8, Mathf.RoundToInt(d * 0.62f));
-                }
                 float under = -ts * 0.17f - 4f; // under the bar and its charge row
 
                 // the interrupt window (drawChannel): a small bar under the health bar empties as it closes, orange and
