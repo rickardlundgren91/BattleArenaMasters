@@ -46,6 +46,7 @@ namespace BAM.Art
         static readonly int[] swings = new int[32];
 
         const float Height = 0.55f;
+        const float AnchorLen = 0.8f; // Knut's thrown anchor, ring to flukes, in tiles (the code-made one was about 0.5)
 
         public void Build(ProjKind k, int t)
         {
@@ -96,9 +97,30 @@ namespace BAM.Art
             boulder = k == ProjKind.BonkBoulder && boulderTex != null;
             if (k == ProjKind.TyraBolt && !boltLoaded) { boltLoaded = true; boltTex = RickardFx.Load("tx_fx_tyra_bolt"); }
             boltPic = k == ProjKind.TyraBolt && boltTex != null;
+            // Knut's thrown anchor: the same model he holds (Props/knut_anchor), not the code-made one (Rickard 2026-10-30 "knuts
+            // ankare måste göras om"): flukes first, the ring (where the chain hangs) back toward Knut, the flat side up to the camera
+            Mesh anchorMesh = k == ProjKind.KnutAnchor ? Props.Mesh("knut_anchor") : null;
+            if (anchorMesh != null)
+            {
+                var ag = new GameObject("Anchor");
+                var at = ag.transform;
+                at.SetParent(vis, false);
+                float s = AnchorLen / Mathf.Max(0.01f, anchorMesh.bounds.size.y); // long in tiles
+                at.localScale = new Vector3(s, s, s);
+                at.localRotation = Quaternion.Euler(-90f, 0f, 0f); // the model's +y (the ring) to the back
+                at.localPosition = -(at.localRotation * (anchorMesh.bounds.center * s));
+                ag.AddComponent<MeshFilter>().sharedMesh = anchorMesh;
+                var ar = ag.AddComponent<MeshRenderer>();
+                var am = ArtMaterials.Instance(ArtMaterials.Lit);
+                Texture2D atex = Props.Texture("knut_anchor");
+                if (atex != null) { am.SetTexture(ArtMaterials.BaseMap, atex); am.mainTexture = atex; }
+                ar.sharedMaterial = am;
+                ar.shadowCastingMode = ShadowCastingMode.Off;
+            }
             visF.sharedMesh = boulder || boltPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
+            if (anchorMesh != null) visR.enabled = false;
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot || k == ProjKind.TyraVolley;
             if (melee)
             {
@@ -337,6 +359,13 @@ namespace BAM.Art
                         dustT.position = transform.position + new Vector3(0f, 0.35f, 0f) - dustT.right * (len * 0.35f);
                         dustMat.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, 0.9f * grow));
                     }
+                    break;
+                }
+                case ProjKind.KnutAnchor when tether != null:
+                {
+                    // always flukes out from Knut, also while the chain hauls it back (by its flight it would turn round on the way in)
+                    Vector3 away = vis.position - tether.position; away.y = 0f;
+                    vis.rotation = away.sqrMagnitude > 0.01f ? Quaternion.LookRotation(away.normalized) : look;
                     break;
                 }
                 default:
