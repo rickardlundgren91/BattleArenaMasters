@@ -132,6 +132,7 @@ namespace BAM.Art
         bool moving;
         float speed01, moveW, phase, idleT, seed;
         float atkT = -1f, windup = 0.3f, castT = -1f, hitT = -1f, hitLen = 0.15f, recoil;
+        long atkTick = -1; // the rules' tick the swing started on (ArtKit.SimTicks), -1 = timed by the frame clock
         float atkCut = -1f, castCut = -1f; // Interrupt: where the swing or the cast was stopped (it holds there and fades out)
         const float CutFade = 0.15f;
         float propBack = -1f;
@@ -637,6 +638,9 @@ namespace BAM.Art
         {
             Probe.OnSwing(atkT >= 0f && atkCut < 0f && atkT < windup);
             windup = Mathf.Max(0.05f, w);
+            // on the rules' clock (ArtKit.SetSimClock) the swing counts from this tick and its blow is the release tick itself
+            atkTick = IsHero && !Preview ? ArtKit.SimTicks : -1;
+            if (atkTick >= 0 && w > 0f) windup = AnimTiming.ReleaseTick(w) * AnimTiming.Tick;
             float now = Time.time;
             if (now - lastAtkAt < 4f) atkGap = now - lastAtkAt; // a fight's swings: how long the recovery may take (BlowSegment)
             lastAtkAt = now;
@@ -1087,7 +1091,9 @@ namespace BAM.Art
                 if (atkT >= 0f)
                 {
                     float atkWas = atkT;
-                    atkT += dt;
+                    // the rules' clock when the game feeds it: never behind the frame clock's start, never back
+                    if (atkTick >= 0 && ArtKit.SimTicks >= atkTick) atkT = Mathf.Max(atkT, AnimTiming.SimElapsed(atkTick, ArtKit.SimTicks, ArtKit.SimAlpha));
+                    else atkT += dt;
                     if (atkCut < 0f && atkWas < windup && atkT >= windup) Probe.OnBlow();
                     // a swing that outlives its plan (a NaN total the plans never make) ends instead of holding the body forever
                     if (AnimTiming.Stuck(atkT, atkTotal)) { Probe.Locks++; atkTotal = atkT; }
