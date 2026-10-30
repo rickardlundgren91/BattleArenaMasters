@@ -37,5 +37,7 @@ namespace BAM.Audio
         HildeKegBlast, HildeKnock,
         // Knut's Anchor Slam wind-up (tap): Rickard's own clip ordered 2026-10-30, silent until it exists
         KnutSlamWindup,
+        // the Haste and Sprint battle spells: Rickard's own clips made for them 2026-10-30 (O-026)
+        SpellHaste, SpellSprint,
     }
 }

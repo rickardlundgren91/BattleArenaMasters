@@ -765,7 +765,8 @@ namespace BAM.Game
                     {
                         ArtKit.PlaySpell((SpellId)e.Kind, Coords.World(e.X, e.Y), Coords.Of(e.A));
                         var sp = (SpellId)e.Kind;
-                        Sound(sp == SpellId.Blink ? SfxId.SpellBlink : sp == SpellId.Shield ? SfxId.SpellShield : SfxId.None, e.A, 0.8f);
+                        Sound(sp == SpellId.Blink ? SfxId.SpellBlink : sp == SpellId.Shield ? SfxId.SpellShield : sp == SpellId.Haste ? SfxId.SpellHaste
+                            : sp == SpellId.Sprint ? SfxId.SpellSprint : SfxId.None, e.A, 0.8f);
                     }
                     break;
                 case EventType.SpellCancel:
@@ -914,7 +915,8 @@ namespace BAM.Game
             bool low = p.Alive && p.Hp < p.MaxHp * 0.25f;
             if (low && !playerLow) BamAudio.Play(SfxId.LowHealth);
             playerLow = low;
-            if (m.WaveN != lastWave) { lastWave = m.WaveN; BamAudio.Play(SfxId.WaveSpawn, 0.5f); }
+            // the horn only for the match's first wave (Rickard 2026-10-30: "första wave")
+            if (m.WaveN != lastWave) { lastWave = m.WaveN; if (m.WaveN == 1) BamAudio.Play(SfxId.WaveSpawn, 0.5f); }
             // the player's own tower losing health while the player is more than 8 tiles from it (Speltest towerHit; at most every 8 s)
             for (int i = 0; i < m.Units.Count; i++)
             {
