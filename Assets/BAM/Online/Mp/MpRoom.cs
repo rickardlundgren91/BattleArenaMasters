@@ -44,6 +44,8 @@ namespace BAM.Online.Mp
         /// <summary>What is going on, or what went wrong, for the room page.</summary>
         public static string Status { get; private set; } = "";
         public static int Mode { get; private set; } = Together;
+        /// <summary>The bots' level in this room: the host picks it in the room and everyone sees it (Rickard 2026-10-30).</summary>
+        public static Difficulty Diff { get; private set; } = Difficulty.Normal;
         public static readonly List<Member> Members = new List<Member>(MpRelay.MaxPlayers);
         public static int MyId { get; private set; }
         public static Member Me { get { foreach (var m in Members) if (m.Id == MyId) return m; return null; } }
@@ -89,7 +91,7 @@ namespace BAM.Online.Mp
         {
             Leave();
             if (mode == Together || mode == Versus) Mode = mode;
-            IsHost = true; MyId = 0; nextId = 1; State = Phase.Connecting; Status = "Making a room…";
+            IsHost = true; MyId = 0; nextId = 1; State = Phase.Connecting; Status = "Making a room…"; Diff = BamSettings.LastDifficulty;
             Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell });
             relay = new MpRelay(true, null);
             Wire();
@@ -228,7 +230,7 @@ namespace BAM.Online.Mp
 
         static void QuickHost()
         {
-            IsHost = true; MyId = 0; nextId = 1; mergeT = MergeEvery; otherParty = null;
+            IsHost = true; MyId = 0; nextId = 1; mergeT = MergeEvery; otherParty = null; Diff = BamSettings.LastDifficulty;
             Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell, Party = myParty });
             relay = new MpRelay(true, null) { Quick = true };
             Wire();
@@ -274,6 +276,13 @@ namespace BAM.Online.Mp
             return true;
         }
 
+        /// <summary>Host: the bots' level for the next match.</summary>
+        public static void SetDiff(Difficulty d)
+        {
+            if (!IsHost || d == Diff) return;
+            Diff = d; BamSettings.LastDifficulty = d; SendRoom();
+        }
+
         public static void SetMode(int mode)
         {
             if (!IsHost || mode == Mode || Members.Count > Capacity(mode)) return;
@@ -295,7 +304,7 @@ namespace BAM.Online.Mp
         {
             if (!CanStart) return;
             int seed = UnityEngine.Random.Range(1, int.MaxValue);
-            var diff = BamSettings.LastDifficulty;
+            var diff = Diff;
             var seats = new SeatConfig[Members.Count];
             for (int i = 0; i < Members.Count; i++)
             {
@@ -513,7 +522,7 @@ namespace BAM.Online.Mp
                     Members.Clear();
                     for (int i = 0; i < n; i++)
                         Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
-                    bool q = r.U8() == 1; int ps = r.U8();
+                    bool q = r.U8() == 1; int ps = r.U8(); Diff = (Difficulty)Math.Min(r.U8(), (int)Difficulty.Hard);
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
                     Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
                     Changed?.Invoke();
@@ -553,7 +562,7 @@ namespace BAM.Online.Mp
             if (!IsHost) return;
             w.Begin(MpMsg.Room); w.U8(Mode); w.U8(Members.Count);
             foreach (var m in Members) { w.U8(m.Id); w.Str(m.Name); w.U8((int)m.Hero); w.U8((int)m.Spell); w.U8(m.InMatch ? 1 : 0); w.U16(Mathf.Clamp((int)m.Ping, 0, 65535)); w.U8(m.Side); }
-            w.U8(Quick ? 1 : 0); w.U8(partySize);
+            w.U8(Quick ? 1 : 0); w.U8(partySize); w.U8((int)Diff);
             Broadcast(w, false);
             Changed?.Invoke();
         }

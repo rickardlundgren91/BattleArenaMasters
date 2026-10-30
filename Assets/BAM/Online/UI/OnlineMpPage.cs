@@ -81,6 +81,19 @@ namespace BAM.Online.UI
             }
         }
 
+        // the bots' level (Rickard 2026-10-30: which bots do you meet when playing together?): EASY / NORMAL / HARD
+        static readonly string[] DiffNames = { "EASY", "NORMAL", "HARD" };
+        static void DiffButtons(float x, float y, float w, Difficulty d, Action<Difficulty> pick, bool draw)
+        {
+            if (draw) Text("Bots", x, y + 13, Treb(12, true), "#ffb43a");
+            float lx = 44, bw = (w - lx - 8) / 3;
+            for (int i = 0; i < 3; i++)
+            {
+                var k = (Difficulty)i;
+                if (draw) MpBtn("mpDiff" + i, DiffNames[i], x + lx + i * (bw + 4), y, bw, 26, d == k ? "#2fae5b" : "#39407a", () => pick(k));
+            }
+        }
+
         // the hero this player plays in the room: a row of portraits, the picked one framed
         static void HeroRow(float x, float y, float w, HeroId picked, bool draw)
         {
@@ -181,6 +194,7 @@ namespace BAM.Online.UI
                 if (draw) Text("Or with friends:", ix, y + 8, Treb(13, true), "#ffb43a");
                 y += 22;
                 ModeButtons(ix, y, iw, createMode, m => createMode = m, draw); y += 36;
+                DiffButtons(ix, y, iw, BamSettings.LastDifficulty, d => BamSettings.LastDifficulty = d, draw); y += 32;
                 var ml = Wrap(ModeLine(createMode, 2), iw, Treb(12)); TextLines(ml, ix, y, "#a9a7c7", draw); y += ml.Count * 16 + 4;
                 var il = Wrap("Press INVITE FRIENDS, or INVITE next to someone below. When they accept, you press START.", iw, Treb(12)); TextLines(il, ix, y, "#f4f1ff", draw); y += il.Count * 16 + 6;
                 if (draw) MpBtn("mpFriends", "INVITE FRIENDS", ix, y, iw, rowH, "#3a6cff", OpenInvite);
@@ -212,8 +226,8 @@ namespace BAM.Online.UI
                     y += 34;
                 }
                 y += 4;
-                if (MpRoom.IsHost) { ModeButtons(ix, y, iw, mode, MpRoom.SetMode, draw); y += 36; }
-                else { var gl = Wrap("Mode: " + MpRoom.ModeNames[mode] + " (the host picks)", iw, Treb(12)); TextLines(gl, ix, y, "#f4f1ff", draw); y += gl.Count * 16; }
+                if (MpRoom.IsHost) { ModeButtons(ix, y, iw, mode, MpRoom.SetMode, draw); y += 36; DiffButtons(ix, y, iw, MpRoom.Diff, MpRoom.SetDiff, draw); y += 32; }
+                else { var gl = Wrap("Mode: " + MpRoom.ModeNames[mode] + ", bots " + DiffNames[(int)MpRoom.Diff] + " (the host picks)", iw, Treb(12)); TextLines(gl, ix, y, "#f4f1ff", draw); y += gl.Count * 16; }
                 var ml = Wrap(ModeLine(mode, Math.Max(2, members.Count)), iw, Treb(12)); TextLines(ml, ix, y, "#a9a7c7", draw); y += ml.Count * 16 + 6;
                 if (draw) Text("Your hero", ix, y + 8, Treb(12, true), "#ffb43a");
                 y += 18;
