@@ -106,6 +106,10 @@ namespace BAM.Art.Editor
             EditorGUILayout.LabelField("Arms", EditorStyles.boldLabel);
             g.ArmSpread = EditorGUILayout.Slider(new GUIContent("Arms out", "Degrees both upper arms turn out from the sides"), g.ArmSpread, 0f, 45f);
             if (g.HandsOff > 0f) EditorGUILayout.LabelField("  + " + g.HandsOff + " more in code (keeps the hands off the thighs)");
+            EditorGUILayout.LabelField("Right arm at rest (degrees)");
+            g.RightArm = ArmSliders(g.RightArm);
+            EditorGUILayout.LabelField("Left arm at rest (degrees)");
+            g.LeftArm = ArmSliders(g.LeftArm);
             if (g.Shoulder)
             {
                 EditorGUILayout.LabelField("Right hand on the shoulder (share of the hero's height)");
@@ -133,6 +137,11 @@ namespace BAM.Art.Editor
             }
             EditorGUILayout.HelpBox("Save writes every hero's numbers to " + FilePath + ". Send that file back to Claude so it goes into the game.", MessageType.None);
         }
+
+        static Vector3 ArmSliders(Vector3 v) => new Vector3(
+            EditorGUILayout.Slider(new GUIContent("  arm out", "The upper arm out from the side (negative = in)"), v.x, -90f, 90f),
+            EditorGUILayout.Slider(new GUIContent("  arm forward", "The upper arm forward (negative = back)"), v.y, -90f, 90f),
+            EditorGUILayout.Slider(new GUIContent("  elbow bend", "More bend at the elbow (negative = straighter)"), v.z, -120f, 120f));
 
         static void Save(GearDef[] all)
         {
