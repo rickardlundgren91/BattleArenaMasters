@@ -1,10 +1,10 @@
 Rickard's AI clips from Speltest ABC2/Resources/Sfx (copied 2026-10-26). File here <- Speltest file:
 UiTap/UiBack/UiConfirm/UiToggle <- click | Countdown <- tick | CountdownGo <- go | Victory <- victory | Defeat <- defeat
 Attack<Hero> <- atk_<hero> (Bram Fenn Tyra Moa Knut Tikta Blast)
-BramHammerThrow <- hammer | BramHammerBounce <- clank | FennWolfCall/FennWolfThrow <- sp_fenn | TyraRelease <- sp_tyra | TyraDraw <- bow (the Arrow Volley draw, 2026-10-28)
-MoaShield/MoaField <- sp_moa | KnutAnchorThrow <- sp_knut | KnutAnchorHook <- clink | TiktaNeedles <- sp_tikta
-BlastBombThrow/BlastFireLane <- sp_blast | BlastExplosion/BlastChainBoom <- boom
-HitLight/HitHeavy <- hit (only when a hero hits you) | CloneAppear <- blink | TowerShot <- tower (only when aimed at you)
+BramHammerThrow <- hammer | BramHammerBounce <- clank | FennWolfCall <- sp_fenn | TyraRelease <- sp_tyra | TyraDraw <- bow (the Arrow Volley draw, 2026-10-28)
+MoaShield <- sp_moa | KnutAnchorThrow <- sp_knut | KnutAnchorHook <- clink | TiktaNeedles <- sp_tikta
+BlastBombThrow <- sp_blast | BlastExplosion <- boom
+HitLight <- hit (only when a hero hits you)
 TowerDestroyed <- towerdown | HeroDeath/AllyDeath <- herodeath | Respawn <- respawn | LevelUp <- levelUp | LowHealth <- heartbeat
 Bonk: Rickard's own AI clips made for him 2026-10-26 (AttackBonk, BonkSlamWindup, BonkSlam, BonkBoulderThrow, BonkKnock, BonkStun); before that he borrowed warrior_swing, rockcrack, sp_oaken, wallcrash
 Hilde (2026-10-29): AttackHilde <- atk_hilde | HildeKegThrow <- sp_hilde (both kegs) | HildeWallCrash <- wallcrash (Speltest's Wall Crash sound)
@@ -16,3 +16,4 @@ Ordered and made by Rickard 2026-10-29 (ElevenLabs, his own; trimmed, faded, pea
 Stunned (Rickard 2026-10-29, ElevenLabs, his own): only the first 0.75 s of his clip, as he asked (a stun or root cutting a special)
 Hilde's own (Rickard 2026-10-29, ElevenLabs): HildeKegBlast (both kegs going off, was Blast's explosion) | HildeKnock (a hero shoved by her keg, was Bonk's knock)
 Rickard's own 2026-10-30 (ElevenLabs; trimmed, faded): SpellHaste (magical speed whoosh, O-026) | GrassEnter (soft leaf rustle, peak -3 dB, O-029) | WaveSpawn (distant war horn, only the match's first wave, O-030)
+Rickard's own 2026-10-31 00:07 CET (ElevenLabs; trimmed both ends, cut to length, 0.12 s fade, peak -1 dB, 48 kHz; O-034/O-027/O-035): TowerShot (tower charge + bolt, replaces Speltest "tower", 0.7 s) | CloneAppear (ghostly copy pop, was blink, 0.9 s) | BlastChainBoom (small secondary pop, was boom, 0.6 s) | HitHeavy (big melee thud+crack, was hit, 0.5 s) | FennWolfThrow (wolf hurled whoosh+growl, was sp_fenn, 0.9 s) | MoaField (honey healing field hum, was sp_moa, 1.2 s, +17 dB) | BlastFireLane (fire line ignite, was sp_blast, 1.1 s, +6 dB high shelf at 600 Hz for phone speakers)
