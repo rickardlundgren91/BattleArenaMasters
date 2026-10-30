@@ -30,7 +30,7 @@ namespace BAM.Game
         }
 
         // target: a dark edge, the gold band and a pulsing inner ring
-        readonly Ring[] range = new Ring[3], charge = new Ring[1], reach = new Ring[1], target = new Ring[3], tower = new Ring[1];
+        readonly Ring[] range = new Ring[3], charge = new Ring[1], reach = new Ring[1], target = new Ring[3], tower = new Ring[2];
         // Brawl Stars ideas 2 and 3 (Rickard 2026-10-26): a red ring under each enemy the dragged special would hit, and an orange
         // ring at the hero's feet while its special is ready
         readonly Ring[] hits = new Ring[8], ready = new Ring[2];
@@ -291,6 +291,9 @@ namespace BAM.Game
                     bool onMe = tw.Target == p;
                     Vector3 tc = Coords.Of(tw); tc.y = 0f;
                     float w = (onMe ? 3f : 1.5f) * px;
+                    // the old game (Hud.cs, Rickard 2026-10-14) also filled the whole reach faint red while it shot at you: the area turns
+                    // red, not only its edge (Rickard 2026-10-30 "tornets area blir inte röd")
+                    if (onMe) Show(tower[1], tc, tr, new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.13f), tr);
                     Show(tower[0], tc, tr + w / 2f, onMe ? new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.75f) : new Color(1f, 1f, 1f, 0.25f), w);
                 }
             }
