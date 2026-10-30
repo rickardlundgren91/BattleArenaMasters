@@ -18,8 +18,9 @@ namespace BAM.Game
     {
         static readonly Color NameAlly = Hex(0x9fd4ff), NameFoe = Hex(0xff9aa4);
         static readonly Color EyeStroke = Hex(0xdfe9e6), EyeEdge = Hex(0x08101a);
-        /// <summary>MLBB's round level badge by the bar (Rickard chooses on 2026-10-30; he had the old 7-segment level removed 2026-10-28).</summary>
-        const bool LevelBadge = true;
+        /// <summary>MLBB's round level badge by the bar: off (Rickard 2026-10-30 chose A "ingen nivåsiffra", as on 2026-10-28; the HUD top
+        /// shows the level). Kept as a switch, not a const, so the badge code still compiles without unreachable-code warnings.</summary>
+        static readonly bool LevelBadge = false;
 
         sealed class Overhead
         {

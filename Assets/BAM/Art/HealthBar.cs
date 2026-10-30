@@ -5,7 +5,7 @@ namespace BAM.Art
     /// <summary>
     /// World-space health bar in the MLBB style (Rickard 2026-10-30 "gör healthbars mer som i mlbb"): a thin dark frame, the fill
     /// shaded with a light top edge, a dark notch every 100 HP (a wider one every 500) on hero bars, the white damage trail, the
-    /// shield after the health, and under a hero's bar a thin row for the special's charge (MLBB's mana row; gold when ready).
+    /// shield after the health, and under a hero's bar a thin orange row for the special's charge (where MLBB has mana; it blinks when ready).
     /// One small dynamic mesh, one draw call, drawn over everything (ArtMaterials.Overlay), so a body or a raised weapon never
     /// cuts through it. The quads are written back to front: with no depth test the triangle order is the layering.
     /// Vertices are rewritten only when a value changes or the trail is catching up.
