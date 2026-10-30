@@ -158,7 +158,7 @@ namespace BAM.Sim
         }
         public bool InCombat(float now) => now - LastCombat < (Kind == UnitKind.Tower ? Rules.TowerOutOfCombat : Rules.HeroOutOfCombat);
         /// <summary>A hero's regen waits only for fights with heroes and towers: hitting or being hit by minions and creeps never stops it (Rickard 2026-10-30).</summary>
-        public bool InFight(float now) => now - LastFight < Rules.HeroOutOfCombat;
+        public bool InFight(float now) => now - LastFight < Rules.HeroRegenDelay;
 
         /// <summary>Statuses as display flags (the art shows stars, slows, shields...). Illusion is set for clones; the game
         /// shows it only to the clone's own team.</summary>

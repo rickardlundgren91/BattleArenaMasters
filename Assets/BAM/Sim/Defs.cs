@@ -138,9 +138,9 @@ namespace BAM.Sim
         public const float RespawnBase = 8, RespawnPerDeath = 1, RespawnInvulnerable = 4;
         public const int RespawnLateLevel = 10;
         public const float RespawnLatePerLevel = 2, RespawnLatePerMinute = 4, RespawnLateMax = 20;
-        public const float RegenAmount = 0.1f, RegenTick = 0.85f, HeroOutOfCombat = 3;
+        public const float RegenAmount = 0.1f, RegenTick = 0.85f, HeroOutOfCombat = 3, HeroRegenDelay = 2; // HeroRegenDelay: seconds after the last hero/tower fight before regen starts (was HeroOutOfCombat, 3 s, until protocol 20)
         public const float TowerOutOfCombat = 10, TowerRegenBelow = 0.25f, TowerRegenAmount = 0.01f, TowerRegenTick = 1;
-        public const float GrassSight = 2.5f, RevealTime = 4;
+        public const float GrassSight = 2.5f, RevealTime = 2; // RevealTime: seconds a hit keeps attacker and target visible in grass (4 s until protocol 20)
         public const float AmbushBonus = 0.3f;
         public const float KnockCooldown = 2; // a hero (or minion) knocked back cannot be knocked again for 2 s from that knock's start (Rickard 2026-10-30)
         public const float AssistWindow = 5;
