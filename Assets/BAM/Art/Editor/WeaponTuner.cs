@@ -43,6 +43,15 @@ namespace BAM.Art.Editor
                     d.Grip = EditorGUILayout.Slider(new GUIContent("Grip", "Where the fist holds it: 0 = the handle's end, 1 = the top"), d.Grip, 0f, 1f);
                     d.HoldUp = EditorGUILayout.Slider(new GUIContent("Hold up", "Degrees above level at rest (negative = pointing down; 0 = off, left as the hand holds it)"), d.HoldUp, -90f, 90f);
                     d.HoldOut = EditorGUILayout.Slider(new GUIContent("Hold out", "Degrees from straight ahead towards its hand's side; past 90 it leans back"), d.HoldOut, -180f, 180f);
+                    d.Fist = EditorGUILayout.Slider(new GUIContent("Close hand", "0 = the fingers as the animation has them, 1 = curled round the weapon"), d.Fist, 0f, 1f);
+                    if (d.Menu.On)
+                    {
+                        // Home and the hero page use their own hold (Tyra's bow hanging from her fist): Hold up/out above are the match's
+                        EditorGUILayout.LabelField("In the menu (Home, hero page)");
+                        float mu = EditorGUILayout.Slider(new GUIContent("  Menu hold up", "Degrees above level in the menu (negative = pointing down)"), d.Menu.Up, -90f, -1f);
+                        float mo = EditorGUILayout.Slider(new GUIContent("  Menu hold out", "Degrees from straight ahead in the menu"), d.Menu.Out, -180f, 180f);
+                        d.Menu = new Hold { Up = mu, Out = mo, Turn = d.Menu.Turn };
+                    }
                     EditorGUILayout.LabelField("Extra turn (degrees about the grip)");
                     d.Turn = new Vector3(
                         EditorGUILayout.Slider("  x", d.Turn.x, -180f, 180f),
