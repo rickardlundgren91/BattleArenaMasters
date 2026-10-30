@@ -203,8 +203,50 @@ namespace BAM.Sim
             }
             return dps;
         }
-        float TtkAt(Unit h, float px, float py) { float d = IncomingDps(h, px, py); return d > 0 ? (h.Hp + ShieldOf(h)) / d : 99; }
+        /// <summary>Seconds h would last standing at (px, py). Normal and Hard bots also take off the burst of every seen enemy hero
+        /// whose special is ready and reaches the spot (players see the same as the red diamond over the hero). Bot analysis
+        /// 2026-10-30: almost half of all bot deaths came right after the killer's special, with the bot still sure it had time.</summary>
+        float TtkAt(Unit h, float px, float py)
+        {
+            float d = IncomingDps(h, px, py); if (!(d > 0)) return 99;
+            float hp = h.Hp + ShieldOf(h);
+            if (Tier.V3) hp = Math.Max(hp * 0.15f, hp - ReadyBurst(h, px, py));
+            return hp / d;
+        }
         float TtkAt(Unit h) => TtkAt(h, h.X, h.Y);
+
+        /// <summary>About how many auto attacks' worth of damage the hero's special puts on one hero at once, from the hero numbers
+        /// (Tikta's four needles at 1.2, Blast's bomb with its burn, Bram's hammer with a bounce...). Moa's shields hurt nobody.</summary>
+        static float SpecialBurst(HeroId id)
+        {
+            switch (id)
+            {
+                case HeroId.Tikta: return 4.8f;
+                case HeroId.Bonk: return 1.7f;
+                case HeroId.Blast: return 1.6f;
+                case HeroId.Oaken: return 1.6f;
+                case HeroId.Bram: return 1.5f;
+                case HeroId.Tyra: return 1.3f;
+                case HeroId.Knut: return 1.3f;
+                case HeroId.Fenn: return 1.2f;
+                case HeroId.Hilde: return 1.2f;
+                default: return 0;
+            }
+        }
+
+        /// <summary>The burst every seen enemy hero with its special ready (and not stunned) could put on h at (px, py) right now.</summary>
+        float ReadyBurst(Unit h, float px, float py)
+        {
+            float b = 0; var us = M.Units;
+            for (int i = 0; i < us.Count; i++)
+            {
+                var e = us[i];
+                if (e.Kind != UnitKind.Hero || !e.Alive || e.IsClone || e.Team == h.Team || !e.SpecialReady || e.Has(St.Stun) || !Sees(e)) continue;
+                if (Hyp(e.X - px, e.Y - py) > SpecialReach(e) + h.R + 1) continue;
+                b += SpecialBurst(e.Hero) * e.StatDmg();
+            }
+            return b;
+        }
 
         // the threat snapshot (old SimThreat.cs): everything about each enemy that does not depend on the spot, worked out once
         struct Threat { public float X, Y, Reach, Dps, SpReach, SpDps; public byte Kind; }
