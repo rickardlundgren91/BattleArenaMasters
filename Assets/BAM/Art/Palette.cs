@@ -22,7 +22,7 @@ namespace BAM.Art
             Blue = 64, BlueLight = 65, BlueDark = 66, Red = 67, RedLight = 68, RedDark = 69,
             BarBack = 70, BarPlayer = 71, BarAlly = 72, BarEnemy = 73, BarShield = 74, BarTrail = 75, BarFrame = 76,
             PlayerRing = 77, Stun = 78, Slow = 79, Root = 80, Burn = 81, Poison = 82, ShieldFx = 83, Haste = 84,
-            AimOk = 85, AimBad = 86, Range = 87, ShadowSoft = 88, WhiteSoft = 89, WhiteMid = 90;
+            AimOk = 85, AimBad = 86, Range = 87, ShadowSoft = 88, WhiteSoft = 89, WhiteMid = 90, PlayerRingSoft = 91;
 
         static readonly Color32[] colors = new Color32[Size * Size];
         static Texture2D tex;
@@ -50,7 +50,7 @@ namespace BAM.Art
             Set(BarShield, 0xfff2b0); Set(BarTrail, 0xffffff); Set(BarFrame, 0x0b0c10);
             Set(PlayerRing, 0x6dff7a); Set(Stun, 0xffe14a); Set(Slow, 0x7fd8ff); Set(Root, 0x6fbf3a); Set(Burn, 0xff7a1a);
             Set(Poison, 0x9cff3a); Set(ShieldFx, 0xffd860, 85); Set(Haste, 0xffffff);
-            Set(AimOk, 0xffffff); Set(AimBad, 0xff3030); Set(Range, 0xffffff); Set(ShadowSoft, 0x000000, 70);
+            Set(AimOk, 0xffffff); Set(AimBad, 0xff3030); Set(Range, 0xffffff); Set(ShadowSoft, 0x000000, 70); Set(PlayerRingSoft, 0x6dff7a, 120);
             Set(WhiteSoft, 0xffffff, 70); Set(WhiteMid, 0xffffff, 150);
         }
 
