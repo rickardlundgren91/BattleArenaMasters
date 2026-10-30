@@ -274,7 +274,8 @@ namespace BAM.Audio
             int n = c.samples * c.channels;
             if (n <= 0 || n > 44100 * 2 * 4) return level;
             if (c.loadType != AudioClipLoadType.DecompressOnLoad) return level; // GetData would fail (and log) on a compressed clip
-            if (gainBuf == null || gainBuf.Length < n) gainBuf = new float[Math.Max(n, 44100)];
+            // GetData wants a buffer of exactly the clip's length: a longer one logs "Data longer than the AudioClip" and fails
+            if (gainBuf == null || gainBuf.Length != n) gainBuf = new float[n];
             var d = gainBuf;
             if (!c.GetData(d, 0)) return level;
             float peak = 0f;
