@@ -44,6 +44,13 @@ namespace BAM.Art.Editor
                     d.HoldUp = EditorGUILayout.Slider(new GUIContent("Hold up", "Degrees above level at rest (negative = pointing down; 0 = off, left as the hand holds it)"), d.HoldUp, -90f, 90f);
                     d.HoldOut = EditorGUILayout.Slider(new GUIContent("Hold out", "Degrees from straight ahead towards its hand's side; past 90 it leans back"), d.HoldOut, -180f, 180f);
                     d.Fist = EditorGUILayout.Slider(new GUIContent("Close hand", "0 = the fingers as the animation has them, 1 = curled round the weapon"), d.Fist, 0f, 1f);
+                    if (d.Run.On)
+                    {
+                        // the run hold's flat side: the idle's vote, or turned half a turn about the shaft
+                        int was = d.RunSign == 0 ? 0 : 1;
+                        int pick = EditorGUILayout.Popup(new GUIContent("Walk: flip", "Turns the weapon half a turn about its shaft while the hero walks"), was, new[] { "No (as BAM picks)", "Yes, turned round" });
+                        if (pick != was) d.RunSign = pick == 0 ? 0 : -WalkVote(hero, w);
+                    }
                     if (d.Menu.On)
                     {
                         // Home and the hero page use their own hold (Tyra's bow hanging from her fist): Hold up/out above are the match's
@@ -136,6 +143,18 @@ namespace BAM.Art.Editor
                 }
             }
             EditorGUILayout.HelpBox("Save writes every hero's numbers to " + FilePath + ". Send that file back to Claude so it goes into the game.", MessageType.None);
+        }
+
+        // the run hold's side every live hero of this kind voted for (1 if none is out yet)
+        static int WalkVote(int hero, int w)
+        {
+            foreach (var v in Object.FindObjectsByType<BodyView>(FindObjectsSortMode.None))
+            {
+                if (v.HeroIndex != hero || v.Gear == null) continue;
+                int s = v.Gear.RunVote(w);
+                if (s != 0) return s;
+            }
+            return 1;
         }
 
         static Vector3 ArmSliders(Vector3 v) => new Vector3(

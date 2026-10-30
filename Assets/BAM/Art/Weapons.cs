@@ -61,6 +61,9 @@ namespace BAM.Art
         /// in the fist's own grip, Unity's retargeted idle turned her hand so the bow lay level across her legs (ANIM-22).</summary>
         public Hold Menu;
         public int MenuSign;
+        /// <summary>Which way the flat side of the run hold goes: 0 = as the idle votes (BAM's own pick), 1 or -1 fixed (Weapon Tuner
+        /// "Walk: flip", Rickard 2026-10-30: "tyra i game norr och vänster gå blir pilbågen bakofram vänd").</summary>
+        public int RunSign;
         /// <summary>Rickard's own touch-up (Weapon Tuner): a shift in the hero's right/up/forward as a share of the figure's height,
         /// and degrees turned about the grip in the weapon's own x/y/z, on top of everything else, every frame.</summary>
         public Vector3 Offset, Turn;
@@ -346,6 +349,7 @@ namespace BAM.Art
             public float Len, Grip, HoldUp, HoldOut;
             public Vector3 Offset, Turn;
             public float Fist;
+            public int RunSign; // 0 (an older file) = the idle's vote
             public float MenuUp, MenuOut; // the menu's own hold (Tyra's bow on Home); MenuUp 0 (an older file) leaves the code's
         }
 
@@ -377,7 +381,7 @@ namespace BAM.Art
             for (int w = 0; w < h.Weapons.Length && w < d.Weapons.Length; w++)
             {
                 Weapon s = h.Weapons[w]; WeaponDef t = d.Weapons[w];
-                t.Len = s.Len; t.Grip = s.Grip; t.HoldUp = s.HoldUp; t.HoldOut = s.HoldOut; t.Offset = s.Offset; t.Turn = s.Turn; t.Fist = s.Fist;
+                t.Len = s.Len; t.Grip = s.Grip; t.HoldUp = s.HoldUp; t.HoldOut = s.HoldOut; t.Offset = s.Offset; t.Turn = s.Turn; t.Fist = s.Fist; t.RunSign = s.RunSign;
                 if (s.MenuUp != 0f && t.Menu.On) t.Menu = new Hold { Up = s.MenuUp, Out = s.MenuOut, Turn = t.Menu.Turn };
             }
         }
@@ -392,7 +396,7 @@ namespace BAM.Art
             for (int w = 0; w < n; w++)
             {
                 WeaponDef s = d.Weapons[w];
-                h.Weapons[w] = new Weapon { Len = s.Len, Grip = s.Grip, HoldUp = s.HoldUp, HoldOut = s.HoldOut, Offset = s.Offset, Turn = s.Turn, MenuUp = s.Menu.Up, MenuOut = s.Menu.Out, Fist = s.Fist };
+                h.Weapons[w] = new Weapon { Len = s.Len, Grip = s.Grip, HoldUp = s.HoldUp, HoldOut = s.HoldOut, Offset = s.Offset, Turn = s.Turn, MenuUp = s.Menu.Up, MenuOut = s.Menu.Out, Fist = s.Fist, RunSign = s.RunSign };
             }
             return h;
         }
@@ -765,7 +769,7 @@ namespace BAM.Art
                     {
                         Quaternion ra = t.rotation;
                         Vector3 ga = t.TransformPoint(gripL[i]);
-                        RestHold(i, W, rest, W.Run, runSign[i]);
+                        RestHold(i, W, rest, W.Run, W.RunSign != 0 ? W.RunSign : runSign[i]);
                         Vector3 gb = t.TransformPoint(gripL[i]);
                         t.rotation = Quaternion.Slerp(ra, t.rotation, rw);
                         t.position += Vector3.Lerp(ga, gb, rw) - t.TransformPoint(gripL[i]);
@@ -913,6 +917,8 @@ namespace BAM.Art
         internal Transform WeaponT(int i) => wT[i];
         internal Transform HandT(int i) => hand[i];
         internal WeaponDef Def(int i) => defs[i];
+        /// <summary>The run hold's flat side the idle voted for (the tuner's flip turns the other way from it).</summary>
+        internal int RunVote(int i) => runSign[i];
         /// <summary>The weapon's grip point and the palm it is locked to, now (world space).</summary>
         internal void GripPoints(int i, out Vector3 grip, out Vector3 palm)
         {
