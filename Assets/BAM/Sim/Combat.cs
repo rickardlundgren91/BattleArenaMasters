@@ -43,6 +43,19 @@ namespace BAM.Sim
             return i;
         }
 
+        /// <summary>Knut's slows do not stack between Knuts (three Knuts slow like one, 2026-10-30 balance): the same slow from
+        /// another hero of the same kind is refreshed instead of added.</summary>
+        internal void AddSlowOnce(Unit u, St type, float dur, float v, Unit by)
+        {
+            if (CcImmune(u)) return;
+            for (int i = 0; i < u.StCount; i++)
+            {
+                ref var s = ref u.Sts[i];
+                if (s.Type == type && s.V == v && s.By != null && s.By.Kind == UnitKind.Hero && s.By.Hero == by.Hero) { if (dur > s.T) s.T = dur; s.By = by; return; }
+            }
+            u.AddRaw(type, dur, v, 0, by, false);
+        }
+
         /// <summary>A short cast state that a stun or root can cut (Tyra's draw, Tikta's storm, Knut's throw).</summary>
         internal void Channel(Unit h, float dur)
         {
@@ -475,7 +488,7 @@ namespace BAM.Sim
             if (dealt <= 0 && t.Has(St.Invulnerable)) return; // nor does a hit on respawn protection (precision CHAINMAP-06; a shield still charges)
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
             h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1);
-            if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddStatus(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, 0, h);
+            if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddSlowOnce(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, h);
             if (h.Hero == HeroId.Bram) BramBacklash(h, t);
             if (h.Hero == HeroId.Tyra) Featherstep(h, t, dealt); // Hero5.cs
             if (h.Hero == HeroId.Oaken) OakenRelease(h, t); // Hero6.cs

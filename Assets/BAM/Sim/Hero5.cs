@@ -137,7 +137,7 @@ namespace BAM.Sim
                 var u = areaBuf[i];
                 if (!u.Alive) continue;
                 SpecialHit(h, u, p.Dmg, p.Kind, true);
-                if (u.Alive) AddStatus(u, St.SlowPct, KnutS.SlamSlowTime, -KnutS.SlamSlow, 0, h);
+                if (u.Alive) AddSlowOnce(u, St.SlowPct, KnutS.SlamSlowTime, -KnutS.SlamSlow, h);
             }
             Emit(EventType.Explosion, h, null, p.Radius, (byte)p.Kind, true, p.X, p.Y);
         }
