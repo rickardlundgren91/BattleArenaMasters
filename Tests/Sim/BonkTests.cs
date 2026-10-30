@@ -59,13 +59,31 @@ namespace BAM.Sim
             Place(a, x + 4, y); Place(c, x + 5, y); Place(far, x - 4, y); b.Charge = b.HDef.MaxCharge;
             Check(!m.TryCastSpecial(b, float.NaN, 0), "no slam with nobody in reach");
 
-            // Boulder Toss: the first enemy on the line is hit and knocked back 1.5 tiles along it
-            Place(a, x + 3, y); Place(c, x + 4.5f, y); b.RemoveAll(St.Casting); b.RemoveAll(St.Channel);
+            // Boulder Toss, bowled (2026-10-30): a head-on hit sends the first enemy straight down the line, the pin bumps the
+            // enemy behind it on, for less, and nobody is hit twice
+            Place(a, x + 3, y); Place(c, x + 4.6f, y); b.RemoveAll(St.Casting); b.RemoveAll(St.Channel); a.Hp = a.MaxHp; c.Hp = c.MaxHp;
             Check(m.TryCastSpecial(b, 0, 1), "the boulder casts");
-            float ax0 = a.X;
-            for (int k = 0; k < 90; k++) { m.UpdateProjectiles(Rules.Tick); if (a.KnockT > 0) m.KnockStep(a, Rules.Tick); }
-            Check(a.Hp < a.MaxHp && c.Hp == c.MaxHp, "the boulder stops in the first enemy");
-            Check(Near(a.X - ax0, BonkS.KnockDist, 0.05f) && Near(a.Y, y), $"knocked back 1.5 tiles along the line: {a.X - ax0:0.00}");
+            float ax0 = a.X, full = b.StatDmg() * BonkS.BoulderCoeff;
+            for (int k = 0; k < 90; k++) { m.UpdateProjectiles(Rules.Tick); if (a.KnockT > 0) m.KnockStep(a, Rules.Tick); if (c.KnockT > 0) m.KnockStep(c, Rules.Tick); }
+            Check(Near(a.MaxHp - a.Hp, full * a.TakenMult, 0.5f), $"the first pin takes the full hit once: {a.MaxHp - a.Hp:0.0} of {full * a.TakenMult:0.0}");
+            Check(Near(a.X - ax0, BonkS.KnockDist, 0.05f) && Near(a.Y, y), $"a head-on pin flies straight down the line: {a.X - ax0:0.00}");
+            Check(c.Hp < c.MaxHp && c.MaxHp - c.Hp < full * c.TakenMult - 1, $"the enemy behind is knocked on, for less: {c.MaxHp - c.Hp:0.0}");
+            Check(c.X > x + 4.6f + 0.5f, $"and slides on down the line: {c.X - (x + 4.6f):0.00}");
+
+            // a hit off the side: the pin flies off that side, the boulder glances the other way and rolls on into the next
+            Place(a, x + 2.5f, y + 0.5f); Place(c, x + 5, y - 1.2f); Place(far, x - 4, y); a.Hp = a.MaxHp; c.Hp = c.MaxHp;
+            b.Charge = b.HDef.MaxCharge; b.RemoveAll(St.Casting); b.RemoveAll(St.Channel); b.RemoveAll(St.Stun); a.RemoveAll(St.Stun); c.RemoveAll(St.Stun);
+            Check(m.TryCastSpecial(b, 0, 1), "the boulder casts again");
+            Proj bo = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Boulder && !p.Done) bo = p;
+            float minAng = 0;
+            for (int k = 0; k < 90; k++)
+            {
+                m.UpdateProjectiles(Rules.Tick); if (!bo.Done) minAng = Math.Min(minAng, bo.Ang);
+                if (a.KnockT > 0) m.KnockStep(a, Rules.Tick); if (c.KnockT > 0) m.KnockStep(c, Rules.Tick);
+            }
+            Check(a.Y > y + 0.5f + 0.6f, $"struck on its right side, the pin flies off to its left: {a.Y - y - 0.5f:0.00}");
+            Check(minAng < -0.2f, $"the boulder glances the other way: {minAng:0.00} rad");
+            Check(c.Hp < c.MaxHp, "and rolls on into the next enemy");
         }
     }
 }

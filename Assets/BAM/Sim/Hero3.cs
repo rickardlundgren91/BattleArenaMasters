@@ -7,19 +7,45 @@ namespace BAM.Sim
     /// a random enemy in range (D1, as every hero); he leans back for a long wind-up, then smashes the club into the ground in front
     /// of him, toward that target: every enemy in the circle there takes the hit, the target only if it is still inside. Tap, Ground
     /// Slam: a short wind-up where he stands, then every enemy hero and minion round him (clear line, not towers) takes a hit and a
-    /// short stun. Drag, Boulder Toss: after a short wind-up a boulder rolls along the aimed line, stops in the first enemy hero or
-    /// minion (or a wall), hits it and knocks it back along the line (walls stop the slide) with a short stun. Passive, Heavy Club:
-    /// every 4th swing is a power hit.</summary>
+    /// short stun. Drag, Boulder Toss, bowled (Rickard 2026-10-30 "mer bowling aktig"): after a short wind-up a boulder rolls along
+    /// the aimed line; the first enemy hero or minion it meets is hit and sent flying like a pin, off the side the boulder struck,
+    /// with a short stun, and the boulder glances off the other way, slower, and rolls on to the next (at most three; walls stop
+    /// it). A pin that slides into another enemy knocks that one on too, for less. Nobody is hit twice by one throw. Passive,
+    /// Heavy Club: every 4th swing is a power hit.</summary>
     public static class BonkS
     {
         public const float SlamRadius = 2.0f, SlamWindup = 0.3f, SlamCoeff = 1.4f, SlamStun = 0.6f;
         public const float BoulderReach = 5.5f, BoulderWindup = 0.25f, BoulderSpeed = 11, BoulderHitbox = 0.55f, BoulderCoeff = 1.3f;
         public const float KnockDist = 1.5f, KnockTime = 0.2f, KnockStun = 0.4f;
+        /// <summary>Bowling (2026-10-30): the boulder hits at most BallPins enemies itself, and one throw at most MaxPins in all with
+        /// the pins it sends into others. A pin flies off up to PinSpread radians from the boulder's way (by where it was struck,
+        /// straight on a head-on hit), the boulder glances BallDeflect the other way, keeps BallSlow of its speed (less on a head-on
+        /// hit, so it rolls behind its pin), NextBallCoeff of its damage, and rolls at least CarryOn tiles on (never past
+        /// BoulderReach + CarryOn). A pin knocks the enemy it slides into PinKnock tiles on, for PinCoeff of the throw's damage, with no stun
+        /// beyond the slide itself.</summary>
+        public const int BallPins = 3, MaxPins = 6;
+        public const float PinSpread = 1.05f, BallDeflect = 0.45f, BallSlow = 0.85f, HeadOnSlow = 0.25f, NextBallCoeff = 0.6f, CarryOn = 2.0f;
+        public const float PinKnock = 1.0f, PinCoeff = 0.4f;
         /// <summary>The slam auto attack: the wind-up (the HeroDef's SpawnDelay), the circle's centre this far in front of him
         /// toward the target, and its radius. Towers are hit only as the picked target.</summary>
         public const float SmashAhead = 1.2f, SmashRadius = 1.3f, SmashFollow = 0.5f; // the club follows its target at most this far (Rickard 2026-10-28)
         public const int PowerEvery = 4;
         public const float PowerBonus = 0.6f;
+    }
+
+    /// <summary>One Boulder Toss: everyone it has hurt so far (by the boulder or by a pin it sent flying), so nobody is hit twice,
+    /// and the throw's damage the pins pass on.</summary>
+    internal sealed class BonkRoll
+    {
+        internal Unit By; internal float Dmg; internal int Count;
+        internal readonly Unit[] Hit = new Unit[BonkS.MaxPins];
+        internal bool Full => Count >= Hit.Length;
+        internal bool Has(Unit u)
+        {
+            for (int i = 0; i < Count; i++) if (Hit[i] == u) return true;
+            return false;
+        }
+        internal void Add(Unit u) { if (Count < Hit.Length) Hit[Count++] = u; }
     }
 
     public sealed partial class Match
@@ -30,6 +56,7 @@ namespace BAM.Sim
             {   // Boulder Toss: rolls straight along the aim after the wind-up, a red line warns the way
                 var p = NewProj(ProjMode.Boulder, h, h.X, h.Y);
                 p.Kind = ProjKind.BonkBoulder; p.T = -BonkS.BoulderWindup; p.Ang = aa; p.Speed = BonkS.BoulderSpeed; p.Dmg = dmg * BonkS.BoulderCoeff; p.Radius = BonkS.BoulderHitbox;
+                p.Travel = BonkS.BoulderReach; p.Roll = new BonkRoll { By = h, Dmg = p.Dmg };
                 float len = Map.ShotReach(h.X, h.Y, aa, BonkS.BoulderReach); // where the boulder really stops, as its aim shows (BONK-05)
                 WarnOf(WarnLine(h, aa, len, BonkS.BoulderHitbox, BonkS.BoulderWindup + len / BonkS.BoulderSpeed), p);
                 h.Facing = aa; h.AimT = Time + BonkS.BoulderWindup + 0.2f;
@@ -126,36 +153,95 @@ namespace BAM.Sim
             Emit(EventType.Explosion, h, null, BonkS.SlamRadius, (byte)ProjKind.BonkSlam, true, p.X, p.Y);
         }
 
-        /// <summary>The boulder, swept like Tikta's line needles: the first enemy along this tick's path is hit if no wall stands
-        /// between; else it stops at a wall or after its reach.</summary>
+        /// <summary>The boulder, swept like Tikta's line needles: the first enemy along this tick's path not yet hit by this throw is
+        /// a pin if no wall stands between, and the boulder rolls on from it with what is left of the tick; else it stops at a wall
+        /// or at the end of its roll (Travel).</summary>
         void BoulderUpdate(Proj p, float dt)
         {
-            float ox = p.X, oy = p.Y, step = p.Speed * dt, len = Math.Max(0, Math.Min(step, BonkS.BoulderReach - p.D));
-            var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, len, BonkS.BoulderHitbox, out float at);
-            if (u != null)
+            float step = p.Speed * dt;
+            for (int n = 0; n <= BonkS.BallPins && !p.Done; n++)
             {
-                float hx = ox + SimMath.Cos(p.Ang) * at, hy = oy + SimMath.Sin(p.Ang) * at;
-                if (!Map.ShotBlocked(ox, oy, hx, hy))
+                float ox = p.X, oy = p.Y, ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang), len = Math.Max(0, Math.Min(step, p.Travel - p.D));
+                var u = NextPin(p, ox, oy, ca, sa, len, out float at);
+                if (u != null && !Map.ShotBlocked(ox, oy, ox + ca * at, oy + sa * at))
                 {
-                    p.X = hx; p.Y = hy; p.D += at; p.Done = true;
-                    bool free = CcImmune(u);
-                    SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
-                    if (u.Alive && !free) Knock(p.Src, u, p.Ang);
-                    return;
+                    p.X = ox + ca * at; p.Y = oy + sa * at; p.D += at; step -= at;
+                    float before = p.Speed;
+                    BallHits(p, u);
+                    step *= p.Speed / before; // the rest of the tick at the boulder's new speed
+                    continue;
                 }
+                p.X += ca * len; p.Y += sa * len; p.D += len;
+                if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
+                if (p.D >= p.Travel - 1e-4f) p.Done = true;
+                return;
             }
-            p.X += SimMath.Cos(p.Ang) * step; p.Y += SimMath.Sin(p.Ang) * step; p.D += step;
-            if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
-            if (p.D >= BonkS.BoulderReach) p.Done = true;
         }
 
-        /// <summary>u slides KnockDist the way ang points over KnockTime, stunned a little longer; walls stop the slide.</summary>
-        void Knock(Unit src, Unit u, float ang)
+        /// <summary>As SweptHit, skipping everyone this throw has already hurt: the first enemy hero or minion whose circle the
+        /// boulder's path from (ox, oy) along (ca, sa) for len tiles touches.</summary>
+        Unit NextPin(Proj p, float ox, float oy, float ca, float sa, float len, out float along)
         {
-            float sp = BonkS.KnockDist / BonkS.KnockTime;
-            u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime; u.KnockKeg = null;
-            AddStatus(u, St.Stun, BonkS.KnockStun, 0, 0, src);
+            along = 0; Unit best = null; float bestAt = float.MaxValue, half = BonkS.BoulderHitbox;
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (!Hurtable(p.Src, u) || u.Team == p.Team || p.Roll.Has(u)) continue;
+                float dx = u.X - ox, dy = u.Y - oy, a = dx * ca + dy * sa, perp2 = dx * dx + dy * dy - a * a, rr = u.R + half;
+                if (perp2 > rr * rr) continue;
+                float h = SimMath.Sqrt(Math.Max(0, rr * rr - perp2)), enter = a - h;
+                if (a + h < 0 || enter > len) continue;
+                enter = Math.Max(0, enter);
+                if (enter < bestAt) { bestAt = enter; best = u; }
+            }
+            along = best != null ? bestAt : 0;
+            return best;
+        }
+
+        /// <summary>The boulder strikes the pin u: the hit, and u flies off the side it was struck (straight on a head-on hit) with
+        /// the stun; the boulder glances the other way, slower and weaker, and rolls on, or stops in its last pin.</summary>
+        void BallHits(Proj p, Unit u)
+        {
+            var roll = p.Roll;
+            float ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang), dx = u.X - p.X, dy = u.Y - p.Y;
+            float side = SimMath.Clamp((dy * ca - dx * sa) / (u.R + BonkS.BoulderHitbox), -1, 1); // + : the pin stood left of the way
+            p.AddHit(u); roll.Add(u);
+            bool free = CcImmune(u);
+            SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
+            if (u.Alive && !free) Knock(p.Src, u, p.Ang + side * BonkS.PinSpread, BonkS.KnockDist, BonkS.KnockStun, roll);
+            p.Ang -= side * BonkS.BallDeflect;
+            p.Speed *= BonkS.BallSlow - (1 - Math.Abs(side)) * BonkS.HeadOnSlow;
+            p.Dmg *= BonkS.NextBallCoeff;
+            p.Travel = Math.Min(Math.Max(p.Travel, p.D + BonkS.CarryOn), BonkS.BoulderReach + BonkS.CarryOn);
+            if (p.HitCount >= BonkS.BallPins || roll.Full) p.Done = true;
+        }
+
+        /// <summary>u slides dist tiles the way ang points over KnockTime, stunned stun s from its start; walls stop the slide.
+        /// roll: the Boulder Toss behind it, so the sliding pin knocks on the enemies it meets.</summary>
+        void Knock(Unit src, Unit u, float ang, float dist, float stun, BonkRoll roll)
+        {
+            float sp = dist / BonkS.KnockTime;
+            u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime; u.KnockKeg = null; u.KnockRoll = roll;
+            if (stun > 0) AddStatus(u, St.Stun, stun, 0, 0, src);
             Emit(EventType.Knock, src, u, BonkS.KnockTime, (byte)ProjKind.BonkBoulder, true, u.X + u.KnockVX * BonkS.KnockTime, u.Y + u.KnockVY * BonkS.KnockTime);
+        }
+
+        /// <summary>A pin sliding from Boulder Toss bumps into the enemies (its own team) it touches with a clear line: each not yet
+        /// hurt by this throw takes PinCoeff of the throw's damage and is knocked on (no stun), away from the pin, and bumps others in turn.</summary>
+        void PinBumps(Unit u)
+        {
+            var roll = u.KnockRoll; var src = roll.By;
+            for (int i = 0; i < Units.Count && !roll.Full; i++)
+            {
+                var o = Units[i];
+                if (o == u || o.Team != u.Team || !Hurtable(src, o) || roll.Has(o)) continue;
+                float dx = o.X - u.X, dy = o.Y - u.Y, rr = u.R + o.R;
+                if (dx * dx + dy * dy > rr * rr || !Map.LosClear(u.X, u.Y, o.X, o.Y)) continue;
+                roll.Add(o);
+                bool free = CcImmune(o);
+                SpecialHit(src, o, roll.Dmg * BonkS.PinCoeff, ProjKind.BonkBoulder, true);
+                if (o.Alive && !free) Knock(src, o, SimMath.Atan2(dy, dx), BonkS.PinKnock, 0, roll);
+            }
         }
 
         /// <summary>One tick of a knockback slide: it moves while the way is free and ends at the first wall.</summary>
@@ -164,9 +250,9 @@ namespace BAM.Sim
             float left = u.KnockT * SimMath.Hypot(u.KnockVX, u.KnockVY); // tiles of the slide still to go (Hilde's Wall Crash)
             float t = Math.Min(dt, u.KnockT); u.KnockT -= dt;
             float nx = u.X + u.KnockVX * t, ny = u.Y + u.KnockVY * t;
-            if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; u.MovedAt = Time; }
+            if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; u.MovedAt = Time; if (u.KnockRoll != null) PinBumps(u); }
             else { if (u.KnockKeg != null) KegWallHit(u, nx, ny, left); u.KnockT = 0; }
-            if (u.KnockT <= 0) u.KnockKeg = null;
+            if (u.KnockT <= 0) { u.KnockKeg = null; u.KnockRoll = null; }
         }
     }
 }
