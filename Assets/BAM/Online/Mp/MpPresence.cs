@@ -100,6 +100,7 @@ namespace BAM.Online.Mp
             if (r.InvCode.Length > 0) declined.Add(r.InvCode);
             if (tell) { LastDeclined = r.InvCode; declinedAt[r.Owner] = Clock(); }
             if (Invite == r) Invite = null;
+            if (noted == r) noted = null;
         }
 
         /// <summary>Seconds left on the invite card.</summary>
@@ -134,7 +135,13 @@ namespace BAM.Online.Mp
         public static void Off()
         {
             if (myLobby != null && Backend != null) { try { Backend.Delete(myLobby); } catch (Exception) { } }
-            myLobby = null; sent = null; Online.Clear(); Invite = null; Looked = false; Status = ""; firstSeen.Clear();
+            myLobby = null; sent = null; Online.Clear(); Looked = false; Status = "";
+            // a friend's note invite does not need our sign: it stays (with the time it was first seen)
+            double t0 = noted != null && firstSeen.TryGetValue(noted.InvCode, out var x) ? x : 0;
+            firstSeen.Clear();
+            if (noted != null && t0 > 0) firstSeen[noted.InvCode] = t0;
+            Invite = noted != null && t0 > 0 && !declined.Contains(noted.InvCode) && InviteLeft(noted) > 0 ? noted : null;
+            if (Invite == null) noted = null;
         }
 
         static async void Run(Func<Task> f)
@@ -161,6 +168,19 @@ namespace BAM.Online.Mp
             return t.Length == 0 ? "Player" : t;
         }
 
+        // an invite that came as a Friends note (MpSocial), not through the others' signs: kept across looks
+        static PresenceRow noted;
+        /// <summary>An invite from a friend's note: shown like one seen in their sign (same quiet time, same 60 s card).</summary>
+        public static void Offer(PresenceRow r)
+        {
+            if (r == null || string.IsNullOrEmpty(r.InvCode) || Blocked.Contains(r.Owner) || IsBlocked != null && IsBlocked(r.Owner) || declined.Contains(r.InvCode)) return;
+            double now = Clock();
+            if (declinedAt.TryGetValue(r.Owner, out var dAt) && now - dAt < DeclineQuiet) return;
+            if (!firstSeen.ContainsKey(r.InvCode)) firstSeen[r.InvCode] = now;
+            noted = r;
+            if (Invite == null && InviteLeft(r) > 0) Invite = r;
+        }
+
         internal static void Take(List<PresenceRow> rows)
         {
             Looked = true; Online.Clear(); Invite = null; string me = Backend.Me; double now = Clock();
@@ -174,6 +194,11 @@ namespace BAM.Online.Mp
                 if (Math.Abs(now - r.InvAt) > 600) continue; // a leftover from long ago (the other phone's clock may differ a little, not by minutes)
                 if (!firstSeen.ContainsKey(r.InvCode)) firstSeen[r.InvCode] = now;
                 if (Invite == null && InviteLeft(r) > 0) Invite = r;
+            }
+            if (Invite == null && noted != null)
+            {
+                if (declined.Contains(noted.InvCode) || InviteLeft(noted) <= 0) noted = null;
+                else Invite = noted;
             }
             Online.Sort((a, b) => a.Free != b.Free ? (a.Free ? -1 : 1) : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
         }

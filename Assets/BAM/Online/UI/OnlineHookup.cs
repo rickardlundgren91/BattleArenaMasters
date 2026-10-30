@@ -19,6 +19,7 @@ namespace BAM.Online.UI
             Flow.MatchStarted = () => Safe("match start", BAM.Online.Online.MatchStarted);
             Flow.MatchEnded = r => Safe("match end", () => BAM.Online.Online.MatchEnded(r));
             Flow.Resumed = () => Safe("resume", BAM.Online.Online.Resumed);
+            Social.Protocol = BAM.Online.Mp.MpSocial.Protocol; // friends see "0.2.0 (10)": the app version alone is the same in every build
             OnlineHooks.Back = OnlineUi.Back;
             OnlineHooks.HomeChip = OnlineUi.HomeChip;
             OnlineHooks.OpenFriends = OnlineUi.OpenFriends;
@@ -26,6 +27,8 @@ namespace BAM.Online.UI
             OnlineHooks.OpenAccount = OnlineUi.OpenAccount;
             OnlineHooks.OpenPlayFriends = OnlineUi.OpenPlayFriends;
             OnlineHooks.OnlineMatch = OnlineUi.OnlineMatch;
+            OnlineHooks.OpenInvite = OnlineUi.OpenInvite;
+            OnlineHooks.Searching = OnlineUi.Searching;
             OnlineHooks.AskToGoOnline = OnlineUi.AskToGoOnline;
             OnlineHooks.LastGain = LastGain;
             OnlineHooks.HeroLockLevel = id => Progress.HeroOpen(id) ? 0 : Progress.HeroLevel(id);

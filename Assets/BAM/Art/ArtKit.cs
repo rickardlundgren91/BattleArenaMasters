@@ -67,6 +67,10 @@ namespace BAM.Art
         public abstract void SetHealth(float hp01, float shield01);
         /// <summary>Hero level shown on the bar (1..15). Ignored by minions and towers.</summary>
         public abstract void SetLevel(int level);
+        /// <summary>Max health of a hero, for the notches every 100 HP on its bar; 0 = none (minions, towers).</summary>
+        public virtual void SetMaxHp(float maxHp) { }
+        /// <summary>A hero's special charge as the thin row under its bar (MLBB's mana row): 0..1, below 0 = no row.</summary>
+        public virtual void SetEnergy(float charge01, bool ready) { }
         /// <summary>Status effects to show (stun stars, slow, burn, shield bubble, ...).</summary>
         public abstract void SetStatus(StatusFlags flags);
         /// <summary>1 = fully visible, about 0.5 = your own unit hidden in grass, 0 = not visible to the player (hide everything).</summary>

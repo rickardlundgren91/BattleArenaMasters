@@ -596,7 +596,7 @@ namespace BAM.Art
             decalR.receiveShadows = false;
 
             // no level badge by the hero bars (Rickard 2026-10-28 "Lvl siffran behövs inte bredvid namnet"); the HUD top still shows it
-            bar = new HealthBar(transform, d.BarWidth, d.Height + 0.28f, false);
+            bar = new HealthBar(transform, d.BarWidth, d.Height + 0.28f, d.BarThick);
             status = new StatusFx(transform, d.Radius, d.Height);
             ResetState();
         }
@@ -618,7 +618,8 @@ namespace BAM.Art
             if (def.ThrowsProp) bones[Hb.Prop].localScale = Vector3.one;
             if (gear != null) gear.Reset();
             bar.Reset();
-            bar.SetLevel(1);
+            bar.SetMaxHp(0f);
+            bar.SetEnergy(-1f, false);
             status.Visible = false; // silently: a view parked while shielded must not pop its shield where it last stood (ApplyLook shows it again)
             status.Set(StatusFlags.None);
             if (marks != null) marks.Reset();
@@ -845,7 +846,9 @@ namespace BAM.Art
         }
 
         public override void SetHealth(float hp01, float shield01) { hp = hp01; bar.Set(hp01, shield01); }
-        public override void SetLevel(int level) => bar.SetLevel(level);
+        public override void SetLevel(int level) { } // the level badge is the HUD's (HudOverhead), over the bar's left end
+        public override void SetMaxHp(float maxHp) => bar.SetMaxHp(maxHp);
+        public override void SetEnergy(float charge01, bool ready) => bar.SetEnergy(charge01, ready);
         public override void SetStatus(StatusFlags flags) => status.Set(flags);
 
         public override void SetVisibility(float alpha)
@@ -878,7 +881,7 @@ namespace BAM.Art
             marker = m;
             decalF.sharedMesh = Shapes.Decal(m);
             byte fill = m == UnitMarker.Player ? Pal.BarPlayer : m == UnitMarker.Enemy ? Pal.BarEnemy : m == UnitMarker.Ally ? Pal.BarAlly : (Team == Teams.Player ? Pal.BarAlly : Pal.BarEnemy);
-            bar.SetColors(fill, Pal.TeamDark(Team));
+            bar.SetColors(fill);
         }
 
         void SpellLooks(float dt)

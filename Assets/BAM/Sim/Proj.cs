@@ -62,6 +62,7 @@ namespace BAM.Sim
         internal int OfSerial;
         /// <summary>The Serial of the shot or drop this warning belongs to (0 = none), for the view.</summary>
         public int WarnFor => OfSerial;
+        internal BonkRoll Roll; // Bonk's Boulder Toss: everyone the throw has hurt, the boulder's and its pins' hits together
         internal Unit[] Hit = new Unit[16];
         internal int HitCount;
 
@@ -92,7 +93,7 @@ namespace BAM.Sim
         {
             Mode = ProjMode.Auto; Kind = ProjKind.TowerShot; Team = 0; Src = Tgt = Caught = null;
             X = Y = PX = PY = OX = OY = Ang = D = Travel = Speed = T = Dmg = Radius = Dur = FX = FY = 0;
-            Big = OnHit = Launched = Out = Done = Tied = Fizzle = false; Ticks = 0; TiktaCast = 0; VolleyCast = 0; Of = null; OfSerial = 0;
+            Big = OnHit = Launched = Out = Done = Tied = Fizzle = false; Ticks = 0; TiktaCast = 0; VolleyCast = 0; Of = null; OfSerial = 0; Roll = null;
             for (int i = 0; i < HitCount; i++) Hit[i] = null;
             HitCount = 0;
         }

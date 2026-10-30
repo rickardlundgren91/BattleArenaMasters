@@ -70,6 +70,7 @@ namespace BAM.Online.Mp
             if (e is LobbyServiceException le && le.Reason == LobbyExceptionReason.LobbyFull) return "That room is full.";
             if (e is LobbyServiceException le2 && le2.Reason == LobbyExceptionReason.LobbyNotFound) return "No room with that code. Is the code right, and is your friend's game open?";
             if (e is LobbyServiceException && m.ToLowerInvariant().Contains("not found")) return "No room with that code. Is the code right, and is your friend's game open?";
+            if (LobbyGate.Limited(e)) return "The online service is busy for a moment. Wait a few seconds and try again.";
             if (m.Contains("project") || m.Contains("Project")) return "Online play is not set up for this game yet (Unity Relay and Lobby).";
             return "Could not connect (" + (m.Length > 80 ? m.Substring(0, 80) + "…" : m) + ").";
         }
@@ -86,14 +87,14 @@ namespace BAM.Online.Mp
                     await NewAllocation(); if (closed) return;
                     var data = new Dictionary<string, DataObject> { { RelayKey, new DataObject(DataObject.VisibilityOptions.Member, relayCode) } };
                     if (Quick) data[TagKey] = new DataObject(DataObject.VisibilityOptions.Public, QuickTag, DataObject.IndexOptions.S1);
-                    var lobby = await LobbyService.Instance.CreateLobbyAsync(Quick ? "bam-quick" : "bam-room", MaxPlayers, new CreateLobbyOptions { IsPrivate = !Quick, Data = data });
+                    var lobby = await LobbyGate.Run(LobbyGate.Kind.Create, () => LobbyService.Instance.CreateLobbyAsync(Quick ? "bam-quick" : "bam-room", MaxPlayers, new CreateLobbyOptions { IsPrivate = !Quick, Data = data }));
                     lobbyId = lobby.Id; Code = lobby.LobbyCode ?? ""; Created = lobby.Created; if (closed) { LeaveLobby(); return; }
                     OnStatus?.Invoke("");
                 }
                 else
                 {
                     OnStatus?.Invoke("Finding the room…");
-                    var lobby = JoinId != null ? await LobbyService.Instance.JoinLobbyByIdAsync(JoinId) : await LobbyService.Instance.JoinLobbyByCodeAsync(Code);
+                    var lobby = await LobbyGate.Run(LobbyGate.Kind.Join, () => JoinId != null ? LobbyService.Instance.JoinLobbyByIdAsync(JoinId) : LobbyService.Instance.JoinLobbyByCodeAsync(Code));
                     lobbyId = lobby.Id; if (closed) { LeaveLobby(); return; }
                     string rc = RelayCode(lobby); if (rc == null) throw new Exception("the room has no Relay code");
                     await Connect(rc);
@@ -111,7 +112,7 @@ namespace BAM.Online.Mp
                 new QueryFilter(QueryFilter.FieldOptions.AvailableSlots, (Math.Max(1, size) - 1).ToString(), QueryFilter.OpOptions.GT),
                 new QueryFilter(QueryFilter.FieldOptions.S1, QuickTag, QueryFilter.OpOptions.EQ),
             };
-            var r = await LobbyService.Instance.QueryLobbiesAsync(new QueryLobbiesOptions { Count = 10, Filters = filters, Order = new List<QueryOrder> { new QueryOrder(true, QueryOrder.FieldOptions.Created) } });
+            var r = await LobbyGate.Run(LobbyGate.Kind.Query, () => LobbyService.Instance.QueryLobbiesAsync(new QueryLobbiesOptions { Count = 10, Filters = filters, Order = new List<QueryOrder> { new QueryOrder(true, QueryOrder.FieldOptions.Created) } }));
             var res = new List<Lobby>();
             if (r != null && r.Results != null) foreach (var l in r.Results) if (l.Id != mine) res.Add(l);
             return res;
@@ -124,7 +125,7 @@ namespace BAM.Online.Mp
             try
             {
                 var data = new Dictionary<string, DataObject> { { TagKey, new DataObject(DataObject.VisibilityOptions.Public, QuickTag, DataObject.IndexOptions.S1) } };
-                await LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { IsPrivate = !open, Data = data });
+                await LobbyGate.Run(LobbyGate.Kind.Update, () => LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { IsPrivate = !open, Data = data }));
             }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] queue: " + e.Message); }
         }
@@ -238,7 +239,7 @@ namespace BAM.Online.Mp
         {
             if (!host || lobbyId == null || closed || paused) return;
             heartbeatT -= Time.unscaledDeltaTime; if (heartbeatT > 0) return; heartbeatT = 15;
-            _ = LobbyService.Instance.SendHeartbeatPingAsync(lobbyId).ContinueWith(t => { _ = t.Exception; });
+            string hid = lobbyId; _ = LobbyGate.Run(LobbyGate.Kind.Heartbeat, () => LobbyService.Instance.SendHeartbeatPingAsync(hid)).ContinueWith(t => { _ = t.Exception; });
         }
 
         // the host slept past Relay's timeout: a new Relay seat, its code into the lobby (a friend joining later finds it there)
@@ -250,7 +251,7 @@ namespace BAM.Online.Mp
                 var old = conns.ToArray();
                 foreach (var kv in old) OnDisconnect?.Invoke(kv.Key);
                 await NewAllocation(); if (closed) return;
-                await LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { Data = new Dictionary<string, DataObject> { { RelayKey, new DataObject(DataObject.VisibilityOptions.Member, relayCode) } } });
+                await LobbyGate.Run(LobbyGate.Kind.Update, () => LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { Data = new Dictionary<string, DataObject> { { RelayKey, new DataObject(DataObject.VisibilityOptions.Member, relayCode) } } }));
             }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] room: " + e); reallocAt = Time.realtimeSinceStartup + 5; } // offline or rate limited: not again every frame
             finally { busy = false; }
@@ -306,6 +307,44 @@ namespace BAM.Online.Mp
         }
     }
 
+    /// <summary>
+    /// Every Lobby call goes through here (Rickard 2026-10-30: "Could not connect (request_rate_limited)"). Unity Lobby allows each
+    /// player only so many calls (query 1 a second, create and join 2 per 6 s, update 5 per 5 s, heartbeat 5 per 30 s), and the
+    /// "here I am" sign, the online list, ONLINE MATCH and the room all use it at once: a list look and a queue look in the same second
+    /// was enough. So calls of one kind wait their turn, and a call the service still turns away waits and is tried again.
+    /// </summary>
+    static class LobbyGate
+    {
+        public enum Kind { Query, Create, Join, Update, Heartbeat }
+        static readonly double[] Space = { 1.15, 3.2, 3.2, 1.1, 6.2 };
+        static readonly DateTime[] next = new DateTime[5];
+
+        public static async Task<T> Run<T>(Kind k, Func<Task<T>> call)
+        {
+            for (int tries = 0; ; tries++)
+            {
+                var now = DateTime.UtcNow; int i = (int)k;
+                var at = next[i] > now ? next[i] : now;
+                next[i] = at.AddSeconds(Space[i]);
+                if (at > now) await Task.Delay(at - now);
+                try { return await call(); }
+                catch (Exception e) when (tries < 3 && Limited(e))
+                {
+                    Debug.Log("[BAM.Online] lobby " + k + " rate limited, trying again");
+                    next[i] = DateTime.UtcNow.AddSeconds(1.5 * (tries + 1) + Space[i]);
+                }
+            }
+        }
+        public static Task Run(Kind k, Func<Task> call) => Run(k, async () => { await call(); return true; });
+
+        public static bool Limited(Exception e)
+        {
+            var m = (e.Message ?? "").ToLowerInvariant();
+            if (e is LobbyServiceException le && le.Reason.ToString().ToLowerInvariant().Contains("ratelimit")) return true;
+            return m.Contains("rate_limit") || m.Contains("rate limit") || m.Contains("ratelimit") || m.Contains("too many") || m.Contains("429");
+        }
+    }
+
     /// <summary>The "here I am" signs in Unity Lobby (copy of Speltest NetRelayPresence): one small public lobby per phone.</summary>
     sealed class MpPresenceLobby : IPresenceBackend
     {
@@ -322,17 +361,17 @@ namespace BAM.Online.Mp
 
         public async Task<string> Create(Dictionary<string, string> data)
         {
-            var l = await LobbyService.Instance.CreateLobbyAsync("bam-online", 2, new CreateLobbyOptions { IsPrivate = false, Data = Obj(data) });
+            var l = await LobbyGate.Run(LobbyGate.Kind.Create, () => LobbyService.Instance.CreateLobbyAsync("bam-online", 2, new CreateLobbyOptions { IsPrivate = false, Data = Obj(data) }));
             return l.Id;
         }
 
-        public Task Update(string id, Dictionary<string, string> data) => LobbyService.Instance.UpdateLobbyAsync(id, new UpdateLobbyOptions { Data = Obj(data) });
-        public Task Heartbeat(string id) => LobbyService.Instance.SendHeartbeatPingAsync(id);
+        public Task Update(string id, Dictionary<string, string> data) => LobbyGate.Run(LobbyGate.Kind.Update, () => LobbyService.Instance.UpdateLobbyAsync(id, new UpdateLobbyOptions { Data = Obj(data) }));
+        public Task Heartbeat(string id) => LobbyGate.Run(LobbyGate.Kind.Heartbeat, () => LobbyService.Instance.SendHeartbeatPingAsync(id));
 
         public async Task<List<PresenceRow>> Query()
         {
             var filters = new List<QueryFilter> { new QueryFilter(QueryFilter.FieldOptions.S1, Tag, QueryFilter.OpOptions.EQ) };
-            var r = await LobbyService.Instance.QueryLobbiesAsync(new QueryLobbiesOptions { Count = 50, Filters = filters, Order = new List<QueryOrder> { new QueryOrder(false, QueryOrder.FieldOptions.LastUpdated) } });
+            var r = await LobbyGate.Run(LobbyGate.Kind.Query, () => LobbyService.Instance.QueryLobbiesAsync(new QueryLobbiesOptions { Count = 50, Filters = filters, Order = new List<QueryOrder> { new QueryOrder(false, QueryOrder.FieldOptions.LastUpdated) } }));
             var res = new List<PresenceRow>();
             if (r != null && r.Results != null)
                 foreach (var l in r.Results)

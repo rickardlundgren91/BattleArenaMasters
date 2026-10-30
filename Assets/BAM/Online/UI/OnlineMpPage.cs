@@ -182,8 +182,8 @@ namespace BAM.Online.UI
                 y += 22;
                 ModeButtons(ix, y, iw, createMode, m => createMode = m, draw); y += 36;
                 var ml = Wrap(ModeLine(createMode, 2), iw, Treb(12)); TextLines(ml, ix, y, "#a9a7c7", draw); y += ml.Count * 16 + 4;
-                var il = Wrap("Press INVITE next to a friend below. When they accept, you press START.", iw, Treb(12)); TextLines(il, ix, y, "#f4f1ff", draw); y += il.Count * 16 + 6;
-                if (draw) MpBtn("mpFriends", "INVITE FROM FRIENDS", ix, y, iw, rowH, "#3a6cff", () => Go("friends"));
+                var il = Wrap("Press INVITE FRIENDS, or INVITE next to someone below. When they accept, you press START.", iw, Treb(12)); TextLines(il, ix, y, "#f4f1ff", draw); y += il.Count * 16 + 6;
+                if (draw) MpBtn("mpFriends", "INVITE FRIENDS", ix, y, iw, rowH, "#3a6cff", OpenInvite);
                 y += rowH + 6;
             }
             else if (st == MpRoom.Phase.Connecting)
@@ -198,7 +198,7 @@ namespace BAM.Online.UI
                 {
                     // no code on screen: more friends are invited from the list below or from Friends
                     if (draw) Text("Your room", ix, y + 10, Treb(13, true), "#f4f1ff");
-                    if (draw) MpBtn("mpFriends", "INVITE MORE", ix + iw - 120, y, 120, 30, "#3a6cff", () => Go("friends"));
+                    if (draw) MpBtn("mpFriends", "INVITE MORE", ix + iw - 120, y, 120, 30, "#3a6cff", OpenInvite);
                     y += 36;
                 }
                 var members = MpRoom.Members; int mode = MpRoom.Mode;
@@ -273,7 +273,7 @@ namespace BAM.Online.UI
         internal static void MpTick()
         {
             if (Account.State == Account.Status.Ready) MpRoom.Ensure(); // the online list and invites run from the room pump
-            MpPresence.Watching = page == "mp" || page == "friends";
+            MpPresence.Watching = page == "mp" || page == "friends" || page == "invite";
             if (MpRoom.State == MpRoom.Phase.Match && MpPresence.Invite != null) MpPresence.Invite = null;
             if (pendingMode >= 0 && MpRoom.IsHost && MpRoom.State == MpRoom.Phase.Lobby) { MpRoom.SetMode(pendingMode); pendingMode = -1; }
             if (MpRoom.State == MpRoom.Phase.Off) pendingMode = -1;
@@ -284,7 +284,28 @@ namespace BAM.Online.UI
 
         // ---------- Online now (the old Menu.MpOnline) ----------
         const float MP_ONLINE_ROW = 34;
-        static float MpOnlineH(float w) => 22 + Math.Max(1, MpPresence.Online.Count) * MP_ONLINE_ROW + 4 + 36;
+        static float MpOnlineH(float w) => 22 + Math.Max(1, MpPresence.Online.Count) * MP_ONLINE_ROW + 4 + 36 + MissingLines(w).Count * 15;
+
+        // friends the Friends service shows online who are not in Online now, and why (Rickard 2026-10-30: FUL online in Friends,
+        // "Nobody else right now" here). Most often another game version: those phones cannot play each other.
+        static readonly List<string> missing = new List<string>();
+        static List<string> MissingLines(float w)
+        {
+            missing.Clear();
+            if (!MpSocial.ShowMe || !MpPresence.Looked) return missing;
+            var sb = new System.Text.StringBuilder();
+            foreach (var f in Social.Friends)
+            {
+                if (f.Presence == Social.Presence.Offline || MpPresence.Find(f.PlayerId) != null) continue;
+                string why = !string.IsNullOrEmpty(f.Version) && f.Version != Social.GameVersion
+                    ? " has version " + f.Version + ", you have " + Social.GameVersion + ". Both need the same version from Google Play."
+                    : " is online but not here yet: their game may still be connecting, or Show me as online is off on their phone.";
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(f.Name).Append(why);
+            }
+            if (sb.Length > 0) missing.AddRange(Wrap(sb.ToString(), w - 24, Treb(11)));
+            return missing;
+        }
         static void MpOnline(float x, float y, float w)
         {
             Text("Online now:", x, y + 8, Treb(12, true), "#ffb43a");
@@ -312,6 +333,9 @@ namespace BAM.Online.UI
                     else MpBtn("mpInv" + i, "INVITE", x + w - 84, yy + 2, 82, 26, "#2fae5b", () => InviteSomeone(row.Owner, row.Name));
                 }
             float ty = ry + Math.Max(1, list.Count) * MP_ONLINE_ROW + 4;
+            var ml = MissingLines(w + 24);
+            for (int i = 0; i < ml.Count; i++) Text(ml[i], x, ty + 6 + i * 15, Treb(11), "#ffb0b0");
+            ty += ml.Count * 15;
             Text("Show me as online", x, ty + 15, Treb(12), "#f4f1ff");
             string col = HubToggle("mpShowMe", x + w - cw(12), ty + 3, cw(12), 24, 12, MpSocial.ShowMe, true);
             Text(MpSocial.ShowMe ? "ON" : "OFF", x + w - cw(6), ty + 15, Treb(12, true), col, "center");
@@ -322,7 +346,7 @@ namespace BAM.Online.UI
         {
             var why = MpSocial.Invite(playerId, name, createMode);
             Toast(why ?? "Invite sent to " + name);
-            if (why == null && page != "mp") Go("mp");
+            if (why == null && page != "mp" && page != "invite") Go("mp"); // the invite panel stays: more can be invited, GO TO ROOM is at its bottom
         }
 
         // ---------- the invite card (the old Menu.DrawInvite): covers everything, ACCEPT joins the inviter's room ----------

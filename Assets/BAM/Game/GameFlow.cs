@@ -216,10 +216,14 @@ namespace BAM.Game
             if (!inMatch) return; // the back press may have left the match
 
             float dt = Time.deltaTime;
+            // offline the open score sheet (the in-match menu) holds the match like Pause, without the pause screen (Rickard
+            // 2026-10-30: against bots only, the menu pauses); online the others play on, so it never holds there
+            bool frozen = paused || (net == null && !over && hud.MenuOpen);
+            BAM.Art.ArtKit.SetPaused(frozen); // effects, zones and shots wait with the match (no-op when unchanged)
             // the bodies and effects slow with the hit-stop's ticks below, so a swing never lands before its shot (offline only)
-            BAM.Art.ArtKit.SetSlow(net == null && !paused && !over && juice.Stopping ? 0.1f : 1f);
+            BAM.Art.ArtKit.SetSlow(net == null && !frozen && !over && juice.Stopping ? 0.1f : 1f);
             if (net != null && !over) NetTicks(dt);
-            else if (!paused && !over)
+            else if (!frozen && !over)
             {
                 acc += juice.Stopping ? dt * 0.1f : dt; // the old hit-stop: ticks come slower for a moment
                 int n = 0;
@@ -244,12 +248,12 @@ namespace BAM.Game
                 }
                 if (acc >= Rules.Tick) acc = 0f;
             }
-            float alpha = paused || over ? 1f : Mathf.Clamp01((net != null ? netDraw : acc) / Rules.Tick);
+            float alpha = frozen || over ? 1f : Mathf.Clamp01((net != null ? netDraw : acc) / Rules.Tick);
             BAM.Art.ArtKit.SetSimClock(match.Ticks, alpha); // the swings' clock (Animation Foundation): blows land on their shots' frame
-            views.Frame(alpha, dt, paused);
+            views.Frame(alpha, dt, frozen);
             cam.Frame(alpha, dt, over);
-            juice.Frame(paused ? 0f : dt);
-            if (intro.Active) intro.Frame(cam.Camera, paused);
+            juice.Frame(frozen ? 0f : dt);
+            if (intro.Active) intro.Frame(cam.Camera, frozen);
             else juice.Apply(cam.Camera);
             BamAudio.SetListener(cam.Focus);
             hud.Frame(dt, paused || resultShown);

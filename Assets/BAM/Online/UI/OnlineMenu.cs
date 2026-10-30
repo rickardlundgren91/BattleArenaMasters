@@ -66,7 +66,7 @@ namespace BAM.Online.UI
             if (p == "hubname" && from != "hubname") { hubNameDraft = Account.Name ?? Suggest(Account.PlatformName); hubConfirm = null; nameAnswer = null; }
             if (p != "hubname") hubConfirm = null;
             hubSocialConfirm = hubReportFor = null;
-            if (p != "friends") { friendMenu = friendRemove = null; }
+            if (p != "friends" && p != "invite") { friendMenu = friendRemove = null; }
             EndInput();
             if (!backNav && from != null && from != p)
             {
@@ -247,6 +247,7 @@ namespace BAM.Online.UI
             ctx = c; W = w; H = h; hits.Clear(); hitsUsed = 0; scrollOff = 0; clipOn = false;
             Social.Tick();
             if (page == "friends") HubFriends();
+            else if (page == "invite") HubInvite();
             else if (page != null)
             {
                 HubPage();

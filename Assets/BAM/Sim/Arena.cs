@@ -134,6 +134,32 @@ namespace BAM.Sim
             return true;
         }
 
+        /// <summary>The direction out of whatever blocks a body of radius r at (x, y): the sum of the unit pushes away from every
+        /// wall tile (its nearest point) and boulder capsule closer than r, normalised; (0, 0) when nothing is that close. A body
+        /// pressed against a boulder gets the stone's round normal, so it can slide round it.</summary>
+        public void WallNormal(float x, float y, float r, out float nx, out float ny)
+        {
+            nx = 0; ny = 0;
+            int x0 = (int)Math.Floor(x - r), x1 = (int)Math.Floor(x + r), y0 = (int)Math.Floor(y - r), y1 = (int)Math.Floor(y + r);
+            for (int ty = y0; ty <= y1; ty++)
+                for (int tx = x0; tx <= x1; tx++)
+                {
+                    if (Walkable(tx, ty)) continue;
+                    if (tx >= 0 && ty >= 0 && tx < W && ty < H && rockTile[ty * W + tx]) continue; // the capsules below
+                    float cx = SimMath.Clamp(x, tx, tx + 1), cy = SimMath.Clamp(y, ty, ty + 1), dx = x - cx, dy = y - cy, d = SimMath.Hypot(dx, dy);
+                    if (d < r && d > 1e-5f) { nx += dx / d; ny += dy / d; }
+                }
+            for (int i = 0; i < RockR.Length; i++)
+            {
+                float dx = RockX1[i] - RockX0[i], dy = RockY1[i] - RockY0[i], l2 = dx * dx + dy * dy;
+                float t = l2 > 0 ? SimMath.Clamp(((x - RockX0[i]) * dx + (y - RockY0[i]) * dy) / l2, 0, 1) : 0;
+                float px = x - RockX0[i] - dx * t, py = y - RockY0[i] - dy * t, d = SimMath.Hypot(px, py);
+                if (d < RockR[i] + r && d > 1e-5f) { nx += px / d; ny += py / d; }
+            }
+            float m = SimMath.Hypot(nx, ny);
+            if (m > 1e-5f) { nx /= m; ny /= m; } else { nx = 0; ny = 0; }
+        }
+
         const float LosStep = 0.1f, LosHalf = 0.1f;
 
         /// <summary>Does a point stop a sight line or a shot? A wall tile does, but a boulder's tiles only inside its capsule

@@ -136,8 +136,8 @@ namespace BAM.Online.UI
         {
             float ph = cw(8), py = y + (h - ph) / 2;
             string label, col;
-            var sign = BAM.Online.Mp.MpSocial.Find(f.PlayerId);
-            if (sign != null && sign.Free)
+            bool otherVersion = !string.IsNullOrEmpty(f.Version) && f.Version != Social.GameVersion;
+            if (!otherVersion && BAM.Online.Mp.MpSocial.CanInvite(f.PlayerId))
             {
                 bool sent = BAM.Online.Mp.MpSocial.IsInvited(f.PlayerId), dn = !sent && Down("hubFrInv:" + f.PlayerId);
                 ctx.fillStyle = sent ? "rgba(255,255,255,0.05)" : dn ? "#24a050" : "#2fae5b"; ctx.beginPath(); ctx.roundRect(x, py, w, ph, ph / 2); ctx.fill();
@@ -146,7 +146,14 @@ namespace BAM.Online.UI
                 if (!sent) Btn("hubFrInv:" + id, x, py, w, ph, () => InviteSomeone(id, nm));
                 return;
             }
-            if (f.Presence == Social.Presence.Playing) { label = "IN MATCH"; col = "rgba(154,162,214,0.6)"; }
+            if (otherVersion && f.Presence != Social.Presence.Offline)
+            {
+                // another game version: they cannot play together until both have the same one
+                string id = f.PlayerId, nm = f.Name, v = f.Version;
+                label = "OTHER VERSION"; col = "#ffb0b0";
+                Btn("hubFrVer:" + id, x, py, w, ph, () => Toast(nm + " has version " + v + ", you have " + Social.GameVersion + ". Both need the same version."));
+            }
+            else if (f.Presence == Social.Presence.Playing) { label = "IN MATCH"; col = "rgba(154,162,214,0.6)"; }
             else if (f.Presence == Social.Presence.Offline) { label = "OFFLINE"; col = "rgba(154,162,214,0.5)"; }
             else { label = "ONLINE"; col = HUB_ACCENT; }
             ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.beginPath(); ctx.roundRect(x, py, w, ph, ph / 2); ctx.fill();

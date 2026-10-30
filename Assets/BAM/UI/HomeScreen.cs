@@ -196,6 +196,7 @@ namespace BAM.UI
                 BuildStage();
                 BuildRow();
                 OnlineFriendsPill(low, BrowBottom + BrowH); // online builds only
+                OnlineInvitePills(low, FeetY, HeroH); // online builds only
                 BuildTopBar();
                 BuildTutCard();
                 top.SetAsLastSibling(); // the top bar over the hero

@@ -10,8 +10,9 @@ namespace BAM.Game
     /// The old game's score tab (ABC2 Hud.cs drawScoreTab, HudV3.cs drawScoreIcon): the glass tool button under the strip's right
     /// end shows a list icon; a tap opens a dark sheet with YOUR TEAM and ENEMY TEAM, each hero's portrait (dimmed with the respawn
     /// seconds while dead), name, role and K / D / A, and EXIT GAME at the bottom, which asks "Leave the match?" with LEAVE and STAY.
-    /// A tap anywhere else closes it. The match goes on while it is open, as in the old game. In the guided match (which had no
-    /// score tab) the button is the pause button instead.
+    /// A tap anywhere else closes it. Against bots the match waits while it is open (GameFlow reads <see cref="MenuOpen"/>,
+    /// Rickard 2026-10-30); online it goes on, as in the old game. In the guided match (which had no score tab) the button is the
+    /// pause button instead.
     /// </summary>
     sealed partial class Hud
     {
@@ -85,6 +86,9 @@ namespace BAM.Game
         }
 
         void CloseScore() { scoreOpen = false; scoreAskLeave = false; }
+
+        /// <summary>The score sheet (the in-match menu) is open: an offline match holds while it is.</summary>
+        public bool MenuOpen => scoreOpen;
 
         void ScoreFrame()
         {
