@@ -82,14 +82,16 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 ```
 <en-US>
 Battle Arena Masters 0.3.1
-• Your party on Home: PLAY together or against each other
-• Blast's special swapped: tap for a fire strip, drag to aim the bomb
+• Your party on Home: PLAY together or vs each other
+• Blast: tap for fire strip, drag to aim the bomb
 • Tyra's aimed bolt flies until it hits something
-• Shots stop exactly at walls; tower areas turn red
-• Player names over heroes; hitting minions no longer stops regen
-• New sounds and clearer hit effects
-Old versions can't play online with this one, so please update.
-Report bugs: support@battlearenamasters.com or Discord.
+• Bram's anvil: gold ring, big slam, crater
+• Regen and bush reveal now 2 s after a fight
+• Shots stop exactly at walls; red tower areas
+• Names over heroes; minions don't stop regen
+• New sounds and hit effects
+Old versions can't play online with this one.
+Bugs: support@battlearenamasters.com or Discord
 </en-US>
 ```
 
