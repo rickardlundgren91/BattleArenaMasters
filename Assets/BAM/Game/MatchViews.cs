@@ -568,6 +568,8 @@ namespace BAM.Game
                         : b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
                         // as in Speltest's sound mix v2: the plain hit thumps only when a hero's (or the wolf's) blow lands on you
                         : b == m.Player && e.A != null && (e.A.Kind == UnitKind.Hero || e.A.Kind == UnitKind.Wolf) ? (e.Big ? SfxId.HitHeavy : SfxId.HitLight)
+                        // a tower's shot landing on you gets its own heavy impact (Rickard 2026-10-30), silent until his clip exists
+                        : b == m.Player && e.A != null && e.A.Kind == UnitKind.Tower ? SfxId.TowerImpact
                         : SfxId.None;
                     // Rickard 2026-10-26: minions fight silently; only heroes, the wolf and towers make combat sounds
                     if (id != SfxId.None && (e.A == null || e.A.Kind != UnitKind.Minion)) BamAudio.PlayAt(id, at, b != null && b.Kind == UnitKind.Minion ? 0.5f : 0.8f);

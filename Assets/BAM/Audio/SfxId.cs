@@ -39,5 +39,8 @@ namespace BAM.Audio
         KnutSlamWindup,
         // the Haste and Sprint battle spells: Rickard's own clips made for them 2026-10-30 (O-026)
         SpellHaste, SpellSprint,
+        // a tower's shot landing on the player (Rickard 2026-10-30 "bättre ljud när torn attackerar en", O-033): silent until his own
+        // clip TowerImpact.mp3 is in Resources/BAM/Sfx
+        TowerImpact,
     }
 }

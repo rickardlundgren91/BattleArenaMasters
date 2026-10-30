@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.SpellSprint + 1;
+        public const int Count = (int)SfxId.TowerImpact + 1;
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)
@@ -108,6 +108,7 @@ namespace BAM.Audio
                 case SfxId.HildeKegBlast: return new SfxInfo(0.9f, 2, 0.2f, 3, 0.04f);
                 case SfxId.HildeKnock: return new SfxInfo(0.8f, 2, 0.1f, 2, 0.03f);
                 case SfxId.KnutSlamWindup: return new SfxInfo(0.8f, 2, 0.2f, 3, 0.03f);
+                case SfxId.TowerImpact: return new SfxInfo(0.9f, 1, 0.3f, 4, 0.03f); // feedback for the player: the tower hurts you
                 default: return new SfxInfo(0.6f, 1, 0.05f, 1, 0f);
             }
         }
