@@ -21,19 +21,19 @@ namespace BAM.Sim
         }
 
         /// <summary>Where Anvil Drop lands for this aim (also for the aim circle): the aimed point, but never inside a wall tile,
-        /// where every line from it is blocked and it would hit nobody (BRAM-03): there it comes down on the wall's face, the last
-        /// point on the way back to Bram that is not in a wall. Over a wall it still flies (the wall rule).</summary>
+        /// where every line from it is blocked and it would hit nobody (BRAM-03): there it comes down by the wall's face, the first
+        /// point on the way back to Bram whose sight lines start clear (Arena.SightClear). Over a wall it still flies (the wall rule).</summary>
         public void AnvilPoint(Unit h, float ang, float k, out float x, out float y) => LandPoint(h, ang, k, BramS.Reach, out x, out y);
 
         /// <summary>A thrown ground special's landing point (AimPoint), pulled back toward h off a wall tile (Bram's anvil, Blast's bomb).</summary>
         void LandPoint(Unit h, float ang, float k, float reach, out float x, out float y)
         {
             AimPoint(h, ang, k, reach, out x, out y);
-            if (!Map.WallAt(x, y)) return;
+            if (Map.SightClear(x, y)) return;
             float d = SimMath.Hypot(h.X - x, h.Y - y);
             if (d < 1e-4f) return;
             float sx = (h.X - x) / d * 0.05f, sy = (h.Y - y) / d * 0.05f;
-            for (float m = 0; m < d && Map.WallAt(x, y); m += 0.05f) { x += sx; y += sy; }
+            for (float m = 0; m < d && !Map.SightClear(x, y); m += 0.05f) { x += sx; y += sy; }
         }
 
         /// <summary>The anvil lands: every enemy hero and minion (not towers) within its radius with a clear line from it is hurt and

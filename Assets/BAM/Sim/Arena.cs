@@ -160,7 +160,7 @@ namespace BAM.Sim
             if (m > 1e-5f) { nx /= m; ny /= m; } else { nx = 0; ny = 0; }
         }
 
-        const float LosStep = 0.1f, LosHalf = 0.1f;
+        const float LosHalf = 0.1f;
 
         /// <summary>Does a point stop a sight line or a shot? A wall tile does, but a boulder's tiles only inside its capsule
         /// (the same shape bodies collide with), so a body standing in a tile corner next to a boulder can still be seen and shot.</summary>
@@ -171,18 +171,88 @@ namespace BAM.Sim
             return !rockTile[ty * W + tx] || HitsRock(x, y, 0);
         }
 
-        /// <summary>No wall (see WallAt) on the line a-b, sampled every 0.1 tile on its centre and both edges (half wide). The ends are not tested.</summary>
+        /// <summary>No wall (see WallAt) on the line a-b: its centre line and both edges (half wide), tested exactly against every
+        /// wall tile and boulder capsule they cross. It used to sample every 0.1 tile, which let an edge slip past a wall corner at
+        /// one length and catch it at another, so the aim could end in open air while the shot flew on (2026-10-30).</summary>
         public bool LineClear(float ax, float ay, float bx, float by, float half = LosHalf)
         {
             float dx = bx - ax, dy = by - ay, d = (float)Math.Sqrt(dx * dx + dy * dy);
             if (d < 1e-4f) return true;
             float px = -dy / d * half, py = dx / d * half;
-            int n = (int)Math.Ceiling(d / LosStep);
-            for (int i = 1; i < n; i++)
+            return SegClear(ax, ay, bx, by) && SegClear(ax + px, ay + py, bx + px, by + py) && SegClear(ax - px, ay - py, bx - px, by - py);
+        }
+
+        // one thin segment against the wall tiles in its box: a plain wall tile stops it if any of it lies in the tile (WallAt's
+        // floor: a tile owns its left/top edges, not its right/bottom ones); a boulder tile only where that part also lies in a capsule
+        bool SegClear(float ax, float ay, float bx, float by)
+        {
+            int tx0 = (int)Math.Floor(Math.Min(ax, bx)), tx1 = (int)Math.Floor(Math.Max(ax, bx));
+            int ty0 = (int)Math.Floor(Math.Min(ay, by)), ty1 = (int)Math.Floor(Math.Max(ay, by));
+            float dx = bx - ax, dy = by - ay;
+            for (int ty = ty0; ty <= ty1; ty++)
+                for (int tx = tx0; tx <= tx1; tx++)
+                {
+                    if (Tile(tx, ty) != Wall) continue;
+                    if (!Clip(ax, ay, dx, dy, tx, ty, out float t0, out float t1)) continue;
+                    if (!rockTile[ty * W + tx]) return false;
+                    if (SegHitsRock(ax + dx * t0, ay + dy * t0, ax + dx * t1, ay + dy * t1)) return false;
+                }
+            return true;
+        }
+
+        const float TileOpen = 1e-5f; // a tile's right and bottom edges belong to the next tile
+
+        // Liang-Barsky: the part t0..t1 of a + t (dx, dy), t in 0..1, inside the tile
+        static bool Clip(float ax, float ay, float dx, float dy, int tx, int ty, out float t0, out float t1)
+        {
+            t0 = 0; t1 = 1;
+            return ClipEdge(-dx, ax - tx, ref t0, ref t1) && ClipEdge(dx, tx + 1 - TileOpen - ax, ref t0, ref t1)
+                && ClipEdge(-dy, ay - ty, ref t0, ref t1) && ClipEdge(dy, ty + 1 - TileOpen - ay, ref t0, ref t1);
+        }
+
+        static bool ClipEdge(float p, float q, ref float t0, ref float t1)
+        {
+            if (Math.Abs(p) < 1e-9f) return q >= 0;
+            float r = q / p;
+            if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; }
+            else { if (r < t0) return false; if (r < t1) t1 = r; }
+            return true;
+        }
+
+        // does the segment a-b come inside a boulder capsule (closer than its radius to the capsule's axis)?
+        bool SegHitsRock(float ax, float ay, float bx, float by)
+        {
+            for (int i = 0; i < RockR.Length; i++)
             {
-                float k = (float)i / n, x = ax + dx * k, y = ay + dy * k;
-                if (WallAt(x, y) || WallAt(x + px, y + py) || WallAt(x - px, y - py)) return false;
+                float cx = RockX0[i], cy = RockY0[i], ex = RockX1[i], ey = RockY1[i];
+                if (Crosses(ax, ay, bx, by, cx, cy, ex, ey)) return true;
+                float d = Math.Min(Math.Min(SimMath.PtSeg(ax, ay, cx, cy, ex, ey), SimMath.PtSeg(bx, by, cx, cy, ex, ey)),
+                                   Math.Min(SimMath.PtSeg(cx, cy, ax, ay, bx, by), SimMath.PtSeg(ex, ey, ax, ay, bx, by)));
+                if (d < RockR[i]) return true;
             }
+            return false;
+        }
+
+        static bool Crosses(float ax, float ay, float bx, float by, float cx, float cy, float ex, float ey)
+        {
+            float d1 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax), d2 = (bx - ax) * (ey - ay) - (by - ay) * (ex - ax);
+            float d3 = (ex - cx) * (ay - cy) - (ey - cy) * (ax - cx), d4 = (ex - cx) * (by - cy) - (ey - cy) * (bx - cx);
+            return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+        }
+        /// <summary>No wall (see WallAt) within a sight line's half width of (x, y), so lines from here start clear in every direction:
+        /// where a thrown special may land (Hero5.LandPoint).</summary>
+        public bool SightClear(float x, float y)
+        {
+            const float h = LosHalf;
+            int x0 = (int)Math.Floor(x - h), x1 = (int)Math.Floor(x + h), y0 = (int)Math.Floor(y - h), y1 = (int)Math.Floor(y + h);
+            for (int ty = y0; ty <= y1; ty++)
+                for (int tx = x0; tx <= x1; tx++)
+                {
+                    if (Tile(tx, ty) != Wall) continue;
+                    float cx = SimMath.Clamp(x, tx, tx + 1), cy = SimMath.Clamp(y, ty, ty + 1);
+                    if ((cx - x) * (cx - x) + (cy - y) * (cy - y) >= h * h) continue;
+                    if (!rockTile[ty * W + tx] || HitsRock(x, y, h)) return false;
+                }
             return true;
         }
         public bool LosClear(float ax, float ay, float bx, float by) => LineClear(ax, ay, bx, by, LosHalf);
