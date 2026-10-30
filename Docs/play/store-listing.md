@@ -85,8 +85,9 @@ Battle Arena Masters 0.3.1
 • Blast's special swapped: tap for a fire strip, drag to aim the bomb
 • Shots and aims now stop exactly at walls and boulders
 • An enemy tower's whole area turns red while it shoots at you
-• Online: the host picks the bots' level in the room
-• Clearer weapon holds, Knut's real anchor, Tyra keeps her bow while running
+• Online: player names over heroes, the host picks the bots' level
+• Hitting minions no longer stops your regen
+• Clearer weapon holds and hit effects
 Old versions can't play online with this one, so please update.
 Report bugs to support@battlearenamasters.com or in our Discord.
 </en-US>
