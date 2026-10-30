@@ -107,6 +107,9 @@ namespace BAM.Art
         public CannonDef Cannon;
         /// <summary>Degrees both upper arms are turned out from the sides after the clips, so a broad body's arms do not cut through it (old MX_ARM_SPREAD).</summary>
         public float ArmSpread;
+        /// <summary>Degrees added to <see cref="ArmSpread"/> in code only (the Weapon Tuner and WeaponTune.json leave it alone), so
+        /// hands that hang close to the legs stay off the thighs as the idle sways (Tyra, ANIM-24).</summary>
+        public float HandsOff;
         /// <summary>At rest the right arm bends so the fist sits in front of the shoulder and the weapon lies back over it (Bonk);
         /// attack and cast clips play untouched.</summary>
         public bool Shoulder;
@@ -187,8 +190,12 @@ namespace BAM.Art
             // up past her shoulder; in Unity the fist's own grip lay level across her legs, his screenshot 22:52 CET, ANIM-22), and on
             // the move she carries it upright at her side, its lower limb out past her leg (run renders
             // bam-work/art/rigg-anim/vila/tyra-bage-sidan.png)
+            // (ANIM-24, Rickard 2026-10-29: "tyra hennes högra hand lår när anim går") her relaxed idle swings the right hand up to
+            // 4 % of her height into the right thigh and the left up to 3 % into the left (Unity run of 2026-10-29); both arms 12
+            // degrees out clear every idle frame, the run and the end of her shot (bam-work/precision/anim/handclip-tyra)
             g[(int)HeroId.Tyra] = new GearDef
             {
+                HandsOff = 12f,
                 Weapons = new[]
                 {
                     new WeaponDef
@@ -646,7 +653,7 @@ namespace BAM.Art
                 show = backIn > PopIn ? 0f : 1f - Mathf.Max(0f, backIn) / PopIn;
                 if (backIn < 0f) { backIn = -1f; show = 1f; }
             }
-            if (gdef.ArmSpread > 0f) ArmSpread(gdef.ArmSpread);
+            if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
             for (int i = 0; i < wT.Length; i++)
             {
@@ -895,7 +902,7 @@ namespace BAM.Art
         /// the hero's space and the way HoldAngle turns each weapon's flat side are noted. Writes bones (BodyView puts them back).</summary>
         public void SampleRest()
         {
-            if (gdef.ArmSpread > 0f) ArmSpread(gdef.ArmSpread);
+            if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(1f);
             for (int i = 0; i < wT.Length; i++)
             {
@@ -936,7 +943,7 @@ namespace BAM.Art
         {
             unchecked
             {
-                int k = (gdef.ArmSpread.GetHashCode() * 31 + gdef.CarryAt.GetHashCode()) * 31 + gdef.Elbow.GetHashCode();
+                int k = ((gdef.ArmSpread + gdef.HandsOff).GetHashCode() * 31 + gdef.CarryAt.GetHashCode()) * 31 + gdef.Elbow.GetHashCode();
                 for (int i = 0; i < defs.Length; i++)
                 {
                     WeaponDef W = defs[i];

@@ -77,6 +77,7 @@ namespace BAM.Art.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Arms", EditorStyles.boldLabel);
             g.ArmSpread = EditorGUILayout.Slider(new GUIContent("Arms out", "Degrees both upper arms turn out from the sides"), g.ArmSpread, 0f, 45f);
+            if (g.HandsOff > 0f) EditorGUILayout.LabelField("  + " + g.HandsOff + " more in code (keeps the hands off the thighs)");
             if (g.Shoulder)
             {
                 EditorGUILayout.LabelField("Right hand on the shoulder (share of the hero's height)");
