@@ -102,6 +102,7 @@ namespace BAM.Art
         float atkCarry, castCarry, lastAtkW, lastCastW;
         bool atkSeg, castSeg, clipsInfo;
         float atkFrom, atkBlow, atkTo, castFrom, castBlowAt, castTo;
+        float atkHitAt = 0.3f; // swing seconds when the clip shows atkBlow: the windup, or for a melee hero windup + its blow's travel
         // the special's form (dragged or tapped), its clip's peak and the pace of the clip up to it (CastSegment)
         bool castDrag;
         float castPeak, castPre = CastRate;
@@ -700,8 +701,17 @@ namespace BAM.Art
         {
             ClipInfo ci = Info(clips[CAttack].GetAnimationClip());
             // the plan's maths and its formulas are in AnimTiming.PlanAttack (Animation Foundation 1.0, headless-tested)
-            AnimTiming.AttackPlan p = AnimTiming.PlanAttack(windup, len, def.Art.AttackStart, def.Art.AttackRelease,
-                ci != null ? ci.Blow : -1f, ci != null ? ci.Settle : -1f, ci != null ? ci.Draw : -1f, Bow, atkGap);
+            // a melee hero's weapon meets its target when the rules land the blow (the release plus the blow's travel, Bonk's slam at
+            // the release), not at the hand's fastest moment: Rickard 2026-10-30 "damage nummer kommer innan träffen från vapnet nu"
+            atkHitAt = windup;
+            float anchor = ci != null ? ci.Blow : -1f;
+            if (AnimFix.ContactTiming && ci != null && ci.Contact > ci.Blow && ci.Blow > 0f && MeleeHit(HeroIndex, out float travel))
+            {
+                anchor = ci.Contact;
+                atkHitAt = windup + travel;
+            }
+            AnimTiming.AttackPlan p = AnimTiming.PlanAttack(atkHitAt, len, def.Art.AttackStart, def.Art.AttackRelease,
+                anchor, ci != null ? ci.Settle : -1f, ci != null ? ci.Draw : -1f, Bow, atkGap);
             if (!p.Valid) return;
             atkFrom = p.From; atkBlow = p.Blow; atkTo = p.To; atkSpeed = p.Speed; recRate = p.RecRate;
             atkTotal = p.Total; atkFade = p.Fade;
@@ -1335,7 +1345,7 @@ namespace BAM.Art
         // slam 1.9 s, Knut's 2.1, Tikta's 1.5; -1 if never, Tyra's shot ends drawn), and for a bow the full draw (Draw: the bow hand
         // at its highest from 10 % on) with which way the arrow points there (AimL: degrees from straight ahead, left negative), and
         // which hand is the fast one at the blow (Right; the hand a shot leaves from, Muzzle)
-        sealed class ClipInfo { public float Blow = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public bool Right = true; public Vector2[] Hips; public float[] Yaw; }
+        sealed class ClipInfo { public float Blow = -1f, Contact = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public bool Right = true; public Vector2[] Hips; public float[] Yaw; }
         static readonly Dictionary<AnimationClip, ClipInfo> clipInfo = new Dictionary<AnimationClip, ClipInfo>();
         static readonly List<AnimationClip> measureList = new List<AnimationClip>();
 
@@ -1432,6 +1442,16 @@ namespace BAM.Art
                         if (f < 0.1f || f > 0.85f) continue;
                         float sl = (L[i + 1] - L[i - 1]).sqrMagnitude, sr = (R[i + 1] - R[i - 1]).sqrMagnitude, sp = Mathf.Max(sl, sr);
                         if (sp > best) { best = sp; ci.Blow = step * i; ci.Right = sr >= sl; }
+                    }
+                    // the contact: where the striking hand has braked to 40 % of its fastest after the blow (the weapon meets its
+                    // target and stops; the fastest moment itself is still mid-swing), at most 0.35 s of clip after it
+                    if (ci.Blow >= 0f)
+                    {
+                        Vector3[] H = ci.Right ? R : L;
+                        int b0 = Mathf.RoundToInt(ci.Blow / step);
+                        float peak = (H[Mathf.Min(n - 1, b0 + 1)] - H[Mathf.Max(0, b0 - 1)]).magnitude;
+                        for (int i = b0 + 1; i < n - 1 && step * (i - b0) <= 0.35f; i++)
+                            if ((H[i + 1] - H[i - 1]).magnitude <= 0.4f * peak) { ci.Contact = step * i; break; }
                     }
                     if (ci.Blow >= 0f)
                         for (int i = 0; i < n; i++)
@@ -1771,7 +1791,7 @@ namespace BAM.Art
         {
             // as before 2026-10-27: the clip at its own pace, from AttackStart (Bram skips the hammer's dip to the side, so it rises
             // straight off his shoulder)
-            if (atkSeg) return t < windup ? atkFrom + t * atkSpeed : Mathf.Min(atkTo, atkBlow + (t - windup) * recRate); // = AnimTiming.AttackClipTime
+            if (atkSeg) return t < atkHitAt ? atkFrom + t * atkSpeed : Mathf.Min(atkTo, atkBlow + (t - atkHitAt) * recRate); // = AnimTiming.AttackClipTime
             if (!Phased(HeroIndex)) return Mathf.Min(clipLen[CAttack], atkStart + t * atkSpeed);
             float coil = windup - atkSlash;
             if (t < coil) { float w = t / Mathf.Max(1e-4f, coil); return atkRel * 0.7f * (1f - (1f - w) * (1f - w) * (1f - w)); }
@@ -1784,6 +1804,22 @@ namespace BAM.Art
         // them: Tyra "nästan alltid har dragen båge och att armen ser ut att gå in i karaktären", Knut's swing "snabbspolar just vid
         // attacken"). The clips play at their own pace as before; the code stays for a later, gentler try.
         static bool Phased(int hero) => false;
+
+        // the heroes whose auto is a blow in reach (MatchViews' melee arcs) and how long after the release the rules land it
+        // (Combat.UpdateAuto: the shot's Travel, HeroDef.ProjTime; Bonk's club lands as its Smash, at the release)
+        static bool MeleeHit(int hero, out float travel)
+        {
+            travel = 0f;
+            switch ((HeroId)hero)
+            {
+                case HeroId.Bonk: return true;
+                case HeroId.Fenn: case HeroId.Knut: case HeroId.Oaken:
+                    var d = BAM.Sim.Defs.Hero((HeroId)hero);
+                    travel = d.ProjTime > 0f ? d.ProjTime : 0.1f;
+                    return true;
+                default: return false;
+            }
+        }
 
         // the hit-stop on the blow by kind of hero (Speltest HeroAttack.cs ATK_STYLE hold): melee 0.06 s, ranged 0.035, magic 0.045,
         // tank 0.085 (Bram, Knut and Bonk; Speltest's ATK_CLASS has Bram and Knut as tanks)

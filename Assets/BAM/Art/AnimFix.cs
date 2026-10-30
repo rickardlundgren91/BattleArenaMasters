@@ -36,5 +36,9 @@ namespace BAM.Art
         /// in the fist and the wrist turns instead (up to WristMax degrees), so it no longer twists in her hand between rest and
         /// shot; its aim, and so the silhouette, stays.</summary>
         public static bool WristTurn = true;
+        /// <summary>Rickard 2026-10-30 ("damage nummer kommer innan träffen från vapnet nu"): a melee hero's swing (Fenn, Knut, Bonk,
+        /// Oaken) shows the weapon meeting its target (the clip's Contact: the striking hand braked after its fastest moment) on the
+        /// tick the rules land the blow and its number shows, instead of showing the fastest moment on the release.</summary>
+        public static bool ContactTiming = true;
     }
 }

@@ -199,12 +199,8 @@ namespace BAM.Game
                 Show(charge[0], at, r * k + cw / 2f, new Color(1f, 1f, 1f, 0.15f + 0.3f * k), cw);
             }
 
-            // the special's own reach while it is ready, if it differs from the auto range
-            if (p.SpecialReady && p.HDef != null)
-            {
-                float sr = p.HDef.TapReach;
-                if (sr > 0.5f && Mathf.Abs(sr - r) > 0.25f) Show(reach[0], at, sr + 0.6f * px, new Color(1f, 1f, 1f, 0.12f), 1.2f * px);
-            }
+            // (the special's own reach, a third white ring while it was ready, is gone: Rickard 2026-10-30 "det är för många cirklar";
+            // the drag's aim still shows its reach)
 
             // a thick gold ring on who the last auto attack picked: held, then fading over the last 0.4 s
             float age = Time.time - autoAt;
@@ -225,7 +221,7 @@ namespace BAM.Game
                 float br = 0.5f + 0.5f * Mathf.Sin(Time.time * 5f);
                 float rw = 2.5f * px, rr0 = Mathf.Max(0.55f, p.R + 0.35f) + 0.12f; // just outside the green "you" ring
                 Show(ready[0], at, rr0 + rw, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.65f + 0.3f * br), rw);
-                Show(ready[1], at, rr0 + rw + (1f + 2f * br) * px * 2f, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.35f * br), 1.5f * px);
+                // one ring only (its breathing outer twin went with "för många cirklar", Rickard 2026-10-30)
             }
 
             // the dragged special's hit preview: who the rules would hit if let go now (Sim AimTargets: walls, line of sight, only the
