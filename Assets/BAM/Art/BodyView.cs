@@ -41,8 +41,15 @@ namespace BAM.Art
         internal bool Shown => renderersOn && vis > 0.01f && !dead;
         internal bool IsPlayer => marker == UnitMarker.Player;
 
-        void OnEnable() { if (IsHero && !Heroes.Contains(this)) Heroes.Add(this); }
-        void OnDisable() { Heroes.Remove(this); }
+        /// <summary>Every view with held weapons now, menu stages included (the weapon debug view).</summary>
+        internal static readonly List<BodyView> Armed = new List<BodyView>(12);
+
+        void OnEnable()
+        {
+            if (IsHero && !Heroes.Contains(this)) Heroes.Add(this);
+            if (gear != null && !Armed.Contains(this)) Armed.Add(this);
+        }
+        void OnDisable() { Heroes.Remove(this); Armed.Remove(this); }
 
         RigDef def;
         Transform model;
@@ -551,6 +558,7 @@ namespace BAM.Art
             gear = HeldGear.Build(def.Gear, anim, art.Height * transform.lossyScale.y * gearK);
             if (gear == null) return;
             gear.OnMenu = Preview; // Tyra's bow hangs from her fist on the menu stage (WeaponDef.Menu)
+            if (isActiveAndEnabled && !Armed.Contains(this)) Armed.Add(this);
             int n0 = rends.Length, ng = gear.Rends.Length;
             var r2 = new Renderer[n0 + ng];
             var o2 = new Material[n0 + ng][];

@@ -75,7 +75,7 @@ namespace BAM.Art
         /// <summary>The worst grip error and turn start over for every hero (the debug menu's Reset).</summary>
         public static void ResetStats()
         {
-            var heroes = BodyView.Heroes;
+            var heroes = BodyView.Armed;
             for (int i = 0; i < heroes.Count; i++) if (heroes[i] != null && heroes[i].Gear != null) heroes[i].Gear.ResetStats();
         }
 
@@ -86,7 +86,7 @@ namespace BAM.Art
         {
             if (!On) return;
             for (int c = 0; c < segN.Length; c++) segN[c] = 0;
-            var heroes = BodyView.Heroes;
+            var heroes = BodyView.Armed;
             for (int h = 0; h < heroes.Count; h++)
             {
                 BodyView v = heroes[h];
@@ -142,6 +142,7 @@ namespace BAM.Art
             if (mats == null) MakeMaterials();
             if (mats == null) return;
             GL.PushMatrix();
+            GL.Viewport(cam.pixelRect); // the portrait frame inside a wider window (UiKit.PortraitFrame), not the whole screen
             GL.LoadProjectionMatrix(GL.GetGPUProjectionMatrix(cam.projectionMatrix, false));
             GL.modelview = cam.worldToCameraMatrix;
             for (int c = 0; c < segN.Length; c++)
@@ -178,7 +179,7 @@ namespace BAM.Art
         {
             sb.Length = 0;
             sb.Append("WEAPONS  lock ").Append(AnimFix.GripLock ? "on" : "off").Append(" wrist ").Append(AnimFix.WristTurn ? "on" : "off").Append("   grip err % now/worst   turn deg/frame worst   twist in fist deg now/worst\n");
-            var heroes = BodyView.Heroes;
+            var heroes = BodyView.Armed;
             for (int h = 0; h < heroes.Count; h++)
             {
                 BodyView v = heroes[h];
@@ -213,7 +214,7 @@ namespace BAM.Art
                 style = new GUIStyle(GUI.skin.label) { fontSize = Mathf.Max(11, Screen.height / 70), richText = false };
                 style.normal.textColor = Color.white;
             }
-            float w = Screen.width * 0.98f, lines = 2f + BodyView.Heroes.Count;
+            float w = Screen.width * 0.98f, lines = 2f + BodyView.Armed.Count;
             float y = Screen.height - style.lineHeight * lines - 8f;
             GUI.color = new Color(0f, 0f, 0f, 0.55f);
             GUI.DrawTexture(new Rect(4f, y - 2f, w, style.lineHeight * lines), Texture2D.whiteTexture);

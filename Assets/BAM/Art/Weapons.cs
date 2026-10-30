@@ -788,8 +788,10 @@ namespace BAM.Art
             Quaternion d = want * Quaternion.Inverse(hd.rotation);
             if (d.w < 0f) d = new Quaternion(-d.x, -d.y, -d.z, -d.w);
             float ang = 2f * Mathf.Acos(Mathf.Min(1f, d.w)) * Mathf.Rad2Deg;
-            FistTwist[i] = ang;
-            if (ang > FistTwistMax[i]) FistTwistMax[i] = ang;
+            // what is left in the fist after the wrist's share (all of it with the switch off)
+            float left = AnimFix.WristTurn ? Mathf.Max(0f, ang - W.WristMax) : ang;
+            FistTwist[i] = left;
+            if (left > FistTwistMax[i]) FistTwistMax[i] = left;
             if (!AnimFix.WristTurn || ang < 0.01f) return;
             float k = Mathf.Min(1f, W.WristMax / ang);
             Vector3 g = t.TransformPoint(gripL[i]);
