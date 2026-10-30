@@ -29,5 +29,8 @@ namespace BAM.Art
         /// <summary>The arms turned out from a broad body (ArmSpread, Bram 36 degrees) only as far as they hang at the side; an arm
         /// raised in a swing plays as the clip made it instead of being twisted out (Speltest's ArmRoom left raised arms alone).</summary>
         public static bool ArmRoom = true;
+        /// <summary>Weapon Precision 2.0 (2026-10-30): after every turn of a held weapon its grip point is shifted into the palm
+        /// (HeldGear.LockGrip), so it never floats off the fist or slides along the shaft; a shift only, the silhouette stays.</summary>
+        public static bool GripLock = true;
     }
 }

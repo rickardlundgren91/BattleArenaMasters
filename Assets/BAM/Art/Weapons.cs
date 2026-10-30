@@ -64,6 +64,10 @@ namespace BAM.Art
         /// <summary>Rickard's own touch-up (Weapon Tuner): a shift in the hero's right/up/forward as a share of the figure's height,
         /// and degrees turned about the grip in the weapon's own x/y/z, on top of everything else, every frame.</summary>
         public Vector3 Offset, Turn;
+        /// <summary>Two-handed weapons (Weapon Precision 2.0): where the other hand holds the weapon, as a share of the length from
+        /// the handle's end like <see cref="Grip"/>; negative = one hand only (every weapon today). With a support grip the other
+        /// arm is bent by a two-bone IK after everything else so its palm sits on that point, by <see cref="SupportW"/>.</summary>
+        public float Support = -1f, SupportW = 1f;
     }
 
     /// <summary>An off-hand shield in front of the left hand (old MX_SHIELD).</summary>
@@ -434,6 +438,13 @@ namespace BAM.Art
         public float LegsW;
         // AboveGround: the way across the ground each weapon's end rested last frame (zero while it is above it)
         Vector3[] lowDir;
+        // Weapon Precision 2.0 (AnimFix.GripLock): how far each weapon's grip was from its palm before the lock this frame and at
+        // most since the last ResetStats (share of the figure's height), and its largest turn in one frame in the hero's own space
+        // (degrees; a flip or a spin shows here), for the debug view (WeaponDebug)
+        internal float[] GripErr, GripErrMax, JumpMax;
+        Quaternion[] lastLocal;
+        // the other arm for a two-handed weapon (WeaponDef.Support): upper arm, forearm, hand, index finger
+        Transform[] supUp, supLo, supHand, supIndex;
 
         public static HeldGear Build(GearDef g, Animator an, float figH)
         {
@@ -451,6 +462,8 @@ namespace BAM.Art
             h.laxSign = new int[nw]; h.votes = new int[nw]; h.handRef = new Quaternion[nw]; h.refSum = new Vector4[nw];
             h.restGrip = new Vector3[nw]; h.gripSum = new Vector3[nw];
             h.runSign = new int[nw]; h.runVotes = new int[nw];
+            h.GripErr = new float[nw]; h.GripErrMax = new float[nw]; h.JumpMax = new float[nw]; h.lastLocal = new Quaternion[nw];
+            h.supUp = new Transform[nw]; h.supLo = new Transform[nw]; h.supHand = new Transform[nw]; h.supIndex = new Transform[nw];
             h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
             h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             h.elbR = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
@@ -512,6 +525,14 @@ namespace BAM.Art
             t.rotation = Quaternion.LookRotation(fingers.normalized, handle);
             if (W.Twist != 0f) t.rotation *= Quaternion.AngleAxis(W.Twist, Vector3.up);
             wT[i] = t; hand[i] = hd; index[i] = ix;
+            if (W.Support >= 0f)
+            {
+                // the other side's arm (a left-hand weapon is supported by the right hand)
+                supUp[i] = an.GetBoneTransform(W.Left ? HumanBodyBones.RightUpperArm : HumanBodyBones.LeftUpperArm);
+                supLo[i] = an.GetBoneTransform(W.Left ? HumanBodyBones.RightLowerArm : HumanBodyBones.LeftLowerArm);
+                supHand[i] = an.GetBoneTransform(W.Left ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+                supIndex[i] = an.GetBoneTransform(W.Left ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal);
+            }
             bindR[i] = t.localRotation;
             palmL[i] = hd.InverseTransformPoint(palm);
             handleV[i] = hd.InverseTransformVector(handle);
@@ -712,12 +733,91 @@ namespace BAM.Art
                 float sw = dead ? 0f : Mathf.Clamp01(atkW);
                 if (AnimFix.FixedGrip && W.SwingTurn != Vector3.zero && sw > 0.001f)
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
+                // every turn above is about the grip, so the aim is final here: the grip goes into the palm (a shift, never a turn, so
+                // the silhouette Rickard picked stays), before his Offset, which is his own grip touch-up and so stays on top of it
+                LockGrip(i);
                 if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
+                if (supHand[i] != null && !dead && W.SupportW > 0.001f && t.localScale.y > 1e-4f) SupportHand(i, W);
+                if (WeaponDebug.On) Jumps(i);
             }
             if (sAnchor != null) ShieldFace(moveW);
             if (cT != null) CannonTick(dt, dead);
+        }
+
+        /// <summary>Weapon Precision 2.0: the weapon's grip point (gripL, the shaft's own centre at <see cref="WeaponDef.Grip"/>, in the
+        /// weapon's space) and the palm (palmL: 0.6 of the way from the wrist to the index knuckle, in the hand's space; an Along staff:
+        /// where the idle held it, restGrip). The bind placement lays the mesh's axis, not the shaft's centre, in the fist, and HoldAngle
+        /// slides the grip across the shaft only, so without the lock the grip sat up to 3 % of the hero's height off the palm and slid
+        /// along the shaft as the hand turned (Simon's audit on issue #5). Measured before the lock (GripErr), then removed by a shift.</summary>
+        void LockGrip(int i)
+        {
+            Transform t = wT[i];
+            if (t.localScale.y < 1e-4f) return; // away (thrown)
+            WeaponDef W = defs[i];
+            Vector3 palm = W.Along && rested && W.HoldUp != 0f && !sampling ? hand[i].TransformPoint(restGrip[i]) : hand[i].TransformPoint(palmL[i]);
+            Vector3 d = palm - t.TransformPoint(gripL[i]);
+            float e = d.magnitude / Mathf.Max(1e-4f, figH);
+            GripErr[i] = e;
+            if (e > GripErrMax[i]) GripErrMax[i] = e;
+            if (AnimFix.GripLock) t.position += d;
+        }
+
+        /// <summary>The other arm bent so its palm holds the weapon at <see cref="WeaponDef.Support"/> (two-bone IK, elbow out and down).</summary>
+        void SupportHand(int i, WeaponDef W)
+        {
+            Transform t = wT[i], up = supUp[i], lo = supLo[i], hd = supHand[i];
+            if (up == null || lo == null) return;
+            Vector3 at = t.TransformPoint(new Vector3(shaftC[i].x, W.Support * meshH[i], shaftC[i].z));
+            Vector3 toPalm = supIndex[i] != null ? (supIndex[i].position - hd.position) * 0.6f : Vector3.zero;
+            Vector3 side = W.Left ? root.right : -root.right;
+            Vector3 hint = lo.position + side * (0.1f * figH) - root.up * (0.05f * figH);
+            float w = Mathf.Clamp01(W.SupportW);
+            TwoBone(up, lo, hd, Vector3.Lerp(hd.position, at - toPalm, w), hint);
+        }
+
+        // the weapon's largest turn in one frame in the hero's own space (debug view only)
+        void Jumps(int i)
+        {
+            Quaternion q = Quaternion.Inverse(root.rotation) * wT[i].rotation;
+            if (lastLocal[i].w != 0f || lastLocal[i].x != 0f || lastLocal[i].y != 0f || lastLocal[i].z != 0f)
+            {
+                float a = Quaternion.Angle(lastLocal[i], q);
+                if (a > JumpMax[i]) JumpMax[i] = a;
+            }
+            lastLocal[i] = q;
+        }
+
+        /// <summary>The debug view's Reset: the worst grip error and turn start over.</summary>
+        internal void ResetStats()
+        {
+            for (int i = 0; i < wT.Length; i++) { GripErrMax[i] = 0f; JumpMax[i] = 0f; lastLocal[i] = default; }
+        }
+
+        internal int WeaponCount => wT.Length;
+        internal Transform WeaponT(int i) => wT[i];
+        internal Transform HandT(int i) => hand[i];
+        internal WeaponDef Def(int i) => defs[i];
+        /// <summary>The weapon's grip point and the palm it is locked to, now (world space).</summary>
+        internal void GripPoints(int i, out Vector3 grip, out Vector3 palm)
+        {
+            grip = wT[i].TransformPoint(gripL[i]);
+            palm = hand[i].TransformPoint(palmL[i]);
+        }
+        /// <summary>A two-handed weapon's support point now; false without one.</summary>
+        internal bool SupportPoint(int i, out Vector3 at)
+        {
+            at = Vector3.zero;
+            if (defs[i] == null || defs[i].Support < 0f || wT[i] == null) return false;
+            at = wT[i].TransformPoint(new Vector3(shaftC[i].x, defs[i].Support * meshH[i], shaftC[i].z));
+            return true;
+        }
+        /// <summary>The weapon's two ends (handle, head) now.</summary>
+        internal void Ends(int i, out Vector3 handleEnd, out Vector3 head)
+        {
+            handleEnd = wT[i].TransformPoint(new Vector3(shaftC[i].x, 0f, shaftC[i].z));
+            head = wT[i].TransformPoint(new Vector3(shaftC[i].x, meshH[i], shaftC[i].z));
         }
 
         // as MxCannonArms: the recoil (back fast, forward slowly), then the right fist on the rear grip; in death the fist lets go

@@ -408,7 +408,11 @@ namespace BAM.Game
             }
             v.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
             v.Launch(from, to, flight);
-            if (MuzzleOf(s.SrcSerial, out Vector3 mz)) v.LaunchFrom(mz); // from the hand or weapon, easing onto the rules' path (SHOT-02)
+            if (MuzzleOf(s.SrcSerial, out Vector3 mz))
+            {
+                v.LaunchFrom(mz); // from the hand or weapon, easing onto the rules' path (SHOT-02)
+                if (s.Kind == ProjKind.TyraVolley) VolleyRelease(s.SrcSerial, mz);
+            }
             ReleaseSound(s.SrcSerial, p.Mode);
             if (p.Mode == ProjMode.Hook && p.Src != null) v.SetTether(ViewOf(p.Src));
         }
@@ -551,6 +555,9 @@ namespace BAM.Game
                     FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash
                         : kind == ProjKind.BramHammerSpecial ? (e.Shot != 0 ? FxKind.Bounce : FxKind.HitBig) // the tap's flying hammer bounces; the anvil (no shot) lands
                         : kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial ? FxKind.Hit
+                        // a volley arrow (the rules fly it as TyraArrow, its hit a special's) wears the volley's gold on each enemy it
+                        // passes through; its own splash at the end stays quiet once it hit (TYRA-07), so this is the volley's hit look
+                        : kind == ProjKind.TyraArrow && e.Dmg == DmgKind.Special ? FxKind.VolleyHit
                         : e.Big ? FxKind.HitBig : FxKind.Hit;
                     float hs = (b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f) * (e.A != null && e.A.Kind == UnitKind.Minion ? 0.6f : 1f); // VIS-03
                     ArtKit.PlayFx(fx, at, hs, b != null ? Side(b.Team) : 0, HeroOf(e.A));
@@ -842,6 +849,17 @@ namespace BAM.Game
                 volleySoundStep[srcSerial] = step;
             }
             Sound(SfxId.TyraRelease, a, 1f);
+        }
+
+        // the five volley arrows leave the bow on one tick: one gold pop at the bow for them (Skill Visibility 2.0), as the twang;
+        // not for a Tyra the player cannot see (shooting does not reveal)
+        readonly Dictionary<int, int> volleyFlashStep = new Dictionary<int, int>();
+        void VolleyRelease(int srcSerial, Vector3 at)
+        {
+            if (!unitBySerial.TryGetValue(srcSerial, out UnitRec r) || r.U == null || !m.IsVisibleTo(r.U, Mine)) return;
+            if (volleyFlashStep.TryGetValue(srcSerial, out int was) && was == step) return;
+            volleyFlashStep[srcSerial] = step;
+            ArtKit.PlayFx(FxKind.VolleyRelease, at, 1f, Side(r.U.Team), (int)HeroId.Tyra);
         }
 
         void Sound(SfxId id, Unit a, float volume)

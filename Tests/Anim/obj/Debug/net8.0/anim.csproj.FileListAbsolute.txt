@@ -1,0 +1,15 @@
+/tmp/bam-animtests/anim
+/tmp/bam-animtests/anim.deps.json
+/tmp/bam-animtests/anim.runtimeconfig.json
+/tmp/bam-animtests/anim.dll
+/tmp/bam-animtests/anim.pdb
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.GeneratedMSBuildEditorConfig.editorconfig
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.AssemblyInfoInputs.cache
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.AssemblyInfo.cs
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.csproj.CoreCompileInputs.cache
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.sourcelink.json
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.dll
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/refint/anim.dll
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.pdb
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/anim.genruntimeconfig.cache
+/home/claude/battle-arena-masters/Tests/Anim/obj/Debug/net8.0/ref/anim.dll

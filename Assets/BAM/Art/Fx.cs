@@ -1050,6 +1050,21 @@ namespace BAM.Art
                     Dust(p + Vector3.up * 0.2f, 4, C(Pal.Ground, 200), 0.45f, 1.2f, 0.5f, 0.3f, 0.2f);
                     break;
                 }
+                case FxKind.VolleyHit:
+                {
+                    // the gold of the volley's own arrows (Speltest tyravolley #fff6a8), not Tyra's plain hit: a struck enemy reads
+                    // as hit by the volley while its arrow flies on; smaller than the bolt's hit, one per enemy per volley
+                    Color gold = new Color(1f, 0.965f, 0.66f, 1f);
+                    if (!HitStar(mid, gold, 0.85f * size, 0.15f)) Pow(mid, 1, new Color32(255, 240, 170, 230), 0.55f * size, 0.14f);
+                    Sparks(mid, 5, new Color32(255, 214, 110, 255), 0.1f * size, 3f, 0.22f, 0.8f);
+                    ImpactRing(p, 0.4f * size, gold, 0.2f);
+                    break;
+                }
+                case FxKind.VolleyRelease:
+                    // where the arrows leave her bow: a quick gold pop, so the fan's start reads at the bow, not at her feet
+                    Flash(p, 0.06f, 0.32f * size, new Color(1f, 0.93f, 0.6f, 0.85f), 0.08f);
+                    Sparks(p, 4, new Color32(255, 220, 120, 255), 0.07f, 2.2f, 0.16f, 0.2f);
+                    break;
                 case FxKind.HildeKnock:
                     // a hero shoved by her keg (was Bonk's dust): his powder puffs, tinted a smoky powder grey, and a few brass sparks
                     if (hDust != null) Burst(hDust, p + Vector3.up * 0.25f, 4, new Color32(222, 212, 196, 225), 0.6f * size, 1.6f * size, 0.8f, 0.45f, 0.25f * size);
@@ -1386,7 +1401,9 @@ namespace BAM.Art
                     if (Random.value < 0.5f) Wisps(p, 1, new Color32(170, 235, 255, 200), 0.35f, 0.3f, 0.4f, 0.4f, 0.05f);
                     Glow(new Vector3(p.x, 0.15f, p.z), 1, new Color32(150, 225, 255, 110), 0.45f, 0f, 0.5f);
                     break;
-                case ProjKind.TyraVolley: Glow(p, 1, new Color32(255, 230, 140, 220), 0.3f, 0.05f, 0.15f); if (Random.value < 0.35f) Embers(p, 1, new Color32(255, 214, 110, 255), 0.07f, 0.4f, 0.35f, 0.3f); break;
+                // a small glow at each arrow's head (0.3 blobbed the five heads into one near the bow, where they fly 0.17 tiles apart a
+                // tile out), embers rarer
+                case ProjKind.TyraVolley: Glow(p, 1, new Color32(255, 230, 140, 220), 0.18f, 0.05f, 0.1f); if (Random.value < 0.2f) Embers(p, 1, new Color32(255, 214, 110, 255), 0.06f, 0.4f, 0.3f, 0.3f); break;
                 case ProjKind.BramHammerSpecial: Sparks(p, 1, heroAccent[(int)HeroId.Bram], 0.1f, 1.5f, 0.25f, 0.3f); break; // a forge tail
                 case ProjKind.TowerShot: Glow(p, 1, C(Pal.TeamLight(team)), 0.35f, 0.1f, 0.2f); break;
                 case ProjKind.BonkBoulder:

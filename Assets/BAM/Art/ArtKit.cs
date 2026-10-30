@@ -157,6 +157,9 @@ namespace BAM.Art
         OakenGuard = 24,  // Stored Impact takes part of a hit: a stone skin flash in his gold
         OakenStored = 25, // while Stored Impact holds damage for his next punch: a gold glow at his fists (sent every few frames)
         HildeKnock = 26,  // a hero shoved by Hilde's keg: Rickard's powder puff (tx_fx_hilde_knock) where it was hit
+        // Tyra's Arrow Volley read as hers (Skill Visibility 2.0, 2026-10-30)
+        VolleyHit = 27,     // a volley arrow passes through an enemy: the volley's gold star on that enemy (the arrow flies on)
+        VolleyRelease = 28, // the five arrows leave the bow: a short gold flash at the bow, once per volley
     }
 
     public static class ArtKit

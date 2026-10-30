@@ -508,7 +508,12 @@ namespace BAM.Art
         /// <summary>Where a hero's shot leaves its hand now (UnitView.Muzzle, SHOT-02): Hilde's cannon mouth; Bonk's boulder between his
         /// hands; Moa's casting hand; else the held weapon's head (HeldGear.ShotFrom: the bow's arrow, the bomb, the hammer, anchor or
         /// the needle in the throwing fist), else that fist. False for minions, towers, the wolf and code figures.</summary>
-        public override bool Muzzle(out Vector3 at)
+        public override bool Muzzle(out Vector3 at) => MuzzleAt(true, out at);
+
+        /// <summary>The same point as <see cref="Muzzle"/> without counting a release (the weapon debug view asks every frame).</summary>
+        internal bool MuzzlePoint(out Vector3 at) => MuzzleAt(false, out at);
+
+        bool MuzzleAt(bool release, out Vector3 at)
         {
             if (CannonMouth(out at)) return true;
             if (HeroIndex < 0 || anim == null || !anim.isHuman) return false;
@@ -516,7 +521,7 @@ namespace BAM.Art
             if (l == null || r == null) return false;
             var h = (HeroId)HeroIndex;
             // the rules' release as the screen sees it: the game asks this the frame the swing's shot is first drawn
-            if (atkT >= 0f && atkCut < 0f && castT < 0f) Probe.OnRelease(windup, atkT, Time.deltaTime * ArtKit.Slow);
+            if (release && atkT >= 0f && atkCut < 0f && castT < 0f) Probe.OnRelease(windup, atkT, Time.deltaTime * ArtKit.Slow);
             if (h == HeroId.Bonk) { at = (l.position + r.position) * 0.5f; return true; }
             bool right = ThrowsRight(castT >= 0f && (atkT < 0f || castT < atkT) ? CCast : CAttack);
             if (h != HeroId.Moa && gear != null && gear.ShotFrom(bowHero, right, out at)) return true;
@@ -530,6 +535,9 @@ namespace BAM.Art
             ClipInfo ci = clips != null && AnimFix.BlowTiming ? Info(clips[slot].GetAnimationClip()) : null;
             return ci == null || ci.Right;
         }
+
+        /// <summary>The held weapons (null for a body without any), for the weapon debug view.</summary>
+        internal HeldGear Gear => gear;
 
         internal bool CannonMouth(out Vector3 at)
         {

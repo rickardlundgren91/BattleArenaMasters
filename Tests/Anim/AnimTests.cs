@@ -374,6 +374,7 @@ namespace BAM.Sim
             SimTests();
             DeterminismTests();
             ClockTests();
+            VisibilityTests();
             Console.WriteLine($"anim tests: {pass} pass, {fail} fail, {info} info");
             return fail > 0 ? 1 : 0;
         }
