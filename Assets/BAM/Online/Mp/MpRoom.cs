@@ -310,7 +310,7 @@ namespace BAM.Online.Mp
             {
                 var m = Members[i];
                 m.Seat = i; m.InMatch = true; m.Loaded = m.Conn < 0; m.Behind = -1;
-                seats[i] = new SeatConfig { Hero = m.Hero, Team = Quick ? TeamOf(m.Side, Versus) : TeamOf(i, Mode), Spell = m.Spell };
+                seats[i] = new SeatConfig { Hero = m.Hero, Team = Quick ? TeamOf(m.Side, Versus) : TeamOf(i, Mode), Spell = m.Spell, Name = m.Name };
             }
             for (int i = 1; i < Members.Count; i++)
             {
@@ -533,7 +533,7 @@ namespace BAM.Online.Mp
                     int seed = r.I32(); var diff = (Difficulty)r.U8(); Mode = Math.Min(r.U8(), Versus); int n = r.U8();
                     if (n > MpRelay.MaxPlayers) return;
                     var seats = new SeatConfig[n];
-                    for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; r.Str(); }
+                    for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }
                     int mine = r.U8();
                     if (mine <= 0 || mine >= n) return;
                     Begin(seed, diff, seats, mine);

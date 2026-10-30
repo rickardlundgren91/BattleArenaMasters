@@ -110,7 +110,10 @@ namespace BAM.Game
                 Unit who = u.IsClone && u.Owner != null ? u.Owner : u;
                 bool mine = who == m.Player;
                 if (!o.Name.gameObject.activeSelf) o.Name.gameObject.SetActive(true);
-                string label = mine ? "You" : HeroCatalog.Get(who.Hero).Name;
+                // online: the other people's names (Rickard 2026-10-30 "när man kör med andra spelare ska man se deras namn"), bots keep the hero's
+                var seats = m.Config.Seats;
+                string person = !mine && seats != null && who.Seat >= 0 && who.Seat < seats.Length ? seats[who.Seat].Name : null;
+                string label = mine ? "You" : !string.IsNullOrEmpty(person) ? person : HeroCatalog.Get(who.Hero).Name;
                 if (o.Name.text != label) o.Name.text = label;
                 o.Name.color = mine ? Color.white : u.Team == m.Player.Team ? NameAlly : NameFoe;
                 o.Name.fontSize = Mathf.Max(8, Mathf.RoundToInt(ts * (mine ? 0.27f : 0.23f)));

@@ -43,6 +43,8 @@ namespace BAM.Sim
         public HeroId Hero;
         public int Team;
         public SpellId Spell = SpellId.Blink;
+        /// <summary>The player's name, shown over the hero (online). Only for the HUD: the rules never read it.</summary>
+        public string Name;
     }
 
     /// <summary>The player's controls for one tick, in map space (x right, y down the map).</summary>
