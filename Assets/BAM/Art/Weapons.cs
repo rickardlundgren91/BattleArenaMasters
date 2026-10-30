@@ -116,6 +116,10 @@ namespace BAM.Art
         /// <summary>Shoulder: where the wrist goes from the upper arm (forward, down, in) and where the elbow points (down, forward,
         /// out), as shares of the figure's height.</summary>
         public Vector3 CarryAt = new Vector3(0.13f, 0.12f, 0.02f), Elbow = new Vector3(0.2f, 0.12f, 0.12f);
+        /// <summary>Shoulder: how much further out to the side than <see cref="CarryAt"/> the wrist goes (share of the figure's
+        /// height), in code only (the Weapon Tuner and WeaponTune.json leave it alone), so the weapon over the shoulder and the
+        /// fist stay out of a broad body (Bram, Bonk, ANIM-25).</summary>
+        public float CarryOut;
     }
 
     /// <summary>
@@ -155,18 +159,26 @@ namespace BAM.Art
             // his head (Rickard's pick 2026-10-28, option C of bam-work/art/rigg-anim/vila/bram-hammare-val.png: held a third of the
             // way up, the shaft's end stuck down between his legs, "heltokig"). The fist sits a little outside the shoulder and the head
             // leans out to his right, so facing the camera the hammer no longer hides his face (Unity run 1 2026-10-29; pick B of
-            // bam-work/art/rigg-anim/spring/bram-spring-val.png; WeaponTune.json beats this until Rickard presses Reset Bram)
+            // bam-work/art/rigg-anim/spring/bram-spring-val.png; WeaponTune.json beats this until Rickard presses Reset Bram).
+            // (ANIM-25, Rickard 2026-10-29: "Bram vapen kropp") with his tuned hold the fist sat 6 % of his height inside his belly
+            // and the shaft went as deep through his chest, right shoulder and head standing and running (Unity's own poses
+            // 2026-10-29); the fist 0.12 further out to his right clears both (bam-work/precision/anim/hold-bram-bonk-knut). That
+            // goes on top of CarryAt, so pick B's own step out (in -0.04) is left to it: after Reset Bram the fist is as far out as
+            // with his tuned numbers, and pick B's aim clears too
             g[(int)HeroId.Bram] = new GearDef
             {
                 Weapons = new[] { new WeaponDef { Model = "bram_hammer_new", Len = 0.7f, Grip = 0.08f, HoldUp = 60f, HoldOut = 145f, Follow = 0.1f } },
                 ArmSpread = 22f,
                 Shoulder = true,
-                CarryAt = new Vector3(0.11f, 0.12f, -0.04f),
+                CarryAt = new Vector3(0.11f, 0.12f, 0.02f),
+                CarryOut = 0.12f,
             };
             // held by the shank just under the ring, so it hangs from the fist with the flukes down (Rickard 2026-10-16/19); hung straight
             // down at his right side, the flukes out, since in the fist's own grip it lay slanted in front of his thighs (Unity run 1
             // 2026-10-29; pick A of bam-work/art/rigg-anim/spring/knut-spring-val.png; WeaponTune.json beats this until Reset Knut)
-            g[(int)HeroId.Knut] = new GearDef { Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f, HoldUp = 80f, HoldOut = -90f } } };
+            // (ANIM-25) his right fist sank up to 5 % of his height into his hip and thigh standing and running (Unity's own poses
+            // 2026-10-29): both arms 16 degrees out keep it off; with pick A's hold that also keeps the flukes off his right foot
+            g[(int)HeroId.Knut] = new GearDef { HandsOff = 16f, Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f, HoldUp = 80f, HoldOut = -90f } } };
             // with her own clips the staff along the forearm hung beside the fist and the crest, face out at the side, read as a
             // torch from the front (Rickard 2026-10-26: "moa håller inte i sina vapen"): the staff now stands up through her right
             // fist, face to the front, and the crest sits on her left hand turned half to the front; (2026-10-28) it stays up through
@@ -227,11 +239,14 @@ namespace BAM.Art
             // fist in front of the shoulder, the club leaning back over it (Rickard 2026-10-26: "ha vapen naturligt på axeln", as in
             // the "Bonk has arrived" picture); only turning the club, it stood in front of his face, behind his back or in his pelt. On the
             // move it stands up over the shoulder, leaning out a little (Unity run 1 2026-10-29: lying back nearly level it read as a pole
-            // from the match camera; pick B of bam-work/art/rigg-anim/spring/bonk-spring-val.png)
+            // from the match camera; pick B of bam-work/art/rigg-anim/spring/bonk-spring-val.png). (ANIM-25, Rickard 2026-10-29: "bonk
+            // vapen i axel") standing, the club lay up to 5 % of his height deep in his right shoulder, upper arm and chest (Unity's
+            // own poses 2026-10-29); the fist 0.1 further out to his right lays it over the shoulder instead
             g[(int)HeroId.Bonk] = new GearDef
             {
                 Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f } } },
                 Shoulder = true,
+                CarryOut = 0.1f,
             };
             // her cannon (Rickard's Meshy model) on her right shoulder like a bazooka, barrel forward, her right fist on its rear grip,
             // kicking back at every shot: old View3DHilde.cs with its numbers for her current body (stocky, short neck: the barrel
@@ -853,7 +868,7 @@ namespace BAM.Art
             Vector3 fwd = root.forward, upW = root.up, rt = root.right;
             Vector3 a = carryUp.position;
             float H = figH;
-            Vector3 ca = gdef.CarryAt, el = gdef.Elbow;
+            Vector3 ca = gdef.CarryAt - new Vector3(0f, 0f, gdef.CarryOut), el = gdef.Elbow;
             Vector3 goal = a + fwd * (ca.x * H) - upW * (ca.y * H) - rt * (ca.z * H);
             Vector3 hint = a - upW * (el.x * H) + fwd * (el.y * H) + rt * (el.z * H);
             TwoBone(carryUp, carryLo, carryHand, Vector3.Lerp(carryHand.position, goal, w), Vector3.Lerp(carryLo.position, hint, w));
@@ -943,7 +958,7 @@ namespace BAM.Art
         {
             unchecked
             {
-                int k = ((gdef.ArmSpread + gdef.HandsOff).GetHashCode() * 31 + gdef.CarryAt.GetHashCode()) * 31 + gdef.Elbow.GetHashCode();
+                int k = (((gdef.ArmSpread + gdef.HandsOff).GetHashCode() * 31 + gdef.CarryAt.GetHashCode()) * 31 + gdef.Elbow.GetHashCode()) * 31 + gdef.CarryOut.GetHashCode();
                 for (int i = 0; i < defs.Length; i++)
                 {
                     WeaponDef W = defs[i];

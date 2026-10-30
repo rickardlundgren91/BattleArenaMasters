@@ -85,6 +85,7 @@ namespace BAM.Art.Editor
                     EditorGUILayout.Slider("  hand forward", g.CarryAt.x, -0.3f, 0.4f),
                     EditorGUILayout.Slider("  hand down", g.CarryAt.y, -0.3f, 0.4f),
                     EditorGUILayout.Slider("  hand in", g.CarryAt.z, -0.3f, 0.3f));
+                if (g.CarryOut > 0f) EditorGUILayout.LabelField("  + " + g.CarryOut + " more out in code (keeps the weapon out of the body)");
                 g.Elbow = new Vector3(
                     EditorGUILayout.Slider("  elbow down", g.Elbow.x, -0.4f, 0.4f),
                     EditorGUILayout.Slider("  elbow forward", g.Elbow.y, -0.4f, 0.4f),
