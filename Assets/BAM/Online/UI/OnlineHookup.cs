@@ -26,6 +26,8 @@ namespace BAM.Online.UI
             OnlineHooks.OpenAccount = OnlineUi.OpenAccount;
             OnlineHooks.OpenPlayFriends = OnlineUi.OpenPlayFriends;
             OnlineHooks.OnlineMatch = OnlineUi.OnlineMatch;
+            OnlineHooks.OpenInvite = OnlineUi.OpenInvite;
+            OnlineHooks.Searching = OnlineUi.Searching;
             OnlineHooks.AskToGoOnline = OnlineUi.AskToGoOnline;
             OnlineHooks.LastGain = LastGain;
             OnlineHooks.HeroLockLevel = id => Progress.HeroOpen(id) ? 0 : Progress.HeroLevel(id);

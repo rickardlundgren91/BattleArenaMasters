@@ -23,6 +23,10 @@ namespace BAM.UI
         public static Func<MatchGain> LastGain;
         /// <summary>The account level that opens a hero, 0 when it is open (offline builds: null, every hero open).</summary>
         public static Func<BAM.Sim.HeroId, int> HeroLockLevel;
+        /// <summary>Home's "+ INVITE" pills beside the hero (Speltest HubInvitePill3): the invite panel, friends first, then everyone online.</summary>
+        public static Action OpenInvite;
+        /// <summary>How many other players are searching ONLINE MATCH now (the green light on the ONLINE MATCH row).</summary>
+        public static Func<int> Searching;
         /// <summary>The account level now.</summary>
         public static Func<int> Level;
     }

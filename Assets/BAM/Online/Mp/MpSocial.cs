@@ -16,6 +16,10 @@ namespace BAM.Online.Mp
         static bool started;
         static readonly List<string> pending = new List<string>(); // invited before the room had its code
         static readonly Dictionary<string, string> names = new Dictionary<string, string>();
+        // friends are also invited with a Friends note (Rickard 2026-10-30: FUL online in Friends but missing from Online now, so
+        // no INVITE): the note carries the room code, so it works whatever the online list sees. id -> the room code it was sent for
+        static readonly Dictionary<string, string> noted = new Dictionary<string, string>();
+        static readonly List<string> notePending = new List<string>();
 
         /// <summary>Short lines for a toast ("Anna said no thanks").</summary>
         public static event Action<string> Say;
@@ -36,6 +40,29 @@ namespace BAM.Online.Mp
             foreach (var id in (PlayerPrefs.GetString(BlockedKey, "") ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) MpPresence.Blocked.Add(id);
             MpPresence.IsBlocked = id => Social.RelationTo(id) == Social.Relation.Blocked;
             MpPresence.SaveBlocked = () => { PlayerPrefs.SetString(BlockedKey, string.Join(",", MpPresence.Blocked)); PlayerPrefs.Save(); };
+            Social.NoteIn += OnNote;
+        }
+
+        static void OnNote(string from, Social.Note n)
+        {
+            if (n.t == "inv" && !string.IsNullOrEmpty(n.code))
+            {
+                string who = MpPresence.CleanName(n.name);
+                if (!string.IsNullOrEmpty(n.v) && n.v != Application.version) { Say?.Invoke(who + " invited you, but has game version " + n.v + " (you have " + Application.version + ")"); return; }
+                var me = MpPresence.Backend != null ? MpPresence.Backend.Me : "";
+                MpPresence.Offer(new PresenceRow { Id = "note", Owner = from, Name = who, InvCode = n.code, InvMode = n.mode, InvAt = n.at, InvTo = me });
+            }
+            else if (n.t == "no" && n.code == MpRoom.Code && noted.TryGetValue(from, out var c) && c == n.code)
+            {
+                noted.Remove(from);
+                Say?.Invoke((names.TryGetValue(from, out var nm) ? nm : "Your friend") + " said no thanks");
+            }
+        }
+
+        static void SendInviteNote(string id)
+        {
+            noted[id] = MpRoom.Code;
+            _ = Social.SendNote(id, new Social.Note { t = "inv", code = MpRoom.Code, mode = MpRoom.Mode, name = MpRoom.MyName, v = Application.version, at = (long)MpPresence.Clock() });
         }
 
         internal static void Tick(float dt)
@@ -53,6 +80,12 @@ namespace BAM.Online.Mp
             // our invites: the room is gone or playing, or the cards on the other phones have run out
             if (me.InvCode.Length > 0 && (!MpRoom.IsHost || MpRoom.Quick || MpRoom.Code != me.InvCode || MpRoom.State == MpRoom.Phase.Match || MpPresence.InvitesOld))
                 MpPresence.ClearInvites();
+            if (MpRoom.State == MpRoom.Phase.Off || MpRoom.Quick || !MpRoom.IsHost) { notePending.Clear(); noted.Clear(); }
+            else if (notePending.Count > 0 && MpRoom.State == MpRoom.Phase.Lobby && MpRoom.Code.Length > 0)
+            {
+                foreach (var id in notePending) SendInviteNote(id);
+                notePending.Clear();
+            }
             if (pending.Count > 0)
             {
                 if (MpRoom.State == MpRoom.Phase.Off || MpRoom.Quick) pending.Clear();
@@ -78,23 +111,45 @@ namespace BAM.Online.Mp
         public static PresenceRow Find(string playerId) => MpPresence.Find(playerId);
 
         /// <summary>Is this player invited to our room right now?</summary>
-        public static bool IsInvited(string playerId) => MpPresence.Invited.Contains(playerId) || pending.Contains(playerId);
+        public static bool IsInvited(string playerId) => MpPresence.Invited.Contains(playerId) || pending.Contains(playerId)
+            || notePending.Contains(playerId) || noted.TryGetValue(playerId, out var c) && c == MpRoom.Code;
+
+        /// <summary>Can INVITE be offered for this player: free in the online list, or a friend the Friends service shows online.</summary>
+        public static bool CanInvite(string playerId)
+        {
+            var r = MpPresence.Find(playerId);
+            if (r != null) return r.Free;
+            var f = Social.FriendById(playerId);
+            return f != null && f.Value.Presence == Social.Presence.Online;
+        }
 
         /// <summary>INVITE: into our room (made now if we have none). Answers null when sent, else why not.</summary>
         public static string Invite(string playerId, string name, int mode = MpRoom.Together)
         {
             if (!SignedIn) return "Sign in to play online first.";
-            if (!ShowMe) return "Turn on \"Show me as online\" to invite.";
             var r = MpPresence.Find(playerId);
-            if (r == null) return (name ?? "They") + " does not have the game open right now.";
-            if (!r.Free) return r.Name + " is busy (" + PresenceState.Text(r.State).ToLowerInvariant() + ").";
+            var friend = Social.FriendById(playerId);
+            if (r != null && !r.Free) return r.Name + " is busy (" + PresenceState.Text(r.State).ToLowerInvariant() + ").";
+            if (friend != null)
+            {
+                var f = friend.Value;
+                if (r == null && f.Presence == Social.Presence.Playing) return f.Name + " is in a match.";
+                if (r == null && f.Presence == Social.Presence.Offline) return f.Name + " does not have the game open right now.";
+                if (!string.IsNullOrEmpty(f.Version) && f.Version != Application.version) return f.Name + " has game version " + f.Version + ", you have " + Application.version + ". Both need the same version from Google Play.";
+            }
+            else
+            {
+                if (r == null) return (name ?? "They") + " does not have the game open right now.";
+                if (!ShowMe) return "Turn on \"Show me as online\" to invite.";
+            }
             if (MpRoom.Quick && MpRoom.State != MpRoom.Phase.Off) return "You are looking for a match. Cancel first to invite.";
-            names[playerId] = r.Name;
+            names[playerId] = r != null ? r.Name : friend.Value.Name;
             bool hosting = MpRoom.IsHost && !MpRoom.Quick && (MpRoom.State == MpRoom.Phase.Lobby || MpRoom.State == MpRoom.Phase.Connecting);
             if (!hosting) MpRoom.Host(mode);
             else if (MpRoom.Members.Count + MpPresence.Invited.Count + pending.Count >= MpRelay.MaxPlayers) return "Your room is full.";
-            if (MpRoom.State == MpRoom.Phase.Lobby && MpRoom.Code.Length > 0) MpPresence.AddInvite(playerId, MpRoom.Code, MpRoom.Mode);
-            else if (!pending.Contains(playerId)) pending.Add(playerId);
+            bool ready = MpRoom.State == MpRoom.Phase.Lobby && MpRoom.Code.Length > 0;
+            if (r != null && ShowMe) { if (ready) MpPresence.AddInvite(playerId, MpRoom.Code, MpRoom.Mode); else if (!pending.Contains(playerId)) pending.Add(playerId); }
+            if (friend != null) { if (ready) SendInviteNote(playerId); else if (!notePending.Contains(playerId)) notePending.Add(playerId); }
             return null;
         }
 
@@ -107,7 +162,12 @@ namespace BAM.Online.Mp
         }
 
         /// <summary>NO THANKS: the inviter is told at its next look.</summary>
-        public static void Decline(PresenceRow r) => MpPresence.Decline(r, true);
+        public static void Decline(PresenceRow r)
+        {
+            if (r == null) return;
+            MpPresence.Decline(r, true);
+            if (Social.FriendById(r.Owner) != null) _ = Social.SendNote(r.Owner, new Social.Note { t = "no", code = r.InvCode });
+        }
 
         /// <summary>Never see this player in the list or get invites from them again (on this phone).</summary>
         public static void Block(PresenceRow r)

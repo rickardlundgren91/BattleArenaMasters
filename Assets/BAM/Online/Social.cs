@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Friends;
 using Unity.Services.Friends.Models;
+using Unity.Services.Friends.Notifications;
 using UnityEngine;
 
 namespace BAM.Online
@@ -24,6 +25,38 @@ namespace BAM.Online
         {
             public string PlayerId, Name;
             public Presence Presence;
+            /// <summary>The game version on their phone (from their Friends presence), "" when unknown (older builds send none).</summary>
+            public string Version;
+        }
+
+        // what we put in our Friends presence: the game version, so a friend's phone can tell why we are missing from its
+        // "Online now" list (only phones with the same version can play each other; Rickard 2026-10-30)
+        [Serializable, UnityEngine.Scripting.Preserve] public class Activity { public string v; }
+
+        /// <summary>A short note between friends through the Friends service (invites that do not need the online list).</summary>
+        [Serializable, UnityEngine.Scripting.Preserve] public class Note { public string t, code, name, v; public int mode; public long at; }
+        /// <summary>A note from a friend arrived (their player id, the note).</summary>
+        public static event Action<string, Note> NoteIn;
+
+        /// <summary>Sends a note to a friend. False when it could not be sent.</summary>
+        public static async Task<bool> SendNote(string playerId, Note n)
+        {
+            if (!active || string.IsNullOrEmpty(playerId)) return false;
+            try { await FriendsService.Instance.MessageAsync(playerId, n); return true; }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] note to friend: " + e.Message); return false; }
+        }
+
+        static void OnMessage(IMessageReceivedEvent e)
+        {
+            try { var n = e.GetAs<Note>(); if (n != null && e.UserId != null && RelationTo(e.UserId) != Relation.Blocked) NoteIn?.Invoke(e.UserId, n); }
+            catch (Exception ex) { Debug.LogWarning("[BAM.Online] note from friend: " + ex.Message); }
+        }
+
+        /// <summary>This friend, or null.</summary>
+        public static Person? FriendById(string playerId)
+        {
+            foreach (var f in friends) if (f.PlayerId == playerId) return f;
+            return null;
         }
 
         static readonly List<Person> friends = new List<Person>(), incoming = new List<Person>(), outgoing = new List<Person>(), blocked = new List<Person>();
@@ -55,6 +88,7 @@ namespace BAM.Online
                 f.RelationshipAdded += OnChange;
                 f.RelationshipDeleted += OnChange;
                 f.PresenceUpdated += OnChange;
+                f.MessageReceived += OnMessage;
                 active = true;
                 await SyncName();
                 await SendPresence();
@@ -77,6 +111,7 @@ namespace BAM.Online
             f.RelationshipAdded -= OnChange;
             f.RelationshipDeleted -= OnChange;
             f.PresenceUpdated -= OnChange;
+            f.MessageReceived -= OnMessage;
             active = false;
             seenIncoming = -1;   // a new account must not toast the old one's requests
             friends.Clear(); incoming.Clear(); outgoing.Clear(); blocked.Clear(); relation.Clear();
@@ -185,7 +220,7 @@ namespace BAM.Online
             bool want = inMatch;
             try
             {
-                await FriendsService.Instance.SetPresenceAvailabilityAsync(want ? Availability.Busy : Availability.Online);
+                await FriendsService.Instance.SetPresenceAsync(want ? Availability.Busy : Availability.Online, new Activity { v = Application.version });
                 sentInMatch = want;
             }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] presence: " + e.Message); }
@@ -211,11 +246,14 @@ namespace BAM.Online
             var m = r.Member;
             if (m == null) return;
             var av = m.Presence != null ? m.Presence.Availability : Availability.Offline;
+            string ver = "";
+            try { var a = m.Presence != null ? m.Presence.GetActivity<Activity>() : null; if (a != null && a.v != null) ver = a.v; } catch (Exception) { }
             into.Add(new Person
             {
                 PlayerId = m.Id,
                 Name = Leaderboard.StripTag(m.Profile != null ? m.Profile.Name : ""),
                 Presence = av == Availability.Online || av == Availability.Away ? Presence.Online : av == Availability.Busy ? Presence.Playing : Presence.Offline,
+                Version = ver,
             });
             relation[m.Id] = kind;
         }

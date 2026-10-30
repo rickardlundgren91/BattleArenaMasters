@@ -43,6 +43,20 @@ namespace BAM.Online.UI
         public static void OpenFriends() { Init(); OnlineMenu.Close(); OnlineMenu.OpenFriends(); }
         /// <summary>Friends online now (not in a match), for the badge on Home's FRIENDS button.</summary>
         public static int FriendsOnline() { int n = 0; foreach (var f in Social.Friends) if (f.Presence == Social.Presence.Online) n++; return n; }
+        /// <summary>Home's + INVITE: the invite panel (friends first, then everyone online), or the sign-in first.</summary>
+        public static void OpenInvite()
+        {
+            Init(); OnlineMenu.Close();
+            if (Account.State != Account.Status.Ready) { OnlineMenu.Go(Account.State == Account.Status.NeedsName ? "hubname" : "golive"); return; }
+            OnlineMenu.OpenInvite();
+        }
+        /// <summary>Other players searching ONLINE MATCH now (their "here I am" sign says queue), for the light on ONLINE MATCH.</summary>
+        public static int Searching()
+        {
+            if (Account.State != Account.Status.Ready) return 0;
+            int n = 0; foreach (var r in BAM.Online.Mp.MpPresence.Online) if (r.State == BAM.Online.Mp.PresenceState.Queue) n++;
+            return n;
+        }
         public static void OpenAccount() { Init(); OnlineMenu.Close(); OnlineMenu.Go("account"); }
         /// <summary>Play with friends: the room page (create a room or join one with a code; BAM.Online.Mp).</summary>
         public static void OpenPlayFriends() { Init(); OnlineMenu.Close(); OnlineMenu.Go("mp"); }

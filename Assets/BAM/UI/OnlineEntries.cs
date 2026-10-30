@@ -74,6 +74,51 @@ namespace BAM.UI
             rt.gameObject.AddComponent<ButtonFx>();
         }
 
+        /// <summary>
+        /// Speltest MenuHome3.HubTeam3 / HubInvitePill3 (ONE_PLAY): an empty party place on each side of the hero is a small glassy
+        /// "+ INVITE" pill, cw(34) out from the middle, at 0.42 of a side hero's height over its feet (cw(10) behind the player's).
+        /// A tap opens the invite panel: friends first, then everyone online (Rickard 2026-10-30).
+        /// </summary>
+        static void OnlineInvitePills(RectTransform low, float feetY, float heroH)
+        {
+            if (OnlineHooks.OpenInvite == null) return;
+            float sideH = heroH * 0.7f, cy = feetY + 10 * Cw + sideH * 0.42f, h = 7 * Cw;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var rt = UiKit.NewRect(side < 0 ? "Invite Left" : "Invite Right", low);
+                var label = Treb(rt, "INVITE", 2.6f, new Color(243 / 255f, 244 / 255f, 1f, 0.92f));
+                float w = label.preferredWidth + h + 3 * Cw;
+                Mid(rt, 0, 0, 540 + side * 34 * Cw, cy, w + 4 * Cw, h + 6 * Cw); // a touch area a little bigger than the pill
+                var hit = rt.gameObject.AddComponent<Image>();
+                hit.color = Color.clear;
+                var pill = UiKit.NewRect("Pill", rt);
+                Mid(pill, 0.5f, 0.5f, 0, 0, w, h);
+                var group = pill.gameObject.AddComponent<CanvasGroup>();
+                group.alpha = 0.7f; // see-through, so the eye stays on the player's hero
+                group.blocksRaycasts = false;
+                var fill = Pic(pill, "Fill", UiKit.Rounded, new Color(14 / 255f, 18 / 255f, 48 / 255f, 0.55f));
+                UiKit.Stretch(fill.rectTransform);
+                Radius(fill, h / 2);
+                var edge = Pic(pill, "Edge", HomeArt.RoundRing(0.3f / 3.5f), UiKit.Primary);
+                UiKit.Stretch(edge.rectTransform);
+                RingRadius(edge, h / 2);
+                float px = h / 2 + 0.5f * Cw, s = 1.4f * Cw; // HubPlus: two bars, 2s long and 0.4s thick
+                Mid(Pic(pill, "PlusH", null, UiKit.Primary).rectTransform, 0, 0.5f, px, 0, 2 * s, 0.4f * s);
+                Mid(Pic(pill, "PlusV", null, UiKit.Primary).rectTransform, 0, 0.5f, px, 0, 0.4f * s, 2 * s);
+                label.transform.SetParent(pill, false);
+                label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(0, 0.5f);
+                label.rectTransform.pivot = new Vector2(0, 0.5f);
+                label.rectTransform.anchoredPosition = new Vector2(h + 0.6f * Cw, 0);
+                label.rectTransform.sizeDelta = new Vector2(label.preferredWidth + Cw, h);
+                var b = rt.gameObject.AddComponent<Button>();
+                b.targetGraphic = hit;
+                b.transition = Selectable.Transition.None;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); OnlineHooks.OpenInvite?.Invoke(); });
+                rt.gameObject.AddComponent<ButtonFx>();
+            }
+        }
+
         /// <summary>The badge follows the number of friends online (asked twice a second).</summary>
         sealed class FriendsBadge : MonoBehaviour
         {
@@ -163,6 +208,7 @@ namespace BAM.UI
             var chev = UiKit.NewRect("Chevron", rt);
             Mid(chev, 1, 0.5f, -6 * Cw, 0, 3 * Cw, 3 * Cw);
             ModeChevron(chev, 1.4f * Cw, UiKit.TextDim);
+            if (swords && OnlineHooks.Searching != null) SearchLight(rt);
             var b = rt.gameObject.AddComponent<Button>();
             b.targetGraphic = fill;
             b.transition = Selectable.Transition.None;
@@ -170,6 +216,61 @@ namespace BAM.UI
             b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); CloseModes(); act(); });
             rt.gameObject.AddComponent<ButtonFx>().PressScale = false;
             return rt;
+        }
+
+        // Rickard 2026-10-30: "visa en lampa ... när någon spelare söker match? Så man vet och kan köa in i dom": a green light
+        // that breathes and "N SEARCHING" on the ONLINE MATCH row while other players are in the queue; pressing the row joins them
+        static void SearchLight(RectTransform row)
+        {
+            var box = UiKit.NewRect("Searching", row);
+            box.anchorMin = box.anchorMax = new Vector2(1, 0.5f);
+            box.pivot = new Vector2(1, 0.5f);
+            box.anchoredPosition = new Vector2(-10 * Cw, 2.3f * Cw); // on the title line: the line under it is long
+            var back = Pic(box, "Back", UiKit.Rounded, new Color(0.18f, 0.68f, 0.36f, 0.22f));
+            UiKit.Stretch(back.rectTransform);
+            Radius(back, 2.6f * Cw);
+            var halo = Pic(box, "Halo", UiKit.Circle, new Color(0.37f, 0.89f, 0.6f, 0.35f));
+            var dot = Pic(box, "Light", UiKit.Circle, new Color32(0x5f, 0xe3, 0x9a, 0xff));
+            var text = Treb(box, "", 2.5f, new Color32(0x8f, 0xff, 0xb0, 0xff));
+            var g = box.gameObject.AddComponent<CanvasGroup>();
+            g.blocksRaycasts = false;
+            box.gameObject.AddComponent<Searching>().Set(box, halo, dot, text, g);
+        }
+
+        /// <summary>The light follows the number of players searching (asked twice a second) and breathes while it is on.</summary>
+        sealed class Searching : MonoBehaviour
+        {
+            RectTransform box; Image halo, dot; Text text; CanvasGroup group; float t; int shown = -1;
+
+            public void Set(RectTransform box, Image halo, Image dot, Text text, CanvasGroup group)
+            {
+                this.box = box; this.halo = halo; this.dot = dot; this.text = text; this.group = group;
+                group.alpha = 0;
+            }
+
+            void Update()
+            {
+                if (shown > 0)
+                {
+                    float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * Mathf.PI * 2 / 1.4f);
+                    float d = 1.6f * Cw * (1.6f + 0.9f * k);
+                    halo.rectTransform.sizeDelta = new Vector2(d, d);
+                    halo.color = new Color(0.37f, 0.89f, 0.6f, 0.45f * (1 - k) + 0.1f);
+                }
+                if ((t -= Time.unscaledDeltaTime) > 0) return;
+                t = 0.5f;
+                int n = OnlineHooks.Searching != null ? OnlineHooks.Searching() : 0;
+                if (n == shown) return;
+                shown = n;
+                group.alpha = n > 0 ? 1 : 0;
+                if (n <= 0) return;
+                text.text = n + " SEARCHING";
+                float h = 5.2f * Cw, dx = 2.6f * Cw, w = dx + 1.6f * Cw + text.preferredWidth + 2 * Cw;
+                box.sizeDelta = new Vector2(w, h);
+                Mid(dot.rectTransform, 0, 0.5f, dx, 0, 1.6f * Cw, 1.6f * Cw);
+                Mid(halo.rectTransform, 0, 0.5f, dx, 0, 2.6f * Cw, 2.6f * Cw);
+                Mid(text.rectTransform, 0, 0.5f, dx + 1.6f * Cw + text.preferredWidth / 2, 0, text.preferredWidth + Cw, h);
+            }
         }
 
         // HubModeIcon("1v1"): two crossed swords on the dark square; the friends row has the two people of the FRIENDS button
