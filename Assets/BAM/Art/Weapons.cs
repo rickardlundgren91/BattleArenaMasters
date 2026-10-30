@@ -228,6 +228,8 @@ namespace BAM.Art
             // (ANIM-24, Rickard 2026-10-29: "tyra hennes högra hand lår när anim går") her relaxed idle swings the right hand up to
             // 4 % of her height into the right thigh and the left up to 3 % into the left (Unity run of 2026-10-29); both arms 12
             // degrees out clear every idle frame, the run and the end of her shot (bam-work/precision/anim/handclip-tyra)
+            // (2026-10-30) no run hold of her own any more: on the move she keeps the idle's hold with Rickard's Turn, as in her idle
+            // and shot (Rickard: "funkar så bra med tyras båge vid attacker och idle men springande är kaosdåligt")
             g[(int)HeroId.Tyra] = new GearDef
             {
                 HandsOff = 12f,
@@ -236,7 +238,7 @@ namespace BAM.Art
                     new WeaponDef
                     {
                         Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f), WristMax = 60f,
-                        SwingTurn = new Vector3(0f, 0f, -90f), Menu = new Hold { Up = -48f, Out = 15f }, MenuSign = -1, Run = new Hold { Up = -80f, Out = 90f },
+                        SwingTurn = new Vector3(0f, 0f, -90f), Menu = new Hold { Up = -48f, Out = 15f }, MenuSign = -1,
                     },
                 },
             };
