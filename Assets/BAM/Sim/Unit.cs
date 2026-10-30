@@ -67,7 +67,7 @@ namespace BAM.Sim
         public Status GetStatus(int i) => Sts[i];
 
         // ---------- combat ----------
-        public float AtkTimer, LastCombat = -99, LastHurt = -99, RevealT, RegenT;
+        public float AtkTimer, LastCombat = -99, LastHurt = -99, LastFight = -99, RevealT, RegenT; // LastFight: last hero or tower combat, the only kind that stops a hero's regen
         /// <summary>The unit the last auto attack went for and when (towers keep theirs).</summary>
         public Unit Target; public float TargetT = -99;
         public float DmgOverride = float.NaN;
@@ -157,6 +157,8 @@ namespace BAM.Sim
             get { float a = 0; for (int i = 0; i < StCount; i++) if (Sts[i].Type == St.Shield) a += Sts[i].Amount; return a; }
         }
         public bool InCombat(float now) => now - LastCombat < (Kind == UnitKind.Tower ? Rules.TowerOutOfCombat : Rules.HeroOutOfCombat);
+        /// <summary>A hero's regen waits only for fights with heroes and towers: hitting or being hit by minions and creeps never stops it (Rickard 2026-10-30).</summary>
+        public bool InFight(float now) => now - LastFight < Rules.HeroOutOfCombat;
 
         /// <summary>Statuses as display flags (the art shows stars, slows, shields...). Illusion is set for clones; the game
         /// shows it only to the clone's own team.</summary>

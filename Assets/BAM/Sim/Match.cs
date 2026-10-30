@@ -374,7 +374,7 @@ namespace BAM.Sim
                 if (u.Kind == UnitKind.Hero)
                 {
                     if (!u.IsClone) { UpdateSpecial(u, dt); SpellTick(u); }
-                    if (!u.InCombat(Time) && !u.IsClone)
+                    if (!u.InFight(Time) && !u.IsClone)
                     {
                         u.RegenT += dt;
                         if (u.RegenT >= Rules.RegenTick) { u.RegenT = 0; Heal(u, u.MaxHp * Rules.RegenAmount, u); }

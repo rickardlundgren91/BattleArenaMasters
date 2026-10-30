@@ -116,9 +116,11 @@ namespace BAM.Sim
             }
             if (tgt.IsClone) { amount = Math.Max(amount, tgt.Hp); ShadowEscape(src, tgt, kind); } // Fenn's decoy is gone at the first damage of any kind (the old illusion took double)
             tgt.LastCombat = Time;
+            if (att == null || att.Kind == UnitKind.Hero && !att.IsClone || att.Kind == UnitKind.Tower) tgt.LastFight = Time; // an enemy hero (or its wolf), a tower, or no known source
             if (src != null && !tgt.IsClone)
             {
                 src.LastCombat = Time;
+                if (tgt.Kind == UnitKind.Hero || tgt.Kind == UnitKind.Tower) src.LastFight = Time; // hitting a minion keeps the regen going
                 if (src.Kind == UnitKind.Hero && att.HeroIndex >= 0) tgt.LastHitBy[att.HeroIndex] = Time;
             }
             if (src != null && src.Kind == UnitKind.Hero && tgt.Kind == UnitKind.Hero && !tgt.IsClone)
