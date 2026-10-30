@@ -77,5 +77,20 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.1 (version code 13, paste in "Release notes")
+
+```
+<en-US>
+Battle Arena Masters 0.3.1
+• Blast's special swapped: tap for a fire strip, drag to aim the bomb
+• Shots and aims now stop exactly at walls and boulders
+• An enemy tower's whole area turns red while it shoots at you
+• Online: the host picks the bots' level in the room
+• Clearer weapon holds, Knut's real anchor, Tyra keeps her bow while running
+Old versions can't play online with this one, so please update.
+Report bugs to support@battlearenamasters.com or in our Discord.
+</en-US>
+```
+
 ## Swedish listing (optional, add later under "Manage translations")
 Not needed for internal testing. The game itself is English only.
