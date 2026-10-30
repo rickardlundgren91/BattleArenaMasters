@@ -60,6 +60,10 @@ namespace BAM.Art.Editor
                 "After every turn the weapon's grip point is moved into the palm, so it never floats off the fist or slides along "
                 + "the handle. Only a shift: how the weapon is aimed stays. Weapon numbers: BAM > Art > Weapon Debug View.",
                 AnimFix.GripLock);
+            AnimFix.WristTurn = Part("Wrist turns instead of the bow (Tyra)",
+                "Tyra's bow keeps its shot grip in her fist and her wrist turns up to 60 degrees instead, so the bow no longer twists "
+                + "in her hand between standing and shooting. Where the bow points stays the same.",
+                AnimFix.WristTurn);
 
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("All on")) SetAll(true);
@@ -87,7 +91,7 @@ namespace BAM.Art.Editor
         static void SetAll(bool on)
         {
             AnimFix.FixedGrip = AnimFix.UpperSwing = AnimFix.LegsFollow = AnimFix.SquaredFacing = on;
-            AnimFix.BlowTiming = AnimFix.Life = AnimFix.ArmRoom = AnimFix.GripLock = on;
+            AnimFix.BlowTiming = AnimFix.Life = AnimFix.ArmRoom = AnimFix.GripLock = AnimFix.WristTurn = on;
         }
     }
 }

@@ -177,7 +177,7 @@ namespace BAM.Art
         void Build()
         {
             sb.Length = 0;
-            sb.Append("WEAPONS  lock ").Append(AnimFix.GripLock ? "on" : "off").Append("   grip err % now/worst   turn deg/frame worst\n");
+            sb.Append("WEAPONS  lock ").Append(AnimFix.GripLock ? "on" : "off").Append(" wrist ").Append(AnimFix.WristTurn ? "on" : "off").Append("   grip err % now/worst   turn deg/frame worst   twist in fist deg now/worst\n");
             var heroes = BodyView.Heroes;
             for (int h = 0; h < heroes.Count; h++)
             {
@@ -192,6 +192,7 @@ namespace BAM.Art
                     sb.Append("  ").Append(g.Def(i).Left ? 'L' : 'R').Append(' ');
                     Pct(g.GripErr[i]); sb.Append('/'); Pct(g.GripErrMax[i]);
                     sb.Append("  ").Append(Mathf.RoundToInt(g.JumpMax[i]));
+                    if (g.Def(i).WristMax > 0f) sb.Append("  twist ").Append(Mathf.RoundToInt(g.FistTwist[i])).Append('/').Append(Mathf.RoundToInt(g.FistTwistMax[i]));
                 }
                 sb.Append('\n');
             }

@@ -32,5 +32,9 @@ namespace BAM.Art
         /// <summary>Weapon Precision 2.0 (2026-10-30): after every turn of a held weapon its grip point is shifted into the palm
         /// (HeldGear.LockGrip), so it never floats off the fist or slides along the shaft; a shift only, the silhouette stays.</summary>
         public static bool GripLock = true;
+        /// <summary>Weapon Precision 2.0 (Rickard's yes 2026-10-30): a weapon with WeaponDef.WristMax (Tyra's bow) keeps the shot's grip
+        /// in the fist and the wrist turns instead (up to WristMax degrees), so it no longer twists in her hand between rest and
+        /// shot; its aim, and so the silhouette, stays.</summary>
+        public static bool WristTurn = true;
     }
 }

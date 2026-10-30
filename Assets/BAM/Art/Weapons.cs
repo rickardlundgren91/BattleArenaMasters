@@ -68,6 +68,11 @@ namespace BAM.Art
         /// the handle's end like <see cref="Grip"/>; negative = one hand only (every weapon today). With a support grip the other
         /// arm is bent by a two-bone IK after everything else so its palm sits on that point, by <see cref="SupportW"/>.</summary>
         public float Support = -1f, SupportW = 1f;
+        /// <summary>AnimFix.WristTurn (Weapon Precision 2.0, Rickard's yes 2026-10-30): the wrist turns up to this many degrees so the
+        /// weapon sits in the fist as it does in the shot (its fist grip with <see cref="SwingTurn"/>), instead of the weapon turning
+        /// inside the fist; the weapon's own aim is not changed, so the silhouette stays. 0 = off (only Tyra: her bow turned 86-180
+        /// degrees in her fist between rest and shot, Simon's audit on issue #5).</summary>
+        public float WristMax;
     }
 
     /// <summary>An off-hand shield in front of the left hand (old MX_SHIELD).</summary>
@@ -216,7 +221,7 @@ namespace BAM.Art
                 {
                     new WeaponDef
                     {
-                        Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f),
+                        Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f), WristMax = 60f,
                         SwingTurn = new Vector3(0f, 0f, -90f), Menu = new Hold { Up = -48f, Out = 15f }, MenuSign = -1, Run = new Hold { Up = -80f, Out = 90f },
                     },
                 },
@@ -442,6 +447,9 @@ namespace BAM.Art
         // most since the last ResetStats (share of the figure's height), and its largest turn in one frame in the hero's own space
         // (degrees; a flip or a spin shows here), for the debug view (WeaponDebug)
         internal float[] GripErr, GripErrMax, JumpMax;
+        /// <summary>How far each weapon is turned in its fist from the shot's grip, now and at most (degrees; WristTurn takes up to
+        /// WeaponDef.WristMax of it), for the debug view.</summary>
+        internal float[] FistTwist, FistTwistMax;
         Quaternion[] lastLocal;
         // the other arm for a two-handed weapon (WeaponDef.Support): upper arm, forearm, hand, index finger
         Transform[] supUp, supLo, supHand, supIndex;
@@ -462,6 +470,7 @@ namespace BAM.Art
             h.laxSign = new int[nw]; h.votes = new int[nw]; h.handRef = new Quaternion[nw]; h.refSum = new Vector4[nw];
             h.restGrip = new Vector3[nw]; h.gripSum = new Vector3[nw];
             h.runSign = new int[nw]; h.runVotes = new int[nw];
+            h.FistTwist = new float[nw]; h.FistTwistMax = new float[nw];
             h.GripErr = new float[nw]; h.GripErrMax = new float[nw]; h.JumpMax = new float[nw]; h.lastLocal = new Quaternion[nw];
             h.supUp = new Transform[nw]; h.supLo = new Transform[nw]; h.supHand = new Transform[nw]; h.supIndex = new Transform[nw];
             h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -735,6 +744,7 @@ namespace BAM.Art
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
                 // every turn above is about the grip, so the aim is final here: the grip goes into the palm (a shift, never a turn, so
                 // the silhouette Rickard picked stays), before his Offset, which is his own grip touch-up and so stays on top of it
+                if (W.WristMax > 0f && !dead) Wrist(i, W);
                 LockGrip(i);
                 if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
@@ -762,6 +772,31 @@ namespace BAM.Art
             GripErr[i] = e;
             if (e > GripErrMax[i]) GripErrMax[i] = e;
             if (AnimFix.GripLock) t.position += d;
+        }
+
+        /// <summary>Weapon Precision 2.0 (AnimFix.WristTurn): the weapon's aim is final; the turn it has in the fist away from the shot's
+        /// grip (bindR, with the swing turn) is taken by the wrist instead, up to WristMax degrees, and the weapon set back to the same
+        /// aim in the world. The hand turns about the wrist joint, so the palm moves a little; LockGrip runs after this.</summary>
+        void Wrist(int i, WeaponDef W)
+        {
+            Transform t = wT[i], hd = hand[i];
+            if (t.localScale.y < 1e-4f) return;
+            Quaternion aim = t.rotation;
+            Quaternion shotGrip = W.SwingTurn != Vector3.zero ? bindR[i] * Quaternion.Euler(W.SwingTurn) : bindR[i];
+            // the hand that would hold this aim in the shot's grip: aim = hand' * shotGrip
+            Quaternion want = aim * Quaternion.Inverse(shotGrip);
+            Quaternion d = want * Quaternion.Inverse(hd.rotation);
+            if (d.w < 0f) d = new Quaternion(-d.x, -d.y, -d.z, -d.w);
+            float ang = 2f * Mathf.Acos(Mathf.Min(1f, d.w)) * Mathf.Rad2Deg;
+            FistTwist[i] = ang;
+            if (ang > FistTwistMax[i]) FistTwistMax[i] = ang;
+            if (!AnimFix.WristTurn || ang < 0.01f) return;
+            float k = Mathf.Min(1f, W.WristMax / ang);
+            Vector3 g = t.TransformPoint(gripL[i]);
+            hd.rotation = Quaternion.Slerp(Quaternion.identity, d, k) * hd.rotation;
+            // same aim, the grip back where it was (LockGrip then moves it to the turned palm)
+            t.rotation = aim;
+            t.position += g - t.TransformPoint(gripL[i]);
         }
 
         /// <summary>The other arm bent so its palm holds the weapon at <see cref="WeaponDef.Support"/> (two-bone IK, elbow out and down).</summary>
@@ -792,7 +827,7 @@ namespace BAM.Art
         /// <summary>The debug view's Reset: the worst grip error and turn start over.</summary>
         internal void ResetStats()
         {
-            for (int i = 0; i < wT.Length; i++) { GripErrMax[i] = 0f; JumpMax[i] = 0f; lastLocal[i] = default; }
+            for (int i = 0; i < wT.Length; i++) { GripErrMax[i] = 0f; JumpMax[i] = 0f; FistTwistMax[i] = 0f; lastLocal[i] = default; }
         }
 
         internal int WeaponCount => wT.Length;
