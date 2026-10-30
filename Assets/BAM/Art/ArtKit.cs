@@ -164,6 +164,7 @@ namespace BAM.Art
         // Tyra's Arrow Volley read as hers (Skill Visibility 2.0, 2026-10-30)
         VolleyHit = 27,     // a volley arrow passes through an enemy: the volley's gold star on that enemy (the arrow flies on)
         VolleyRelease = 28, // the five arrows leave the bow: a short gold flash at the bow, once per volley
+        AnvilDrop = 29,     // Bram's Anvil Drop lands (Rickard 2026-10-30 "måste synas mer"): its own big blow, size = the hit radius
     }
 
     public static class ArtKit
@@ -478,6 +479,13 @@ namespace BAM.Art
         {
             if (!ready) return;
             Fx.ChainWarn(at, Mathf.Max(0.1f, radius), Mathf.Max(0.05f, fuse));
+        }
+
+        /// <summary>Bram's Anvil Drop on its way down: a forge-gold edge on the radius and a ring closing in to the middle as it lands.</summary>
+        public static void PlayAnvilWarn(Vector3 at, float radius, float fall)
+        {
+            if (!ready) return;
+            Fx.AnvilWarn(at, Mathf.Max(0.1f, radius), Mathf.Max(0.05f, fall));
         }
 
         /// <summary>A shown hero's height in world units, feet to crown, as the art fitted it (for the menu stages' framing).</summary>

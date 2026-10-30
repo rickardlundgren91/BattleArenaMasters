@@ -665,6 +665,25 @@ namespace BAM.Art
             Sparks(at + Vector3.up * 0.6f, 8, new Color32(255, 245, 209, 255), 0.1f, 2.5f, 0.2f, 1.2f);
         }
 
+        /// <summary>Bram's Anvil Drop warning (ArtKit.PlayAnvilWarn), on top of the rules' red circle: his forge gold on the edge for
+        /// the whole fall and a second ring closing in from the edge to the middle, so where and when it lands reads at a glance.</summary>
+        public static void AnvilWarn(Vector3 at, float radius, float fall)
+        {
+            if (!teleLoaded) { teleLoaded = true; teleTex = RickardFx.Load("tx_fx_telegraph_ring"); }
+            Color edge = (Color)heroAccent[(int)HeroId.Bram], gold = new Color(1f, 0.82f, 0.3f, 1f);
+            if (teleTex != null)
+            {
+                SpawnTele(at, radius * 2.255f, radius * 2.255f, edge, fall);
+                SpawnTele(at, radius * 2.255f, 0.05f, gold, fall, true);
+            }
+            else
+            {
+                Spawn(Shapes.RingMesh(0.9f, Pal.White), at, radius, radius, edge, fall, true, 0);
+                Spawn(Shapes.RingMesh(0.85f, Pal.White), at, radius, 0.05f, gold, fall, true, 0);
+                live[live.Count - 1].Linear = true;
+            }
+        }
+
         static void SpawnTele(Vector3 at, float s0, float s1, Color c, float life, bool linear = false)
         {
             Spawn(FxAtlas.FullQuad(), at, s0, s1, c, life, true, 3);
@@ -955,6 +974,28 @@ namespace BAM.Art
                     Chunks(p + Vector3.up * 0.2f, 5, C(Pal.Rock), 0.13f, 3f, 0.6f, 2.2f);
                     Dust(p + Vector3.up * 0.1f, 4, C(Pal.Ground, 200), 0.5f, 1.2f, 0.5f, 0.3f, 0.2f);
                     Crack(p, 0.5f * size, 0.8f);
+                    break;
+                }
+                case FxKind.AnvilDrop:
+                {
+                    // Bram's Anvil Drop lands (Rickard 2026-10-30 "BRAMS DRA SKILL MÅSTE SYNAS MER"): was the passive's small blow, now
+                    // a big white flash, his spark fan twice as tall, rays, Bonk's cracks held for the 1.5 s stun, a dust ring rolling
+                    // out to the true radius with his forge ring on it, stone thrown and stars over the middle. size = the hit radius
+                    Color32 m = heroMain[(int)HeroId.Bram], a = heroAccent[(int)HeroId.Bram];
+                    Flash(mid, 0.35f * size, 1.4f * size, new Color(1f, 1f, 1f, 0.95f), 0.1f);
+                    Pow(mid, 1, a, 2.2f * size, 0.22f);
+                    PicUpright("tx_fx_bram_anvil", p + Vector3.up * (0.2f + 0.9f * size), (Color)a, 3.2f * size, 0.45f);
+                    Rays(mid, (Color)a, 2.2f * size, 0.3f);
+                    Ring(p, 0.3f * size, 1.15f * size, new Color(1f, 1f, 1f, 0.7f), 0.18f, 0.6f); // a fast white punch past the edge
+                    if (bCrack != null) Emit1(bCrack, new Vector3(p.x, 0.03f, p.z), Color.white, 2.6f * 0.95f * size, 1.6f, Random.value * 360f);
+                    else Crack(p, 0.9f * size, 1.6f);
+                    if (bShock != null) Emit1(bShock, new Vector3(p.x, 0.07f, p.z), Color.white, 3.1f * size, 0.6f, Random.value * 360f);
+                    ImpactRing(p, size, (Color)m, 0.5f);
+                    Nova(p, (Color)a, size, 0.4f);
+                    Sparks(mid, 20, a, 0.16f, 5.5f, 0.45f, 2.5f, 0.3f * size);
+                    Stars(mid + Vector3.up * 0.4f, 5, C(Pal.White), 0.5f, 2f, 0.5f, 1.5f, 0.3f * size);
+                    Chunks(p + Vector3.up * 0.2f, 10, C(Pal.Rock), 0.16f, 4.5f, 0.7f, 3.5f, 0.4f * size);
+                    Dust(p + Vector3.up * 0.15f, 8, C(Pal.Ground, 220), 0.6f * size, 2.2f * size, 0.8f, 0.5f, 0.5f * size);
                     break;
                 }
                 case FxKind.WolfLand:

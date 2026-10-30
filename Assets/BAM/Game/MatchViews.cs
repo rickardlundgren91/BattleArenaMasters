@@ -552,6 +552,8 @@ namespace BAM.Game
                     V(b)?.PlayHit(e.Big);
                     if (e.Shot != 0 && !shotHitAt.ContainsKey(e.Shot)) { shotHitAt[e.Shot] = at; shotHits.Add(e); } // its own hit comes first
                     if (kind == ProjKind.BonkSlam && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f); // the slam stuns
+                    // so does Bram's anvil (no shot; the tap's flying hammer has one): the same stun sound, one at a time (SfxRecipes)
+                    if (kind == ProjKind.BramHammerSpecial && e.Shot == 0 && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f);
                     // Bram's bounces get their own gold line; Tyra's bolt and Tikta's needles carry the special's look in their own
                     // impact, so they add only the small hit (fx review 2026-10-26, P1-2/P1-3)
                     FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash
@@ -641,7 +643,12 @@ namespace BAM.Game
                     if ((HeroId)e.Kind == HeroId.Blast && e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
                     // so are Hilde's kegs: the big one (drag) and the small quick one (tap)
                     // Bram's Anvil Drop: his hammer goes up high and comes down on the red circle as it lands (BRAM-04)
-                    if ((HeroId)e.Kind == HeroId.Bram && e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BramHammerSpecial, BramS.DropDelay, 2f);
+                    // thrown higher (2 -> 3 tiles) and with his gold ring closing in on the landing spot (Rickard 2026-10-30 "måste synas mer")
+                    if ((HeroId)e.Kind == HeroId.Bram && e.Big)
+                    {
+                        LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BramHammerSpecial, BramS.DropDelay, 3f);
+                        ArtKit.PlayAnvilWarn(Coords.World(e.X, e.Y), BramS.DropRadius, BramS.DropDelay);
+                    }
                     if ((HeroId)e.Kind == HeroId.Hilde) LobGhost(a, Coords.World(e.X, e.Y), e.Big ? ProjKind.HildeKeg : ProjKind.HildeBurst, e.Big ? 0.4f : 0.3f);
                     break;
                 }
@@ -693,7 +700,7 @@ namespace BAM.Game
                     // Hilde's kegs and Oaken's slam have their own looks (2026-10-29, HILDE-03 / OAKEN-02), drawn on the true radius
                     bool own = pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst || pk == ProjKind.OakenSlam;
                     // Bram's Anvil Drop and Knut's Anchor Slam (Simon's reworks) get their own heroes' blows, not Blast's fireball
-                    FxKind ek = pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? FxKind.AnvilStrike : pk == ProjKind.KnutSlam ? FxKind.AnchorHit
+                    FxKind ek = pk == ProjKind.BramHammerSpecial ? FxKind.AnvilDrop : pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.KnutSlam ? FxKind.AnchorHit
                         : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : pk == ProjKind.OakenSlam ? FxKind.OakenSlam : own ? FxKind.KegBlast : FxKind.Explosion;
                     // Bonk: his auto slam and Ground Slam, both the club into the ground, drawn at the true hit radius (a power swing
                     // is no wider in the rules, so it is told by its sound and shake, not a bigger ring: BONK-06)

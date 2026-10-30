@@ -85,6 +85,20 @@ namespace BAM.Game
                     {
                         // Bonk's club into the ground shakes the screen a little when it is near (Rickard 2026-10-26)
                         var k = (ProjKind)e.Kind;
+                        // Bram's Anvil Drop landing near you shakes like Bonk's slam (its red warning shows to everyone, so it is
+                        // seen); a short hit-stop only when it hit someone (Rickard 2026-10-30 "måste synas mer")
+                        if (k == ProjKind.BramHammerSpecial && p.Alive)
+                        {
+                            float ax = e.X - p.X, ay = e.Y - p.Y;
+                            if (ax * ax + ay * ay < 36f)
+                            {
+                                bool hit = false;
+                                for (int j = 0; j < i && !hit; j++) hit = ev[j].Type == EventType.Hit && ev[j].A == e.A && (ProjKind)ev[j].Kind == ProjKind.BramHammerSpecial && ev[j].Shot == 0;
+                                AddTrauma(hit ? 0.5f : 0.3f);
+                                if (hit) Stop(0.07f);
+                            }
+                            break;
+                        }
                         // a club swung from where the player cannot see Bonk (a miss in grass) shakes nothing: swinging does not reveal (BONK-09)
                         if ((k == ProjKind.BonkSlam || k == ProjKind.BonkClub) && p.Alive && (e.A == null || m.IsVisibleTo(e.A, p.Team)))
                         {
