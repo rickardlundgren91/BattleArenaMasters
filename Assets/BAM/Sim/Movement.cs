@@ -25,24 +25,50 @@ namespace BAM.Sim
             return SimMath.Clamp((u.BaseSpeed + flat) * (1 + pct), 0.5f, 6);
         }
 
-        /// <summary>Walks u one tick along (dx, dy): a longer vector is cut to full speed, a shorter one walks slower. Slides
-        /// along walls; a root holds it still.</summary>
+        /// <summary>Walks u one tick along (dx, dy): a longer vector is cut to full speed, a shorter one walks slower. Glides
+        /// along walls and round the boulders (Slide); a root holds it still.</summary>
         internal void MoveUnit(Unit u, float dx, float dy, float dt)
         {
             if (dx == 0 && dy == 0) return;
             if (u.Has(St.Root)) return;
             float sp = SpeedOf(u), m = SimMath.Hypot(dx, dy);
             if (m > 1) { dx /= m; dy /= m; }
-            float ox = u.X, oy = u.Y, nx = ox + dx * sp * dt, ny = oy + dy * sp * dt;
-            if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; }
-            else if (Map.Free(nx, oy, u.R)) u.X = nx;
-            else if (Map.Free(ox, ny, u.R)) u.Y = ny;
+            float ox = u.X, oy = u.Y, sx = dx * sp * dt, sy = dy * sp * dt;
+            if (Map.Free(ox + sx, oy + sy, u.R)) { u.X = ox + sx; u.Y = oy + sy; }
+            else Slide(u, sx, sy);
             float moved = SimMath.Hypot(u.X - ox, u.Y - oy);
             if (moved > 0)
             {
                 if (!(u.AimT > Time)) u.Facing = SimMath.Atan2(dy, dx);
                 u.WalkT += moved; u.MovedAt = Time;
             }
+        }
+
+        /// <summary>A step (sx, sy) that runs into a wall or a boulder: walk up to the contact, then glide the rest along the
+        /// surface (the step minus its part into the wall). The glide keeps more speed the more the step grazes the wall
+        /// (sqrt of the sideways share), so running at a stone at an angle slides off or round it; only a dead-on run stops.
+        /// Falls back to the old one-axis tries in a tight corner.</summary>
+        void Slide(Unit u, float sx, float sy)
+        {
+            float ox = u.X, oy = u.Y, r = u.R, lo = 0, hi = 1;
+            for (int i = 0; i < 6; i++) { float k = (lo + hi) * 0.5f; if (Map.Free(ox + sx * k, oy + sy * k, r)) lo = k; else hi = k; }
+            float cx = ox + sx * lo, cy = oy + sy * lo, rx = sx * (1 - lo), ry = sy * (1 - lo), rl = SimMath.Hypot(rx, ry);
+            Map.WallNormal(cx, cy, r + 0.02f, out float nx, out float ny);
+            float into = rx * nx + ry * ny;
+            if (rl > 1e-6f && into < 0)
+            {
+                float tx = rx - nx * into, ty = ry - ny * into, tl = SimMath.Hypot(tx, ty);
+                if (tl > 1e-6f)
+                {
+                    float keep = rl * SimMath.Sqrt(tl / rl) / tl; // glide length rl * sqrt(sideways share), along the surface
+                    float gx = tx * keep, gy = ty * keep;
+                    for (int i = 0; i < 3; i++, gx *= 0.5f, gy *= 0.5f)
+                        if (Map.Free(cx + gx, cy + gy, r)) { u.X = cx + gx; u.Y = cy + gy; return; }
+                }
+            }
+            if (lo > 0) { u.X = cx; u.Y = cy; return; }
+            if (Map.Free(ox + sx, oy, r)) u.X = ox + sx;
+            else if (Map.Free(ox, oy + sy, r)) u.Y = oy + sy;
         }
 
         /// <summary>Moves u to the nearest free spot (rings of 0.5 tiles, 16 directions) when it ended up inside a wall.</summary>
