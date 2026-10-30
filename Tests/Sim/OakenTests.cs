@@ -9,7 +9,7 @@ namespace BAM.Sim
         {
             var m = Make(HeroId.Oaken, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Bram, HeroId.Knut, HeroId.Tikta });
             var h = m.Player; var a = m.Foe(HeroId.Bram); var c = m.Foe(HeroId.Knut); var far = m.Foe(HeroId.Tikta);
-            Check(HeroCatalog.Get(HeroId.Oaken).Name == "Oaken" && HeroCatalog.Get(HeroId.Oaken).Id == HeroId.Oaken && h.HDef.Tank && Near(h.HDef.Hp, 330), "Oaken is hero 10, a 330 hp tank");
+            Check(HeroCatalog.Get(HeroId.Oaken).Name == "Oaken" && HeroCatalog.Get(HeroId.Oaken).Id == HeroId.Oaken && h.HDef.Tank && Near(h.HDef.Hp, 340), "Oaken is hero 10, a 340 hp tank");
             float x = 7.5f, y = 20, dmg = h.StatDmg();
             Place(h, x, y); Place(a, x + 1.2f, y); Place(c, x + 6, y + 6); Place(far, x - 8, y);
 
