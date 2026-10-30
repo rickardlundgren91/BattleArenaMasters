@@ -250,12 +250,14 @@ namespace BAM.Art
             // move it stands up over the shoulder, leaning out a little (Unity run 1 2026-10-29: lying back nearly level it read as a pole
             // from the match camera; pick B of bam-work/art/rigg-anim/spring/bonk-spring-val.png). (ANIM-25, Rickard 2026-10-29: "bonk
             // vapen i axel") standing, the club lay up to 5 % of his height deep in his right shoulder, upper arm and chest (Unity's
-            // own poses 2026-10-29); the fist 0.1 further out to his right lays it over the shoulder instead
+            // own poses 2026-10-29); the fist 0.1 further out to his right lays it over the shoulder instead. With his own Orc Idle 1
+            // (2026-10-30) he leans forward and the club lying straight back pressed against his head and pelt (Rickard: "bonk blev bra
+            // förutom hur vapen ligger"): it now leans 35 degrees out from straight back and the fist sits 0.04 further out
             g[(int)HeroId.Bonk] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 170f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f } } },
+                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 145f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f } } },
                 Shoulder = true,
-                CarryOut = 0.1f,
+                CarryOut = 0.14f,
             };
             // her cannon (Rickard's Meshy model) on her right shoulder like a bazooka, barrel forward, her right fist on its rear grip,
             // kicking back at every shot: old View3DHilde.cs with its numbers for her current body (stocky, short neck: the barrel
