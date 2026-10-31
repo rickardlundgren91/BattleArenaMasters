@@ -36,6 +36,17 @@ namespace BAM.Art
         /// in the fist and the wrist turns instead (up to WristMax degrees), so it no longer twists in her hand between rest and
         /// shot; its aim, and so the silhouette, stays.</summary>
         public static bool WristTurn = true;
+        /// <summary>Tyra pilot (issue #5, Simon's yes 2026-10-31): the grip is locked to the palm socket calibrated from the hand's own
+        /// fist (WeaponDef.Socket) instead of 0.6 of the way from the wrist to the index knuckle (2.78 % of Tyra's height off); Rickard's
+        /// Offset, tuned on the old palm, is left out while it is on. Only weapons with a Socket (Tyra's bow).</summary>
+        public static bool PalmSocket = true;
+        /// <summary>Tyra pilot, off by default (an A/B): WristTurn works towards the grip her fist makes in the clip made for the bow
+        /// (WeaponDef.GripY/GripZ, along the knuckles) instead of the bind placement (53 degrees off the knuckle line); the bow's aim,
+        /// and so the silhouette, stays, but her hand turns differently (in the shot too, up to WristMax).</summary>
+        public static bool AnatomicalWrist = false;
+        /// <summary>Tyra pilot, off by default (an A/B against the silhouette): the bow is held only as her fist holds it, so its look
+        /// follows the clip's hand (level at the hip in the idle and walk) instead of Rickard's hold angles.</summary>
+        public static bool GripLockFull = false;
         /// <summary>Rickard 2026-10-30 ("damage nummer kommer innan träffen från vapnet nu"): a melee hero's swing (Fenn, Knut, Bonk,
         /// Oaken) shows the weapon meeting its target (the clip's Contact: the striking hand braked after its fastest moment) on the
         /// tick the rules land the blow and its number shows, instead of showing the fastest moment on the release.</summary>

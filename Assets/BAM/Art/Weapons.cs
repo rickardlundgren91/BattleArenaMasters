@@ -80,6 +80,16 @@ namespace BAM.Art
         /// has them, 1 = curled round the weapon's shaft (each finger joint bends up to <see cref="HeldGear.FistBend"/> degrees on
         /// top of the clip, towards the shaft; the thumb half as much).</summary>
         public float Fist;
+        /// <summary>Tyra pilot (issue #5, Simon's yes 2026-10-31; AnimFix.PalmSocket): the palm socket, where the fist holds the
+        /// weapon's grip, in the hand's own frame f, t, n (f from the wrist to the index knuckle, t towards the thumb's root across f,
+        /// n = f x t), in lengths of wrist to index knuckle; zero = the 0.6 rule (palmL). Calibrated offline from the curled fingers of
+        /// the clip that was made for this weapon (Tyra: Shoot at its draw, the centres of the four fingers' curl circles; the same
+        /// fist in Run within 0.53 % of the height), so a rig's own hand decides it, not a fixed share. Code only.</summary>
+        public Vector3 Socket;
+        /// <summary>Tyra pilot (AnimFix.AnatomicalWrist, AnimFix.GripLockFull): the weapon's own +y (along the handle) and +z as the
+        /// fist holds it, in the same f, t, n frame (Tyra's bow: along the knuckles, its back to the arrow's line at the draw); zero
+        /// = none. Code only.</summary>
+        public Vector3 GripY, GripZ;
     }
 
     /// <summary>An off-hand shield in front of the left hand (old MX_SHIELD).</summary>
@@ -239,6 +249,10 @@ namespace BAM.Art
                     {
                         Model = "tyra_bow", Len = 0.75f, Grip = 0.5f, Left = true, HoldUp = -5f, HoldOut = 10f, Follow = 0.15f, RestTurn = new Vector3(0f, -90f, 0f), WristMax = 60f,
                         SwingTurn = new Vector3(0f, 0f, -90f), Menu = new Hold { Up = -48f, Out = 15f }, MenuSign = -1,
+                        // Tyra pilot (issue #5): her fist from Shoot's draw, measured offline (Blender, 2026-10-30); the grip 2.78 % of
+                        // her height from the 0.6 rule, the bow 9.5 degrees from her knuckle line
+                        Socket = new Vector3(0.8148f, -0.0447f, -0.3928f),
+                        GripY = new Vector3(0.3956f, 0.6415f, 0.6573f), GripZ = new Vector3(0.8995f, -0.4151f, -0.1363f),
                     },
                 },
             };
@@ -488,6 +502,17 @@ namespace BAM.Art
         /// WeaponDef.WristMax of it), for the debug view.</summary>
         internal float[] FistTwist, FistTwistMax;
         Quaternion[] lastLocal;
+        // Tyra pilot (WeaponDef.Socket, GripY/GripZ): the palm socket in the hand's own space, and the anatomical grip as a turn in
+        // the hand's own space (the weapon's localRotation when the fist holds it as the clip made it)
+        Vector3[] sockL;
+        Quaternion[] anatR;
+        bool[] hasSock, hasAnat;
+        // read by the Grip Validator (BAM.Art.Editor) after this frame's Tick, besides WeaponT/HandT/Def/GripPoints below
+        internal float FigH => figH;
+        internal Transform[] FingersAt(int i) => fing[i];
+        internal Vector3 PalmRuleWorld(int i) => hand[i].TransformPoint(palmL[i]);
+        internal bool SocketWorld(int i, out Vector3 at) { at = hasSock[i] ? hand[i].TransformPoint(sockL[i]) : Vector3.zero; return hasSock[i]; }
+        internal bool AnatomicalGrip(int i, out Quaternion local) { local = hasAnat[i] ? anatR[i] : Quaternion.identity; return hasAnat[i]; }
         // the other arm for a two-handed weapon (WeaponDef.Support): upper arm, forearm, hand, index finger
         Transform[] supUp, supLo, supHand, supIndex;
 
@@ -510,6 +535,7 @@ namespace BAM.Art
             h.FistTwist = new float[nw]; h.FistTwistMax = new float[nw];
             h.GripErr = new float[nw]; h.GripErrMax = new float[nw]; h.JumpMax = new float[nw]; h.lastLocal = new Quaternion[nw];
             h.supUp = new Transform[nw]; h.supLo = new Transform[nw]; h.supHand = new Transform[nw]; h.supIndex = new Transform[nw];
+            h.sockL = new Vector3[nw]; h.anatR = new Quaternion[nw]; h.hasSock = new bool[nw]; h.hasAnat = new bool[nw];
             h.armR = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
             h.armL = an.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             h.elbR = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
@@ -591,6 +617,31 @@ namespace BAM.Art
             handS[i] = Mathf.Max(1e-6f, hd.lossyScale.y);
             shaftC[i] = Weapons.ShaftAxis(mesh, W.Grip * mh); // a hammer's box is not centred on its shaft
             Place(i);
+            Anatomy(i, W, hd, ix, th);
+        }
+
+        // Tyra pilot: the palm socket and the anatomical grip from the hand's own frame (wrist, index knuckle, thumb root: all fixed in
+        // the hand bone, so whatever the fingers do the frame follows the hand exactly); measured in the bind pose, kept in hand space
+        void Anatomy(int i, WeaponDef W, Transform hd, Transform ix, Transform th)
+        {
+            if (W.Socket == Vector3.zero || ix == null || th == null) return;
+            Vector3 fa = ix.position - hd.position;
+            float hl = fa.magnitude;
+            if (hl < 1e-6f) return;
+            Vector3 f = fa / hl;
+            Vector3 tt = Vector3.ProjectOnPlane(th.position - hd.position, f);
+            if (tt.sqrMagnitude < 1e-12f) return;
+            tt.Normalize();
+            Vector3 n = Vector3.Cross(f, tt);
+            sockL[i] = hd.InverseTransformPoint(hd.position + (f * W.Socket.x + tt * W.Socket.y + n * W.Socket.z) * hl);
+            hasSock[i] = true;
+            if (W.GripY == Vector3.zero || W.GripZ == Vector3.zero) return;
+            Vector3 y = (f * W.GripY.x + tt * W.GripY.y + n * W.GripY.z).normalized;
+            Vector3 z = f * W.GripZ.x + tt * W.GripZ.y + n * W.GripZ.z;
+            z = Vector3.ProjectOnPlane(z, y).normalized;
+            if (z.sqrMagnitude < 0.5f) return;
+            anatR[i] = Quaternion.Inverse(hd.rotation) * Quaternion.LookRotation(z, y);
+            hasAnat[i] = true;
         }
 
         // length and grip into the bind placement (again when the tuner changes them)
@@ -795,9 +846,16 @@ namespace BAM.Art
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
                 // every turn above is about the grip, so the aim is final here: the grip goes into the palm (a shift, never a turn, so
                 // the silhouette Rickard picked stays), before his Offset, which is his own grip touch-up and so stays on top of it
-                if (W.WristMax > 0f && !gone) Wrist(i, W, liveW);
-                LockGrip(i);
-                if (W.Offset != Vector3.zero) t.position += root.TransformDirection(W.Offset) * figH;
+                // Tyra pilot, AnimFix.GripLockFull (off by default, for an A/B against the silhouette): the weapon is held only as the
+                // fist holds it (the anatomical grip), whatever the hold above aimed; the wrist has nothing to take, the bow's look
+                // then follows the clip's hand
+                bool full = AnimFix.GripLockFull && hasAnat[i] && !gone && t.localScale.y > 1e-4f;
+                if (full) t.rotation = hand[i].rotation * anatR[i];
+                if (W.WristMax > 0f && !gone && !full) Wrist(i, W, liveW);
+                LockGrip(i, full);
+                // Rickard's Offset was tuned on the 0.6 palm; with the calibrated socket the grip is already in the fist (Tyra's -0.03
+                // down would move it 3 % of her height off it again), so it is left out while the socket is on
+                if (W.Offset != Vector3.zero && !(AnimFix.PalmSocket && hasSock[i])) t.position += root.TransformDirection(W.Offset) * figH;
                 if (W.Fist > 0.001f && !gone) CloseHand(i, W.Fist * liveW);
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
@@ -844,17 +902,19 @@ namespace BAM.Art
             }
         }
 
-        void LockGrip(int i)
+        void LockGrip(int i, bool force = false)
         {
             Transform t = wT[i];
             if (t.localScale.y < 1e-4f) return; // away (thrown)
             WeaponDef W = defs[i];
-            Vector3 palm = W.Along && rested && W.HoldUp != 0f && !sampling ? hand[i].TransformPoint(restGrip[i]) : hand[i].TransformPoint(palmL[i]);
+            // Tyra pilot (AnimFix.PalmSocket): the calibrated socket instead of the 0.6 rule
+            Vector3 palm = AnimFix.PalmSocket && hasSock[i] ? hand[i].TransformPoint(sockL[i])
+                : W.Along && rested && W.HoldUp != 0f && !sampling ? hand[i].TransformPoint(restGrip[i]) : hand[i].TransformPoint(palmL[i]);
             Vector3 d = palm - t.TransformPoint(gripL[i]);
             float e = d.magnitude / Mathf.Max(1e-4f, figH);
             GripErr[i] = e;
             if (e > GripErrMax[i]) GripErrMax[i] = e;
-            if (AnimFix.GripLock) t.position += d;
+            if (AnimFix.GripLock || force) t.position += d;
         }
 
         /// <summary>Weapon Precision 2.0 (AnimFix.WristTurn): the weapon's aim is final; the turn it has in the fist away from the shot's
@@ -865,7 +925,10 @@ namespace BAM.Art
             Transform t = wT[i], hd = hand[i];
             if (t.localScale.y < 1e-4f) return;
             Quaternion aim = t.rotation;
-            Quaternion shotGrip = W.SwingTurn != Vector3.zero ? bindR[i] * Quaternion.Euler(W.SwingTurn) : bindR[i];
+            // Tyra pilot (AnimFix.AnatomicalWrist): the grip the wrist works towards is the one her fist makes in the clip made for
+            // the bow (anatR), not the bind placement, which lay 53 degrees off her knuckle line
+            Quaternion shotGrip = AnimFix.AnatomicalWrist && hasAnat[i] ? anatR[i]
+                : W.SwingTurn != Vector3.zero ? bindR[i] * Quaternion.Euler(W.SwingTurn) : bindR[i];
             // the hand that would hold this aim in the shot's grip: aim = hand' * shotGrip
             Quaternion want = aim * Quaternion.Inverse(shotGrip);
             Quaternion d = want * Quaternion.Inverse(hd.rotation);
@@ -925,7 +988,7 @@ namespace BAM.Art
         internal void GripPoints(int i, out Vector3 grip, out Vector3 palm)
         {
             grip = wT[i].TransformPoint(gripL[i]);
-            palm = hand[i].TransformPoint(palmL[i]);
+            palm = AnimFix.PalmSocket && hasSock[i] ? hand[i].TransformPoint(sockL[i]) : hand[i].TransformPoint(palmL[i]);
         }
         /// <summary>A two-handed weapon's support point now; false without one.</summary>
         internal bool SupportPoint(int i, out Vector3 at)
