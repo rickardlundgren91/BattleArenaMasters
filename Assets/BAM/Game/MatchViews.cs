@@ -647,6 +647,7 @@ namespace BAM.Game
                     {
                         bool myKill = b.Team != m.Player.Team && b.IsRealHero && e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
                         if (myKill) BamAudio.Duck(1f); // the rest of the world steps back for the player's kill (Speltest sound mix v2)
+                        if (myKill) ArtKit.PlayFx(FxKind.Kill, Coords.Of(b), 1.2f, Side(b.Team)); // Rickard's gold kill burst (2026-10-31)
                         if (b == m.Player) BamAudio.Play(SfxId.HeroDeath);
                         else if (myKill) BamAudio.Play(SfxId.HeroDeath); // the kill confirm: loud, not by distance (Brawl Stars idea 5); no extra chime (Speltest sound mix v2)
                         else BamAudio.PlayAt(b.Team == Mine ? SfxId.AllyDeath : SfxId.HeroDeath, Coords.Of(b));

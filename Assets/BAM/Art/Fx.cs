@@ -319,6 +319,8 @@ namespace BAM.Art
             "tx_fx_hit_star_a", "tx_fx_hit_star_b", "tx_fx_hit_star_c", "tx_fx_impact_ring", "tx_fx_fenn_claw", "tx_fx_bram_anvil",
             "tx_fx_tyra_release", "tx_fx_tyra_charge", "tx_fx_blast_explosion", "tx_fx_tikta_poison", "tx_fx_knut_splash", "tx_fx_moa_honey",
             "tx_fx_blast_scorch",
+            // his set of 2026-10-31 (thread "ultgra"): Tyra's arrow hit, the tower's hit on you, heal, kill, the wolf coming and landing
+            "tx_fx_tyra_hit", "tx_fx_tower_hit", "tx_fx_heal", "tx_fx_kill", "tx_fx_fenn_summon", "tx_fx_fenn_land",
         };
 
         // mode: 0 white on black (additive), 1 white + alpha (additive weighed by alpha), 2 a coloured picture (alpha blended)
@@ -351,6 +353,9 @@ namespace BAM.Art
                 else if (n == "tx_fx_knut_splash") PicSystem(n, true, 2, 0.45f, 1.1f); // water thrown out on the ground
                 else if (n == "tx_fx_moa_honey") PicSystem(n, true, 2, 0.6f, 1f); // a honey puddle spreading
                 else if (n == "tx_fx_blast_scorch") PicSystem(n, true, 2, 0.95f, 1f); // a burn mark that stays a while
+                else if (n == "tx_fx_fenn_land") PicSystem(n, true, 1, 0.5f, 1.15f); // the wolf's dust spreads on the ground
+                else if (n == "tx_fx_kill") PicSystem(n, false, 1, 0.5f, 1.25f); // the kill burst swells
+                else if (n == "tx_fx_heal") PicSystem(n, false, 1, 0.9f, 1f); // the plus signs keep their size (they rise instead)
                 else PicSystem(n, false, 1);
             }
             var t = RickardFx.Load("tx_fx_ember");
@@ -892,7 +897,9 @@ namespace BAM.Art
             switch (kind)
             {
                 case FxKind.Hit when hero >= 0:
-                    if (!HitStar(mid, Color.white, 0.8f * size, 0.14f)) Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
+                    // Tyra's arrows get his own small sharp hit (2026-10-31); the others his hit stars
+                    if (!(hero == (int)HeroId.Tyra && Pic("tx_fx_tyra_hit", mid, Color.white, 0.9f * size, 0.16f)))
+                        if (!HitStar(mid, Color.white, 0.8f * size, 0.14f)) Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
                     if (hero == (int)HeroId.Fenn) Pic("tx_wow_sword_slash", mid, (Color)heroMain[hero], 1.2f * size, 0.14f); // his sword cuts
                     Sparks(mid, 6, heroMain[hero], 0.12f * size, 3f, 0.25f, 1f);
                     Stars(mid, 1, heroAccent[hero], 0.35f * size, 0.5f, 0.2f);
@@ -1004,7 +1011,8 @@ namespace BAM.Art
                     break;
                 }
                 case FxKind.WolfLand:
-                    // Fenn's wolf lands on nothing: a soft ring and dust, no bite
+                    // Fenn's wolf lands on nothing: his clawed dust puff on the ground (2026-10-31), a soft ring and dust, no bite
+                    Pic("tx_fx_fenn_land", p, (Color)heroMain[(int)HeroId.Fenn], 1.8f * size, 0.3f);
                     Ring(p, 0.2f * size, 1.2f * size, (Color)heroMain[(int)HeroId.Fenn], 0.35f);
                     Dust(p + Vector3.up * 0.1f, 4, C(Pal.Ground, 200), 0.5f * size, 1.2f, 0.5f, 0.3f, 0.2f);
                     Wisps(p + Vector3.up * 0.3f, 3, heroAccent[(int)HeroId.Fenn], 0.5f * size, 0.6f, 0.6f, 0.6f, 0.2f);
@@ -1162,6 +1170,23 @@ namespace BAM.Art
                     Glow(p + Vector3.up * 0.75f, 2, new Color32(255, 200, 70, 200), 0.3f * size, 0.25f, 0.25f, 0.4f, 0.35f);
                     Embers(p + Vector3.up * 0.7f, 1, heroAccent[(int)HeroId.Oaken], 0.08f, 0.5f, 0.45f, 0.8f, 0.35f);
                     break;
+                case FxKind.Heal:
+                {
+                    // a green "+N" shows (HudTop): his three plus signs over the hero in the number's green, a few glows rising
+                    Color g = new Color(0.42f, 1f, 0.56f, 0.9f);
+                    if (!PicUpright("tx_fx_heal", p + Vector3.up * (1.1f * size), g, 0.9f * size, 0.6f)) Stars(p + Vector3.up * 0.8f, 3, new Color32(107, 255, 143, 230), 0.25f * size, 0.6f, 0.5f, 1f, 0.3f);
+                    Glow(p + Vector3.up * 0.5f, 4, new Color32(107, 255, 143, 180), 0.18f * size, 0.7f, 0.5f, 1.2f, 0.3f);
+                    break;
+                }
+                case FxKind.Kill:
+                {
+                    // the player's kill: his gold burst on the body (nova and rays without the picture), a ring on the ground
+                    Color gold = new Color(1f, 0.85f, 0.35f, 1f);
+                    if (!Pic("tx_fx_kill", mid, gold, 2.4f * size, 0.45f)) Nova(p, gold, 1.2f * size, 0.45f);
+                    Rays(mid, gold, 1.2f * size, 0.2f);
+                    Ring(p, 0.3f * size, 1.3f * size, gold, 0.4f);
+                    break;
+                }
                 case FxKind.Cast when hero >= 0:
                     // HeroCast already gives the glow and stars: only the ground swirl and ring, in the hero's two colours
                     Swirl(p, 1.1f * size, (Color)heroMain[hero], 0.5f);
@@ -1197,7 +1222,9 @@ namespace BAM.Art
                     Flash(mid, 0.2f * size, 0.8f * size, new Color(1f, 1f, 1f, 0.9f), 0.08f);
                     Pillar(p, 1.2f * size, 2.4f * size, (Color)m, 0.6f);
                     Swirl(p, 1.2f * size, (Color)m, 0.6f);
-                    Pic("tx_wow_warrior_whirl", p, (Color)a, 2.6f * size, 0.6f);
+                    // his howling spirit wolf head (2026-10-31) standing where the wolf comes; the WoW whirl only without it
+                    if (!PicUpright("tx_fx_fenn_summon", p + Vector3.up * (0.9f * size), (Color)m, 2.0f * size, 0.45f))
+                        Pic("tx_wow_warrior_whirl", p, (Color)a, 2.6f * size, 0.6f);
                     Wisps(p + Vector3.up * 0.3f, 6, a, 0.7f * size, 1.2f, 0.8f, 1f, 0.3f);
                     Glow(p + Vector3.up * 0.3f, 12, m, 0.25f * size, 1.6f, 0.7f, 0.8f, 0.3f);
                     Stars(p + Vector3.up * 0.6f, 4, a, 0.3f * size, 1.2f, 0.6f, 1f, 0.4f);
@@ -1216,6 +1243,7 @@ namespace BAM.Art
                     Ring(p, 0.2f * size, 0.7f * size, (Color)teamL, 0.3f);
                     break;
                 case FxKind.TowerShotFlash:
+                    Pic("tx_fx_tower_hit", p, (Color)teamL, 1.4f * size, 0.25f); // his electric burst where the bolt lands (2026-10-31)
                     Pow(p, 1, teamL, 0.6f * size, 0.12f);
                     Flash(p, 0.15f * size, 0.6f * size, (Color)teamL, 0.15f);
                     Glow(p, 6, teamL, 0.2f * size, 2f, 0.25f);

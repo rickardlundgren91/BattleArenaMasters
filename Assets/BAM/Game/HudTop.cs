@@ -197,6 +197,7 @@ namespace BAM.Game
                     f.Label.fontSize = t.Creep ? 28 : 36;
                     f.BaseA = t.Creep ? 0.7f : 0.95f;
                     f.Label.gameObject.SetActive(true);
+                    if (t.Heal) BAM.Art.ArtKit.PlayFx(BAM.Art.FxKind.Heal, f.At, 1f); // Rickard's plus signs with the number (2026-10-31)
                 }
                 // still burning: keep summing for the next second; done: free the slot
                 if (now - t.Last > (t.Heal ? 1.1f : 0.6f) || !u.Alive) t.Unit = null;

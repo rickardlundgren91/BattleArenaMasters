@@ -165,6 +165,9 @@ namespace BAM.Art
         VolleyHit = 27,     // a volley arrow passes through an enemy: the volley's gold star on that enemy (the arrow flies on)
         VolleyRelease = 28, // the five arrows leave the bow: a short gold flash at the bow, once per volley
         AnvilDrop = 29,     // Bram's Anvil Drop lands (Rickard 2026-10-30 "måste synas mer"): its own big blow, size = the hit radius
+        // Rickard's own pictures 2026-10-31 (thread "ultgra"): the heal plus signs and the player's kill burst
+        Heal = 30,          // a green "+N" shows on a friendly hero (HudTop): his plus signs float up over it
+        Kill = 31,          // the player's kill on an enemy hero: his gold burst on the body
     }
 
     public static class ArtKit

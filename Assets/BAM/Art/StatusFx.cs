@@ -49,6 +49,40 @@ namespace BAM.Art
             return ringMats[slot] = m;
         }
 
+        // Rickard's own slow (tx_fx_slow, ice crystals, in colour, additive) and root (tx_fx_root, vines, alpha blended) on the ground,
+        // 2026-10-31 (thread "ultgra"); their rings reach 0.8 and 0.86 of the picture's half width. Without them the old looks stay.
+        static Material slowMat, rootMat;
+        static bool slowLoaded, rootLoaded;
+        const float SlowQuad = 2f / 0.8f, RootQuad = 2f / 0.86f;
+
+        static Material SlowMat()
+        {
+            if (slowLoaded) return slowMat;
+            slowLoaded = true;
+            var tex = RickardFx.Load("tx_fx_slow");
+            if (tex == null) return null;
+            slowMat = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.UnlitAdd));
+            slowMat.name = "BAM slow crystals";
+            slowMat.SetTexture(ArtMaterials.BaseMap, tex);
+            slowMat.mainTexture = tex;
+            slowMat.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, 0.9f));
+            return slowMat;
+        }
+
+        static Material RootMat()
+        {
+            if (rootLoaded) return rootMat;
+            rootLoaded = true;
+            var tex = RickardFx.Load("tx_fx_root");
+            if (tex == null) return null;
+            rootMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+            rootMat.name = "BAM root vines";
+            rootMat.SetTexture(ArtMaterials.BaseMap, tex);
+            rootMat.mainTexture = tex;
+            rootMat.renderQueue = 3020;
+            return rootMat;
+        }
+
         static Material stunMat;
         static bool stunLoaded;
 
@@ -171,6 +205,8 @@ namespace BAM.Art
         {
             Mesh mesh; Material mat; Vector3 pos; float s;
             float rr = Mathf.Max(radius, 0.25f) * 1.3f;
+            if (i == Slow && SlowMat() != null) { MakeOwnRing(i, slowMat, rr * SlowQuad); return; }
+            if (i == Root && RootMat() != null) { MakeOwnRing(i, rootMat, rr * RootQuad); return; }
             Material own = i == StunRing ? RingMat(0, Pal.Stun) : i == PoisonRing ? RingMat(1, Pal.Poison) : i == BurnRing ? RingMat(2, Pal.Burn)
                 : i == Slow ? RingMat(3, Pal.Slow) : null;
             if (own != null) { MakeOwnRing(i, own, i == Slow ? rr * RingQuad : rr * 1.05f * RingQuad); return; }
