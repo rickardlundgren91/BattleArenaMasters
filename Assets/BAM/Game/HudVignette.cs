@@ -32,6 +32,17 @@ namespace BAM.Game
             bool on = !hidden && !(m.Tut != null && m.Tut.Island) && (BamSettings.Graphics != GraphicsQuality.Low || low > 0f);
             if (vignette.enabled != on) vignette.enabled = on;
             if (!on) return;
+            // it frames the game picture, not the whole window: in a landscape window (the editor's Game view) the camera draws
+            // only the standing frame, and a vignette over the whole window left the arena almost untouched, so the grass at the
+            // sides looked lighter than on a phone (Rickard 2026-10-31 "är gräset ljust igen?"); on a phone it is the whole screen
+            UnityEngine.Rect v = cam.Camera.rect;
+            var vr = vignette.rectTransform;
+            if (vr.anchorMin != v.min || vr.anchorMax != v.max)
+            {
+                vr.anchorMin = v.min;
+                vr.anchorMax = v.max;
+                vr.offsetMin = vr.offsetMax = Vector2.zero;
+            }
             var c = Color.Lerp(Color.black, new Color(0.75f, 0.05f, 0.05f), low);
             c.a = 0.35f + low * (0.35f + 0.2f * Mathf.Sin(Time.unscaledTime * 6f));
             vignette.color = c;
