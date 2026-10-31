@@ -198,16 +198,13 @@ namespace BAM.Sim
             Emit(EventType.Death, killer, u, streak);
         }
 
-        /// <summary>The wait before a dead hero comes back: 8 s, +1 s per earlier death, and from level 10 more with the level and
-        /// the match clock (at most 20 s more).</summary>
-        public float RespawnTime(Unit u)
-        {
-            float t = Rules.RespawnBase + Rules.RespawnPerDeath * (u.Deaths - 1);
-            if (u.Level < Rules.RespawnLateLevel) return t;
-            float since = Math.Max(0, Time - (Rules.RespawnLateLevel - 1) * Rules.SecondsPerLevel);
-            float extra = Rules.RespawnLatePerLevel * (u.Level - (Rules.RespawnLateLevel - 1)) + Rules.RespawnLatePerMinute * since / 60f;
-            return t + Math.Min(Rules.RespawnLateMax, extra);
-        }
+        /// <summary>The wait before a dead hero comes back: 8 s, +1 s per earlier death, and up to 20 s more as the match clock runs
+        /// (LateRamp).</summary>
+        public float RespawnTime(Unit u) => Rules.RespawnBase + Rules.RespawnPerDeath * (u.Deaths - 1) + Rules.RespawnLateMax * LateRamp();
+
+        /// <summary>0 until 1:30 on the match clock, then straight up to 1 at 6:00 (no steps); always 0 in the tutorial and HERO TEST.</summary>
+        internal float LateRamp() => Tut != null || Config.HeroTest ? 0
+            : Math.Max(0, Math.Min(1, (Time - Rules.LateStart) / (Rules.LateFull - Rules.LateStart)));
 
         void Revive(Unit u)
         {
@@ -232,13 +229,8 @@ namespace BAM.Sim
             }
             return false;
         }
-        /// <summary>From level 10 heroes take more from tower shots, growing with the match clock.</summary>
-        internal float TowerLateMult(Unit h)
-        {
-            if (h.Level < Rules.TowerLateLevel) return 1;
-            float since = Math.Max(0, Time - (Rules.TowerLateLevel - 1) * Rules.SecondsPerLevel);
-            return Math.Min(Rules.TowerLateMax, 1 + Rules.TowerLateBase + Rules.TowerLatePerLevel * (h.Level - Rules.TowerLateLevel) + Rules.TowerLatePerMinute * since / 60);
-        }
+        /// <summary>Heroes take more from tower shots as the match clock runs: x1 until 1:30, straight up to x2 at 6:00 (LateRamp).</summary>
+        internal float TowerLateMult(Unit h) => 1 + (Rules.TowerLateMax - 1) * LateRamp();
         /// <summary>From level 8 towers take more damage, growing with the match clock (at most x5).</summary>
         internal float TowerLateTaken() => Math.Min(Rules.TowerTakenMax, 1 + Rules.TowerTakenPerMinute * Math.Max(0, Time - (Rules.TowerTakenLevel - 1) * Rules.SecondsPerLevel) / 60);
         /// <summary>Backdoor protection (Rickard 2026-10-28, closed-test feedback): a hero hitting a tower without one of its own

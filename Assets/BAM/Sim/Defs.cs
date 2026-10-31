@@ -136,8 +136,10 @@ namespace BAM.Sim
         public const float SecondsPerLevel = 16;
         public const int MaxLevel = 12;
         public const float RespawnBase = 8, RespawnPerDeath = 1, RespawnInvulnerable = 4;
-        public const int RespawnLateLevel = 10;
-        public const float RespawnLatePerLevel = 2, RespawnLatePerMinute = 4, RespawnLateMax = 20;
+        // late game (Rickard 2026-10-31: no sudden jumps): from 1:30 to 6:00 on the match clock a dead hero's wait grows in one
+        // straight line to +20 s and tower shots on heroes to x2 (until protocol 21 both stepped up with the levels from 2:24)
+        public const float LateStart = 90, LateFull = 360;
+        public const float RespawnLateMax = 20;
         public const float RegenAmount = 0.1f, RegenTick = 0.85f, HeroOutOfCombat = 3, HeroRegenDelay = 2; // HeroRegenDelay: seconds after the last hero/tower fight before regen starts (was HeroOutOfCombat, 3 s, until protocol 20)
         public const float TowerOutOfCombat = 10, TowerRegenBelow = 0.25f, TowerRegenAmount = 0.01f, TowerRegenTick = 1;
         public const float GrassSight = 2.5f, RevealTime = 2; // RevealTime: seconds a hit keeps attacker and target visible in grass (4 s until protocol 20)
@@ -146,10 +148,9 @@ namespace BAM.Sim
         public const float AssistWindow = 5;
         public const float SpecialBuffer = 0.25f;
         public const float SiegeVsTower = 2;
-        // towers: shots in a row at one hero hit harder, and heroes from level 10 take more from towers as the match goes on
+        // towers: shots in a row at one hero hit harder, and heroes take more from towers as the match goes on (LateStart..LateFull)
         public const float TowerAggroTime = 2, TowerRamp = 0.2f, TowerRampMax = 2, TowerRampReset = 2.5f;
-        public const int TowerLateLevel = 10;
-        public const float TowerLateBase = 0.25f, TowerLatePerLevel = 0.1f, TowerLatePerMinute = 0.15f, TowerLateMax = 2;
+        public const float TowerLateMax = 2;
         // the other side: from level 8 towers take more damage, a hero without its own minion at the tower gets half of that
         public const int TowerTakenLevel = 8;
         public const float TowerTakenPerMinute = 1, TowerTakenMax = 5;
