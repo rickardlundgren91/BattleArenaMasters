@@ -108,9 +108,15 @@ namespace BAM.Core
 
         public static BAM.Sim.Difficulty LastDifficulty
         {
-            get { Load(); return (BAM.Sim.Difficulty)lastDifficulty; }
-            set { Load(); if (lastDifficulty == (int)value) return; lastDifficulty = (int)value; PlayerPrefs.SetInt(Key + "diff", lastDifficulty); PlayerPrefs.SetInt(Key + "diffrun", 0); Commit(); }
+            get { Load(); return lastDifficulty == (int)BAM.Sim.Difficulty.Ultra && !UltraOpen ? BAM.Sim.Difficulty.Hard : (BAM.Sim.Difficulty)lastDifficulty; }
+            set { Load(); if (value == BAM.Sim.Difficulty.Ultra && !UltraOpen) value = BAM.Sim.Difficulty.Hard; if (lastDifficulty == (int)value) return; lastDifficulty = (int)value; PlayerPrefs.SetInt(Key + "diff", lastDifficulty); PlayerPrefs.SetInt(Key + "diffrun", 0); Commit(); }
         }
+
+        /// <summary>Ultra opens after this many won matches against Hard bots (Rickard 2026-10-31), counted on this phone.</summary>
+        public const int UltraWins = 30;
+        public static int HardWins => PlayerPrefs.GetInt(Key + "hardwins", 0);
+        public static bool UltraOpen => HardWins >= UltraWins;
+        public static void AddHardWin() { PlayerPrefs.SetInt(Key + "hardwins", HardWins + 1); Commit(); }
 
         /// <summary>
         /// The bot level follows the player (Rickard 2026-10-31 "om man inte vinner matcher ska man inte tvingas till hard matcher

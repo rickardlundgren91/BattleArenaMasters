@@ -710,6 +710,7 @@ namespace BAM.UI
         {
             readonly Image[] fills, edges;
             readonly Text[] labels;
+            readonly bool[] dims;
 
             // full: the segments fill the row (the mode sheet's BOT DIFFICULTY); else they sit on the right of a settings row
             public HubChoice(RectTransform row, string[] names, System.Action<int> chosen, bool full = false)
@@ -726,7 +727,7 @@ namespace BAM.UI
                     box.rectTransform.offsetMax = new Vector2(-2.5f * Cw, 5.5f * Cw);
                 }
                 int n = names.Length;
-                fills = new Image[n]; edges = new Image[n]; labels = new Text[n];
+                fills = new Image[n]; edges = new Image[n]; labels = new Text[n]; dims = new bool[n];
                 for (int i = 0; i < n; i++)
                 {
                     int index = i;
@@ -758,9 +759,12 @@ namespace BAM.UI
                     bool on = i == sel;
                     fills[i].color = on ? HubToggleOn : new Color(1, 1, 1, 0.04f);
                     edges[i].enabled = on;
-                    labels[i].color = on ? Color.white : UiKit.TextDim;
+                    labels[i].color = on ? Color.white : dims[i] ? new Color(UiKit.TextDim.r, UiKit.TextDim.g, UiKit.TextDim.b, UiKit.TextDim.a * 0.35f) : UiKit.TextDim;
                 }
             }
+
+            /// <summary>A locked choice: its label is faded (Set still draws it).</summary>
+            public void Dim(int i, bool dim) => dims[i] = dim;
         }
 
         // ---- shared pieces ----
