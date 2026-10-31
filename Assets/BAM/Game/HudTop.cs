@@ -93,6 +93,8 @@ namespace BAM.Game
             // the burn/poison/heal sums hold the last match's units: drop them, or one stray number pops over the new match
             for (int i = 0; i < tickSums.Length; i++) if (tickSums[i] != null) { tickSums[i].Unit = null; tickSums[i].Sum = 0f; }
             shownClock = false; laidOut = Vector2.zero;
+            // the countdown pill holds the level alone: hide the clock and lay out for it now (the per-frame check only reacts to a change, so a clock left on from the last match, or on by default in the first, overlapped the level)
+            timeText.gameObject.SetActive(false); LayoutPillText();
             int[] count = new int[2];
             for (int i = 0; i < portraits.Length; i++) { portraits[i].Unit = null; portraits[i].Root.gameObject.SetActive(false); }
             // HERO TEST: no portraits, no clock, kills or stars (the old Hud hides them there); the tower bars stay
