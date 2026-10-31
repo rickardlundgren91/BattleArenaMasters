@@ -85,6 +85,14 @@ namespace BAM.Game
             scoreOpen = true; scoreAskLeave = false;
         }
 
+        /// <summary>Opens the score sheet (Android back in a match with other players, where Pause is not allowed).</summary>
+        public void OpenMenu()
+        {
+            if (m == null || tutorial || scoreRoot == null || (m.State != MatchState.Play && m.State != MatchState.Countdown)) return;
+            CancelTouches();
+            scoreOpen = true; scoreAskLeave = false;
+        }
+
         void CloseScore() { scoreOpen = false; scoreAskLeave = false; }
 
         /// <summary>The score sheet (the in-match menu) is open: an offline match holds while it is.</summary>

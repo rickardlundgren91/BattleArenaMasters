@@ -123,9 +123,13 @@ namespace BAM.Game
             Begin(setup.Tutorial);
         }
 
+        /// <summary>Only a match alone against bots may pause (Rickard 2026-10-31): with another real player (friends party or
+        /// online) the match never pauses and never shows the pause screen, whatever asks (back button, focus loss, background).</summary>
+        public bool CanPause => net == null;
+
         public void Pause()
         {
-            if (!inMatch || paused || resultShown) return;
+            if (!inMatch || paused || resultShown || !CanPause) return;
             paused = true;
             hud.CancelTouches();
             BamAudio.StopAll();
@@ -211,8 +215,12 @@ namespace BAM.Game
         {
             if (!inMatch) return;
             var kb = Keyboard.current;
-            // Android's back button arrives as Escape: it closes our menus first, else it pauses
-            if (kb != null && kb.escapeKey.wasPressedThisFrame && !Screens.HandleBack() && (paused || !hud.HandleBack())) Pause();
+            // Android's back button arrives as Escape: it closes our menus first, else it pauses (with other players: it opens the
+            // score sheet instead, whose EXIT GAME leaves; the match plays on)
+            if (kb != null && kb.escapeKey.wasPressedThisFrame && !Screens.HandleBack() && (paused || !hud.HandleBack()))
+            {
+                if (CanPause) Pause(); else hud.OpenMenu();
+            }
             if (!inMatch) return; // the back press may have left the match
 
             float dt = Time.deltaTime;
@@ -268,8 +276,7 @@ namespace BAM.Game
             }
         }
 
-        // Online: this phone's controls go to the link 60 times a second (also while the pause screen is up, then as no input:
-        // the others play on), and the rules step with every tick the link knows. Hit-stop stays off, so no phone slows the host.
+        // Online: this phone's controls go to the link 60 times a second (never paused online: the others play on), and the rules step with every tick the link knows. Hit-stop stays off, so no phone slows the host.
         void NetTicks(float dt)
         {
             acc += dt; netDraw += dt;
@@ -374,7 +381,7 @@ namespace BAM.Game
         // Android's notification shade or a system dialog only takes focus (no OnApplicationPause): pause there too
         void OnApplicationFocus(bool focus)
         {
-            if (!focus) Pause();
+            if (!focus) Pause(); // no-op with other players (CanPause)
         }
     }
 }
