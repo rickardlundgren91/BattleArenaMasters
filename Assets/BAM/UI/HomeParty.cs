@@ -225,7 +225,8 @@ namespace BAM.UI
         static void SetPlaySub()
         {
             string rest = CurrentParty() != null ? "WITH YOUR PARTY" : homeMode == Mode.Classic ? PlaySubFor(homeMode, true) : ModeSub(homeMode).ToUpperInvariant();
-            playSub.text = "<color=#ffd166>" + ModeTitle(homeMode) + "</color>   " + rest;
+            if (IsPractice(homeMode) && CurrentParty() == null) rest = ModeTitle(homeMode); // PRACTICE   TRAINING / HERO TEST
+            playSub.text = "<color=#ffd166>" + CardTitle(homeMode) + "</color>   " + rest;
             float w = 1.4f * Cw + 5.4f * Cw + 1.4f * Cw + playSub.preferredWidth + 5 * Cw;
             homeModeChip.sizeDelta = new Vector2(Mathf.Clamp(w, 40 * Cw, 78 * Cw), homeModeChip.sizeDelta.y);
             int xp = homeMode == Mode.Classic && OnlineHooks.FirstWinXp != null ? OnlineHooks.FirstWinXp() : 0;
