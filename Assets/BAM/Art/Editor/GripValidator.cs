@@ -23,10 +23,17 @@ namespace BAM.Art.Editor
     /// </summary>
     static class GripValidatorMenu
     {
-        const string Key = "BAM.GripValidator.Pending";
+        const string Key = "BAM.GripValidator.Pending", AnatKey = "BAM.GripValidator.Anatomical";
 
         [MenuItem("BAM/Art/Grip Validator (Tyra)")]
-        static void Open()
+        static void Open() => Run(false);
+
+        /// <summary>The same run with the A/B switch AnimFix.AnatomicalWrist on (Play reloads the scripts, which would put a switch
+        /// set by hand in the Editor back to its default, so the run sets it itself).</summary>
+        [MenuItem("BAM/Art/Grip Validator (Tyra, anatomical wrist A-B)")]
+        static void OpenAnatomical() => Run(true);
+
+        static void Run(bool anatomical)
         {
             if (EditorApplication.isPlaying) { EditorApplication.isPlaying = false; return; }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -43,6 +50,7 @@ namespace BAM.Art.Editor
             c.farClipPlane = 60f;
             new GameObject("Sun").AddComponent<Light>().type = LightType.Directional;
             SessionState.SetBool(Key, true);
+            SessionState.SetBool(AnatKey, anatomical);
             EditorSceneManager.playModeStartScene = null;
             EditorApplication.isPlaying = true;
         }
@@ -54,6 +62,7 @@ namespace BAM.Art.Editor
             {
                 if (s != PlayModeStateChange.EnteredPlayMode || !SessionState.GetBool(Key, false)) return;
                 SessionState.SetBool(Key, false);
+                AnimFix.AnatomicalWrist = SessionState.GetBool(AnatKey, false);
                 new GameObject("BAM Grip Validator").AddComponent<GripValidatorRunner>();
             };
         }
