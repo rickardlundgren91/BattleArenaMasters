@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -7,11 +8,13 @@ using BAM.Sim;
 using UnityEditor;
 using UnityEngine;
 
-namespace BAM.Art.Editor
+namespace BAM.Art
 {
-    /// <summary>The Grip Validator's driver (BAM > Art > Grip Validator (Tyra), GripValidator.cs): drives Tyra's view through the
+    /// <summary>The Grip Validator's driver (BAM > Art > Grip Validator (Tyra), Editor/GripValidator.cs): drives Tyra's view through the
     /// script (Update, before the views' LateUpdate) and measures after it (LateUpdate, late). In a file of its own, named after the
-    /// class, so Unity has a script asset for it and honours its execution order.</summary>
+    /// class, so Unity has a script asset for it and honours its execution order. It lives in BAM.Art, not BAM.Art.Editor, because
+    /// Unity refuses AddComponent for a MonoBehaviour from an Editor assembly ("it is an editor script"); the whole file is
+    /// UNITY_EDITOR only, so nothing of it reaches a build.</summary>
     [DefaultExecutionOrder(10000)]
     sealed class GripValidatorRunner : MonoBehaviour
     {
@@ -460,3 +463,4 @@ namespace BAM.Art.Editor
         }
     }
 }
+#endif
