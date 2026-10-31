@@ -147,16 +147,15 @@ namespace BAM.Online.UI
             if (p != null && i < p.Count) HubNameTag3(cw(22), cw(4.5f), p.Mates[i].Name, p.Mates[i].Ready, false, false);
         }
 
-        // MenuHome3.HubNameTag3 (ONE_PLAY: the slim, see-through plate): [READY dot] [crown] name [READY / IN A MATCH] [pencil], centred
-        // on (cx, cy). The word after the name is new (2026-10-31): the ring's colour alone did not tell a new player who was ready.
+        // MenuHome3.HubNameTag3 (ONE_PLAY: the slim, see-through plate): [READY dot] [crown] name [pencil], centred on (cx, cy).
+        // The dot is mint when the friend is ready and grey while still in a match; a word after the name was tried on
+        // 2026-10-31 and dropped the same evening (Rickard: a dot and the name is enough, less clutter).
         static void HubNameTag3(float cx, float cy, string name, bool? ready, bool leader, bool pen)
         {
-            string nf = Lil(cw(3.5f)), sf = Treb(cw(2.3f), true); float gap = cw(1.4f), crownW = leader ? cw(3.6f) : 0, penD = pen ? cw(5.4f) : 0, dot = ready.HasValue ? cw(1.1f) : 0;
+            string nf = Lil(cw(3.5f)); float gap = cw(1.4f), crownW = leader ? cw(3.6f) : 0, penD = pen ? cw(5.4f) : 0, dot = ready.HasValue ? cw(1.1f) : 0;
             string nm = name ?? ""; ctx.font = nf; while (nm.Length > 3 && ctx.measureText(nm) > cw(16)) nm = nm.Substring(0, nm.Length - 2) + "…";
             float nw = ctx.measureText(nm);
-            string status = !ready.HasValue ? null : ready.Value ? "READY" : "IN A MATCH";
-            float sw = 0; if (status != null) { ctx.font = sf; sw = ctx.measureText(status); }
-            float w = (dot > 0 ? dot * 2 + gap : 0) + crownW + (crownW > 0 ? gap : 0) + nw + (sw > 0 ? gap + sw : 0) + (penD > 0 ? gap + penD : 0);
+            float w = (dot > 0 ? dot * 2 + gap : 0) + crownW + (crownW > 0 ? gap : 0) + nw + (penD > 0 ? gap + penD : 0);
             { float a1 = ctx.globalAlpha; ctx.globalAlpha = a1 * 0.5f; HubPlate3(cx, cy - cw(3.1f), w + cw(4), cw(6.2f)); ctx.globalAlpha = a1; }
             float x = cx - w / 2;
             if (dot > 0)
@@ -167,7 +166,6 @@ namespace BAM.Online.UI
             }
             if (leader) { HubCrown(x + crownW / 2, cy, cw(1.6f)); x += crownW + gap; }
             Text(nm, x, cy, nf, HUB_TEXT, shadow: "rgba(0,0,0,0.5)", sh: cw(0.3f), stroke: "rgba(6,8,26,0.9)", sw: cw(0.45f)); x += nw;
-            if (status != null) { x += gap; Text(status, x, cy + cw(0.2f), sf, ready.Value ? HUB_ACCENT : HUB_DIM); x += sw; }
             if (pen)
             {
                 x += gap; float penX = x + penD / 2;
