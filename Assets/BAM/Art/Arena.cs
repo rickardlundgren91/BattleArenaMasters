@@ -230,9 +230,11 @@ namespace BAM.Art
         }
 
         // The old game's bush (View3DMapArena.ArenaBush, Rickard 2026-10-17: "the leaves built in code looked good, so they are the
-        // bush"): on every grass tile about 24 pointed leaves on a jittered 5x5 grid, leaning away from the camera so on screen they
-        // rise long and upward and fan out; tiles on an area's edge lean their outer leaves outward, so the outline is ragged. Two
-        // greens, each leaf dark at the root and light at the tip (a bilinear 4x2 ramp texture, as the old palette). One mesh per tile,
+        // bush"), drawn in the painted ground grass's style (Rickard 2026-10-31: "stilen gräset är gjort", same greens): on every
+        // grass tile five tufts of 5-7 pointed blades fanned from one root, leaning away from the camera so on screen they rise long
+        // and upward; tiles on an area's edge lean their outer blades outward, so the outline is ragged. Two greens, each blade dark
+        // at the root and light at the tip (a bilinear 4x2 ramp texture, as the old palette). About as many triangles as the old
+        // 24 leaves per tile. One mesh per tile,
         // one shared material (SRP batcher), so BushField can fade the tiles round the player and lean them away from heroes.
         static Texture2D leafRamp;
         static Material leafMat, leafFaded;
@@ -245,7 +247,6 @@ namespace BAM.Art
             var uv = new System.Collections.Generic.List<Vector2>(16384);
             var t = new System.Collections.Generic.List<int>(24576);
             bool G(int x, int y) => x >= 0 && y >= 0 && x < w && y < h && info.Tile(x, y) == TGrass;
-            const int N = 5;
             GameObject holder = null;
             // PERF-01: 124 tiles drawn one by one cost about 120 draw calls. Each 3 x 2 block of tiles is also merged into one
             // still mesh that is drawn while no tile in it fades or leans; BushField swaps a block to its own tiles only then.
@@ -263,21 +264,29 @@ namespace BAM.Art
                     var mid0 = info.TileCenter(x, y); // each tile is its own piece round its middle, so it can fade and lean alone
                     // the old map's rows grew with z; here row y lies at z = h - 1 - y, so the old row y - 1 (toward -z) is y + 1
                     float ex = (G(x - 1, y) ? 0 : -1) + (G(x + 1, y) ? 0 : 1), ez = (G(x, y + 1) ? 0 : -1) + (G(x, y - 1) ? 0 : 1);
-                    for (int j = 0; j < N; j++)
-                        for (int i = 0; i < N; i++)
+                    // tufts like the painted ground grass (T_BAM_Ground_Grass): five clumps per tile (four jittered quarters and one in
+                    // the middle), each a fan of 5-7 blades from one root, so dark gaps open between the clumps
+                    for (int q = 0; q < 5; q++)
+                    {
+                        int qi = q == 4 ? 2 : q & 1, qj = q == 4 ? 2 : q >> 1;
+                        int hx = x * 3 + qi, hy = y * 3 + qj;
+                        float u = q == 4 ? 0.35f + Hash(hx, hy, 32) * 0.3f : (qi + 0.2f + Hash(hx, hy, 32) * 0.6f) / 2f;
+                        float vv = q == 4 ? 0.35f + Hash(hx, hy, 33) * 0.3f : (qj + 0.2f + Hash(hx, hy, 33) * 0.6f) / 2f;
+                        var foot = new Vector3(x + u, 0f, h - 1 - y + vv) - mid0;
+                        int row = Hash(hx, hy, 37) < 0.35f ? 1 : 0;
+                        int blades = 5 + (int)(Hash(hx, hy, 40) * 2.99f);
+                        float a0 = Hash(hx, hy, 34) * 6.283f, tall = 0.8f + Hash(hx, hy, 35) * 0.35f;
+                        float edgeW = Mathf.Clamp01(Mathf.Max(ex * (u - 0.5f), ez * (vv - 0.5f)) * 2.2f); // near an open side: lean out
+                        for (int b = 0; b < blades; b++)
                         {
-                            int hx = x * N + i, hy = y * N + j;
-                            if (Hash(hx, hy, 31) < 0.06f) continue; // a few gaps
-                            float u = (i + 0.15f + Hash(hx, hy, 32) * 0.7f) / N, vv = (j + 0.15f + Hash(hx, hy, 33) * 0.7f) / N;
-                            var at = new Vector3(x + u, 0f, h - 1 - y + vv) - mid0;
-                            float a = (Hash(hx, hy, 34) - 0.5f) * 1.6f; // -46..46 degrees round +z
-                            var dir = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
-                            float edgeW = Mathf.Clamp01(Mathf.Max(ex * (u - 0.5f), ez * (vv - 0.5f)) * 2.2f); // near an open side: lean out
-                            dir = (dir + new Vector3(ex, 0f, ez) * (edgeW * 1.4f)).normalized;
-                            float len = 0.75f + Hash(hx, hy, 35) * 0.4f - edgeW * 0.15f, wd = 0.085f + Hash(hx, hy, 36) * 0.04f;
-                            int row = Hash(hx, hy, 37) < 0.35f ? 1 : 0;
-                            Leaf(v, n, uv, t, at, dir, len, wd, row, Hash(hx, hy, 38) < 0.5f ? 1 : 2);
+                            int bx = hx * 7 + b;
+                            float a = a0 + b * 6.283f / blades + (Hash(bx, hy, 41) - 0.5f) * 0.6f;
+                            // fanned round the root, but leaning away from the camera like the old leaves, and out at an open side
+                            var dir = (new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a) + 0.9f) + new Vector3(ex, 0f, ez) * (edgeW * 1.2f)).normalized;
+                            float len = tall * (0.65f + Hash(bx, hy, 42) * 0.45f), wd = 0.075f + Hash(bx, hy, 43) * 0.03f, up = 0.55f + Hash(bx, hy, 44) * 0.35f;
+                            Blade(v, n, uv, t, foot + dir * 0.04f, dir, len, wd, up, row, Hash(bx, hy, 45) < 0.7f);
                         }
+                    }
                     if (v.Count == 0) continue;
                     var mesh = new Mesh { name = "Bush tile" };
                     mesh.SetVertices(v); mesh.SetNormals(n); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
@@ -363,32 +372,34 @@ namespace BAM.Art
             if (m.HasProperty(SpecColorId)) m.SetColor(SpecColorId, Color.black);
         }
 
-        // a pointed leaf from its root p, rising and bending out along dir: five rings of two points, widest a third of the way up
-        static void Leaf(System.Collections.Generic.List<Vector3> v, System.Collections.Generic.List<Vector3> n, System.Collections.Generic.List<Vector2> uv,
-            System.Collections.Generic.List<int> t, Vector3 p, Vector3 dir, float len, float wd, int row, int mid)
+        // one grass blade from its root p, rising and bending out along dir: four rings of two points, widest a third of the way up.
+        // Painted in flat tone steps as the ground grass: dark root, then mid, then a light tip on most blades
+        static void Blade(System.Collections.Generic.List<Vector3> v, System.Collections.Generic.List<Vector3> n, System.Collections.Generic.List<Vector2> uv,
+            System.Collections.Generic.List<int> t, Vector3 p, Vector3 dir, float len, float wd, float up, int row, bool light)
         {
             var side = Vector3.Cross(Vector3.up, dir).normalized;
-            Vector3 ctrl = p + Vector3.up * (len * 0.75f) + dir * (len * 0.15f), end = p + Vector3.up * (len * 0.7f) + dir * (len * 0.6f);
+            Vector3 ctrl = p + Vector3.up * (len * up) + dir * (len * 0.2f), end = p + Vector3.up * (len * up * 0.85f) + dir * (len * 0.65f);
             Vector3 Pt(float k) => (1 - k) * (1 - k) * p + 2 * (1 - k) * k * ctrl + k * k * end;
             int pl = -1, pr = -1;
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 4; i++)
             {
-                float k = LeafT[i];
+                float k = BladeT[i];
                 Vector3 c = Pt(k), tan = (Pt(Mathf.Min(1f, k + 0.05f)) - Pt(Mathf.Max(0f, k - 0.05f))).normalized;
                 Vector3 nr = Vector3.Cross(side, tan).normalized;
                 if (nr.z > 0f) nr = -nr;                    // the face toward the camera
                 nr = (nr + Vector3.up * 0.6f).normalized;   // and a little up, so the light reads soft
-                int cell = i == 0 ? 0 : i < 3 ? mid : 3;    // root dark, middle mid or light, tip
+                int cell = light ? BladeLight[i] : BladeDim[i];
                 var cuv = new Vector2((cell + 0.5f) / 4f, (row + 0.5f) / 2f);
                 int l = v.Count;
-                v.Add(c - side * (wd * LeafW[i])); n.Add(nr); uv.Add(cuv);
-                v.Add(c + side * (wd * LeafW[i])); n.Add(nr); uv.Add(cuv);
+                v.Add(c - side * (wd * BladeW[i])); n.Add(nr); uv.Add(cuv);
+                v.Add(c + side * (wd * BladeW[i])); n.Add(nr); uv.Add(cuv);
                 if (pl >= 0) { t.Add(pl); t.Add(pr); t.Add(l + 1); t.Add(pl); t.Add(l + 1); t.Add(l); }
                 pl = l; pr = l + 1;
             }
         }
 
-        static readonly float[] LeafT = { 0f, 0.3f, 0.6f, 0.85f, 1f }, LeafW = { 0.35f, 1f, 0.85f, 0.45f, 0f };
+        static readonly float[] BladeT = { 0f, 0.4f, 0.75f, 1f }, BladeW = { 0.5f, 1f, 0.6f, 0f };
+        static readonly int[] BladeLight = { 0, 2, 3, 3 }, BladeDim = { 0, 1, 2, 2 };
 
         // the old game's hash (View3DMapStyle.Hash): the same leaves in the same places
         static float Hash(int x, int y, int k)
