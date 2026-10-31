@@ -223,14 +223,7 @@ namespace BAM.Game
                 Show(target[2], tp, ri + 1.2f * px, new Color(Gold.r, Gold.g, Gold.b, 0.7f * fa), 2.4f * px);
             }
 
-            // ready: an orange ring at the hero's feet, breathing
-            if (p.SpecialReady)
-            {
-                float br = 0.5f + 0.5f * Mathf.Sin(Time.time * 5f);
-                float rw = 2.5f * px, rr0 = Mathf.Max(0.55f, p.R + 0.35f) + 0.12f; // just outside the green "you" ring
-                Show(ready[0], at, rr0 + rw, new Color(ReadyOrange.r, ReadyOrange.g, ReadyOrange.b, 0.65f + 0.3f * br), rw);
-                // one ring only (its breathing outer twin went with "för många cirklar", Rickard 2026-10-30)
-            }
+            // (the orange "special ready" ring at the feet is gone: Rickard 2026-10-31, the HP bar already shows a ready special)
 
             // the dragged special's hit preview: who the rules would hit if let go now (Sim AimTargets: walls, line of sight, only the
             // first one a bolt, hook, needle or boulder meets; Moa's field: the allies it shields, in honey) (AIM-03, AIM-04)
@@ -249,12 +242,11 @@ namespace BAM.Game
             {
                 // Moa's tap shields the ally hero (or herself) with the lowest health share in reach: show who that is now (MOA-02)
                 var pick = m.MostHurtAlly(p, MoaS.Range);
-                if (pick != null)
+                // only on an ally: on Moa herself the honey ring is gone (Rickard 2026-10-31, the HP bar shows the shield and the ready special)
+                if (pick != null && pick != p)
                 {
                     Vector3 up = views.DrawnAt(pick); up.y = 0f;
-                    // on Moa herself it goes just outside her orange ready rings, so the two never sit on top of each other
-                    float pr = pick == p ? Mathf.Max(0.55f, p.R + 0.35f) + 0.12f + 12f * px : pick.R + 0.22f;
-                    Show(moaPick[0], up, pr, new Color(Honey.r, Honey.g, Honey.b, 0.75f), 2.5f * px);
+                    Show(moaPick[0], up, pick.R + 0.22f, new Color(Honey.r, Honey.g, Honey.b, 0.75f), 2.5f * px);
                 }
             }
 
