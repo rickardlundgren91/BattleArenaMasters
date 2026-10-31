@@ -49,7 +49,8 @@ namespace BAM.Art
             Set(Blue, 0x2f7bff); Set(BlueLight, 0x8cc0ff); Set(BlueDark, 0x1c4fb8);
             Set(Red, 0xff3d3d); Set(RedLight, 0xff9a8f); Set(RedDark, 0xb31d24);
             Set(BarBack, 0x1a1c24); Set(BarPlayer, 0x53e05a); Set(BarAlly, 0x3d9bff); Set(BarEnemy, 0xff4040);
-            Set(BarShield, 0xfff2b0); Set(BarTrail, 0xffffff); Set(BarFrame, 0x0b0c10);
+            Set(BarShield, 0xffcc00); // strong gold like the Shield spell and bubble; the old cream was too close to the white damage trail (Rickard 2026-10-31)
+            Set(BarTrail, 0xffffff); Set(BarFrame, 0x0b0c10);
             Set(PlayerRing, 0x6dff7a); Set(Stun, 0xffe14a); Set(Slow, 0x7fd8ff); Set(Root, 0x6fbf3a); Set(Burn, 0xff7a1a);
             Set(Poison, 0x9cff3a); Set(ShieldFx, 0xffd860, 85); Set(Haste, 0xffffff);
             Set(AimOk, 0xffffff); Set(AimBad, 0xff3030); Set(Range, 0xffffff); Set(ShadowSoft, 0x000000, 70); Set(PlayerRingSoft, 0x6dff7a, 120);
