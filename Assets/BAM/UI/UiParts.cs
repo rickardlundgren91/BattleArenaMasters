@@ -87,6 +87,9 @@ namespace BAM.UI
     /// </summary>
     sealed class SafeAreaFitter : MonoBehaviour
     {
+        /// <summary>Keep the frame's top and bottom but span the screen's full width (UiKit.WideArea).</summary>
+        public bool FullWidth { get => fullWidth; set { fullWidth = value; if (isActiveAndEnabled) Apply(); } }
+        bool fullWidth;
         Rect applied;
         Vector2Int size;
         float bottomExtra, nextCheck;
@@ -116,8 +119,8 @@ namespace BAM.UI
             UiKit.NavBarInset = bottomExtra;
             var f = UiKit.PortraitFrame();
             var rt = (RectTransform)transform;
-            rt.anchorMin = new Vector2(f.xMin / Screen.width, f.yMin / Screen.height);
-            rt.anchorMax = new Vector2(f.xMax / Screen.width, f.yMax / Screen.height);
+            rt.anchorMin = new Vector2(FullWidth ? 0f : f.xMin / Screen.width, f.yMin / Screen.height);
+            rt.anchorMax = new Vector2(FullWidth ? 1f : f.xMax / Screen.width, f.yMax / Screen.height);
             rt.offsetMin = rt.offsetMax = Vector2.zero;
         }
 

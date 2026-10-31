@@ -230,6 +230,7 @@ namespace BAM.UI
             go = rt.gameObject;
             if (overMatch) UiKit.Fill(rt, UiKit.Dim).raycastTarget = true;
             else UiKit.Fill(rt, Color.black).raycastTarget = true; // black outside the standing frame, like the old game
+            if (!overMatch) UiKit.Background(UiKit.WideArea(rt)); // the gradient reaches the sides on a foldable or tablet
             var body = UiKit.SafeArea(rt);
             if (!overMatch) UiKit.Background(body);
             go.SetActive(false);

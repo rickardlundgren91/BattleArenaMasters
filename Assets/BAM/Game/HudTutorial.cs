@@ -377,7 +377,7 @@ namespace BAM.Game
         // ---------------------------------------------------------------- helpers
 
         // one tile in the safe area's units (as HudOverhead sizes its marks from the camera)
-        float TilePx() => cam.PixelsPerTile * (Screen.width > 1f ? safe.rect.width / Screen.width : 1f);
+        float TilePx() => cam.PixelsPerTile * (Screen.width > 1f ? canvasRect.rect.width / Screen.width : 1f); // canvas units per pixel (the frame can be narrower than the screen)
 
         Vector2 Local(Vector2 screen)
         {

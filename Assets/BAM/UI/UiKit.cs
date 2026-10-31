@@ -113,19 +113,29 @@ namespace BAM.UI
         public static float NavBarInset { get; internal set; }
 
         /// <summary>
-        /// The old game's frame (AbcGame.cs Layout), in screen pixels: a standing picture inside the safe area, shaped like the
-        /// safe area itself when that is between 9:22 and 9:16, else 9:19.5, centred. On a phone it is the whole safe area; a
-        /// wider window (the editor's landscape Game view, a tablet) gets it in the middle with black edges beside it. The match
-        /// camera is framed by it and every SafeArea child lays out inside it.
+        /// The standing frame, in screen pixels: a standing picture inside the safe area, shaped like the safe area itself when
+        /// that is between 9:22 and 9:16, centred. A taller screen gets 9:19.5 (the old game's AbcGame.cs Layout); a wider one
+        /// (a foldable opened up, a tablet, the editor's landscape Game view) gets 9:16, the canvas's own 1080x1920 shape, as
+        /// wide as the menus are laid out for. Was 9:19.5 there too until a Galaxy Z Fold tester found the game "forced narrow"
+        /// (2026-10-31). Every SafeArea child lays out inside it; WideArea children and the match camera use the full width.
         /// </summary>
-        public static Rect PortraitFrame()
+        public static Rect PortraitFrame() => Frame(9f / 16f);
+
+        /// <summary>
+        /// The frame the match camera measures its 11.5 tiles across: the standing frame, except that a screen wider than 9:16
+        /// keeps the old 9:19.5 shape, so a foldable or tablet sees the same length of lane and the same tile size as before; the
+        /// picture now runs on over the full width instead of black edges.
+        /// </summary>
+        public static Rect CameraFrame() => Frame(9f / 19.5f);
+
+        static Rect Frame(float wideShape)
         {
             float sw = Screen.width, sh = Screen.height;
             var sa = Screen.safeArea;
             if (sa.width < 10f || sa.height < 10f) sa = new Rect(0f, 0f, sw, sh);
             if (NavBarInset > sa.yMin) sa.yMin = Mathf.Min(NavBarInset, sa.yMax - 10f);
             float a = sa.width / sa.height;
-            float ar = a >= 9f / 22f && a <= 9f / 16f ? a : 9f / 19.5f;
+            float ar = a < 9f / 22f ? 9f / 19.5f : a > 9f / 16f ? wideShape : a;
             float fw, fh;
             if (a > ar) { fh = sa.height; fw = sa.height * ar; }
             else { fw = sa.width; fh = sa.width / ar; }
@@ -140,6 +150,18 @@ namespace BAM.UI
             var rt = NewRect("SafeArea", parent);
             Stretch(rt);
             rt.gameObject.AddComponent<SafeAreaFitter>();
+            return rt;
+        }
+
+        /// <summary>
+        /// A child as tall as the standing frame but as wide as the whole screen: for backgrounds and bars that should reach the
+        /// screen's sides on a foldable or tablet instead of leaving black edges. On a phone it is the same as SafeArea.
+        /// </summary>
+        public static RectTransform WideArea(RectTransform parent)
+        {
+            var rt = NewRect("WideArea", parent);
+            Stretch(rt);
+            rt.gameObject.AddComponent<SafeAreaFitter>().FullWidth = true;
             return rt;
         }
 

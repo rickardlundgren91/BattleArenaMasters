@@ -30,6 +30,16 @@ namespace BAM.UI
             var rt = UiKit.NewRect("Nav", root);
             UiKit.Stretch(rt);
             nav = rt.gameObject;
+            // on a foldable or tablet the bar's colour and top line run on to the screen's sides (the tabs stay in the frame)
+            var wideBar = UiKit.Fill(UiKit.WideArea(rt), NavBg);
+            UiKit.Band(wideBar, false, 0, NavH, 0);
+            var wideBelow = UiKit.Fill(wideBar.rectTransform, NavBg);
+            wideBelow.rectTransform.anchorMin = new Vector2(0, 0);
+            wideBelow.rectTransform.anchorMax = new Vector2(1, 0);
+            wideBelow.rectTransform.pivot = new Vector2(0.5f, 1);
+            wideBelow.rectTransform.sizeDelta = new Vector2(0, 400);
+            wideBelow.rectTransform.anchoredPosition = Vector2.zero;
+            UiKit.Band(UiKit.Fill(wideBar.rectTransform, new Color(UiKit.Trim.r, UiKit.Trim.g, UiKit.Trim.b, 0.42f)), true, 0, 3, 0);
             var safe = UiKit.SafeArea(rt);
             var bar = UiKit.Fill(safe, NavBg);
             bar.raycastTarget = true;

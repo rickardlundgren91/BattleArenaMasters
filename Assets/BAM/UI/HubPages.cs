@@ -51,6 +51,7 @@ namespace BAM.UI
             UiKit.Stretch(rt);
             go = rt.gameObject;
             UiKit.Fill(rt, Color.black).raycastTarget = true; // black outside the standing frame
+            UiKit.Background(UiKit.WideArea(rt)); // the gradient reaches the sides on a foldable or tablet
             var body = UiKit.SafeArea(rt);
             UiKit.Background(body);
             PageArt(body);
