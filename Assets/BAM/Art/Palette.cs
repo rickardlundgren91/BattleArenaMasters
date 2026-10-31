@@ -50,7 +50,7 @@ namespace BAM.Art
             Set(Blue, 0x2f7bff); Set(BlueLight, 0x8cc0ff); Set(BlueDark, 0x1c4fb8);
             Set(Red, 0xff3d3d); Set(RedLight, 0xff9a8f); Set(RedDark, 0xb31d24);
             Set(BarBack, 0x1a1c24); Set(BarPlayer, 0x53e05a); Set(BarAlly, 0x3d9bff); Set(BarEnemy, 0xff4040);
-            Set(BarShield, 0xffcc00); // strong gold like the Shield spell and bubble; the old cream was too close to the white damage trail (Rickard 2026-10-31)
+            Set(BarShield, 0xe89a08); // glossy amber gold from Rickard's own picture (2026-10-31); the old cream was too close to the white damage trail
             Set(BarTrail, 0xffffff); Set(BarFrame, 0x0b0c10);
             Set(PlayerRing, 0x6dff7a); Set(Stun, 0xffe14a); Set(Slow, 0x7fd8ff); Set(Root, 0x6fbf3a); Set(Burn, 0xff7a1a);
             Set(Poison, 0x9cff3a); Set(ShieldFx, 0xffd860, 85); Set(Haste, 0xffffff);
@@ -58,7 +58,7 @@ namespace BAM.Art
             Set(WhiteSoft, 0xffffff, 70); Set(WhiteMid, 0xffffff, 150);
             Set(BarPlayerHi, 0xb4f5b7); Set(BarPlayerLo, 0x3fb846); Set(BarAllyHi, 0xa9d2ff); Set(BarAllyLo, 0x2f7fd6);
             Set(BarEnemyHi, 0xffa7a7); Set(BarEnemyLo, 0xd23434); Set(BarEnergy, 0xffa21c); Set(BarEnergyReady, 0xffe58a); // BAM orange, not MLBB white (Rickard 2026-10-30)
-            Set(BarShieldHi, 0xfff09a); Set(BarShieldLo, 0xe0a200); // gold shield shading, like the health fill
+            Set(BarShieldHi, 0xf7d64e); Set(BarShieldLo, 0xcc7600); // bright yellow top band and deep orange-gold bottom, as in his picture
         }
 
         static void Set(int i, int rgb, byte a = 255) =>

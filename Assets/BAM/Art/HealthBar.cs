@@ -12,7 +12,7 @@ namespace BAM.Art
     /// </summary>
     sealed class HealthBar
     {
-        const int QFrame = 0, QBack = 1, QTrail = 2, QHpLo = 3, QHpMid = 4, QHpHi = 5, QShLo = 6, QShMid = 7, QShHi = 8, QEnBack = 9, QEn = 10, QTicks = 11,
+        const int QFrame = 0, QBack = 1, QTrail = 2, QHpLo = 3, QHpMid = 4, QHpHi = 5, QShLo = 6, QShMid = 7, QShHi = 8, QShEdge = 9, QEnBack = 10, QEn = 11, QTicks = 12,
             MaxTicks = 24, Quads = QTicks + MaxTicks;
         const float Border = 0.02f, EnergyH = 0.045f, EnergyGap = 0.015f, TickStep = 100f;
 
@@ -133,6 +133,8 @@ namespace BAM.Art
             Quad(QShLo, shA, y0, shB, y1);                   // the shield is shaded like the health: gold with a light top edge (Rickard 2026-10-31)
             Quad(QShMid, shA, y0 + h * 0.45f, shB, y1);
             Quad(QShHi, shA, y1 - h * 0.18f, shB, y1);
+            if (shB > shA) Quad(QShEdge, shA - 0.007f, y0, shA + 0.007f, y1); // a dark line where the shield starts, so it reads as its own block
+            else Quad(QShEdge, 0f, 0f, 0f, 0f);
             if (en)
             {
                 Quad(QEnBack, x0, ey0, x1, ey1);
@@ -174,6 +176,7 @@ namespace BAM.Art
             Col(QShLo, Pal.BarShieldLo);
             Col(QShMid, Pal.BarShield);
             Col(QShHi, Pal.BarShieldHi);
+            Col(QShEdge, Pal.BarFrame);
             Col(QEnBack, Pal.BarBack);
             Col(QEn, !ready ? Pal.BarEnergy : readyLit ? Pal.BarEnergyReady : Pal.Gold);
             for (int i = 0; i < MaxTicks; i++) Col(QTicks + i, Pal.BarFrame);
