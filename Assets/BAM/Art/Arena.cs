@@ -111,8 +111,10 @@ namespace BAM.Art
                     Vector3 r = info.Rocks[i];
                     float rad = Mathf.Max(0.3f, r.z);
                     Vector3 p = new Vector3(r.x, 0f, r.y);
+                    // Rickard's mossy boulder picture stands here (RockPictures below) and carries its own shadow: the round code shadow
+                    // under it showed as a dark circle round the stone (Rickard 2026-10-31 "stenarna har mörka cirklar runt sig")
+                    if (rockPic != null) continue;
                     marks.Color(Pal.Shadow).Disc(new Vector3(p.x, 0.012f, p.z), rad * 1.15f, 20);
-                    if (rockPic != null) continue; // Rickard's mossy boulder picture stands here (RockPictures below)
                     solid.Color(Pal.Rock).Boulder(p + new Vector3(0f, rad * 0.45f, 0f), new Vector3(rad * 0.95f, rad * 0.75f, rad * 1.05f), 77 + i);
                     solid.Color(Pal.RockLight).Boulder(p + new Vector3(rad * 0.45f, rad * 0.25f, rad * 0.5f), new Vector3(rad * 0.4f, rad * 0.35f, rad * 0.4f), 91 + i);
                     solid.Color(Pal.StoneDark).Boulder(p + new Vector3(-rad * 0.5f, rad * 0.15f, -rad * 0.4f), new Vector3(rad * 0.3f, rad * 0.25f, rad * 0.3f), 103 + i);
