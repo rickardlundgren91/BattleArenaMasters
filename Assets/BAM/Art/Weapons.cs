@@ -850,12 +850,13 @@ namespace BAM.Art
                 // fist holds it (the anatomical grip), whatever the hold above aimed; the wrist has nothing to take, the bow's look
                 // then follows the clip's hand
                 bool full = AnimFix.GripLockFull && hasAnat[i] && !gone && t.localScale.y > 1e-4f;
-                if (full) t.rotation = hand[i].rotation * anatR[i];
+                if (full) { t.rotation = hand[i].rotation * anatR[i]; FistTwist[i] = 0f; } // nothing left for the wrist to take
                 if (W.WristMax > 0f && !gone && !full) Wrist(i, W, liveW);
                 LockGrip(i, full);
                 // Rickard's Offset was tuned on the 0.6 palm; with the calibrated socket the grip is already in the fist (Tyra's -0.03
-                // down would move it 3 % of her height off it again), so it is left out while the socket is on
-                if (W.Offset != Vector3.zero && !(AnimFix.PalmSocket && hasSock[i])) t.position += root.TransformDirection(W.Offset) * figH;
+                // down would move it 3 % of her height off it again), so it is left out while the grip is locked to the socket
+                bool inSocket = AnimFix.PalmSocket && hasSock[i] && (AnimFix.GripLock || full);
+                if (W.Offset != Vector3.zero && !inSocket) t.position += root.TransformDirection(W.Offset) * figH;
                 if (W.Fist > 0.001f && !gone) CloseHand(i, W.Fist * liveW);
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
