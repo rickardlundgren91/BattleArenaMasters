@@ -712,6 +712,7 @@ namespace BAM.UI
             readonly Image[] fills, edges;
             readonly Text[] labels;
             readonly bool[] dims;
+            readonly bool strong; // the mode sheet's rows: the chosen one filled mint with dark letters (Rickard 2026-10-31), Settings keep the old look
 
             // full: the segments fill the row (the mode sheet's BOT DIFFICULTY); else they sit on the right of a settings row
             public HubChoice(RectTransform row, string[] names, System.Action<int> chosen, bool full = false)
@@ -727,6 +728,7 @@ namespace BAM.UI
                     box.rectTransform.offsetMin = new Vector2(0, -5.5f * Cw);
                     box.rectTransform.offsetMax = new Vector2(-2.5f * Cw, 5.5f * Cw);
                 }
+                strong = full;
                 int n = names.Length;
                 fills = new Image[n]; edges = new Image[n]; labels = new Text[n]; dims = new bool[n];
                 for (int i = 0; i < n; i++)
@@ -758,9 +760,9 @@ namespace BAM.UI
                 for (int i = 0; i < fills.Length; i++)
                 {
                     bool on = i == sel;
-                    fills[i].color = on ? HubToggleOn : new Color(1, 1, 1, 0.04f);
-                    edges[i].enabled = on;
-                    labels[i].color = on ? Color.white : dims[i] ? new Color(UiKit.TextDim.r, UiKit.TextDim.g, UiKit.TextDim.b, UiKit.TextDim.a * 0.35f) : UiKit.TextDim;
+                    fills[i].color = on ? (strong ? UiKit.Primary : HubToggleOn) : new Color(1, 1, 1, 0.04f);
+                    edges[i].enabled = on && !strong;
+                    labels[i].color = on ? (strong ? (Color)new Color32(0x06, 0x28, 0x1d, 0xff) : Color.white) : dims[i] ? new Color(UiKit.TextDim.r, UiKit.TextDim.g, UiKit.TextDim.b, UiKit.TextDim.a * 0.35f) : UiKit.TextDim;
                 }
             }
 
