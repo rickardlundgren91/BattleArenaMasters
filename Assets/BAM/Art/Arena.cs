@@ -327,10 +327,8 @@ namespace BAM.Art
                 };
                 leafRamp.SetPixels32(new[]
                 {
-                    // the ground grass's olive (T_BAM_Ground_Grass), a shade darker so the bush still reads as a hiding place
-                    // (Rickard 2026-10-31: bushes in the grass's style; the old mint greens clashed with it)
-                    new Color32(0x1c, 0x2c, 0x0c, 255), new Color32(0x3a, 0x4e, 0x14, 255), new Color32(0x5a, 0x6c, 0x1c, 255), new Color32(0x9c, 0xa0, 0x3e, 255), // leaves
-                    new Color32(0x16, 0x26, 0x0e, 255), new Color32(0x28, 0x3e, 0x14, 255), new Color32(0x42, 0x5a, 0x1c, 255), new Color32(0x80, 0x90, 0x38, 255), // the grass's dark tufts
+                    new Color32(0x1c, 0x4a, 0x2c, 255), new Color32(0x2c, 0x7a, 0x44, 255), new Color32(0x4a, 0xa4, 0x5a, 255), new Color32(0x9b, 0xd8, 0x73, 255), // leaves
+                    new Color32(0x18, 0x44, 0x38, 255), new Color32(0x2a, 0x76, 0x60, 255), new Color32(0x48, 0xa0, 0x7c, 255), new Color32(0xa6, 0xe0, 0xa0, 255), // a cooler green
                 });
                 leafRamp.Apply(false, true);
                 leafMat = ArtMaterials.Instance(ArtMaterials.Lit);
