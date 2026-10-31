@@ -77,6 +77,25 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.2 (next build after 14, paste in "Release notes")
+
+```
+<en-US>
+Battle Arena Masters 0.3.2
+• New Home: MODES row, PRACTICE, party on Home
+• Bots play more like people; Normal is easier
+• New Ultra bots: win 30 vs Hard to unlock
+• Smoother online play for the joining player
+• Clearer online search, step by step
+• Gold shield on the health bar, fewer rings
+• Late game ramps up smoothly from 1:30
+• Foldables and wide screens fill the screen
+• New hit effects and sounds
+Old versions can't play online with this one.
+Bugs: Settings > Report a bug (Discord)
+</en-US>
+```
+
 ## Closed test release notes 0.3.1 (versions 13 and 14 in one, paste in "Release notes")
 
 ```
