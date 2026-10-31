@@ -247,6 +247,7 @@ namespace BAM.Art
             var uv = new System.Collections.Generic.List<Vector2>(16384);
             var t = new System.Collections.Generic.List<int>(24576);
             bool G(int x, int y) => x >= 0 && y >= 0 && x < w && y < h && info.Tile(x, y) == TGrass;
+            float away = info.Turned ? -1f : 1f; // +z leads away from the camera, -z when it looks from the other end (online, top team)
             GameObject holder = null;
             // PERF-01: 124 tiles drawn one by one cost about 120 draw calls. Each 3 x 2 block of tiles is also merged into one
             // still mesh that is drawn while no tile in it fades or leans; BushField swaps a block to its own tiles only then.
@@ -282,9 +283,10 @@ namespace BAM.Art
                             int bx = hx * 7 + b;
                             float a = a0 + b * 6.283f / blades + (Hash(bx, hy, 41) - 0.5f) * 0.6f;
                             // fanned round the root, but leaning away from the camera like the old leaves, and out at an open side
-                            var dir = (new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a) + 0.9f) + new Vector3(ex, 0f, ez) * (edgeW * 1.2f)).normalized;
+                            // (online on the top team the camera looks from the north, COORDS-01: away from it is -z there)
+                            var dir = (new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a) + 0.9f * away) + new Vector3(ex, 0f, ez) * (edgeW * 1.2f)).normalized;
                             float len = tall * (0.65f + Hash(bx, hy, 42) * 0.45f), wd = 0.075f + Hash(bx, hy, 43) * 0.03f, up = 0.55f + Hash(bx, hy, 44) * 0.35f;
-                            Blade(v, n, uv, t, foot + dir * 0.04f, dir, len, wd, up, row, Hash(bx, hy, 45) < 0.7f);
+                            Blade(v, n, uv, t, foot + dir * 0.04f, dir, len, wd, up, row, Hash(bx, hy, 45) < 0.7f, away);
                         }
                     }
                     if (v.Count == 0) continue;
@@ -375,7 +377,7 @@ namespace BAM.Art
         // one grass blade from its root p, rising and bending out along dir: four rings of two points, widest a third of the way up.
         // Painted in flat tone steps as the ground grass: dark root, then mid, then a light tip on most blades
         static void Blade(System.Collections.Generic.List<Vector3> v, System.Collections.Generic.List<Vector3> n, System.Collections.Generic.List<Vector2> uv,
-            System.Collections.Generic.List<int> t, Vector3 p, Vector3 dir, float len, float wd, float up, int row, bool light)
+            System.Collections.Generic.List<int> t, Vector3 p, Vector3 dir, float len, float wd, float up, int row, bool light, float away)
         {
             var side = Vector3.Cross(Vector3.up, dir).normalized;
             Vector3 ctrl = p + Vector3.up * (len * up) + dir * (len * 0.2f), end = p + Vector3.up * (len * up * 0.85f) + dir * (len * 0.65f);
@@ -386,7 +388,7 @@ namespace BAM.Art
                 float k = BladeT[i];
                 Vector3 c = Pt(k), tan = (Pt(Mathf.Min(1f, k + 0.05f)) - Pt(Mathf.Max(0f, k - 0.05f))).normalized;
                 Vector3 nr = Vector3.Cross(side, tan).normalized;
-                if (nr.z > 0f) nr = -nr;                    // the face toward the camera
+                if (nr.z * away > 0f) nr = -nr;             // the face toward the camera
                 nr = (nr + Vector3.up * 0.6f).normalized;   // and a little up, so the light reads soft
                 int cell = light ? BladeLight[i] : BladeDim[i];
                 var cuv = new Vector2((cell + 0.5f) / 4f, (row + 0.5f) / 2f);
