@@ -73,7 +73,7 @@ namespace BAM.Sim
         float Temperament()
         {
             if (float.IsNaN(bold)) { bold = Srand(-1, 1); if (TK(17) > 0) Skill = Srand(-1, 1) * TK(17); }
-            return SimMath.Clamp(bold + SimMath.Clamp((H.Kills - H.Deaths) * 0.1f, -0.5f, 0.5f), -1, 1);
+            return SimMath.Clamp(bold + Mood() + SimMath.Clamp((H.Kills - H.Deaths) * 0.1f, -0.5f, 0.5f), -1, 1);
         }
 
         /// <summary>After a respawn or a recall the bot starts over at its base: no old path, goal, kite or stuck spot.</summary>
@@ -81,7 +81,7 @@ namespace BAM.Sim
         {
             path.Clear(); hasGoal = false; gFollow = null; gHasF = false; kite = null;
             hasStuck = false; hasBlocked = false; t = 0;
-            if (died) { retreat = false; danger = false; focus = null; backWithLeader = false; }
+            if (died) { retreat = false; danger = false; focus = null; backWithLeader = false; HumanOnDeath(); }
         }
 
         void SetGoal(float x, float y, float stop = 0, Unit follow = null) { hasGoal = true; gX = x; gY = y; gStop = stop; gFollow = follow; gHasF = false; }
@@ -104,7 +104,7 @@ namespace BAM.Sim
                 {
                     spT = float.NaN;
                     bool dz = danger || retreat && ttk < 3;
-                    if (h.SpecialReady && (SpecialWanted(dz) || DragPlan(dz, out _, out _)) && !TeamSpecialHold(dz)) BotCast(dz);
+                    if (h.SpecialReady && (SpecialWanted(dz) && !SaveCc() || DragPlan(dz, out _, out _)) && !TeamSpecialHold(dz)) BotCast(dz);
                 }
             }
             if (h.Has(St.Casting) || !h.Alive) return;
@@ -182,7 +182,7 @@ namespace BAM.Sim
             Temperament();
             if (!(mistakeT > now))
             {
-                float mc = BotTables.Mistake[tierI]; mistakeT = now + Srand(6, 14); bool plat = tierI == 3;
+                float mc = BotTables.Mistake[tierI]; mistakeT = now + Srand(6, 14); bool plat = tierI >= 3;
                 misjudge = plat && Srnd() < mc;
                 overchase = !plat && safety && Srnd() < mc * (1 + bold * 0.5f);
                 lateRetreat = !plat && Srnd() < mc * (1 + bold * 0.5f) ? 0.06f : 0;
@@ -193,7 +193,7 @@ namespace BAM.Sim
             ttk = TtkAt(h);
             if (h.Kills != seenKills)
             {
-                seenKills = h.Kills;
+                seenKills = h.Kills; HumanOnKill();
                 if (!AnyFoeHeroSeenWithin(h, 7) && hpR > 0.3f && Srnd() < TK(18)) emoteT = now + Srand(0.6f, 1.2f); // a little dance after a kill
             }
             bool allyMinionsNear = false;
@@ -320,7 +320,7 @@ namespace BAM.Sim
             if (h.SpecialReady)
             {
                 bool dz = danger || retreat && ttk < 3;
-                if ((SpecialWanted(dz) || DragPlan(dz, out _, out _)) && !TeamSpecialHold(dz)) { if (float.IsNaN(spT)) spT = PickReact() * 0.5f * TK(11) * HumanReaction(); }
+                if ((SpecialWanted(dz) && !SaveCc() || DragPlan(dz, out _, out _)) && !TeamSpecialHold(dz)) { if (float.IsNaN(spT)) spT = PickReact() * 0.5f * TK(11) * HumanReaction(); }
                 else spT = float.NaN;
             }
         }

@@ -136,11 +136,11 @@ namespace BAM.Sim
                 float reach = (v3 && InvulT(h) > 1.5f ? 3 * TK3(33) : 0)
                     + (v3 && TK3(34) != 0 && CountSeenNear(e.Team, h.Team, e, e.X, e.Y, 8) == 0 && alliesNear > 0 ? 3 * TK3(34) : 0)
                     + behind + h.Range + Tier.Roaming + (canChase && low && !bait && !guard ? 3 * TK(10) : 0) + (assist ? (wary ? 2 : 5) : 0) + (engaged ? 4 : 0)
-                    + (safety && Outranges(h, e) ? 1.5f : 0) + bold * 0.8f + (low && overchase && !bait ? 2.5f : 0) + (hitMe ? 1 : 0) + (saving ? 2 : 0) - (guard ? 1.5f : 0)
+                    + (safety && Outranges(h, e) ? 1.5f : 0) + (bold + Mood()) * 0.8f + (low && (overchase || Greedy) && !bait ? 2.5f : 0) + (hitMe ? 1 : 0) + (saving ? 2 : 0) - (guard ? 1.5f : 0)
                     + numReach + TK(1) + (lf != 0 ? BotTables.TeamReach : 0);
                 if (d > reach) continue;
                 bool underTower = enemyTower != null && enemyTower.Alive && Dist(e, enemyTower) < enemyTower.UDef.Range + 0.5f;
-                if (underTower && (safety || HpR(h) < 0.5f) && tank < 60 && ttkE > Tier.TtkTowerDive * TK(13) && !(lf != 0 && HpR(h) > 0.5f)) continue;
+                if (underTower && (safety || HpR(h) < 0.5f) && tank < 60 && ttkE > Tier.TtkTowerDive * TK(13) && !(lf != 0 && HpR(h) > 0.5f) && !(GreedDive && low)) continue;
                 if (underTower && guard && tank < 25) continue;
                 if (v3 && TK3(23) > 0 && !hitMe && !saving && !low && !engaged && lf == 0)
                 {   // don't walk alone into a group; wait until a teammate is close enough to help
@@ -153,7 +153,7 @@ namespace BAM.Sim
                 {
                     float dd = d != 0 ? d : 1, spotX = e.X + (h.X - e.X) / dd * sk, spotY = e.Y + (h.Y - e.Y) / dd * sk;
                     float spent = 1 - 0.2f * Math.Max(SpentCert(h, e), misjudge ? 1 : 0);
-                    float ratio = 0.6f * (sd <= -3 ? 0.85f : sd <= -2 ? 0.92f : sd >= 2 ? 0.75f : 1) * (1 - bold * 0.2f) * spent * (misjudge ? 0.85f : 1) * (engaged ? 0.6f : 1)
+                    float ratio = 0.6f * (sd <= -3 ? 0.85f : sd <= -2 ? 0.92f : sd >= 2 ? 0.75f : 1) * (1 - (bold + Mood()) * 0.2f) * spent * (misjudge ? 0.85f : 1) * (engaged ? 0.6f : 1)
                         * (guard ? 1.25f : 1) * (wary ? 1.3f : 1) * numRatio * TK(2) * (v3 && TK3(35) != 0 ? 1 + TK3(35) * 0.1f * V3ReadyFoes(e) : 1)
                         * (v3 ? 1 + TK3(42) * (h.SpecialReady ? -0.15f : 0.15f) : 1);
                     if (TtkAt(h, spotX, spotY) < ttkE * ratio && !hitMe && !saving && !(assist && !wary) && !committed && lf == 0) continue;
@@ -167,12 +167,13 @@ namespace BAM.Sim
                 if (engaged) s += 3;
                 if (harass) s += 2;
                 s += SpentCert(h, e);
+                s += SmartScore(e, h); // own tower, wait out a kiter's special (BotHuman.cs)
                 if (hitMe) s += 1.5f;
                 for (int i = 0; i < M.Heroes.Count; i++) { var k = M.Heroes[i]; if (k.Team == h.Team && k != h && now - e.LastHitBy[i] < 2) { s += 1.5f; break; } }
                 if (e == focus) s += committed ? 3 : 1;
                 s += LeadScore(lead, lf); // join the human's fight
                 s += SignalBonus(e); // a teammate called ATTACK near e (BotSignal.cs)
-                for (int i = 0; i < allies.Count; i++) { var a = allies[i]; if (a.Bot != null && a.Bot.focus == e && Dist(a, h) < 8) s += TK(21) * (v3 ? TK3(3) : 1); } // focus the target a nearby teammate is on
+                for (int i = 0; i < allies.Count; i++) { var a = allies[i]; if (a.Bot != null && a.Bot.focus == e && Dist(a, h) < 8) s += TK(21) * (v3 ? TK3(3) : 1) * BotTables.FocusMul[tierI]; } // focus the target a nearby teammate is on
                 if (v3 && e.Hp + ShieldOf(e) < h.StatDmg() * 1.05f && d < h.Range + e.R + 1) s += 2 * TK3(8); // a one-hit kill in reach comes first
                 if (s > bs) { bs = s; best = e; urgent = low || saving || hitMe || lf == 2; }
             }

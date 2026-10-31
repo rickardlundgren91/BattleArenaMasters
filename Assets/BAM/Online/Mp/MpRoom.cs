@@ -522,7 +522,7 @@ namespace BAM.Online.Mp
                     Members.Clear();
                     for (int i = 0; i < n; i++)
                         Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
-                    bool q = r.U8() == 1; int ps = r.U8(); Diff = (Difficulty)Math.Min(r.U8(), (int)Difficulty.Hard);
+                    bool q = r.U8() == 1; int ps = r.U8(); Diff = (Difficulty)Math.Min(r.U8(), (int)Difficulty.Ultra);
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
                     Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
                     Changed?.Invoke();

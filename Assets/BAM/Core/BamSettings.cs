@@ -109,7 +109,29 @@ namespace BAM.Core
         public static BAM.Sim.Difficulty LastDifficulty
         {
             get { Load(); return (BAM.Sim.Difficulty)lastDifficulty; }
-            set { Load(); if (lastDifficulty == (int)value) return; lastDifficulty = (int)value; PlayerPrefs.SetInt(Key + "diff", lastDifficulty); Commit(); }
+            set { Load(); if (lastDifficulty == (int)value) return; lastDifficulty = (int)value; PlayerPrefs.SetInt(Key + "diff", lastDifficulty); PlayerPrefs.SetInt(Key + "diffrun", 0); Commit(); }
+        }
+
+        /// <summary>
+        /// The bot level follows the player (Rickard 2026-10-31 "om man inte vinner matcher ska man inte tvingas till hard matcher
+        /// och helst hållas nere på easy tills det börjar gå bra"): after an offline bot match at the picked level, 2 losses in a
+        /// row move the pick one level down, and a run of wins on Easy moves it up to Normal: 3 the first time, 2 more after every
+        /// step down (at most 7), so a new player does not bounce between Easy and Normal (real matches 30-31 Oct: Easy 82 %,
+        /// Normal 27 %). Hard and Ultra are only ever picked by hand. The player can always pick another level. Returns true
+        /// when the pick moved.
+        /// </summary>
+        public static bool AfterBotMatch(BAM.Sim.Difficulty played, bool won)
+        {
+            Load();
+            if ((int)played != lastDifficulty) return false;
+            int run = PlayerPrefs.GetInt(Key + "diffrun", 0), need = PlayerPrefs.GetInt(Key + "diffneed", 3);
+            run = won ? Mathf.Max(0, run) + 1 : Mathf.Min(0, run) - 1;
+            int to = lastDifficulty;
+            if (run <= -2 && lastDifficulty > 0) { to = lastDifficulty - 1; PlayerPrefs.SetInt(Key + "diffneed", Mathf.Min(7, need + 2)); }
+            else if (run >= need && lastDifficulty == (int)BAM.Sim.Difficulty.Easy) to = (int)BAM.Sim.Difficulty.Normal;
+            if (to != lastDifficulty) { LastDifficulty = (BAM.Sim.Difficulty)to; return true; }
+            PlayerPrefs.SetInt(Key + "diffrun", run); Commit();
+            return false;
         }
 
         static void Load()
@@ -126,7 +148,7 @@ namespace BAM.Core
             tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;
             tutorialCard = PlayerPrefs.GetInt(Key + "tutcard", 0) == 1;
             lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", 0), 0, BAM.Sim.HeroCatalog.Count - 1);
-            lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, 2);
+            lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, (int)BAM.Sim.Difficulty.Ultra);
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
         }
 

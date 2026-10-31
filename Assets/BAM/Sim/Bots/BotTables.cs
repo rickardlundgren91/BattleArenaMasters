@@ -11,19 +11,19 @@ namespace BAM.Sim
     /// </summary>
     static class BotTables
     {
-        // tier index: Bronze 0, Silver 1, Gold 2, Platinum 3 (BotTier.Name)
-        internal static int Index(BotTier t) => t.Name == "Platinum" ? 3 : t.Name == "Gold" ? 2 : t.Name == "Silver" ? 1 : 0;
+        // tier index: Bronze 0, Silver 1, Gold 2, Platinum 3, Ultra 4 (BotTier.Name)
+        internal static int Index(BotTier t) => t.Name == "Ultra" ? 4 : t.Name == "Platinum" ? 3 : t.Name == "Gold" ? 2 : t.Name == "Silver" ? 1 : 0;
 
-        internal static readonly float[] DodgeChance = { 0.25f, 0.45f, 0.6f, 0.75f };
+        internal static readonly float[] DodgeChance = { 0.15f, 0.45f, 0.6f, 0.75f, 0.8f };
         internal const float DodgeChanceMax = 0.8f;
-        internal static readonly float[] Mistake = { 0.3f, 0.15f, 0.06f, 0.02f };
-        internal static readonly float[] PanicSpecial = { 0.35f, 0.2f, 0, 0 };
-        internal static readonly float[] Suspicion = { 0.1f, 0.45f, 0.65f, 0.75f };
-        internal static readonly float[] Soak = { 0, 0.5f, 0.8f, 1 };
-        internal static readonly float[] DodgeReact = { 0.4f, 0.3f, 0.22f, 0.16f };
+        internal static readonly float[] Mistake = { 0.35f, 0.15f, 0.06f, 0.02f, 0 };
+        internal static readonly float[] PanicSpecial = { 0.35f, 0.2f, 0, 0, 0 };
+        internal static readonly float[] Suspicion = { 0.1f, 0.45f, 0.65f, 0.75f, 0.8f };
+        internal static readonly float[] Soak = { 0, 0.5f, 0.8f, 1, 1 };
+        internal static readonly float[] DodgeReact = { 0.4f, 0.3f, 0.22f, 0.16f, 0.14f };
         // human reflexes: a dodge never starts sooner than a person reacts (old HUMAN_REFLEX, on by default)
-        internal static readonly float[] DodgeReactMin = { 0.45f, 0.35f, 0.3f, 0.25f };
-        internal static readonly float[] DodgeStep = { 0.15f, 0.25f, 0.4f, 9 };
+        internal static readonly float[] DodgeReactMin = { 0.45f, 0.35f, 0.3f, 0.25f, 0.22f };
+        internal static readonly float[] DodgeStep = { 0.15f, 0.25f, 0.4f, 9, 9 };
 
         // V2 knobs (old TK_V2) and the V3 offsets added to some of them (TK3_OF -> TK3_DEF)
         static readonly float[] TkV2 = { 0, 0, 1.25f, 1, -0.2f, 1.5f, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0.8f, 1.25f, 1, 0.25f, 2.5f, 0, 1.5f, 0, 0, 1 };
@@ -59,5 +59,19 @@ namespace BAM.Sim
         internal const float NoticeGrace = 0.5f, LeadSeenT = 0.3f;
         // human-like movement (old SimHumanMove.cs): walking turns at half rate, dodges turn at 16 rad/s, brake over the last 0.35 tiles
         internal const float HmTurn = 0.5f, HmDodgeTurn = 16, HmBrake = 0.35f;
+
+        // human mistakes and bot smarts by level (BotHuman.cs, Rickard 2026-10-31); same for every bot of a tier on both teams
+        internal static readonly float[] TiltChance = { 0.7f, 0.5f, 0.3f, 0.1f, 0 }; // A: angry after a death
+        internal static readonly float[] TiltBold = { 0.6f, 0.45f, 0.3f, 0.15f, 0 };
+        internal static readonly float[] CarefulChance = { 0, 0.2f, 0.5f, 0.8f, 1 }; // G: careful after a death instead
+        internal const float CarefulBold = 0.3f, MoodT = 20;
+        internal static readonly float[] GreedChance = { 0.5f, 0.35f, 0.2f, 0.05f, 0 }; // chases too far right after a kill
+        internal const float GreedT = 4;
+        internal static readonly float[] Tunnel = { 1.2f, 0.6f, 0.4f, 0.15f, 0.1f }; // B: s later to notice a second enemy hero
+        internal static readonly float[] Fumble = { 0.35f, 0.2f, 0.12f, 0.05f, 0.02f }; // C: an aimed special without lead
+        internal static readonly float[] FocusMul = { 0.6f, 0.8f, 1.2f, 1.5f, 1.8f }; // H: weight of "a teammate is on it"
+        internal static readonly float[] OwnTowerFight = { 0, 0.5f, 1, 1.5f, 2 }; // I: a target in our tower's reach
+        internal static readonly float[] KiteWait = { 0, 0.5f, 1, 1.5f, 2 }; // J: an outranging hero with its special spent
+        internal const float SaveCcR = 7; // K: an enemy hero this close keeps the stun slam off the minions
     }
 }

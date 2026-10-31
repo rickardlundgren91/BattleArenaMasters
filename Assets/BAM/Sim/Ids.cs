@@ -80,7 +80,7 @@ namespace BAM.Sim
         Marked = 1 << 10,      // Tikta's Deathmark is on this hero
     }
 
-    public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2 }
+    public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2, Ultra = 3 } // Ultra: above Hard (Rickard 2026-10-31)
 
     /// <summary>The battle spell a hero takes into the match (old SimSpells.cs): one extra button beside the SPECIAL.</summary>
     public enum SpellId : byte { None = 0, Blink = 1, Recall = 2, Shield = 3, Haste = 4, Sprint = 5 }

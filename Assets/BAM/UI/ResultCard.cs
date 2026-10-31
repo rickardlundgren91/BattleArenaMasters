@@ -315,7 +315,7 @@ namespace BAM.UI
             resCardEdge.color = edge;
             int seconds = Mathf.Max(0, Mathf.FloorToInt(r.Seconds));
             string length = (seconds / 60) + ":" + (seconds % 60).ToString("00");
-            resSub.text = (r.Tutorial ? "Tutorial" : DifficultyNames[Mathf.Clamp((int)r.Difficulty, 0, 2)] + " bots") + " · " + length;
+            resSub.text = (r.Tutorial ? "Tutorial" : DifficultyNames[Mathf.Clamp((int)r.Difficulty, 0, DifficultyNames.Length - 1)] + " bots") + " · " + length;
 
             resTable.gameObject.SetActive(resTableMode);
             resSmall.gameObject.SetActive(!resTableMode);

@@ -22,9 +22,10 @@ namespace BAM.Online
         public const int XpWin = 100, XpLoss = 60, XpKill = 5, XpFightMax = 60, XpFirstWin = 50;
         // Rating by opponent (Rickard 2026-10-29, 20 Easy wins to Rift): a win gives Easy +15, Normal +35, Hard +75, real players
         // +150; a loss takes 0, 0, 25 and 50. Easy and Normal stop giving Rating at 300 and 700 (Rift, Vanguard). Never under 0.
+        // Ultra bots (2026-10-31): +100, a loss -30.
         public const string Players = "Players";
-        static readonly string[] RatingKinds = { "Easy", "Normal", "Hard", Players };
-        static readonly int[] RatingWin = { 15, 35, 75, 150 }, RatingLoss = { 0, 0, -25, -50 }, RatingCap = { 300, 700, 0, 0 };
+        static readonly string[] RatingKinds = { "Easy", "Normal", "Hard", "Ultra", Players };
+        static readonly int[] RatingWin = { 15, 35, 75, 100, 150 }, RatingLoss = { 0, 0, -25, -30, -50 }, RatingCap = { 300, 700, 0, 0, 0 };
 
         /// <summary>What a match changes the Rating by, the same way as ReportMatch.js ratingChange.</summary>
         public static int RatingChange(int rating, string kind, bool won)
@@ -147,6 +148,8 @@ namespace BAM.Online
                 seconds = (int)r.Seconds,
                 kills = r.Kills,
                 deaths = r.Deaths,
+                towerDeaths = r.TowerDeaths,
+                readyDeaths = r.ReadyDeaths,
                 hero = r.Hero.ToString(),
                 difficulty = r.Difficulty.ToString(),
                 vs = vs ?? "",
@@ -269,6 +272,7 @@ namespace BAM.Online
         public long at;            // unix seconds when it ended
         public bool won;
         public int seconds, kills, deaths;
+        public int towerDeaths, readyDeaths; // mistakes (2026-10-31): deaths in the enemy tower's reach, with the special ready
         public string hero, difficulty;
         public string vs;          // against players: "v" + the match's seed, the same on every phone in it; "" against bots
         public int team;           // with vs: this player's team (0 or 1)

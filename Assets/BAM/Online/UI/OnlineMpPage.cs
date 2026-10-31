@@ -82,12 +82,12 @@ namespace BAM.Online.UI
         }
 
         // the bots' level (Rickard 2026-10-30: which bots do you meet when playing together?): EASY / NORMAL / HARD
-        static readonly string[] DiffNames = { "EASY", "NORMAL", "HARD" };
+        static readonly string[] DiffNames = { "EASY", "NORMAL", "HARD", "ULTRA" };
         static void DiffButtons(float x, float y, float w, Difficulty d, Action<Difficulty> pick, bool draw)
         {
             if (draw) Text("Bots", x, y + 13, Treb(12, true), "#ffb43a");
-            float lx = 44, bw = (w - lx - 8) / 3;
-            for (int i = 0; i < 3; i++)
+            int n = DiffNames.Length; float lx = 44, bw = (w - lx - 4 * (n - 1)) / n;
+            for (int i = 0; i < n; i++)
             {
                 var k = (Difficulty)i;
                 if (draw) MpBtn("mpDiff" + i, DiffNames[i], x + lx + i * (bw + 4), y, bw, 26, d == k ? "#2fae5b" : "#39407a", () => pick(k));

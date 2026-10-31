@@ -22,6 +22,7 @@ namespace BAM.Core
         public bool Quit;       // the player left from the pause menu
         public float Seconds;
         public int Kills, Deaths;
+        public int TowerDeaths, ReadyDeaths; // mistakes: deaths in the enemy tower's reach, deaths with the special ready
         public int Level;       // the player's hero level at the end
         public HeroId Hero;
         public Difficulty Difficulty;

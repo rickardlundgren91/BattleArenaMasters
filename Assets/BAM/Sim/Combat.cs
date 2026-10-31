@@ -171,6 +171,9 @@ namespace BAM.Sim
             if (u.IsMinionLike) { u.DeadT = 0.6f; Emit(EventType.Death, killer, u); return; }
 
             // a hero
+            var etw = Towers[Teams.Other(u.Team)];
+            if (etw != null && etw.Alive && SimMath.Dist(u, etw) < etw.UDef.Range + u.R + 0.5f) u.TowerDeaths++;
+            if (u.SpecialReady) u.ReadyDeaths++;
             u.Deaths++; u.RespawnT = RespawnTime(u); u.DiedAt = Time;
             u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0; u.KnockKeg = null; u.KnockRoll = null; u.KnockFreeAt = -99;
             u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
@@ -508,6 +511,7 @@ namespace BAM.Sim
             var tier = h.Bot.Tier;
             float k = tier.AimLead * Rng.Range(0.8f, 1.15f) * (tier.V3 ? 0.7f : 1) * BotBrain.LeadSeen(this, h, t); // no lead on a walk it has not watched
             float n = tier.AimNoise * (1 - 0.25f * h.Bot.Skill) * (tier.V3 ? 1.2f : 1);
+            if (h.Bot.Fumble()) { k = 0; n *= 1.5f; } // a human miss: aimed where the target is (BotHuman.cs)
             float ft = FlightTime(f, a, b, SimMath.Dist(h, t));
             for (int i = 0; i < 2; i++) ft = FlightTime(f, a, b, SimMath.Hypot(t.X + t.MoVx * ft * k - h.X, t.Y + t.MoVy * ft * k - h.Y));
             ax = t.X + t.MoVx * ft * k + Rng.Range(-n, n) * 0.5f;

@@ -34,7 +34,7 @@ namespace BAM.Sim
             if (!M.IsVisibleTo(e, tm)) return false;
             if (e.Kind != UnitKind.Hero || e.IsClone || e.Team == tm || float.IsNaN(e.VisSince[tm])) return true;
             if (float.IsNaN(e.NoticeAt[tm])) e.NoticeAt[tm] = e.VisSince[tm] + BotTables.DodgeReactMin[tierI] * Srand(0.9f, 1.4f);
-            return Now >= e.NoticeAt[tm];
+            return Now >= e.NoticeAt[tm] + TunnelExtra(e); // tunnel vision while chasing another hero (BotHuman.cs)
         }
 
         /// <summary>0..1: how much of t's walk the bot h has watched (scales its aim lead in Match.LeadAim).</summary>

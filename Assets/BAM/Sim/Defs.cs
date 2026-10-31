@@ -118,14 +118,18 @@ namespace BAM.Sim
                 AimLead = lead, AimNoise = noise, V3 = name != "Bronze",
             };
 
-        public static readonly BotTier Bronze = T("Bronze", 0.35f, 0.4f, 0.5f, 0.7f, 0, 3, 3, false, new[] { 0.5f, 0.8f, 1.2f }, 1, 2, 0.2f, 0.7f);
+        public static readonly BotTier Bronze = T("Bronze", 0.35f, 0.4f, 0.5f, 0.7f, 0, 3, 3, false, new[] { 0.6f, 0.9f, 1.3f }, 1, 2, 0.2f, 0.9f); // Easy a bit easier (Rickard 2026-10-31): reactions 0.5/0.8/1.2 -> 0.6/0.9/1.3 s, aim noise 0.7 -> 0.9
         public static readonly BotTier Silver = T("Silver", 0.2f, 0.6f, 0.6f, 0.7f, 2, 3, 2, false, new[] { 0.5f, 0.7f, 1f }, 1, 4, 0.5f, 0.5f);
         public static readonly BotTier Gold = T("Gold", 0.4f, 0.6f, 0.6f, 0.7f, 2.5f, 3, 2, true, new[] { 0.4f, 0.6f, 0.9f }, 1, 5, 0.75f, 0.35f);
         public static readonly BotTier Platinum = T("Platinum", 0.5f, 0.6f, 0.69f, 0.8f, 3, 3, 2, true, new[] { 0.333f, 0.5f, 0.75f }, 1, 7, 0.9f, 0.25f);
 
+        // Ultra (Rickard 2026-10-31 "ett botläge som heter Ultra"): Platinum with faster reactions and sharper aim, and the
+        // smartest choices with no mistakes in BotTables; every bot in the match, both teams, plays it
+        public static readonly BotTier Ultra = T("Ultra", 0.5f, 0.6f, 0.69f, 0.8f, 3, 3, 2, true, new[] { 0.28f, 0.42f, 0.62f }, 1, 8, 1f, 0.18f);
+
         // Normal is Silver since 2026-10-31: with Gold, Easy -> Normal cost a mid player 25 points and Normal -> Hard only 5
         // (real matches 30-31 Oct: 82 % wins on Easy, 27 % on Normal, 57 % on Hard); Silver splits the gap (58/42/28 %).
-        public static BotTier Tier(Difficulty d) => d == Difficulty.Easy ? Bronze : d == Difficulty.Normal ? Silver : Platinum;
+        public static BotTier Tier(Difficulty d) => d == Difficulty.Easy ? Bronze : d == Difficulty.Normal ? Silver : d == Difficulty.Ultra ? Ultra : Platinum;
     }
 
     /// <summary>The match rules' fixed numbers (the old game's shipped values).</summary>

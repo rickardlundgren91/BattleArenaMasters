@@ -82,6 +82,8 @@ namespace BAM.Sim
         public Unit Owner;
         public float LifeT;
         public int Level = 1, Pips, Deaths, Kills, Assists, Streak;
+        /// <summary>Mistakes counted for the match report (M, 2026-10-31): deaths in the enemy tower's reach, deaths with the special ready.</summary>
+        public int TowerDeaths, ReadyDeaths;
         public float Charge;
         public float RespawnT, DiedAt = -99, SpawnX, SpawnY;
         /// <summary>The bot playing this hero (null for the player and for tutorial dummies).</summary>

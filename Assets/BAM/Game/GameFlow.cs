@@ -342,6 +342,8 @@ namespace BAM.Game
                 Seconds = Mathf.Max(0f, match.Time) + (match.Tut != null && !match.Tut.Island ? islandSeconds : 0f),
                 Kills = p.Kills,
                 Deaths = p.Deaths,
+                TowerDeaths = p.TowerDeaths,
+                ReadyDeaths = p.ReadyDeaths,
                 Level = p.Level,
                 Hero = p.Hero,
                 Difficulty = setup.Difficulty,
@@ -354,6 +356,7 @@ namespace BAM.Game
             resultShown = true;
             var r = Result(false);
             if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
+            if (!r.Tutorial && !setup.HeroTest && setup.Net == null) BamSettings.AfterBotMatch(r.Difficulty, r.Won); // the bot level follows the player
             SendEnd(false);
             hud.CancelTouches();
             BamAudio.StopMusic(); // the victory or defeat jingle first; Update brings the music back after it

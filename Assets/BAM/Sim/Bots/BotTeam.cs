@@ -187,7 +187,7 @@ namespace BAM.Sim
             FollowSpot(l, fwd, out float gx, out float gy); SetGoal(gx, gy);
         }
 
-        float HumanReaction() => HumanInMatch ? BotTables.HumanReact : 1;
+        float HumanReaction() => HumanInMatch && tierI < 4 ? BotTables.HumanReact : 1; // Ultra: no slow-down for a person, both teams (2026-10-31)
 
         /// <summary>With a person in the match: hold the ready special (up to 6 s) for a moment worth it.</summary>
         bool TeamSpecialHold(bool dz)
