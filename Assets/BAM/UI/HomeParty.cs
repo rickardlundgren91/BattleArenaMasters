@@ -229,12 +229,9 @@ namespace BAM.UI
             float w = 1.4f * Cw + 5.4f * Cw + 1.4f * Cw + playSub.preferredWidth + 5 * Cw;
             homeModeChip.sizeDelta = new Vector2(Mathf.Clamp(w, 40 * Cw, 78 * Cw), homeModeChip.sizeDelta.y);
             int xp = homeMode == Mode.Classic && OnlineHooks.FirstWinXp != null ? OnlineHooks.FirstWinXp() : 0;
-            homeFirstWin.gameObject.SetActive(xp > 0);
-            if (xp > 0)
-            {
-                homeFirstWinText.text = "FIRST WIN TODAY  +" + xp + " XP";
-                homeFirstWin.sizeDelta = new Vector2(homeFirstWinText.preferredWidth + 4 * Cw, homeFirstWin.sizeDelta.y);
-            }
+            homeFirstWinText.gameObject.SetActive(xp > 0);
+            if (xp > 0) homeFirstWinText.text = "FIRST WIN TODAY · +" + xp + " XP";
+            homePlayLabel.anchoredPosition = new Vector2(0, xp > 0 ? 0.08f * BrowH : 0); // PLAY moves up over the line, as with the old sub line
         }
 
         /// <summary>The party now: the editor's test party (BAM > Test Party) first, else the online room.</summary>

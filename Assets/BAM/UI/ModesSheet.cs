@@ -79,7 +79,7 @@ namespace BAM.UI
             var grad = UiKit.NewRect("Gradient", glass.rectTransform);
             UiKit.Stretch(grad);
             var gr = grad.gameObject.AddComponent<RawImage>();
-            gr.texture = HomeArt.Gradient(new Color(26 / 255f, 31 / 255f, 74 / 255f, 0.97f), new Color(10 / 255f, 13 / 255f, 38 / 255f, 0.98f));
+            gr.texture = HomeArt.Gradient(new Color(26 / 255f, 31 / 255f, 74 / 255f, 1f), new Color(10 / 255f, 13 / 255f, 38 / 255f, 1f)); // solid: at 0.97 Home's PLAY and the tab bar showed through
             gr.raycastTarget = false;
             var edge = Pic(glass.rectTransform, "Edge", HomeArt.RoundRing(0.4f / 6f), UiKit.Trim);
             UiKit.Stretch(edge.rectTransform);
@@ -136,7 +136,7 @@ namespace BAM.UI
             c.Rect = UiKit.NewRect(ModeTitle(m), modeSheet);
             // the warm glow behind the chosen card
             var glow = Pic(c.Rect, "Glow", HomeArt.ModeGlow, Color.white);
-            Mid(glow.rectTransform, 0.5f, 1, 0, -OptH / 2, 1080 * 1.2f, OptH * 1.4f);
+            Mid(glow.rectTransform, 0.5f, 1, 0, -OptH / 2, 1080 - 2 * SheetX, OptH * 1.4f); // inside the sheet: 1.2 x the width glowed out past the screen's sides
             c.Fill = Pic(c.Rect, "Fill", UiKit.Rounded, new Color(1, 1, 1, 0.04f));
             UiKit.Stretch(c.Fill.rectTransform);
             Radius(c.Fill, 3.4f * Cw);

@@ -23,8 +23,8 @@ namespace BAM.UI
         static RectTransform homeHero; // the letter badge, only if the 3D model could not be made
         static RawImage homePortraitImg;
         static Text homeName, homeTitle, playSub; // playSub: the mode chip's text over PLAY (SetPlaySub)
-        static RectTransform homeModeChip, homeFirstWin;
-        static Text homeFirstWinText;
+        static RectTransform homeModeChip, homePlayLabel;
+        static Text homeFirstWinText; // "FIRST WIN TODAY +50 XP" under PLAY, as the old sub line (SetPlaySub)
         static RectTransform homeModeIcon;
         static float homeModeIconSize;
         static int homeModeShown = -1;
@@ -153,7 +153,7 @@ namespace BAM.UI
             float ew = cw * 24;
             SetPart(homeEdgeL, -W / 2 + ew / 2, 0, ew, H);
             SetPart(homeEdgeR, W / 2 - ew / 2, 0, ew, H);
-            SetPart(homeMidFade, 0, cw * 20, W, cw * 50);
+            SetPart(homeMidFade, 0, 0, W, cw * 70); // from the very top: starting at cw(20) it drew a hard line across the sky (Rickard's screenshot 2026-10-31)
             SetPart(homeTopFade, 0, 0, W, cw * 52);
             // dark from the mode chip down (it sits cw(2..10) over the bottom row), fading out just under the hero's feet
             float fh = cw * 18, fb = Mathf.Min(dy + dh - cw * 24, (H - homeBrowY) - cw * 6 - fh);
@@ -383,23 +383,6 @@ namespace BAM.UI
                 modesPress = homeModeChip.gameObject.AddComponent<HomePress>();
 
                 BuildPlay(4 * Cw);
-                BuildFirstWin();
-            }
-
-            // "FIRST WIN TODAY +50 XP": a mint tag on PLAY's top-right corner while the day's first-win XP is still to win
-            // (online builds: OnlineHooks.FirstWinXp; offline there is no XP and no tag)
-            void BuildFirstWin()
-            {
-                float h = 4.6f * Cw;
-                homeFirstWin = UiKit.NewRect("FirstWin", low);
-                At(homeFirstWin, 1080 - 6 * Cw, BrowBottom + BrowH - 1.8f * Cw, 40 * Cw, h, 1, 0.5f);
-                var drop = Img(homeFirstWin, "Shadow", UiKit.Rounded, new Color32(0x1a, 0x8a, 0x66, 0xff));
-                Round(drop, h / 2);
-                UiKit.Stretch(drop.rectTransform, 0, 0.5f * Cw, 0, -0.5f * Cw);
-                Round(Img(homeFirstWin, "Fill", UiKit.Rounded, UiKit.Primary), h / 2);
-                homeFirstWinText = Lil(homeFirstWin, "", 2.5f, new Color32(0x06, 0x28, 0x1d, 0xff));
-                UiKit.Stretch(homeFirstWinText.rectTransform);
-                homeFirstWin.gameObject.SetActive(false);
             }
 
             // PlayButton: Rickard's orange button image in the rounded shape with a dark border, a warm pulsing glow, a shine
@@ -414,7 +397,7 @@ namespace BAM.UI
                 Round(shadow, r);
                 UiKit.Stretch(shadow.rectTransform, 0, Cw, 0, -Cw);
                 playGlow = Img(rt, "Glow", HomeArt.PlayGlow, Color.white);
-                Size(playGlow.rectTransform, 2 * 0.62f * w, 2 * 0.95f * h);
+                Size(playGlow.rectTransform, 1.08f * w, 2 * 0.95f * h); // PLAY is screen wide now: the old 1.24 w glowed out past the screen's sides
                 Round(Img(rt, "Edge", UiKit.Rounded, new Color32(0x0b, 0x13, 0x30, 0xff)), r);
                 var face = Img(rt, "Face", UiKit.Rounded, UiKit.Orange);
                 Round(face, r - b);
@@ -435,14 +418,21 @@ namespace BAM.UI
                 playDark.enabled = false;
 
                 float size = 7.6f * Cw;
-                var label = Lil(rt, "PLAY", 7.6f, Color.white);
+                // PLAY and its ›, in one box: in the middle, or a little up when the first-win line is under it (SetPlaySub)
+                homePlayLabel = Size(UiKit.NewRect("Label", rt), w, h);
+                var label = Lil(homePlayLabel, "PLAY", 7.6f, Color.white);
                 Edge(label, new Color32(0x8a, 0x32, 0x00, 0xff), size * 0.07f * 0.6f, new Color32(0xb0, 0x4a, 0x00, 0xff), size * 0.083f);
-                float lx = -2.5f * Cw, ly = 0; // the mode line is on the chip above, so PLAY sits in the middle
+                float lx = -2.5f * Cw, ly = 0;
                 Size(label.rectTransform, w, size * 1.4f).anchoredPosition = new Vector2(lx, ly);
                 // the › after the label: a dark stroke under a white one
                 float ax = lx + label.preferredWidth / 2 + 4.2f * Cw, kk = size * 0.22f;
-                Chevron(rt, ax, ly, kk, kk * 0.75f, new Color32(0x8a, 0x32, 0x00, 0xff));
-                Chevron(rt, ax, ly, kk, kk * 0.42f, Color.white);
+                Chevron(homePlayLabel, ax, ly, kk, kk * 0.75f, new Color32(0x8a, 0x32, 0x00, 0xff));
+                Chevron(homePlayLabel, ax, ly, kk, kk * 0.42f, Color.white);
+                // the old sub line's place and look (Lilita with a dark orange edge) for "FIRST WIN TODAY +50 XP"
+                homeFirstWinText = Lil(rt, "", 3.2f, Color.white);
+                Edge(homeFirstWinText, new Color32(0x6e, 0x26, 0x00, 0xff), 0.3f * Cw, new Color(60 / 255f, 15 / 255f, 0, 0.85f), 0.45f * Cw);
+                Size(homeFirstWinText.rectTransform, w, 5 * Cw).anchoredPosition = new Vector2(0, -0.28f * h);
+                homeFirstWinText.gameObject.SetActive(false);
 
                 var hit = rt.gameObject.AddComponent<Image>();
                 hit.color = Color.clear;
