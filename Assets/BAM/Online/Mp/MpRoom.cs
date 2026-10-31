@@ -633,6 +633,8 @@ namespace BAM.Online.Mp
         public long Display => Lockstep.Display;
         public int Adjust() => Lockstep.Adjust();
         public void Predict(long f, PlayerInput[] inputs) => Lockstep.Predict(f, inputs);
+        public void PredictedStep(long f, Match shown) => Lockstep.PredictedStep(f, shown);
+        public bool TakeMiss() => Lockstep.TakeMiss();
 
         public MatchConfig Config => cfg;
         public bool Turned => turned;
@@ -677,6 +679,8 @@ namespace BAM.Online.Mp
             Debug.Log("[BAM.Online] match over: version " + Application.version + ", seed " + cfg.Seed + ", seat " + cfg.LocalSeat + "/" + cfg.Seats.Length
                 + ", ticks " + Lockstep.Stepped + (Lockstep.Host ? "" : ", buffer " + Lockstep.Buffer) + ", waits " + stalls + " (longest " + Mathf.RoundToInt(longestStall * 1000) + " ms)"
                 + ", net test " + MpNetTest.Current.name
+                + (Lockstep.Predicting ? ", prediction: kept " + Lockstep.Held + ", copied again " + Lockstep.Missed + ", fingerprint off " + Lockstep.HashMissed
+                    + ", ahead " + Lockstep.Ahead : "")
                 + (Lockstep.Problem != null ? ", problem: " + Lockstep.Problem : "") + (quit ? ", left" : ""));
             MpRoom.MatchEnded(this, quit);
         }

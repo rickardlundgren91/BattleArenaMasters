@@ -69,10 +69,21 @@ namespace BAM.Online.Mp
         public bool Predicting;
         int soloMask;
         readonly Queue<PlayerInput> soloQ = new Queue<PlayerInput>(16);
+        // what the shown match was run with, by tick, and its fingerprints: when the host's frames turn out to be exactly that, the
+        // shown match already is what the confirmed one will be (same rules, same controls) and need not be copied and run again
+        const int GuessCap = 256;
+        readonly PlayerInput[] guess; readonly long[] guessAt = new long[GuessCap];
+        readonly long[] guessHashAt = new long[16]; readonly ulong[] guessHash = new ulong[16];
+        bool missed = true;
+        /// <summary>Guest, for the log: frames that kept the shown match, frames that made it be copied again, fingerprints that differed.</summary>
+        public int Held, Missed, HashMissed;
 
         public MpLockstep(bool host, int seats, int local)
         {
             Host = host; Seats = seats; Local = local;
+            guess = new PlayerInput[GuessCap * seats];
+            for (int i = 0; i < GuessCap; i++) guessAt[i] = -1;
+            for (int i = 0; i < guessHashAt.Length; i++) guessHashAt[i] = -1;
             ring = new PlayerInput[Cap * seats];
             latest = new PlayerInput[seats];
             specQ = new Queue<PlayerInput>[seats]; spellQ = new Queue<PlayerInput>[seats]; sigQ = new TeamSignal[seats];
@@ -269,10 +280,13 @@ namespace BAM.Online.Mp
             {
                 if (solo && stepped >= built)
                 {
-                    if (soloQ.Count == 0) return false;
+                    // predicting: this phone's controls are kept by tick, so the confirmed match takes them in step with the shown one
+                    // (a queue would hand tick `built` the controls given for the later tick g, the hero a few ticks late ever after)
+                    // (one tick behind them: the shown match has always run a tick first, so it is kept, not copied every frame)
+                    if (Predicting ? built >= g - 1 || g - built >= Cap : soloQ.Count == 0) return false;
                     int b0 = (int)(built % Cap) * Seats;
                     for (int s = 0; s < Seats; s++) ring[b0 + s] = PlayerInput.None;
-                    ring[b0 + Local] = soloQ.Dequeue();
+                    ring[b0 + Local] = Predicting ? mine[built % Cap] : soloQ.Dequeue();
                     masks[built % Cap] = (byte)soloMask; soloMask = 0;
                     built++;
                 }
@@ -290,9 +304,31 @@ namespace BAM.Online.Mp
             int idx = (int)(stepped % Cap), bb = idx * Seats, mask = masks[idx];
             if (mask != 0) for (int s = 0; s < Seats; s++) if ((mask & (1 << s)) != 0) m.SeatToBot(s);
             for (int s = 0; s < Seats && s < into.Length; s++) into[s] = ring[bb + s];
+            if (Predicting && !Host)
+            {
+                // the shown match ran this frame with exactly these controls (and no seat became a bot)? else it is copied again
+                int gi = (int)(stepped % GuessCap);
+                bool same = mask == 0 && guessAt[gi] == stepped;
+                for (int s = 0; same && s < Seats && s < into.Length; s++) same = SameInput(in into[s], in guess[gi * Seats + s]);
+                if (!same) missed = true;
+            }
             stepped++;
             return true;
         }
+
+        /// <summary>Guest: the shown match must be copied from the confirmed one again (a guess was wrong since the last copy). Clears it.</summary>
+        public bool TakeMiss()
+        {
+            bool m = missed; missed = false;
+            if (m) Missed++; else Held++;
+            return m;
+        }
+
+        static bool SameInput(in PlayerInput a, in PlayerInput b) =>
+            Bits(a.MoveX) == Bits(b.MoveX) && Bits(a.MoveY) == Bits(b.MoveY) && a.Special == b.Special && Bits(a.AimAngle) == Bits(b.AimAngle)
+            && Bits(a.AimK) == Bits(b.AimK) && a.Spell == b.Spell && Bits(a.SpellAngle) == Bits(b.SpellAngle) && Bits(a.SpellK) == Bits(b.SpellK)
+            && a.Signal == b.Signal;
+        static int Bits(float f) => BitConverter.SingleToInt32Bits(f);
 
         // ---------------------------------------------------------------- guest prediction
 
@@ -326,6 +362,26 @@ namespace BAM.Online.Mp
                 if (b >= 0) { i.MoveX = ring[b + s].MoveX; i.MoveY = ring[b + s].MoveY; }
                 into[s] = i;
             }
+            int gi = (int)(f % GuessCap);
+            guessAt[gi] = f;
+            for (int s = 0; s < Seats && s < into.Length; s++) guess[gi * Seats + s] = into[s];
+        }
+
+        /// <summary>Guest (tests): the controls the shown match last ran frame f with; false when not kept any more.</summary>
+        public bool Guess(long f, PlayerInput[] into)
+        {
+            int gi = (int)(f % GuessCap); if (guessAt[gi] != f) return false;
+            for (int s = 0; s < Seats && s < into.Length; s++) into[s] = guess[gi * Seats + s];
+            return true;
+        }
+
+        /// <summary>Guest: after the shown match stepped frame f: its fingerprint is kept to check against the confirmed one's (a safety
+        /// net: if a copy ever leaves something out, the shown match is copied again within half a second, not drifting on).</summary>
+        public void PredictedStep(long f, Match shown)
+        {
+            if (f % HashEvery != 0) return;
+            int i = (int)(f / HashEvery % guessHashAt.Length);
+            guessHashAt[i] = f; guessHash[i] = shown.Checksum();
         }
 
         /// <summary>After each step: the fingerprint every HashEvery frames (the host keeps it, a guest sends it).</summary>
@@ -334,6 +390,11 @@ namespace BAM.Online.Mp
             long f = stepped - 1;
             if (f % HashEvery != 0) return;
             ulong h = m.Checksum();
+            if (Predicting && !Host)
+            {
+                int i = (int)(f / HashEvery % guessHashAt.Length);
+                if (guessHashAt[i] == f && guessHash[i] != h && !missed) { missed = true; HashMissed++; Log?.Invoke("the shown match differed from the confirmed one at frame " + f); }
+            }
             if (Host) { int slot = (int)(f / HashEvery % hashFrame.Length); hashFrame[slot] = f; hashVal[slot] = h; return; }
             if (solo) return;
             Flush();

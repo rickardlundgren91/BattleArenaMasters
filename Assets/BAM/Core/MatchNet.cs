@@ -41,5 +41,11 @@ namespace BAM.Core
         int Adjust();
         /// <summary>The controls to run frame f of the shown match with (this phone's own, the others' last known).</summary>
         void Predict(long f, PlayerInput[] inputs);
+        /// <summary>After the shown match stepped frame f (its fingerprint, to check against the confirmed match's).</summary>
+        void PredictedStep(long f, Match shown);
+        /// <summary>After the confirmed match stepped: true when the shown match must be copied from it again, because a guess since
+        /// the last copy was wrong (the others' controls, a late own one, a seat turned into a bot) or a fingerprint differed. False:
+        /// the shown match already is the confirmed one run ahead with the right controls, and is kept as it is (no copy, no rerun).</summary>
+        bool TakeMiss();
     }
 }

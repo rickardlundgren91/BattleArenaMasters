@@ -52,6 +52,8 @@ namespace BAM.Game
         long pFrame, shownFrame;
         // at most this far ahead of the host (its frames stopped coming): the shown match waits instead of guessing on
         const int MaxAhead = 45;
+        readonly System.Diagnostics.Stopwatch predWatch = new System.Diagnostics.Stopwatch();
+        float predMaxMs; int predFrom; // (the first second left out: loading)
         // the guided match is two matches with one hero: the training island, then the first battle in the arena (Rickard 2026-10-26: one hero all through, Tyra)
         float islandSeconds;
         // the first start shows Home this long before the guided match takes over (its picture zooms in and fades, Hud.Dissolve)
@@ -186,7 +188,7 @@ namespace BAM.Game
             {
                 confirmed = Match.Create(cfg);
                 mirror = new BAM.Sim.SimMirror(confirmed, match);
-                mirror.Sync(); // before the views: they keep the shown match's objects
+                predMaxMs = 0; predFrom = Time.frameCount + 60; mirror.Sync(); // before the views: they keep the shown match's objects
                 pFrame = shownFrame = 0;
             }
             Screens.HideAll();
@@ -343,19 +345,27 @@ namespace BAM.Game
                 if (confirmed.State == MatchState.Over) break;
             }
             bool end = confirmed.State == MatchState.Over;
+            // copied again only when a guess was wrong: most frames the host's frames are just what the shown match already ran with
+            // (this phone's controls in time, the others holding their stick), and then the shown match is kept as it is
+            bool sync = moved && (net.TakeMiss() || end || pFrame < net.Confirmed);
+            predWatch.Restart();
             long was = pFrame; // the frame shown so far: where the corrections are measured
-            if (moved) { views.BeginCorrect(); mirror.Sync(); pFrame = net.Confirmed; }
+            if (sync) { views.BeginCorrect(); mirror.Sync(); pFrame = net.Confirmed; }
             long to = end ? pFrame : net.Display;
-            if (moved && pFrame == was) views.EndCorrect(); // (past what was shown: nothing to compare)
+            if (sync && pFrame == was) views.EndCorrect(); // (past what was shown: nothing to compare)
             while (pFrame < to)
             {
                 net.Predict(pFrame, netInputs);
                 match.Step(netInputs);
+                net.PredictedStep(pFrame, match);
                 pFrame++;
-                if (moved && pFrame == was) views.EndCorrect();
+                if (sync && pFrame == was) views.EndCorrect();
                 if (pFrame > shownFrame) { shownFrame = pFrame; ShownStep(); }
             }
-            if (moved) views.Rebind();
+            if (sync) views.Rebind();
+            float ms = (float)predWatch.Elapsed.TotalMilliseconds;
+            if (ms > predMaxMs && Time.frameCount > predFrom) predMaxMs = ms;
+            if (end) Debug.Log("[BAM.Online] prediction: longest frame of copying and rerunning " + Mathf.RoundToInt(predMaxMs) + " ms");
             BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f);
             net.Flush();
             if (end) { over = true; overAt = Time.unscaledTime; acc = 0f; }
