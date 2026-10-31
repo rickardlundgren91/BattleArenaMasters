@@ -14,7 +14,7 @@ namespace BAM.Art
     {
         const int QFrame = 0, QBack = 1, QTrail = 2, QHpLo = 3, QHpMid = 4, QHpHi = 5, QShLo = 6, QShMid = 7, QShHi = 8, QShEdge = 9, QEnBack = 10, QEn = 11, QTicks = 12,
             MaxTicks = 24, Quads = QTicks + MaxTicks;
-        const float Border = 0.02f, EnergyH = 0.045f, EnergyGap = 0.015f, TickStep = 100f;
+        const float Border = 0.035f, EnergyH = 0.045f, EnergyGap = 0.015f, TickStep = 100f;
 
         public readonly Transform T;
         readonly MeshRenderer r;

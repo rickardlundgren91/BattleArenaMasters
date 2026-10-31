@@ -33,6 +33,7 @@ namespace BAM.Online.UI
             OnlineHooks.LastGain = LastGain;
             OnlineHooks.HeroLockLevel = id => Progress.HeroOpen(id) ? 0 : Progress.HeroLevel(id);
             OnlineHooks.Level = () => Progress.Shown.level;
+            OnlineHooks.Matches = () => Progress.Shown.matches;
             OnlineHooks.FirstWinXp = () => Account.State == Account.Status.Ready || Account.State == Account.Status.NeedsName
                 || Account.State == Account.Status.Offline && Account.Enabled ? Progress.FirstWinXpLeft() : 0;
             OnlineHooks.Party = OnlineMenu.Party;

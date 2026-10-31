@@ -31,6 +31,8 @@ namespace BAM.UI
         public static Func<int> FirstWinXp;
         /// <summary>The account level now.</summary>
         public static Func<int> Level;
+        /// <summary>Matches counted on the account (the HUD hides its TAP/DRAG help after a few).</summary>
+        public static Func<int> Matches;
 
         /// <summary>The party on Home (Speltest MenuHome3.HubTeam3): null when this phone is not in a room with friends.</summary>
         public static Func<PartyView> Party;

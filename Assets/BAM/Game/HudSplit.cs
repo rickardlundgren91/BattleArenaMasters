@@ -21,6 +21,7 @@ namespace BAM.Game
         static readonly Color SplitGrey = new Color(70f / 255f, 74f / 255f, 92f / 255f, 0.45f),
             LevelCharging = new Color(1f, 180f / 255f, 50f / 255f, 0.3f), LevelReady = new Color(1f, 196f / 255f, 64f / 255f, 0.38f);
 
+        const int TapDragHideAfter = 10;
         Image specialFillRight, splitGrey, tapIcon, dragIcon;
         RectTransform[] splitLevel = new RectTransform[2];
         Image[] splitLevelImg = new Image[2];
@@ -71,6 +72,8 @@ namespace BAM.Game
             // which half is which
             for (int h = 0; h < 2; h++)
             {
+                // new players only: after TapDragHideAfter counted matches the labels are gone (Rickard 2026-10-31)
+                if (OnlineHooks.Matches != null && OnlineHooks.Matches() >= TapDragHideAfter) break;
                 var t = UiKit.Label(specialRoot, h == 0 ? "TAP" : "DRAG", Mathf.RoundToInt(R * 0.26f), TextAnchor.MiddleCenter,
                     new Color(1f, 1f, 1f, 0.8f));
                 UiKit.Place(t, 0.5f, 0.5f, (h == 0 ? -1f : 1f) * R * 0.45f, -R * 0.63f, R, R * 0.4f);
