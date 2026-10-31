@@ -34,7 +34,7 @@ namespace BAM.Sim
     /// A hero, Fenn's clone, a minion, Fenn's wolf or a tower. Coordinates are tiles: x to the right, y down the map (row 0 is the
     /// enemy's end). Everything is read by the game and the bots; only the rules (BAM.Sim) change it.
     /// </summary>
-    public sealed class Unit
+    public sealed partial class Unit
     {
         public const int MaxStatus = 24;
 

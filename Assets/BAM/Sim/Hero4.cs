@@ -22,7 +22,7 @@ namespace BAM.Sim
     }
 
     /// <summary>One keg blast's Wall Crash, shared by every hero it knocked: at most one stun per blast.</summary>
-    internal sealed class KegCrash { internal Unit By; internal bool Stunned; }
+    internal sealed partial class KegCrash { internal Unit By; internal bool Stunned; }
 
     public sealed partial class Match
     {

@@ -13,7 +13,7 @@ namespace BAM.Sim
     /// 8 break the enemy tower together with a new pair of minions; it falls to exactly TowerHits of Tyra's auto attacks.
     /// The towers never shoot. No failure. The match screen reads this.
     /// </summary>
-    public sealed class Tutorial
+    public sealed partial class Tutorial
     {
         public const int StepMove = 0, StepAuto = 1, StepSpecial = 2, StepThrow = 3, StepBlink = 4, StepFight = 5, StepHeal = 6, StepTower = 7;
         /// <summary>The opening: DESTROY THE ENEMY TOWER over Tyra as she lands (no look at the tower first since 2026-10-29).</summary>

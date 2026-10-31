@@ -106,7 +106,7 @@ namespace BAM.Sim
     /// The match's random numbers (SplitMix64). Our own generator, not System.Random, so a seed gives the same match in the
     /// headless runner (.NET 8) and on the phone (IL2CPP). Only the rules draw from it; pictures and sounds use their own.
     /// </summary>
-    public sealed class Rng
+    public sealed partial class Rng
     {
         ulong s;
         /// <summary>For Match.Checksum.</summary>

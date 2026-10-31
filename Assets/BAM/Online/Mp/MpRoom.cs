@@ -624,7 +624,15 @@ namespace BAM.Online.Mp
         {
             cfg = config; this.turned = turned;
             Lockstep = new MpLockstep(host, config.Seats.Length, config.LocalSeat) { Log = s => Debug.Log("[BAM.Online] lockstep: " + s) };
+            Lockstep.Predicting = !host && SimMirror.Available;
+            if (!host && !SimMirror.Available) Debug.LogWarning("[BAM.Online] SimCopy.g.cs is out of date: no prediction, the guest plays with the delay (BAM > Online > Regenerate SimCopy)");
         }
+
+        public bool Predicts => Lockstep.Predicting;
+        public long Confirmed => Lockstep.Stepped;
+        public long Display => Lockstep.Display;
+        public int Adjust() => Lockstep.Adjust();
+        public void Predict(long f, PlayerInput[] inputs) => Lockstep.Predict(f, inputs);
 
         public MatchConfig Config => cfg;
         public bool Turned => turned;

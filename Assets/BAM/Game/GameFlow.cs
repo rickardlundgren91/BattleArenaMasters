@@ -44,6 +44,14 @@ namespace BAM.Game
         string netStatus;
         // a guest that fell behind steps up to this many extra ticks a frame to catch up
         const int NetCatchUp = 4, NetFarBehind = 12;
+        // guest prediction (2026-10-31, Rickard: "som gäst var det långsamt ... som värd är det jättebra respons"): the confirmed match
+        // steps with the host's frames as before; what is shown (match) is a copy of it run ahead with this phone's own controls at
+        // once (SimMirror), copied anew whenever frames come. Events show once, the first time a tick is run.
+        Match confirmed;
+        BAM.Sim.SimMirror mirror;
+        long pFrame, shownFrame;
+        // at most this far ahead of the host (its frames stopped coming): the shown match waits instead of guessing on
+        const int MaxAhead = 45;
         // the guided match is two matches with one hero: the training island, then the first battle in the arena (Rickard 2026-10-26: one hero all through, Tyra)
         float islandSeconds;
         // the first start shows Home this long before the guided match takes over (its picture zooms in and fades, Hud.Dissolve)
@@ -173,6 +181,14 @@ namespace BAM.Game
             if (net != null) { seed = cfg.Seed; netInputs = new PlayerInput[Match.MaxSeats]; netStatus = null; }
             Coords.Turned = net != null && net.Turned;
             match = Match.Create(cfg);
+            confirmed = null; mirror = null;
+            if (net != null && net.Predicts)
+            {
+                confirmed = Match.Create(cfg);
+                mirror = new BAM.Sim.SimMirror(confirmed, match);
+                mirror.Sync(); // before the views: they keep the shown match's objects
+                pFrame = shownFrame = 0;
+            }
             Screens.HideAll();
             views = new MatchViews(match);
             if (cam == null) cam = new MatchCamera(Camera);
@@ -206,7 +222,7 @@ namespace BAM.Game
             views = null;
             BAM.Art.ArtKit.ClearEffects(); // every effect of the match goes (Bonk's too), and the art pause is lifted
             cam.End();
-            match = null;
+            match = null; confirmed = null; mirror = null;
             BamAudio.StopAll();
             Screens.HideHint();
         }
@@ -230,7 +246,7 @@ namespace BAM.Game
             BAM.Art.ArtKit.SetPaused(frozen); // effects, zones and shots wait with the match (no-op when unchanged)
             // the bodies and effects slow with the hit-stop's ticks below, so a swing never lands before its shot (offline only)
             BAM.Art.ArtKit.SetSlow(net == null && !frozen && !over && juice.Stopping ? 0.1f : 1f);
-            if (net != null && !over) NetTicks(dt);
+            if (net != null && !over) { if (mirror != null) NetTicksPredicted(dt); else NetTicks(dt); }
             else if (!frozen && !over)
             {
                 acc += juice.Stopping ? dt * 0.1f : dt; // the old hit-stop: ticks come slower for a moment
@@ -256,7 +272,7 @@ namespace BAM.Game
                 }
                 if (acc >= Rules.Tick) acc = 0f;
             }
-            float alpha = frozen || over ? 1f : Mathf.Clamp01((net != null ? netDraw : acc) / Rules.Tick);
+            float alpha = frozen || over ? 1f : Mathf.Clamp01((net != null && mirror == null ? netDraw : acc) / Rules.Tick);
             BAM.Art.ArtKit.SetSimClock(match.Ticks, alpha); // the swings' clock (Animation Foundation): blows land on their shots' frame
             views.Frame(alpha, dt, frozen);
             cam.Frame(alpha, dt, over);
@@ -301,6 +317,64 @@ namespace BAM.Game
                 netStatus = st;
                 if (st != null) Screens.ShowHint(st); else Screens.HideHint();
             }
+        }
+
+        // A guest with prediction: this phone's controls go out tagged with the tick they are for, and the shown match runs to that
+        // tick at once with them. The confirmed match steps with every frame the host sent; when any came, the shown match is copied
+        // from it again and run ahead anew (the guesses about the others corrected).
+        void NetTicksPredicted(float dt)
+        {
+            acc += dt;
+            int n = 0;
+            while (acc >= Rules.Tick && n < MaxTicksPerFrame) { acc -= Rules.Tick; n++; }
+            if (acc >= Rules.Tick) acc = 0f;
+            n = Mathf.Max(0, n + net.Adjust()); // keep this phone's controls arriving just before their frame at the host
+            if (net.Display + n < net.Confirmed) n = (int)(net.Confirmed - net.Display); // never behind what is confirmed
+            long room = MaxAhead - (net.Display - net.Confirmed);
+            if (n > room) n = (int)Mathf.Max(0, room);
+            for (int i = 0; i < n; i++) { PlayerInput input = paused ? PlayerInput.None : hud.TakeInput(); net.Submit(in input); }
+
+            bool moved = false;
+            while (net.Next(confirmed, netInputs))
+            {
+                confirmed.Step(netInputs);
+                net.AfterStep(confirmed);
+                moved = true;
+                if (confirmed.State == MatchState.Over) break;
+            }
+            bool end = confirmed.State == MatchState.Over;
+            long was = pFrame; // the frame shown so far: where the corrections are measured
+            if (moved) { views.BeginCorrect(); mirror.Sync(); pFrame = net.Confirmed; }
+            long to = end ? pFrame : net.Display;
+            if (moved && pFrame == was) views.EndCorrect(); // (past what was shown: nothing to compare)
+            while (pFrame < to)
+            {
+                net.Predict(pFrame, netInputs);
+                match.Step(netInputs);
+                pFrame++;
+                if (moved && pFrame == was) views.EndCorrect();
+                if (pFrame > shownFrame) { shownFrame = pFrame; ShownStep(); }
+            }
+            if (moved) views.Rebind();
+            BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f);
+            net.Flush();
+            if (end) { over = true; overAt = Time.unscaledTime; acc = 0f; }
+            string st = net.Status;
+            if (st != netStatus)
+            {
+                netStatus = st;
+                if (st != null) Screens.ShowHint(st); else Screens.HideHint();
+            }
+        }
+
+        // a tick of the shown match run for the first time: its events go to the views, sounds and the result card's counts
+        void ShownStep()
+        {
+            BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f);
+            Screens.CountEvents(match);
+            views.AfterStep();
+            juice.AfterStep();
+            hud.AfterStep();
         }
 
         // one online tick; true when the match ended with it

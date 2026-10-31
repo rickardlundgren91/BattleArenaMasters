@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace BAM.Sim
 {
     /// <summary>A walking path on the tile grid: tile centres, the last point being the goal itself. One per unit, reused.</summary>
-    public sealed class PathBuf
+    public sealed partial class PathBuf
     {
         public const int Cap = 160;
         public readonly float[] X = new float[Cap], Y = new float[Cap];
@@ -17,7 +17,7 @@ namespace BAM.Sim
     /// The map BAM_OriginalArena_v1_2 (the old game's arena): 15 x 35 tiles, mirrored around the middle row. Tile (tx, ty)
     /// has ty counted from the top row (the enemy's side). Team 0 lives at the bottom (large y), team 1 at the top.
     /// </summary>
-    public sealed class Arena
+    public sealed partial class Arena
     {
         /// <summary>The BAM arena's size; another map (the guided match's island) may have its own.</summary>
         public const int ArenaW = 15, ArenaH = 35;

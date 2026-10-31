@@ -27,5 +27,19 @@ namespace BAM.Core
         string Status { get; }
         /// <summary>The match ended (quit: this player left it before the end).</summary>
         void MatchEnded(bool quit);
+
+        // ---- guest prediction (2026-10-31, Rickard: as a guest the hero answered late): the game steps the confirmed match with
+        // Next as before (fingerprints, the end), and shows a copy of it (SimMirror) run ahead to Display with Predict's controls
+
+        /// <summary>This phone shows a predicted match (a guest, with a usable SimMirror). False: Next's match is the one shown.</summary>
+        bool Predicts { get; }
+        /// <summary>Frames the confirmed match has stepped.</summary>
+        long Confirmed { get; }
+        /// <summary>The tick this phone's next controls are for: the shown match is run up to here.</summary>
+        long Display { get; }
+        /// <summary>Ticks to run more (+) or fewer (-) this frame, so this phone's controls reach the host just in time.</summary>
+        int Adjust();
+        /// <summary>The controls to run frame f of the shown match with (this phone's own, the others' last known).</summary>
+        void Predict(long f, PlayerInput[] inputs);
     }
 }

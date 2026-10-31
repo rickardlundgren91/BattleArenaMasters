@@ -56,6 +56,7 @@ namespace BAM.Game
             public float StoredFx;         // Oaken: when his Stored Impact glow was last puffed (OAKEN-02)
             public int Honey = HoneyOff;   // Moa's shield rings shown: lit cells per ring (HoneyKey)
             public Quaternion Rot;
+            public float FixX, FixY;       // online guest: a correction of the guess, drawn away over ~0.1 s instead of a jump
             public bool Squared;           // the view was told it faces a target or an aim, not its path (AnimFix.LegsFollow)
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
@@ -193,6 +194,50 @@ namespace BAM.Game
         }
 
         // ---------------------------------------------------------------- after every Step
+
+        /// <summary>
+        /// Online guest with prediction: the shown match was copied from the confirmed one again and run ahead anew, so units and
+        /// shots made in the guessed part are new objects with the same serials. Points the views at them (no events, nothing ends).
+        /// </summary>
+        // the units' spots before the shown match was copied again (BeginCorrect), by serial, to see how far each one moved
+        readonly Dictionary<int, Vector2> before = new Dictionary<int, Vector2>(96);
+
+        /// <summary>Online guest: remembers where every unit is now, before the shown match is copied anew and run back to this frame.</summary>
+        public void BeginCorrect()
+        {
+            before.Clear();
+            var us = m.Units;
+            for (int i = 0; i < us.Count; i++) before[us[i].Serial] = new Vector2(us[i].X, us[i].Y);
+        }
+
+        /// <summary>Online guest: the shown match is back at the frame of BeginCorrect. A unit that is now somewhere else was guessed
+        /// wrong (another player turned): it is drawn from where it was and slides to its spot, unless it is far (a blink, a respawn).</summary>
+        public void EndCorrect()
+        {
+            var us = m.Units;
+            for (int i = 0; i < us.Count; i++)
+            {
+                var u = us[i];
+                if (!before.TryGetValue(u.Serial, out Vector2 b) || !unitBySerial.TryGetValue(u.Serial, out UnitRec r)) continue;
+                float dx = b.x - u.X, dy = b.y - u.Y;
+                if (dx * dx + dy * dy > 4f) continue;
+                r.FixX += dx; r.FixY += dy;
+            }
+            before.Clear();
+        }
+
+        public void Rebind()
+        {
+            var us = m.Units;
+            for (int i = 0; i < us.Count; i++) if (unitBySerial.TryGetValue(us[i].Serial, out UnitRec r)) r.U = us[i];
+            var ps = m.Projs;
+            for (int i = 0; i < ps.Count; i++)
+            {
+                var p = ps[i];
+                if (p.Done || !p.IsShot) continue;
+                if (shotBySerial.TryGetValue(p.Serial, out ShotRec s) && s.P != null) s.P = p;
+            }
+        }
 
         public void AfterStep()
         {
@@ -999,6 +1044,17 @@ namespace BAM.Game
             // a respawn or a long pull jumps; drawing the jump between ticks would slide the hero across the map
             bool jump = (u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY) > 4f;
             Vector3 pos = jump ? Coords.Of(u) : Coords.Lerp(u.PX, u.PY, u.X, u.Y, alpha);
+            if (r.FixX != 0f || r.FixY != 0f)
+            {
+                if (jump) { r.FixX = r.FixY = 0f; }
+                else
+                {
+                    pos += new Vector3(r.FixX, 0f, -r.FixY);
+                    float k = Mathf.Exp(-dt * 14f);
+                    r.FixX *= k; r.FixY *= k;
+                    if (r.FixX * r.FixX + r.FixY * r.FixY < 1e-5f) r.FixX = r.FixY = 0f;
+                }
+            }
             bool hero = u.Kind == UnitKind.Hero, aim = u.AimT > m.Time;
             // AnimFix.SquaredFacing (Speltest CombatFeel.Squared): in a fight a hero keeps facing its target between swings, its legs
             // turned to the travel (BodyView), instead of the rules' snap to it for each windup and back to the path after; an aimed

@@ -52,8 +52,21 @@ namespace BAM.Online.Mp
         readonly long[] hashFrame = new long[128];
         readonly ulong[] hashVal = new ulong[128];
 
+        // host: a guest's controls by the tick they are for (guest prediction): used at exactly that frame when they came in time
+        const int FutCap = 128;
+        readonly PlayerInput[] fut; readonly long[] futT, recvMax;
+
         // guest
         bool solo, waiting = true;
+        // guest prediction (2026-10-31): the tick this phone's next controls are for (it runs ahead of the host by about the trip
+        // there), its own controls by tick, and the host's word on how early they arrive (frames' lead, ticks)
+        long g;
+        readonly PlayerInput[] mine = new PlayerInput[Cap];
+        const int NoLead = 127, LeadMin = 1, LeadTarget = 3, LeadMax = 7, AdjustEvery = 20;
+        int lead = NoLead, leadSeen, leadUsed, adjWait;
+        /// <summary>Guest: the game shows a predicted match ahead of the frames (SimMirror), so frames are taken as soon as they come
+        /// (no jitter buffer) and the controls carry the tick they are for.</summary>
+        public bool Predicting;
         int soloMask;
         readonly Queue<PlayerInput> soloQ = new Queue<PlayerInput>(16);
 
@@ -66,6 +79,9 @@ namespace BAM.Online.Mp
             gone = new bool[seats];
             for (int s = 0; s < seats; s++) { latest[s] = PlayerInput.None; specQ[s] = new Queue<PlayerInput>(MaxPresses); spellQ[s] = new Queue<PlayerInput>(MaxPresses); }
             for (int i = 0; i < hashFrame.Length; i++) hashFrame[i] = -1;
+            fut = new PlayerInput[FutCap * seats]; futT = new long[FutCap * seats]; recvMax = new long[seats];
+            for (int i = 0; i < futT.Length; i++) futT[i] = -1;
+            for (int s = 0; s < seats; s++) recvMax[s] = -1;
         }
 
         /// <summary>Frames known and not yet stepped.</summary>
@@ -89,10 +105,12 @@ namespace BAM.Online.Mp
                 Build(MpInput.RoundTrip(in own, scratch));
                 return;
             }
-            if (solo) { if (soloQ.Count < 32) soloQ.Enqueue(MpInput.RoundTrip(in own, scratch)); return; }
-            if (outCount == 0) { outMsg.Begin(MpMsg.In); outMsg.U8(0); }
+            var q = MpInput.RoundTrip(in own, scratch);
+            mine[g % Cap] = q;
+            if (solo) { if (soloQ.Count < 32) soloQ.Enqueue(q); g++; return; }
+            if (outCount == 0) { outMsg.Begin(MpMsg.In); outMsg.U8(0); outMsg.I32((int)g); }
             MpInput.Write(outMsg, in own);
-            outCount++;
+            outCount++; g++;
             if (outCount >= 60) Flush(); // never more than a second in one message
         }
 
@@ -125,16 +143,31 @@ namespace BAM.Online.Mp
                 var i = PlayerInput.None;
                 if (!gone[s])
                 {
+                    // the controls the guest gave for exactly this tick, when they came in time (what its prediction showed)
+                    int j = s * FutCap + (int)(f % FutCap);
+                    if (futT[j] == f)
+                    {
+                        var x = fut[j]; futT[j] = -1; latest[s] = x;
+                        if (x.Special) { i.Special = true; i.AimAngle = x.AimAngle; i.AimK = x.AimK; }
+                        if (x.Spell) { i.Spell = true; i.SpellAngle = x.SpellAngle; i.SpellK = x.SpellK; }
+                        i.Signal = x.Signal;
+                    }
                     i.MoveX = latest[s].MoveX; i.MoveY = latest[s].MoveY;
-                    if (specQ[s].Count > 0) { var p = specQ[s].Dequeue(); i.Special = true; i.AimAngle = p.AimAngle; i.AimK = p.AimK; }
-                    if (spellQ[s].Count > 0) { var p = spellQ[s].Dequeue(); i.Spell = true; i.SpellAngle = p.SpellAngle; i.SpellK = p.SpellK; }
-                    i.Signal = sigQ[s]; sigQ[s] = TeamSignal.None;
+                    // presses that came too late for their tick: at the next frame
+                    if (!i.Special && specQ[s].Count > 0) { var p = specQ[s].Dequeue(); i.Special = true; i.AimAngle = p.AimAngle; i.AimK = p.AimK; }
+                    if (!i.Spell && spellQ[s].Count > 0) { var p = spellQ[s].Dequeue(); i.Spell = true; i.SpellAngle = p.SpellAngle; i.SpellK = p.SpellK; }
+                    if (i.Signal == TeamSignal.None) { i.Signal = sigQ[s]; sigQ[s] = TeamSignal.None; }
                 }
                 ring[b + s] = i;
             }
             masks[f % Cap] = (byte)pendingMask; pendingMask = 0;
             built++;
-            if (outCount == 0) { outMsg.Begin(MpMsg.Frames); outMsg.I32((int)f); outMsg.U8(0); outFirst = f; }
+            if (outCount == 0)
+            {
+                outMsg.Begin(MpMsg.Frames); outMsg.I32((int)f); outMsg.U8(0); outFirst = f;
+                // each seat's lead: how many ticks ahead of this frame its controls have come (the guest keeps it a little above 0)
+                for (int s = 0; s < Seats; s++) outMsg.U8(s == Local || recvMax[s] < 0 ? NoLead : (byte)(sbyte)Math.Max(-126, Math.Min(126, recvMax[s] - f)));
+            }
             outMsg.U8(masks[f % Cap]);
             for (int s = 0; s < Seats; s++) MpInput.Write(outMsg, in ring[b + s]);
             outCount++;
@@ -148,6 +181,7 @@ namespace BAM.Online.Mp
             if (from < 0 || from >= built || built - from >= Cap - 1) return -1;
             long to = Math.Min(built, from + 60);
             w.Begin(MpMsg.Frames); w.I32((int)from); w.U8((int)(to - from));
+            for (int s = 0; s < Seats; s++) w.U8(NoLead);
             for (long f = from; f < to; f++)
             {
                 w.U8(masks[f % Cap]);
@@ -161,10 +195,13 @@ namespace BAM.Online.Mp
         public void OnIn(int seat, ref MpReader r)
         {
             if (!Host || seat < 0 || seat >= Seats || gone[seat]) return;
-            int n = r.U8();
+            int n = r.U8(); long first = (uint)r.I32();
             for (int k = 0; k < n; k++)
             {
-                var i = MpInput.Read(ref r);
+                var i = MpInput.Read(ref r); long t = first + k;
+                if (t > recvMax[seat]) recvMax[seat] = t;
+                // in time: kept for its own frame
+                if (t >= built && t < built + FutCap) { int j = seat * FutCap + (int)(t % FutCap); fut[j] = i; futT[j] = t; continue; }
                 latest[seat] = i;
                 if (i.Special && specQ[seat].Count < MaxPresses) specQ[seat].Enqueue(i);
                 if (i.Spell && spellQ[seat].Count < MaxPresses) spellQ[seat].Enqueue(i);
@@ -199,6 +236,7 @@ namespace BAM.Online.Mp
         {
             if (Host || solo) return;
             long first = (uint)r.I32(); int n = r.U8();
+            for (int s = 0; s < Seats; s++) { int l = r.U8(); if (s == Local && l != NoLead) { lead = (sbyte)l; leadSeen++; } }
             for (int k = 0; k < n; k++)
             {
                 long f = first + k;
@@ -238,7 +276,7 @@ namespace BAM.Online.Mp
                     masks[built % Cap] = (byte)soloMask; soloMask = 0;
                     built++;
                 }
-                else if (!solo)
+                else if (!solo && !Predicting)
                 {
                     long have = built - stepped;
                     if (waiting) { if (have < buffer) return false; waiting = false; calm = 0; spare = int.MaxValue; }
@@ -254,6 +292,40 @@ namespace BAM.Online.Mp
             for (int s = 0; s < Seats && s < into.Length; s++) into[s] = ring[bb + s];
             stepped++;
             return true;
+        }
+
+        // ---------------------------------------------------------------- guest prediction
+
+        /// <summary>Guest: the tick this phone's next controls are for. The predicted match is shown up to here.</summary>
+        public long Display => g;
+        /// <summary>Guest: ticks the shown match is ahead of the confirmed one.</summary>
+        public long Ahead => g - stepped;
+
+        /// <summary>Guest: ticks to run more (+) or fewer (-) this frame, so this phone's controls reach the host a little before their
+        /// frame. Changes at most once in AdjustEvery frames and only after a new word from the host.</summary>
+        public int Adjust()
+        {
+            if (Host || solo || !Predicting) return 0;
+            if (adjWait > 0) { adjWait--; return 0; }
+            if (leadSeen == leadUsed || lead == NoLead) return 0;
+            leadUsed = leadSeen;
+            if (lead < LeadMin) { adjWait = AdjustEvery; return Math.Min(6, LeadTarget - lead); }
+            if (lead > LeadMax) { adjWait = AdjustEvery; return -1; }
+            return 0;
+        }
+
+        /// <summary>Guest: the controls to predict frame f with: this phone's own as given, everyone else's last known movement
+        /// (no presses: a special is not guessed).</summary>
+        public void Predict(long f, PlayerInput[] into)
+        {
+            int b = stepped > 0 ? (int)((stepped - 1) % Cap) * Seats : -1;
+            for (int s = 0; s < Seats && s < into.Length; s++)
+            {
+                if (s == Local) { into[s] = f < g && g - f < Cap ? mine[f % Cap] : PlayerInput.None; continue; }
+                var i = PlayerInput.None;
+                if (b >= 0) { i.MoveX = ring[b + s].MoveX; i.MoveY = ring[b + s].MoveY; }
+                into[s] = i;
+            }
         }
 
         /// <summary>After each step: the fingerprint every HashEvery frames (the host keeps it, a guest sends it).</summary>

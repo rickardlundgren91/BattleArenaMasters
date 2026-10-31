@@ -21,7 +21,7 @@ namespace BAM.Sim
         public Unit HtFoe, HtAlly;
         float htAllyFullT, htCdT;
 
-        sealed class HtSlot { public MinionKind Kind; public float Ax, Ay, Bx = float.NaN, By; public Unit M; public bool GoB; public float DeadT; }
+        sealed partial class HtSlot { public MinionKind Kind; public float Ax, Ay, Bx = float.NaN, By; public Unit M; public bool GoB; public float DeadT; }
         HtSlot[] htSlots;
 
         void StartHeroTest()

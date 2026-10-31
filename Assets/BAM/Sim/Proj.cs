@@ -31,7 +31,7 @@ namespace BAM.Sim
     /// A shot, a special on its way, a ground area or a warning. Pooled inside the match: keep Serial with any reference.
     /// T counts up from 0 (or from a negative wind-up, during which a shot rides along in its shooter's hand).
     /// </summary>
-    public sealed class Proj
+    public sealed partial class Proj
     {
         public int Serial;
         public ProjMode Mode;

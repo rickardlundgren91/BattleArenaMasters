@@ -35,7 +35,7 @@ namespace BAM.Sim
 
     /// <summary>One Boulder Toss: everyone it has hurt so far (by the boulder or by a pin it sent flying), so nobody is hit twice,
     /// and the throw's damage the pins pass on.</summary>
-    internal sealed class BonkRoll
+    internal sealed partial class BonkRoll
     {
         internal Unit By; internal float Dmg; internal int Count;
         internal readonly Unit[] Hit = new Unit[BonkS.MaxPins];
