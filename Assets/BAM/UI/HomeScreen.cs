@@ -398,6 +398,9 @@ namespace BAM.UI
                 UiKit.Stretch(shadow.rectTransform, 0, Cw, 0, -Cw);
                 playGlow = Img(rt, "Glow", HomeArt.PlayGlow, Color.white);
                 Size(playGlow.rectTransform, 1.08f * w, 2 * 0.95f * h); // PLAY is screen wide now: the old 1.24 w glowed out past the screen's sides
+                // off since 2026-10-31: over the darker bottom the orange glow turned into a muddy brown halo (Rickard: "är inte glöden
+                // väldigt konstig?"); the button's own inner glow and shine still pulse
+                playGlow.enabled = false;
                 Round(Img(rt, "Edge", UiKit.Rounded, new Color32(0x0b, 0x13, 0x30, 0xff)), r);
                 var face = Img(rt, "Face", UiKit.Rounded, UiKit.Orange);
                 Round(face, r - b);
