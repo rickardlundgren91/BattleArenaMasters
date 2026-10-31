@@ -47,7 +47,7 @@ namespace BAM.Game
             scoreRoot = UiKit.NewRect("Score", safe);
             UiKit.Stretch(scoreRoot);
             var dim = UiKit.Fill(scoreRoot, ScoreDim);
-            UiKit.Stretch(dim.rectTransform, -400f, -400f, -400f, -400f); // over the bars outside the safe area too
+            UiKit.Stretch(dim.rectTransform, -2000f, -400f, -2000f, -400f); // over the bars outside the safe area too, and a foldable's sides
             dim.raycastTarget = true;
             var close = dim.gameObject.AddComponent<Button>();
             close.targetGraphic = dim;

@@ -30,9 +30,10 @@ namespace BAM.Game
         readonly GameFlow flow;
         Canvas canvas;
         RectTransform safe;
-        // the standing frame's height but the screen's full width: the joystick zone, the SPECIAL and its "denied" line live
-        // here, so on a foldable or tablet they sit at the screen's edges where the thumbs are (on a phone it is the safe area)
-        RectTransform wideHud;
+        // how far the screen reaches past the safe area at the left and right, in canvas units: 0 on a phone and in a landscape
+        // window, more on a WideScreen (a foldable, a tablet), where the joystick zone and the SPECIAL reach out to the screen's
+        // edges, where the thumbs are (ApplyLayout)
+        float gapL, gapR;
         Text deniedText, specialName;
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
@@ -249,6 +250,7 @@ namespace BAM.Game
         {
             if (m == null) return;
             canvas.enabled = !hidden;
+            ApplyLayout(); // a foldable opened or closed: the controls follow the screen's edges
             // the old rings' widths are in the old game's CSS pixels: 400 across the portrait frame, not the phone's own pixels
             // (on a 1080 wide phone one device pixel made them 2.7 times too thin, Rickard 2026-10-26 "jättesvag"); the camera's
             // frame, so on a wide screen they keep the same width next to the tiles as on a phone
@@ -495,34 +497,55 @@ namespace BAM.Game
 
         // ---------------------------------------------------------------- layout
 
+        // Every frame and on a settings change; lays the controls out again only when the hand or the screen's side gaps changed
+        // (a foldable opened or closed during a match).
         void ApplyLayout()
         {
-            if (!built || (laidOutHand && leftHanded == BamSettings.LeftHanded)) return;
+            if (!built) return;
+            SideGaps(out float gl, out float gr);
+            if (laidOutHand && leftHanded == BamSettings.LeftHanded && Mathf.Abs(gl - gapL) < 0.5f && Mathf.Abs(gr - gapR) < 0.5f) return;
+            gapL = gl;
+            gapR = gr;
             leftHanded = BamSettings.LeftHanded;
             laidOutHand = true; // the first call lays the controls out even when the setting is still the default (right-handed)
             CancelTouches();
-            // right-handed: joystick on the left half, special bottom right; left-handed mirrors both
+            // right-handed: joystick on the left half, special bottom right; left-handed mirrors both. On a WideScreen both reach
+            // out past the safe area to the screen's edges (the gaps are 0 on a phone)
             joyArea.anchorMin = new Vector2(leftHanded ? 0.5f : 0f, 0f);
             joyArea.anchorMax = new Vector2(leftHanded ? 1f : 0.5f, 0.82f);
-            joyArea.offsetMin = joyArea.offsetMax = Vector2.zero;
+            joyArea.offsetMin = new Vector2(leftHanded ? 0f : -gapL, 0f);
+            joyArea.offsetMax = new Vector2(leftHanded ? gapR : 0f, 0f);
             joy.RightSide = leftHanded;
-            float side = leftHanded ? 0f : 1f;
-            UiKit.Place(specialRoot, side, 0f, leftHanded ? 70f : -70f, 150f, 270f, 270f);
-            UiKit.Place(deniedText, side, 0f, leftHanded ? 30f : -30f, 440f, 520f, 70f);
+            joy.SideGap = leftHanded ? gapR : gapL;
+            float side = leftHanded ? 0f : 1f, edge = leftHanded ? -gapL : gapR;
+            UiKit.Place(specialRoot, side, 0f, (leftHanded ? 70f : -70f) + edge, 150f, 270f, 270f);
+            UiKit.Place(deniedText, side, 0f, (leftHanded ? 30f : -30f) + edge, 440f, 520f, 70f);
             deniedText.alignment = leftHanded ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
             Canvas.ForceUpdateCanvases();
             joy.Rest();
+        }
+
+        // the screen's reach past the safe area at each side, in canvas units (the safe area is narrower than the screen only on
+        // a WideScreen; a landscape window keeps its black edges and the controls in the frame, as it always did)
+        void SideGaps(out float left, out float right)
+        {
+            left = right = 0f;
+            if (!UiKit.WideScreen || canvasRect == null) return;
+            UnityEngine.Rect c = canvasRect.rect, s = safe.rect;
+            Vector2 lo = canvasRect.InverseTransformPoint(safe.TransformPoint(s.min));
+            Vector2 hi = canvasRect.InverseTransformPoint(safe.TransformPoint(s.max));
+            left = Mathf.Max(0f, lo.x - c.xMin);
+            right = Mathf.Max(0f, c.xMax - hi.x);
         }
 
         void Build()
         {
             built = true;
             canvas = UiKit.CreateCanvas("BAM.Hud", HudOrder);
-            wideHud = UiKit.WideArea((RectTransform)canvas.transform); // before the safe area, so everything there sits above it
             safe = UiKit.SafeArea(canvas);
 
             // joystick: a see-through half of the screen that catches touches (first, so the buttons sit above it)
-            joyArea = UiKit.NewRect("Joystick", wideHud);
+            joyArea = UiKit.NewRect("Joystick", safe);
             joyArea.pivot = new Vector2(0.5f, 0.5f);
             var catcher = joyArea.gameObject.AddComponent<Image>();
             catcher.color = Color.clear;
@@ -543,7 +566,7 @@ namespace BAM.Game
             Edge(joy.Knob, 1.12f * JoystickZone.Radius, 4f, new Color(1f, 1f, 1f, 0.8f));
 
             // special button
-            specialRoot = UiKit.NewRect("Special", wideHud);
+            specialRoot = UiKit.NewRect("Special", safe);
             var hit = specialRoot.gameObject.AddComponent<Image>();
             hit.sprite = UiKit.Circle;
             hit.color = Color.clear;
@@ -615,7 +638,7 @@ namespace BAM.Game
             specialName.resizeTextMaxSize = 44;
             UiKit.AddOutline(specialName, 3);
 
-            deniedText = UiKit.Label(wideHud, "", 44, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.8f));
+            deniedText = UiKit.Label(safe, "", 44, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.8f));
             UiKit.AddOutline(deniedText, 3);
 
             BuildTop();

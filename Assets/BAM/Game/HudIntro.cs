@@ -68,7 +68,6 @@ namespace BAM.Game
                 if (on) CancelTouches();
                 safe.gameObject.SetActive(!on);
             }
-            if (wideHud.gameObject.activeSelf == on) wideHud.gameObject.SetActive(!on); // the joystick and the SPECIAL too
         }
 
         /// <summary>Every frame; true while the intro owns the screen.</summary>

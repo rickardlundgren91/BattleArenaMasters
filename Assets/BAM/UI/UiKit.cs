@@ -120,14 +120,16 @@ namespace BAM.UI
         /// gets 9:16 instead, the canvas's own 1080x1920 shape, as wide as the menus are laid out for (a Galaxy Z Fold tester
         /// found the game "forced narrow", 2026-10-31). Every SafeArea child lays out inside it.
         /// </summary>
-        public static Rect PortraitFrame() => Frame(9f / 16f);
+        public static Rect PortraitFrame() => ShapedFrame(9f / 16f, 9f / 19.5f);
 
         /// <summary>
         /// The frame the match camera measures its 11.5 tiles across: the standing frame, except that a WideScreen keeps the old
-        /// 9:19.5 shape, so a foldable or tablet sees the same length of lane and the same tile size as a usual phone; there the
-        /// picture runs on over the full width instead of black edges.
+        /// 9:19.5 shape, so a foldable or tablet sees the same length of lane and the same tile size as a usual phone (there the
+        /// picture runs on over the full width instead of black edges), and a TallScreen gets 9:22, the tallest phone shape,
+        /// so an older foldable's cover screen sees no further ahead than that phone (Rickard 2026-10-31: "välj du den bästa
+        /// lösningen"; before, it saw almost the whole lane).
         /// </summary>
-        public static Rect CameraFrame() => Frame(9f / 19.5f);
+        public static Rect CameraFrame() => ShapedFrame(9f / 19.5f, 9f / 22f);
 
         /// <summary>
         /// A standing screen wider than 9:16 (9:16 &lt; width/height &lt;= 1): menus and the match fill its full width (WideArea, the
@@ -141,6 +143,15 @@ namespace BAM.UI
         // a hair over 9:16 still counts as a phone (rounding), so a 16:9 phone never flips between the two
         static bool IsWide(float a) => a > 9f / 16f + 0.002f && a <= 1f;
 
+        /// <summary>
+        /// A standing screen taller than 9:22 (the cover screen of an older foldable such as a Z Fold 3 to 5): the match camera
+        /// shows only its 9:22 CameraFrame, with thin black bands above and below.
+        /// </summary>
+        public static bool TallScreen
+        {
+            get { return SafeAspect(out _) < 9f / 22f; }
+        }
+
         static float SafeAspect(out Rect sa)
         {
             float sw = Screen.width, sh = Screen.height;
@@ -150,10 +161,12 @@ namespace BAM.UI
             return sa.height > 0f ? sa.width / sa.height : 9f / 19.5f;
         }
 
-        static Rect Frame(float wideShape)
+        // the frame inside the safe area: its own shape on a phone, wideShape on a WideScreen, tallShape when taller than 9:22,
+        // the old 9:19.5 in a landscape window
+        static Rect ShapedFrame(float wideShape, float tallShape)
         {
             float a = SafeAspect(out Rect sa);
-            float ar = IsWide(a) ? wideShape : a >= 9f / 22f && a <= 1f ? a : 9f / 19.5f;
+            float ar = IsWide(a) ? wideShape : a < 9f / 22f ? tallShape : a <= 1f ? a : 9f / 19.5f;
             float fw, fh;
             if (a > ar) { fh = sa.height; fw = sa.height * ar; }
             else { fw = sa.width; fh = sa.width / ar; }

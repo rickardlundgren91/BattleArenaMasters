@@ -31,6 +31,7 @@ namespace BAM.Game
         readonly Camera cam;
         Camera bars;
         bool wide;                      // UiKit.WideScreen when the size was last taken: the whole screen, no bars
+        bool tall;                      // UiKit.TallScreen then: only the 9:22 camera frame, black bands above and below
         Color menuBackground;
         bool skyChanged;
         Match m;
@@ -84,7 +85,7 @@ namespace BAM.Game
             float k = 1f - Mathf.Exp(-speed * dt);
             focus += (target - focus) * k;
             // half the width actually seen (more than 11.5 tiles on a WideScreen), so a wide view is not pushed off-centre
-            float halfW = 0.5f * Mathf.Max(TilesAcross, cam.pixelWidth * upp), halfH = FrameLength * 0.42f;
+            float halfW = 0.5f * (wide ? Mathf.Max(TilesAcross, cam.pixelWidth * upp) : TilesAcross), halfH = FrameLength * 0.42f;
             focus.x = 2f * halfW >= m.Map.W + 2f * Over ? m.Map.W * 0.5f : Mathf.Clamp(focus.x, halfW - Over, m.Map.W - halfW + Over);
             if (m.Map.H > 2f * halfH) focus.z = Mathf.Clamp(focus.z, halfH - Over, m.Map.H - halfH + Over);
             Place();
@@ -92,24 +93,30 @@ namespace BAM.Game
 
         // The camera draws the frame's columns from the top of the screen to the bottom: TilesAcross over the frame's width,
         // the focus FocusDown of the way down the frame. On a WideScreen it draws the whole screen at the same scale, so more
-        // of the sides shows; in a landscape window only the frame, with black edges beside it (the old game's look).
+        // of the sides shows; on a TallScreen only the 9:22 frame, with black bands above and below, so nobody sees further
+        // ahead than on the tallest phone; in a landscape window only the frame, with black edges beside it (the old look).
         void UpdateSize()
         {
             float sw = Screen.width, sh = Screen.height;
             Rect f = UiKit.CameraFrame();
             if (f.width < 1f || f.height < 1f || sw < 1f || sh < 1f) return;
-            bool w = UiKit.WideScreen;
-            if (f != frame || sw != screen.x || sh != screen.y || w != wide)
+            bool w = UiKit.WideScreen, t = !w && UiKit.TallScreen;
+            if (f != frame || sw != screen.x || sh != screen.y || w != wide || t != tall)
             {
                 frame = f;
                 screen = new Vector2(sw, sh);
                 wide = w;
-                cam.rect = w ? new Rect(0f, 0f, 1f, 1f) : new Rect(f.x / sw, 0f, f.width / sw, 1f);
-                SetBars(!w && f.width < sw - 1f);
+                tall = t;
+                cam.rect = w ? new Rect(0f, 0f, 1f, 1f)
+                    : t ? new Rect(f.x / sw, f.y / sh, f.width / sw, f.height / sh)
+                    : new Rect(f.x / sw, 0f, f.width / sw, 1f);
+                SetBars(!w && (t || f.width < sw - 1f));
             }
+            // the view's height and middle in screen pixels (the whole screen's height but on a TallScreen)
+            float vh = t ? f.height : sh, vmid = t ? f.y + 0.5f * f.height : 0.5f * sh;
             upp = TilesAcross / f.width;
-            lift = (0.5f * sh - f.yMax + FocusDown * f.height) * upp;
-            cam.orthographicSize = 0.5f * sh * upp;
+            lift = (vmid - f.yMax + FocusDown * f.height) * upp;
+            cam.orthographicSize = 0.5f * vh * upp;
         }
 
         // The old game's bars camera: draws nothing and clears the whole screen black before the match camera draws its part.

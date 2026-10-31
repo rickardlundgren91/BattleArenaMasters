@@ -164,6 +164,7 @@ namespace BAM.Game
         void BuildCenter()
         {
             dim = UiKit.Fill(safe, new Color(0f, 0f, 0f, 0.35f));
+            UiKit.Stretch(dim.rectTransform, -2000f, 0f, -2000f, 0f); // out to the screen's sides on a foldable (off screen on a phone)
             dim.transform.SetAsFirstSibling(); // under the controls
             dim.enabled = false;
 

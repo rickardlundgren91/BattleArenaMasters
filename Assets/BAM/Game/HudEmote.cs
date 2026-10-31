@@ -261,10 +261,10 @@ namespace BAM.Game
         // safe area's coordinates
         UnityEngine.Rect HudArea()
         {
-            UnityEngine.Rect w = wideHud.rect;
-            Vector2 a = safe.InverseTransformPoint(wideHud.TransformPoint(w.min));
-            Vector2 b = safe.InverseTransformPoint(wideHud.TransformPoint(w.max));
-            return UnityEngine.Rect.MinMaxRect(a.x, a.y, b.x, b.y);
+            UnityEngine.Rect r = safe.rect;
+            r.xMin -= gapL;
+            r.xMax += gapR;
+            return r;
         }
 
         Vector2 SlotCentre(int i)

@@ -578,7 +578,7 @@ namespace BAM.Game
             tutEnd = UiKit.NewRect("TutorialEnd", safe);
             UiKit.Stretch(tutEnd);
             tutEndDim = UiKit.Fill(tutEnd, Color.clear);
-            UiKit.Stretch(tutEndDim.rectTransform, -400, -400, -400, -400); // past the safe area's edges too
+            UiKit.Stretch(tutEndDim.rectTransform, -2000, -400, -2000, -400); // past the safe area's edges too, and a foldable's sides
             tutEndDim.raycastTarget = true;
             tutEndButton = tutEnd.gameObject.AddComponent<Button>();
             tutEndButton.targetGraphic = tutEndDim;

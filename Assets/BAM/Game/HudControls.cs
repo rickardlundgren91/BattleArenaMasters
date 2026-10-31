@@ -29,15 +29,18 @@ namespace BAM.Game
         {
             // the old game's joyRest: 22 % of the width in from the side, 13 % of the height up from the bottom, measured on the
             // whole HUD (the safe area), not on the touch zone, so it never depends on the zone's layout. On a foldable or tablet
-            // the HUD is wider than the standing frame (1080 units at 9:16): the stick stays as far from the edge as there.
+            // (SideGap > 0) it is measured from the screen's edge instead, as far in as on a 9:16 phone (1080 units wide).
             var frame = (RectTransform)Area.parent;
             Rect f = frame.rect;
             float inset = 0.22f * Mathf.Min(f.width, 1080f);
-            var at = new Vector3(rightSide ? f.xMax - inset : f.xMin + inset, f.yMin + 0.13f * f.height, 0f);
+            var at = new Vector3(rightSide ? f.xMax + SideGap - inset : f.xMin - SideGap + inset, f.yMin + 0.13f * f.height, 0f);
             return Area.InverseTransformPoint(frame.TransformPoint(at));
         }
 
         public bool RightSide;
+
+        /// <summary>How far the screen reaches past the HUD's safe area on the stick's side (canvas units; 0 on a phone).</summary>
+        public float SideGap;
 
         public void OnPointerDown(PointerEventData e)
         {
