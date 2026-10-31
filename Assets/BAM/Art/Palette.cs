@@ -24,7 +24,8 @@ namespace BAM.Art
             PlayerRing = 77, Stun = 78, Slow = 79, Root = 80, Burn = 81, Poison = 82, ShieldFx = 83, Haste = 84,
             AimOk = 85, AimBad = 86, Range = 87, ShadowSoft = 88, WhiteSoft = 89, WhiteMid = 90, PlayerRingSoft = 91,
             // MLBB-style bar shading (HealthBar): light top edge and dark lower half of each fill, and the special's charge row
-            BarPlayerHi = 92, BarPlayerLo = 93, BarAllyHi = 94, BarAllyLo = 95, BarEnemyHi = 96, BarEnemyLo = 97, BarEnergy = 98, BarEnergyReady = 99;
+            BarPlayerHi = 92, BarPlayerLo = 93, BarAllyHi = 94, BarAllyLo = 95, BarEnemyHi = 96, BarEnemyLo = 97, BarEnergy = 98, BarEnergyReady = 99,
+            BarShieldHi = 100, BarShieldLo = 101;
 
         static readonly Color32[] colors = new Color32[Size * Size];
         static Texture2D tex;
@@ -57,6 +58,7 @@ namespace BAM.Art
             Set(WhiteSoft, 0xffffff, 70); Set(WhiteMid, 0xffffff, 150);
             Set(BarPlayerHi, 0xb4f5b7); Set(BarPlayerLo, 0x3fb846); Set(BarAllyHi, 0xa9d2ff); Set(BarAllyLo, 0x2f7fd6);
             Set(BarEnemyHi, 0xffa7a7); Set(BarEnemyLo, 0xd23434); Set(BarEnergy, 0xffa21c); Set(BarEnergyReady, 0xffe58a); // BAM orange, not MLBB white (Rickard 2026-10-30)
+            Set(BarShieldHi, 0xfff09a); Set(BarShieldLo, 0xe0a200); // gold shield shading, like the health fill
         }
 
         static void Set(int i, int rgb, byte a = 255) =>
