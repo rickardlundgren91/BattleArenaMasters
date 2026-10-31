@@ -92,8 +92,11 @@ namespace BAM.UI
                 At(r, cx, feet, 0, 0);
                 if (ready)
                 {
-                    Half(Ellipse(r, rx, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), back);
-                    Half(Ellipse(r, rx, 0.65f * Cw, UiKit.Primary, 0), back);
+                    if (!RingPicture(r, rx, back)) // Rickard's ring picture, else the drawn one
+                    {
+                        Half(Ellipse(r, rx, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), back);
+                        Half(Ellipse(r, rx, 0.65f * Cw, UiKit.Primary, 0), back);
+                    }
                 }
                 else Half(Ellipse(r, rx, 0.45f * Cw, new Color(170 / 255f, 178 / 255f, 200 / 255f, 0.45f), 0), back);
                 return r;

@@ -312,8 +312,11 @@ namespace BAM.UI
                 At(contact, 540, FeetY, 2 * ringX * 0.55f, 2 * ringY * 0.75f);
                 var ringBack = UiKit.NewRect("RingBack", stage);
                 At(ringBack, 540, FeetY, 0, 0);
-                Half(Ellipse(ringBack, ringX, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), true);
-                Half(Ellipse(ringBack, ringX, 0.65f * Cw, UiKit.Primary, 0), true);
+                if (!RingPicture(ringBack, ringX, true))
+                {
+                    Half(Ellipse(ringBack, ringX, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), true);
+                    Half(Ellipse(ringBack, ringX, 0.65f * Cw, UiKit.Primary, 0), true);
+                }
 
                 // the hero: Rickard's 3D model on a picture as wide as the screen (HubHero3), so no weapon is cut off
                 homeHero = UiKit.HeroBadge(stage, HeroId.Bram);
@@ -326,8 +329,11 @@ namespace BAM.UI
 
                 var ringFront = UiKit.NewRect("RingFront", stage);
                 At(ringFront, 540, FeetY, 0, 0);
-                Half(Ellipse(ringFront, ringX, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), false);
-                Half(Ellipse(ringFront, ringX, 0.65f * Cw, UiKit.Primary, 0), false);
+                if (!RingPicture(ringFront, ringX, false))
+                {
+                    Half(Ellipse(ringFront, ringX, 1.8f * Cw, Fade(UiKit.Primary, 0.3f), 0), false);
+                    Half(Ellipse(ringFront, ringX, 0.65f * Cw, UiKit.Primary, 0), false);
+                }
 
                 // a tap on the hero opens Heroes; a drag sideways turns him (the old hubHero button, cw(40) wide)
                 var hit = UiKit.NewRect("HeroHit", stage);
@@ -661,6 +667,24 @@ namespace BAM.UI
                 float w = 2 * rx * f;
                 Size(img.rectTransform, w, w * sprite.rect.height / sprite.rect.width).anchoredPosition = new Vector2(0, y);
                 return img;
+            }
+
+            // Rickard's ring picture (home_ring, O-040, 2026-10-31) instead of the two drawn mint ellipses: its back or front half,
+            // the bright outer line on rx. False when the picture is missing: the drawn ring then.
+            static Sprite ringSprite;
+            static bool RingPicture(RectTransform parent, float rx, bool back)
+            {
+                if (ringSprite == null)
+                {
+                    var tex = Picture("home_ring", true);
+                    if (tex == null) return false;
+                    ringSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                }
+                var img = Img(parent, "RingPicture", ringSprite, Color.white);
+                float w = 2 * rx * 1.1f; // the picture's bright edge sits a little inside its glow
+                Size(img.rectTransform, w, w * ringSprite.rect.height / ringSprite.rect.width);
+                Half(img, back);
+                return true;
             }
 
             // The back (upper) or front (lower) half of a ring, so the hero stands inside it.
