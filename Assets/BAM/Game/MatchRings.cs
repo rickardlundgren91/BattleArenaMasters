@@ -217,10 +217,10 @@ namespace BAM.Game
                 float fa = age < 0.7f ? 1f : 1f - (age - 0.7f) / 0.4f, pop = Mathf.Max(0f, 1f - age / 0.15f);
                 float rr = autoTarget.R + 0.22f + 0.12f * pop;
                 Vector3 tp = views.DrawnAt(autoTarget); tp.y = 0f;
-                float gw = 3.5f * px, ri = rr * (0.72f + 0.06f * Mathf.Sin(age * 18f));
+                float gw = 3.5f * px;
                 Show(target[0], tp, rr + gw + 1.5f * px, new Color(Dark.r, Dark.g, Dark.b, 0.55f * fa), 2f * (gw + 1.5f * px));
                 Show(target[1], tp, rr + gw, new Color(Gold.r, Gold.g, Gold.b, fa), 2f * gw);
-                Show(target[2], tp, ri + 1.2f * px, new Color(Gold.r, Gold.g, Gold.b, 0.7f * fa), 2.4f * px);
+                // (its thinner pulsing inner ring is gone: two gold rings on one target, Rickard 2026-10-31)
             }
 
             // (the orange "special ready" ring at the feet is gone: Rickard 2026-10-31, the HP bar already shows a ready special)
