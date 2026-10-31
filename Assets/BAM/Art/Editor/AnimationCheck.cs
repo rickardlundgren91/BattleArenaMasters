@@ -68,8 +68,8 @@ namespace BAM.Art.Editor
                 "The bow's grip is locked to the palm point measured from Tyra's own fist in her Shoot clip, inside the fist, instead "
                 + "of 0.6 of the way to the index knuckle (2.78 % of her height off). Rickard's Offset is left out while this is on.",
                 AnimFix.PalmSocket);
-            AnimFix.AnatomicalWrist = Part("Wrist aims for the fist's own grip (A/B, Tyra pilot)",
-                "Off by default. With the wrist turn on, the wrist works towards the grip her fist makes in the bow clip (the bow along "
+            AnimFix.AnatomicalWrist = Part("Wrist aims for the fist's own grip (Tyra pilot)",
+                "On by default. With the wrist turn on, the wrist works towards the grip her fist makes in the bow clip (the bow along "
                 + "the knuckles) instead of the bind placement. Where the bow points stays the same; her hand turns differently.",
                 AnimFix.AnatomicalWrist);
             AnimFix.GripLockFull = Part("Bow fully in the fist (A/B, changes the look)",
@@ -109,7 +109,8 @@ namespace BAM.Art.Editor
             AnimFix.FixedGrip = AnimFix.UpperSwing = AnimFix.LegsFollow = AnimFix.SquaredFacing = on;
             AnimFix.BlowTiming = AnimFix.Life = AnimFix.ArmRoom = AnimFix.GripLock = AnimFix.WristTurn = AnimFix.ContactTiming = on;
             AnimFix.PalmSocket = on;
-            AnimFix.AnatomicalWrist = AnimFix.GripLockFull = false; // A/B alternatives, not parts: never on with "All on"
+            AnimFix.AnatomicalWrist = on;
+            AnimFix.GripLockFull = false; // an A/B alternative (changes the look), not a part: never on with "All on"
         }
     }
 }
