@@ -279,12 +279,20 @@ namespace BAM.Art
             for (int i = 0; i < n; i++) Release(list[i]);
         }
 
+        static Quaternion SunRotation(bool turned) => Quaternion.Euler(52f, turned ? 152f : -28f, 0f);
+
+        /// <summary>Points the sun for a turned camera or back for the normal one (the menus always use the normal).</summary>
+        public static void TurnSun(bool turned)
+        {
+            if (sun != null) sun.transform.rotation = SunRotation(turned);
+        }
+
         static void SetupLighting()
         {
             var lg = new GameObject("BAM Sun");
             lg.transform.SetParent(root, false);
             // from behind the camera and a bit to the left, so faces (toward the bottom of the screen) are lit
-            lg.transform.rotation = Quaternion.Euler(52f, -28f, 0f);
+            lg.transform.rotation = SunRotation(false);
             sun = lg.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.96f, 0.88f);
@@ -329,6 +337,9 @@ namespace BAM.Art
         {
             Init();
             if (arena == null || arena.Tiles == null) { Debug.LogError("[BAM.Art] BuildArena: no map"); return new GameObject("Arena"); }
+            // the sun turns with the camera (online, top team): still from behind it and a bit to its left, so faces stay lit and
+            // shadows fall the same way on screen for both players (Rickard 2026-10-31 "ser allt identiskt ut")
+            TurnSun(arena.Turned);
             return Arena.Build(arena);
         }
 

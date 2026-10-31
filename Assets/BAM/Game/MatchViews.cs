@@ -1265,6 +1265,7 @@ namespace BAM.Game
             for (int i = 0; i < zones.Count; i++) ArtKit.Release(zones[i].V);
             units.Clear(); dying.Clear(); shots.Clear(); zones.Clear();
             if (arena != null) Object.Destroy(arena);
+            ArtKit.TurnSun(false); // the menus are lit as always after a turned online match
             arena = null;
             unitBySerial.Clear(); shotBySerial.Clear(); zoneBySerial.Clear();
         }
