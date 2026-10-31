@@ -114,7 +114,11 @@ namespace BAM.UI
             Stretched(segs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
             modeDifficulty = new HubChoice(segs, DifficultyNames, i =>
             {
-                if (i == (int)Difficulty.Ultra && !BamSettings.UltraOpen) { RefreshModes(); return; } // locked: the label above says why
+                if (i == (int)Difficulty.Ultra && !BamSettings.UltraOpen) // locked: says why only when tapped, the label stays short (Rickard 2026-10-31)
+                {
+                    ShowHint("Ultra opens after " + BamSettings.UltraWins + " wins against Hard (" + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins + ")");
+                    RefreshModes(); return;
+                }
                 // in a party the leader picks the bots for everyone (MpRoom.SetDiff); the others are told and the choice goes back
                 if (TestParty != null) TestParty.Bots = (Difficulty)i;
                 else if (Party() != null) OnlineHooks.PartyBots?.Invoke((Difficulty)i);
@@ -285,7 +289,7 @@ namespace BAM.UI
             modeDifficulty.Dim((int)Difficulty.Ultra, !ultraOpen);
             modeDifficulty.Set((int)(party != null ? party.Bots : BamSettings.LastDifficulty));
             // Ultra opens after 30 wins against Hard bots (Rickard 2026-10-31)
-            diffLabel.text = ultraOpen ? "BOT DIFFICULTY" : "BOT DIFFICULTY · ULTRA: WIN " + BamSettings.UltraWins + " VS HARD (" + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins + ")";
+            diffLabel.text = "BOT DIFFICULTY"; // a locked Ultra is dimmed; tapping it tells how to open it (ShowHint)
             modePartyRow.gameObject.SetActive(party != null);
             if (party != null) { modeParty.Set(party.Mode); Stretched(modePartyRow, 0, ExpH, 0, PartyRowH); }
             float expH = ExpNow;

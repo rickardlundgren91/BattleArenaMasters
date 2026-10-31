@@ -32,7 +32,7 @@ namespace BAM.UI
         static void OnlineFriendsPill(RectTransform low, float rowTop)
         {
             if (OnlineHooks.OpenFriends == null) return;
-            float h = 11 * Cw, r = h / 2, cx = 1080 - 4 * Cw - r, cy = rowTop + 3 * Cw + r;
+            float h = 11 * Cw, r = h / 2, cx = 1080 - 4 * Cw - r, cy = rowTop + 2.2f * Cw + 4 * Cw; // level with the mode chip's middle (2026-10-31)
             var rt = UiKit.NewRect("Friends", low);
             rt.anchorMin = rt.anchorMax = Vector2.zero;
             rt.pivot = new Vector2(0.5f, 0.5f);
