@@ -27,6 +27,8 @@ namespace BAM.UI
         public static Action OpenInvite;
         /// <summary>How many other players are searching ONLINE MATCH now (the green light on the ONLINE MATCH row).</summary>
         public static Func<int> Searching;
+        /// <summary>The XP the day's first win still gives (0 when today's first win is done), for the tag on Home's PLAY.</summary>
+        public static Func<int> FirstWinXp;
         /// <summary>The account level now.</summary>
         public static Func<int> Level;
 

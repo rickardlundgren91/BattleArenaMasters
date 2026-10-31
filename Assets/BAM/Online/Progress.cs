@@ -124,6 +124,8 @@ namespace BAM.Online
             return null;
         }
 
+        /// <summary>The XP today's first win still gives: XpFirstWin, or 0 once today (UTC day, as MatchEnded counts it) has a win.</summary>
+        public static int FirstWinXpLeft() => Shown.winDay != DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 86400 ? XpFirstWin : 0;
         public static int XpFor(bool won, int kills, bool firstWinToday)
             => (won ? XpWin : XpLoss) + Math.Min(XpFightMax, Math.Max(0, kills) * XpKill) + (won && firstWinToday ? XpFirstWin : 0);
 

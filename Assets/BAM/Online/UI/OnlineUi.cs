@@ -126,6 +126,16 @@ namespace BAM.Online.UI
     static partial class OnlineMenu
     {
         /// <summary>The Home chip into a texture of pw x ph pixels (MenuHome3.HubTopBar3 in its ONE_PLAY look, on the top bar).</summary>
+        // a small mint pencil leaning right, s long (a hint that the name is chosen by tapping the chip)
+        static void Pencil(float x, float y, float s)
+        {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(Mathf.PI / 4);
+            float w = s * 0.42f;
+            ctx.fillStyle = HUB_ACCENT; ctx.fillRect(-w / 2, -s, w, s * 1.3f);
+            ctx.beginPath(); ctx.moveTo(-w / 2, s * 0.3f); ctx.lineTo(w / 2, s * 0.3f); ctx.lineTo(0, s * 0.75f); ctx.closePath(); ctx.fill();
+            ctx.restore();
+        }
+
         internal static void DrawChip(Ctx c, int pw, int ph)
         {
             ctx = c; W = 400; H = 400 * ph / (float)Math.Max(1, pw);
@@ -134,33 +144,46 @@ namespace BAM.Online.UI
             var st = Account.State; var t = Progress.Shown;
             bool on = st == Account.Status.Ready || st == Account.Status.NeedsName || st == Account.Status.Offline && Account.Enabled;
             float px = 0, cy = chipH / 2;
-            // BAM's Home is the old ONE_PLAY look: the chip sits on the top bar's glass, so it has no background of its own
+            // 2026-10-31 (Rickard: the top got better in the mockup): straight on Home's dark top, no glass. The portrait in a mint
+            // ring with the account level on a gold badge; the name (or "Choose a name" in mint with a pencil); the rank line;
+            // under it the bar to the next level (the rank's own bar is on the profile page).
             float acx = px + chipH / 2, ar = chipH / 2 - cw(1), acy = cy;
             ctx.fillStyle = VGrad(acy - ar, acy + ar, "#4c6bff", "#7a3cff"); ctx.beginPath(); ctx.arc(acx, acy, ar, 0, 7); ctx.fill();
             if (!DrawPortrait(TopHero(t), acx, acy, ar)) Text(on && !string.IsNullOrEmpty(Account.Name) ? Account.Name.Substring(0, 1).ToUpper() : "?", acx, acy, Lil(ar), "#fff", "center");
+            ctx.strokeStyle = HUB_ACCENT; ctx.lineWidth = cw(0.6f); ctx.beginPath(); ctx.arc(acx, acy, ar + cw(0.2f), 0, 7); ctx.stroke();
             int rk = RankInfo.RankOf(t.rating);
             float tx = px + chipH + cw(2.4f), tw = px + chipW - cw(3) - tx;
             if (on)
             {
-                ctx.fillStyle = HUB_BG0; ctx.beginPath(); ctx.arc(acx + ar * 0.78f, acy + ar * 0.72f, cw(2.3f), 0, 7); ctx.fill();
-                HubRankEmblem(rk, acx + ar * 0.78f, acy + ar * 0.72f, cw(1.9f));
+                float bx = acx + ar * 0.78f, by = acy + ar * 0.74f, br = cw(2.3f);
+                ctx.fillStyle = HUB_BG0; ctx.beginPath(); ctx.arc(bx, by, br, 0, 7); ctx.fill();
+                ctx.strokeStyle = HUB_GOLD; ctx.lineWidth = cw(0.4f); ctx.beginPath(); ctx.arc(bx, by, br, 0, 7); ctx.stroke();
+                string lv = Progress.LevelOf(t.xp).ToString();
+                Text(lv, bx, by + cw(0.1f), Lil(cw(lv.Length > 1 ? 2.2f : 2.7f)), "#ffd166", "center");
             }
-            string nm = on ? (string.IsNullOrEmpty(Account.Name) ? "Choose a name" : Account.Name) : "Play online";
-            // shrink a long name a little before cutting it ("Choose a name" was cut to "Choose a na…")
+            bool noName = on && string.IsNullOrEmpty(Account.Name);
+            string nm = on ? (noName ? "Choose a name" : Account.Name) : "Play online";
+            float pen = noName ? cw(3.4f) : 0; // room for the pencil
             float ns = 3.8f; ctx.font = Lil(cw(ns));
-            while (ns > 2.9f && ctx.measureText(nm) > tw) { ns -= 0.1f; ctx.font = Lil(cw(ns)); }
-            while (nm.Length > 3 && ctx.measureText(nm) > tw) nm = nm.Substring(0, nm.Length - 2) + "…";
-            Text(nm, tx, cy - cw(2.8f), Lil(cw(ns)), HUB_TEXT);
-            string rl = on ? "Lv " + Progress.LevelOf(t.xp) + " · " + RankInfo.NAMES[rk] + " · " + t.rating : "Friends and Top 100";
-            string rf = Treb(Min11(cw(2.7f)), true);
-            ctx.font = rf; while (rl.Length > 3 && ctx.measureText(rl) > tw) rl = rl.Substring(0, rl.Length - 2) + "…";
-            Text(rl, tx, cy + cw(1.1f), rf, on ? RankInfo.COLORS[rk] : HUB_ACCENT, shadow: "rgba(0,0,0,0.85)", sh: cw(0.35f), stroke: "rgba(6,8,26,0.9)", sw: cw(0.35f)); // a dark edge, so it reads on the glass
+            while (ns > 2.9f && ctx.measureText(nm) > tw - pen) { ns -= 0.1f; ctx.font = Lil(cw(ns)); }
+            while (nm.Length > 3 && ctx.measureText(nm) > tw - pen) nm = nm.Substring(0, nm.Length - 2) + "…";
+            float nw = ctx.measureText(nm);
+            Text(nm, tx, cy - cw(2.8f), Lil(cw(ns)), noName ? HUB_ACCENT : HUB_TEXT, shadow: "rgba(0,0,0,0.6)", sh: cw(0.3f));
+            if (noName) Pencil(tx + nw + cw(1.9f), cy - cw(2.9f), cw(1.5f));
             if (on)
             {
-                float bY = cy + cw(4), bH = cw(1), barW = tw;
-                ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.beginPath(); ctx.roundRect(tx, bY - bH / 2, barW, bH, bH / 2); ctx.fill();
-                float f = RankInfo.Progress(t.rating); if (f > 0) { ctx.fillStyle = RankInfo.COLORS[rk]; ctx.beginPath(); ctx.roundRect(tx, bY - bH / 2, Math.Max(bH, barW * f), bH, bH / 2); ctx.fill(); }
+                float ex = tx + cw(1.3f), ey = cy + cw(1.1f);
+                HubRankEmblem(rk, ex, ey, cw(1.3f));
+                string rl = RankInfo.NAMES[rk] + " · " + t.rating;
+                string rf = Treb(Min11(cw(2.7f)), true);
+                ctx.font = rf; while (rl.Length > 3 && ctx.measureText(rl) > tw - cw(3.4f)) rl = rl.Substring(0, rl.Length - 2) + "…";
+                Text(rl, tx + cw(3.4f), ey, rf, RankInfo.COLORS[rk], shadow: "rgba(0,0,0,0.85)", sh: cw(0.35f), stroke: "rgba(6,8,26,0.9)", sw: cw(0.35f));
+                Progress.IntoLevel(t.xp, out int have, out int need);
+                float bY = cy + cw(4.2f), bH = cw(1), barW = Math.Min(tw, cw(24)), f = need > 0 ? Mathf.Clamp01(have / (float)need) : 0;
+                ctx.fillStyle = "rgba(255,255,255,0.16)"; ctx.beginPath(); ctx.roundRect(tx, bY - bH / 2, barW, bH, bH / 2); ctx.fill();
+                if (f > 0) { ctx.fillStyle = HUB_ACCENT; ctx.beginPath(); ctx.roundRect(tx, bY - bH / 2, Math.Max(bH, barW * f), bH, bH / 2); ctx.fill(); }
             }
+            else Text("Friends and Top 100", tx, cy + cw(1.1f), Treb(Min11(cw(2.7f)), true), HUB_ACCENT, shadow: "rgba(0,0,0,0.85)", sh: cw(0.35f));
         }
     }
 }

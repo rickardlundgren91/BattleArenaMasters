@@ -13,13 +13,18 @@ namespace BAM.UI
     // The old code drew in cw units (cw(v) = v % of the width). Here everything is built once at a design width of 1080
     // (cw = 10.8) in two groups scaled to the frame's width: the top bar from the top, and the hero and the bottom row
     // from the top of the tab bar. Left out until the features exist: currencies, rank and bell. The party places and the name tags: HomeParty.cs.
+    // 2026-10-31 (Rickard, "nu ska vi utveckla och förbättra"): the top bar without its glass pill and without the gear (Settings
+    // is a tab), the MODES square became a mode chip over PLAY, PLAY is as wide as the screen, the bottom is darker, and PLAY
+    // carries a "FIRST WIN TODAY" badge while the day's first-win XP is still there. Hero size, fonts, icons and INVITE as before.
     public static partial class Screens
     {
         static HomeFx homeFx;
         static HeroStage homeStage;
         static RectTransform homeHero; // the letter badge, only if the 3D model could not be made
         static RawImage homePortraitImg;
-        static Text homeName, homeTitle, playSub;
+        static Text homeName, homeTitle, playSub; // playSub: the mode chip's text over PLAY (SetPlaySub)
+        static RectTransform homeModeChip, homeFirstWin;
+        static Text homeFirstWinText;
         static RectTransform homeModeIcon;
         static float homeModeIconSize;
         static int homeModeShown = -1;
@@ -54,7 +59,7 @@ namespace BAM.UI
             homePortraitImg.enabled = homePortraitImg.texture != null;
             homeName.text = info.Name;
             homeTitle.text = info.Title;
-            playSub.text = HomePlaySub();
+            SetPlaySub();
             if (homeModeShown != (int)homeMode)
             {
                 homeModeShown = (int)homeMode;
@@ -95,7 +100,7 @@ namespace BAM.UI
             homeSky = FadePart(screen, null, sky);
             homeMelt = FadePart(screen, fadeV, sky);
             homeSky.enabled = homeMelt.enabled = false;
-            var edge = new Color(6 / 255f, 9 / 255f, 30 / 255f, 0.5f);
+            var edge = new Color(6 / 255f, 9 / 255f, 30 / 255f, 0.6f); // a little darker than the old 0.5: the hero stands out more
             homeEdgeL = FadePart(screen, fadeH, edge);
             homeEdgeR = FadePart(screen, fadeH, edge);
             homeEdgeR.rectTransform.localScale = new Vector3(-1, 1, 1);
@@ -150,9 +155,10 @@ namespace BAM.UI
             SetPart(homeEdgeR, W / 2 - ew / 2, 0, ew, H);
             SetPart(homeMidFade, 0, cw * 20, W, cw * 50);
             SetPart(homeTopFade, 0, 0, W, cw * 52);
-            float fb = Mathf.Min(dy + dh - cw * 24, (H - homeBrowY) - cw * 30);
-            SetPart(homeBottomFade, 0, fb, W, cw * 30);
-            SetPart(homeBottomFill, 0, fb + cw * 30 - 1, W, Mathf.Max(0, H - fb - cw * 30 + 1));
+            // dark from the mode chip down (it sits cw(2..10) over the bottom row), fading out just under the hero's feet
+            float fh = cw * 18, fb = Mathf.Min(dy + dh - cw * 24, (H - homeBrowY) - cw * 6 - fh);
+            SetPart(homeBottomFade, 0, fb, W, fh);
+            SetPart(homeBottomFill, 0, fb + fh - 1, W, Mathf.Max(0, H - fb - fh + 1));
         }
 
         /// <summary>The sky over the painting while it is zoomed out (scale = its scale now) so far that its top edge shows.</summary>
@@ -205,7 +211,8 @@ namespace BAM.UI
             HomePress playPress, modesPress;
             float spring = 1, springV, shineAt = -9;
             bool playWasDown;
-            const float PlayW = 1080 - 8 * Cw - 17 * Cw * 1.1f - 2.6f * Cw, PlayInnerH = BrowH - 2 * 0.7f * Cw;
+            const float PlayW = 1080 - 8 * Cw, PlayInnerH = BrowH - 2 * 0.7f * Cw;
+            const float ChipH = 8 * Cw, ChipGap = 2.2f * Cw, ChipIcon = 5.4f * Cw;
 
             public void Build(RectTransform body)
             {
@@ -333,38 +340,66 @@ namespace BAM.UI
                 homeStage.Tapped = () => { BamAudio.Play(SfxId.UiTap); ShowTab(1); };
             }
 
-            // ---- the bottom row: MODES and PLAY ----
+            // ---- the bottom row: the mode chip and PLAY ----
 
             void BuildRow()
             {
-                // HubModeBtn: a dark square with BAM's rune frame, the mode's icon and MODES
-                float mw = BrowH * 1.1f, r = 4 * Cw;
-                var modesRt = UiKit.NewRect("Modes", low);
-                At(modesRt, 4 * Cw, BrowBottom, mw, BrowH, 0, 0);
-                var shadow = Img(modesRt, "Shadow", UiKit.Rounded, new Color(0, 0, 0, 0.35f));
+                // the mode chip (was the MODES square, HubModeBtn): the mode's own icon, then its name in gold and what it is,
+                // and a small ▾; a tap opens MODES. Its width follows the text (SetPlaySub), at most to FRIENDS' round button.
+                float r = ChipH / 2;
+                homeModeChip = UiKit.NewRect("Modes", low);
+                At(homeModeChip, 4 * Cw, BrowBottom + BrowH + ChipGap, 60 * Cw, ChipH, 0, 0); // on PLAY's left edge, clear of FRIENDS on the right
+                var shadow = Img(homeModeChip, "Shadow", UiKit.Rounded, new Color(0, 0, 0, 0.35f));
                 Round(shadow, r);
-                UiKit.Stretch(shadow.rectTransform, 0, Cw, 0, -Cw);
-                modesFace = UiKit.NewRect("Face", modesRt);
+                UiKit.Stretch(shadow.rectTransform, 0, 0.6f * Cw, 0, -0.6f * Cw);
+                modesFace = UiKit.NewRect("Face", homeModeChip);
                 UiKit.Stretch(modesFace);
-                Round(Img(modesFace, "Fill", UiKit.Rounded, new Color(HubGlass.r, HubGlass.g, HubGlass.b, 0.94f)), r);
-                RuneFrame(modesFace, mw, BrowH, r);
-                // the chosen mode's sign (HubModeIcon(hubMode)); RefreshHome swaps it when the mode changes
+                Round(Img(modesFace, "Fill", UiKit.Rounded, new Color(HubGlass.r, HubGlass.g, HubGlass.b, 0.9f)), r);
+                RoundRing(Img(modesFace, "Gold", HomeArt.RoundRing(0.3f * Cw / r), Fade(HubGold, 0.6f)), r);
                 homeModeIcon = UiKit.NewRect("ModeIcon", modesFace);
-                float s = Mathf.Min(mw, BrowH) * 0.5f;
-                Size(homeModeIcon, s, s).anchoredPosition = new Vector2(0, BrowH * 0.08f);
-                homeModeIconSize = s;
-                var label = Lil(modesFace, "MODES", 2.6f, HubSoft);
-                Size(label.rectTransform, mw, 5 * Cw).anchoredPosition = new Vector2(0, -0.32f * BrowH);
-                var hit = modesRt.gameObject.AddComponent<Image>();
+                homeModeIcon.anchorMin = homeModeIcon.anchorMax = homeModeIcon.pivot = new Vector2(0, 0.5f);
+                homeModeIcon.anchoredPosition = new Vector2(1.4f * Cw, 0);
+                homeModeIcon.sizeDelta = new Vector2(ChipIcon, ChipIcon);
+                homeModeIconSize = ChipIcon;
+                playSub = Lil(modesFace, "", 3f, HubSoft);
+                playSub.supportRichText = true;
+                playSub.alignment = TextAnchor.MiddleLeft;
+                var lr = playSub.rectTransform;
+                lr.anchorMin = new Vector2(0, 0); lr.anchorMax = new Vector2(1, 1); lr.pivot = new Vector2(0, 0.5f);
+                lr.offsetMin = new Vector2(1.4f * Cw + ChipIcon + 1.4f * Cw, 0); lr.offsetMax = new Vector2(-5 * Cw, 0);
+                // the ▾: a small chevron turned down
+                var down = UiKit.NewRect("Down", modesFace);
+                down.anchorMin = down.anchorMax = down.pivot = new Vector2(1, 0.5f);
+                down.anchoredPosition = new Vector2(-2.6f * Cw, 0); down.sizeDelta = Vector2.zero;
+                down.localRotation = Quaternion.Euler(0, 0, -90);
+                Chevron(down, 0, 0, 0.9f * Cw, 0.45f * Cw, HubSoft);
+                var hit = homeModeChip.gameObject.AddComponent<Image>();
                 hit.color = Color.clear;
-                var b = modesRt.gameObject.AddComponent<Button>();
+                var b = homeModeChip.gameObject.AddComponent<Button>();
                 b.transition = Selectable.Transition.None;
                 b.navigation = new Navigation { mode = Navigation.Mode.None };
                 b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); Push(modes); });
-                modesRt.gameObject.AddComponent<ButtonFx>().PressScale = false;
-                modesPress = modesRt.gameObject.AddComponent<HomePress>();
+                homeModeChip.gameObject.AddComponent<ButtonFx>().PressScale = false;
+                modesPress = homeModeChip.gameObject.AddComponent<HomePress>();
 
-                BuildPlay(4 * Cw + mw + 2.6f * Cw);
+                BuildPlay(4 * Cw);
+                BuildFirstWin();
+            }
+
+            // "FIRST WIN TODAY +50 XP": a mint tag on PLAY's top-right corner while the day's first-win XP is still to win
+            // (online builds: OnlineHooks.FirstWinXp; offline there is no XP and no tag)
+            void BuildFirstWin()
+            {
+                float h = 4.6f * Cw;
+                homeFirstWin = UiKit.NewRect("FirstWin", low);
+                At(homeFirstWin, 1080 - 6 * Cw, BrowBottom + BrowH - 1.8f * Cw, 40 * Cw, h, 1, 0.5f);
+                var drop = Img(homeFirstWin, "Shadow", UiKit.Rounded, new Color32(0x1a, 0x8a, 0x66, 0xff));
+                Round(drop, h / 2);
+                UiKit.Stretch(drop.rectTransform, 0, 0.5f * Cw, 0, -0.5f * Cw);
+                Round(Img(homeFirstWin, "Fill", UiKit.Rounded, UiKit.Primary), h / 2);
+                homeFirstWinText = Lil(homeFirstWin, "", 2.5f, new Color32(0x06, 0x28, 0x1d, 0xff));
+                UiKit.Stretch(homeFirstWinText.rectTransform);
+                homeFirstWin.gameObject.SetActive(false);
             }
 
             // PlayButton: Rickard's orange button image in the rounded shape with a dark border, a warm pulsing glow, a shine
@@ -402,15 +437,12 @@ namespace BAM.UI
                 float size = 7.6f * Cw;
                 var label = Lil(rt, "PLAY", 7.6f, Color.white);
                 Edge(label, new Color32(0x8a, 0x32, 0x00, 0xff), size * 0.07f * 0.6f, new Color32(0xb0, 0x4a, 0x00, 0xff), size * 0.083f);
-                float lx = -2.5f * Cw, ly = 0.08f * h;
+                float lx = -2.5f * Cw, ly = 0; // the mode line is on the chip above, so PLAY sits in the middle
                 Size(label.rectTransform, w, size * 1.4f).anchoredPosition = new Vector2(lx, ly);
                 // the › after the label: a dark stroke under a white one
                 float ax = lx + label.preferredWidth / 2 + 4.2f * Cw, kk = size * 0.22f;
                 Chevron(rt, ax, ly, kk, kk * 0.75f, new Color32(0x8a, 0x32, 0x00, 0xff));
                 Chevron(rt, ax, ly, kk, kk * 0.42f, Color.white);
-                playSub = Lil(rt, "", 3.2f, Color.white);
-                Edge(playSub, new Color32(0x6e, 0x26, 0x00, 0xff), 0.3f * Cw, new Color(60 / 255f, 15 / 255f, 0, 0.85f), 0.45f * Cw);
-                Size(playSub.rectTransform, w, 5 * Cw).anchoredPosition = new Vector2(0, -0.28f * h);
 
                 var hit = rt.gameObject.AddComponent<Image>();
                 hit.color = Color.clear;
@@ -473,19 +505,11 @@ namespace BAM.UI
                 Size(Img(box, "Eye", UiKit.Circle, back).rectTransform, 0.44f * k, 0.44f * k).anchoredPosition = new Vector2(0.45f * k, -0.1f * k);
             }
 
-            // ---- the top bar: one glass pill with the hero's picture and name, the round gear under it ----
+            // ---- the top bar: the hero's picture and name straight on the dark top (no glass pill, no gear: Settings is a tab) ----
 
             void BuildTopBar()
             {
-                float cy = 7.5f * Cw, bh = 14 * Cw;
-                var bar = Img(top, "Glass", UiKit.Rounded, new Color(HubGlass.r, HubGlass.g, HubGlass.b, 0.62f));
-                Round(bar, bh / 2);
-                AtTop(bar.rectTransform, 1.5f * Cw, cy - bh / 2, 1080 - 3 * Cw, bh);
-                var trim = Img(bar.rectTransform, "Trim", HomeArt.RoundRing(0.35f * Cw / (bh / 2)), Fade(HubGold, 0.55f));
-                RoundRing(trim, bh / 2);
-                var sheen = Img(bar.rectTransform, "Sheen", UiKit.Rounded, new Color(1, 1, 1, 0.06f));
-                Round(sheen, bh * 0.2f);
-                AtTop(sheen.rectTransform, Cw, 0.5f * Cw, 1080 - 5 * Cw, bh * 0.4f);
+                float cy = 7.5f * Cw;
 
                 // the picture: the chosen hero's portrait in a blue-purple circle
                 float ar = 5 * Cw;
@@ -511,23 +535,6 @@ namespace BAM.UI
                 Edge(homeTitle, new Color(6 / 255f, 8 / 255f, 26 / 255f, 0.9f), 0.25f * Cw, new Color(0, 0, 0, 0.85f), 0.35f * Cw);
                 AtTop(homeTitle.rectTransform, tx, cy + 1.1f * Cw - 2.5f * Cw, 50 * Cw, 5 * Cw);
                 if (OnlineChip(top, cy)) { disc.gameObject.SetActive(false); homeName.gameObject.SetActive(false); homeTitle.gameObject.SetActive(false); } // online builds: the old profile chip
-
-                // HubRoundBtn with HubGear: Settings
-                float rb = 11 * Cw;
-                var btn = UiKit.NewRect("Gear", top);
-                AtTop(btn, 1080 - 3 * Cw - rb, 16 * Cw, rb, rb);
-                var drop = Img(btn, "Shadow", UiKit.Circle, new Color(0, 0, 0, 0.3f));
-                UiKit.Stretch(drop.rectTransform, 0, 0.6f * Cw, 0, -0.6f * Cw);
-                var face = Img(btn, "Face", UiKit.Circle, new Color(HubGlass.r, HubGlass.g, HubGlass.b, 0.88f));
-                face.raycastTarget = true;
-                Img(btn, "Edge", HomeArt.CircleRing(0.4f * Cw / (rb / 2)), new Color(150 / 255f, 160 / 255f, 1f, 0.3f));
-                Gear(btn, 2.8f * Cw, HubText, new Color32(0x15, 0x1a, 0x42, 0xff));
-                var b = btn.gameObject.AddComponent<Button>();
-                b.targetGraphic = face;
-                b.transition = Selectable.Transition.None;
-                b.navigation = new Navigation { mode = Navigation.Mode.None };
-                b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); ShowTab(2); });
-                btn.gameObject.AddComponent<ButtonFx>();
             }
 
             // HubTutCard (the old MenuNewPlayer.cs): after the first tutorial, "Tutorial done" and "Next: your first match" on a dark

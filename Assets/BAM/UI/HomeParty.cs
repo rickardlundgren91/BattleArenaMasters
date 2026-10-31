@@ -193,7 +193,7 @@ namespace BAM.UI
                 if (leaveBtn != null) leaveBtn.gameObject.SetActive(p != null);
                 if (invitePills != null)
                     for (int i = 0; i < 2; i++) invitePills[i].gameObject.SetActive(i >= shownCount);
-                playSub.text = HomePlaySub();
+                SetPlaySub();
                 PlaceParty();
             }
 
@@ -220,6 +220,22 @@ namespace BAM.UI
 
         /// <summary>What Home's PLAY says it starts: "WITH YOUR PARTY" in a party (the old sub line), else the mode.</summary>
         static string HomePlaySub() => CurrentParty() != null ? "WITH YOUR PARTY" : PlaySubFor(homeMode, true);
+
+        /// <summary>The mode chip over PLAY: the mode's name in gold and what PLAY starts; the chip fits the text. And the first-win tag.</summary>
+        static void SetPlaySub()
+        {
+            string rest = CurrentParty() != null ? "WITH YOUR PARTY" : homeMode == Mode.Classic ? PlaySubFor(homeMode, true) : ModeSub(homeMode).ToUpperInvariant();
+            playSub.text = "<color=#ffd166>" + ModeTitle(homeMode) + "</color>   " + rest;
+            float w = 1.4f * Cw + 5.4f * Cw + 1.4f * Cw + playSub.preferredWidth + 5 * Cw;
+            homeModeChip.sizeDelta = new Vector2(Mathf.Clamp(w, 40 * Cw, 78 * Cw), homeModeChip.sizeDelta.y);
+            int xp = homeMode == Mode.Classic && OnlineHooks.FirstWinXp != null ? OnlineHooks.FirstWinXp() : 0;
+            homeFirstWin.gameObject.SetActive(xp > 0);
+            if (xp > 0)
+            {
+                homeFirstWinText.text = "FIRST WIN TODAY  +" + xp + " XP";
+                homeFirstWin.sizeDelta = new Vector2(homeFirstWinText.preferredWidth + 4 * Cw, homeFirstWin.sizeDelta.y);
+            }
+        }
 
         /// <summary>The party now: the editor's test party (BAM > Test Party) first, else the online room.</summary>
         static PartyView CurrentParty() => TestParty ?? OnlineHooks.Party?.Invoke();
