@@ -251,10 +251,20 @@ namespace BAM.Game
         // the wheel opens above the button, kept on screen, so the thumb and the SPECIAL never cover it
         Vector2 WheelCentre()
         {
-            Rect r = safe.rect;
+            Rect r = HudArea();
             Vector2 e = HeartCentre();
             float mrg = WheelR + SlotR * 1.25f;
             return new Vector2(Mathf.Clamp(e.x, r.xMin + mrg, r.xMax - mrg), Mathf.Clamp(e.y + mrg * 1.1f, r.yMin + mrg, r.yMax - mrg));
+        }
+
+        // the whole HUD (wider than the safe area on a foldable or tablet, where the SPECIAL sits at the screen's edge), in the
+        // safe area's coordinates
+        UnityEngine.Rect HudArea()
+        {
+            UnityEngine.Rect w = wideHud.rect;
+            Vector2 a = safe.InverseTransformPoint(wideHud.TransformPoint(w.min));
+            Vector2 b = safe.InverseTransformPoint(wideHud.TransformPoint(w.max));
+            return UnityEngine.Rect.MinMaxRect(a.x, a.y, b.x, b.y);
         }
 
         Vector2 SlotCentre(int i)

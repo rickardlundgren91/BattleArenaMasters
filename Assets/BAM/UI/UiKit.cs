@@ -114,28 +114,46 @@ namespace BAM.UI
 
         /// <summary>
         /// The standing frame, in screen pixels: a standing picture inside the safe area, shaped like the safe area itself when
-        /// that is between 9:22 and 9:16, centred. A taller screen gets 9:19.5 (the old game's AbcGame.cs Layout); a wider one
-        /// (a foldable opened up, a tablet, the editor's landscape Game view) gets 9:16, the canvas's own 1080x1920 shape, as
-        /// wide as the menus are laid out for. Was 9:19.5 there too until a Galaxy Z Fold tester found the game "forced narrow"
-        /// (2026-10-31). Every SafeArea child lays out inside it; WideArea children and the match camera use the full width.
+        /// that is between 9:22 and 9:16 (a phone), centred. A taller screen gets 9:19.5 (the old game's AbcGame.cs Layout), and
+        /// so does a landscape window (the editor's landscape Game view: Rickard's everyday view looks as it always did). A
+        /// standing screen wider than 9:16 (WideScreen: a foldable opened up or its wide cover screen, a tablet held upright)
+        /// gets 9:16 instead, the canvas's own 1080x1920 shape, as wide as the menus are laid out for (a Galaxy Z Fold tester
+        /// found the game "forced narrow", 2026-10-31). Every SafeArea child lays out inside it.
         /// </summary>
         public static Rect PortraitFrame() => Frame(9f / 16f);
 
         /// <summary>
-        /// The frame the match camera measures its 11.5 tiles across: the standing frame, except that a screen wider than 9:16
-        /// keeps the old 9:19.5 shape, so a foldable or tablet sees the same length of lane and the same tile size as before; the
-        /// picture now runs on over the full width instead of black edges.
+        /// The frame the match camera measures its 11.5 tiles across: the standing frame, except that a WideScreen keeps the old
+        /// 9:19.5 shape, so a foldable or tablet sees the same length of lane and the same tile size as a usual phone; there the
+        /// picture runs on over the full width instead of black edges.
         /// </summary>
         public static Rect CameraFrame() => Frame(9f / 19.5f);
 
-        static Rect Frame(float wideShape)
+        /// <summary>
+        /// A standing screen wider than 9:16 (9:16 &lt; width/height &lt;= 1): menus and the match fill its full width (WideArea, the
+        /// match camera). False on a phone and in a landscape window, which keep the old look with black edges.
+        /// </summary>
+        public static bool WideScreen
+        {
+            get { return IsWide(SafeAspect(out _)); }
+        }
+
+        // a hair over 9:16 still counts as a phone (rounding), so a 16:9 phone never flips between the two
+        static bool IsWide(float a) => a > 9f / 16f + 0.002f && a <= 1f;
+
+        static float SafeAspect(out Rect sa)
         {
             float sw = Screen.width, sh = Screen.height;
-            var sa = Screen.safeArea;
+            sa = Screen.safeArea;
             if (sa.width < 10f || sa.height < 10f) sa = new Rect(0f, 0f, sw, sh);
             if (NavBarInset > sa.yMin) sa.yMin = Mathf.Min(NavBarInset, sa.yMax - 10f);
-            float a = sa.width / sa.height;
-            float ar = a < 9f / 22f ? 9f / 19.5f : a > 9f / 16f ? wideShape : a;
+            return sa.height > 0f ? sa.width / sa.height : 9f / 19.5f;
+        }
+
+        static Rect Frame(float wideShape)
+        {
+            float a = SafeAspect(out Rect sa);
+            float ar = IsWide(a) ? wideShape : a >= 9f / 22f && a <= 1f ? a : 9f / 19.5f;
             float fw, fh;
             if (a > ar) { fh = sa.height; fw = sa.height * ar; }
             else { fw = sa.width; fh = sa.width / ar; }
@@ -154,8 +172,9 @@ namespace BAM.UI
         }
 
         /// <summary>
-        /// A child as tall as the standing frame but as wide as the whole screen: for backgrounds and bars that should reach the
-        /// screen's sides on a foldable or tablet instead of leaving black edges. On a phone it is the same as SafeArea.
+        /// A child as tall as the standing frame but, on a WideScreen, as wide as the whole screen: for backgrounds, bars and the
+        /// match controls that should reach the sides of a foldable or tablet. On a phone and in a landscape window it is the
+        /// same as SafeArea.
         /// </summary>
         public static RectTransform WideArea(RectTransform parent)
         {

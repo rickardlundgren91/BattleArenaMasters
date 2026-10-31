@@ -30,6 +30,9 @@ namespace BAM.Game
         readonly GameFlow flow;
         Canvas canvas;
         RectTransform safe;
+        // the standing frame's height but the screen's full width: the joystick zone, the SPECIAL and its "denied" line live
+        // here, so on a foldable or tablet they sit at the screen's edges where the thumbs are (on a phone it is the safe area)
+        RectTransform wideHud;
         Text deniedText, specialName;
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
@@ -247,8 +250,9 @@ namespace BAM.Game
             if (m == null) return;
             canvas.enabled = !hidden;
             // the old rings' widths are in the old game's CSS pixels: 400 across the portrait frame, not the phone's own pixels
-            // (on a 1080 wide phone one device pixel made them 2.7 times too thin, Rickard 2026-10-26 "jättesvag")
-            float cssPx = Screen.width > 1f && canvasRect.rect.width > 1f ? safe.rect.width * Screen.width / canvasRect.rect.width / 400f : 1f;
+            // (on a 1080 wide phone one device pixel made them 2.7 times too thin, Rickard 2026-10-26 "jättesvag"); the camera's
+            // frame, so on a wide screen they keep the same width next to the tiles as on a phone
+            float cssPx = Mathf.Max(1f, UiKit.CameraFrame().width) / 400f;
             rings.Frame(hidden || (Intro != null && Intro.Active), cssPx / cam.PixelsPerTile);
             OverheadFrame(hidden || (Intro != null && Intro.Active));
             VignetteFrame(hidden || (Intro != null && Intro.Active));
@@ -514,10 +518,11 @@ namespace BAM.Game
         {
             built = true;
             canvas = UiKit.CreateCanvas("BAM.Hud", HudOrder);
+            wideHud = UiKit.WideArea((RectTransform)canvas.transform); // before the safe area, so everything there sits above it
             safe = UiKit.SafeArea(canvas);
 
             // joystick: a see-through half of the screen that catches touches (first, so the buttons sit above it)
-            joyArea = UiKit.NewRect("Joystick", safe);
+            joyArea = UiKit.NewRect("Joystick", wideHud);
             joyArea.pivot = new Vector2(0.5f, 0.5f);
             var catcher = joyArea.gameObject.AddComponent<Image>();
             catcher.color = Color.clear;
@@ -538,7 +543,7 @@ namespace BAM.Game
             Edge(joy.Knob, 1.12f * JoystickZone.Radius, 4f, new Color(1f, 1f, 1f, 0.8f));
 
             // special button
-            specialRoot = UiKit.NewRect("Special", safe);
+            specialRoot = UiKit.NewRect("Special", wideHud);
             var hit = specialRoot.gameObject.AddComponent<Image>();
             hit.sprite = UiKit.Circle;
             hit.color = Color.clear;
@@ -610,7 +615,7 @@ namespace BAM.Game
             specialName.resizeTextMaxSize = 44;
             UiKit.AddOutline(specialName, 3);
 
-            deniedText = UiKit.Label(safe, "", 44, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.8f));
+            deniedText = UiKit.Label(wideHud, "", 44, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.8f));
             UiKit.AddOutline(deniedText, 3);
 
             BuildTop();

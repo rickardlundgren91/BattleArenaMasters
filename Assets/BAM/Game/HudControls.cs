@@ -28,10 +28,12 @@ namespace BAM.Game
         public Vector2 RestPosition(bool rightSide)
         {
             // the old game's joyRest: 22 % of the width in from the side, 13 % of the height up from the bottom, measured on the
-            // whole HUD (the safe area), not on the touch zone, so it never depends on the zone's layout
+            // whole HUD (the safe area), not on the touch zone, so it never depends on the zone's layout. On a foldable or tablet
+            // the HUD is wider than the standing frame (1080 units at 9:16): the stick stays as far from the edge as there.
             var frame = (RectTransform)Area.parent;
             Rect f = frame.rect;
-            var at = new Vector3(rightSide ? f.xMax - 0.22f * f.width : f.xMin + 0.22f * f.width, f.yMin + 0.13f * f.height, 0f);
+            float inset = 0.22f * Mathf.Min(f.width, 1080f);
+            var at = new Vector3(rightSide ? f.xMax - inset : f.xMin + inset, f.yMin + 0.13f * f.height, 0f);
             return Area.InverseTransformPoint(frame.TransformPoint(at));
         }
 

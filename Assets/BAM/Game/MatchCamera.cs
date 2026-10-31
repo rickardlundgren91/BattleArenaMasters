@@ -1,6 +1,7 @@
 using BAM.Sim;
 using BAM.UI;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace BAM.Game
 {
@@ -8,8 +9,10 @@ namespace BAM.Game
     /// The old game's camera (AbcGame.cs Layout and updateCamera): orthographic, tilted down 55 degrees (elevation asin 0.82),
     /// 11.5 tiles across the camera frame (UiKit.CameraFrame) with the focus 52% down it (Rickard 2026-10-25: "rätt zoom
     /// på kamera"). On a phone the frame is the whole safe area and the picture runs on under the status and navigation bars;
-    /// a wider screen (a foldable opened up, a tablet) keeps the phone's tile size and lane length and simply shows more to
-    /// the sides (the arena's edge and the water round it) instead of the old game's black edges (a Z Fold tester, 2026-10-31).
+    /// a standing screen wider than 9:16 (UiKit.WideScreen: a foldable, a tablet held upright) keeps a usual phone's tile size
+    /// and lane length and simply shows more to the sides (the arena's edge and the water round it) instead of the old game's
+    /// black edges (a Z Fold tester, 2026-10-31). A landscape window (the editor's landscape Game view) keeps the old game's
+    /// frame with black edges beside it.
     /// Follows the player's hero a little ahead (towards the enemy); while it is dead it follows a living teammate and comes
     /// back at the respawn. The guided match frames Tyra and the enemy tower together (the old game's tutCamY).
     /// </summary>
@@ -26,6 +29,8 @@ namespace BAM.Game
 
         static readonly Color IslandSky = new Color32(0x79, 0xb9, 0xee, 0xff);
         readonly Camera cam;
+        Camera bars;
+        bool wide;                      // UiKit.WideScreen when the size was last taken: the whole screen, no bars
         Color menuBackground;
         bool skyChanged;
         Match m;
@@ -63,6 +68,7 @@ namespace BAM.Game
             cam.orthographic = false;
             cam.rect = new Rect(0f, 0f, 1f, 1f);
             frame = default;
+            SetBars(false);
             m = null; watched = null;
         }
 
@@ -77,29 +83,54 @@ namespace BAM.Game
             if (over) speed = 3.5f;
             float k = 1f - Mathf.Exp(-speed * dt);
             focus += (target - focus) * k;
-            // half the width actually seen (more than 11.5 tiles on a wide screen), so a wide view is not pushed off-centre
-            float halfW = 0.5f * Mathf.Max(TilesAcross, screen.x * upp), halfH = FrameLength * 0.42f;
+            // half the width actually seen (more than 11.5 tiles on a WideScreen), so a wide view is not pushed off-centre
+            float halfW = 0.5f * Mathf.Max(TilesAcross, cam.pixelWidth * upp), halfH = FrameLength * 0.42f;
             focus.x = 2f * halfW >= m.Map.W + 2f * Over ? m.Map.W * 0.5f : Mathf.Clamp(focus.x, halfW - Over, m.Map.W - halfW + Over);
             if (m.Map.H > 2f * halfH) focus.z = Mathf.Clamp(focus.z, halfH - Over, m.Map.H - halfH + Over);
             Place();
         }
 
-        // The camera draws the whole screen: TilesAcross over the camera frame's width, the focus FocusDown of the way down
-        // the frame. Wider than the frame it shows more of the sides at the same scale.
+        // The camera draws the frame's columns from the top of the screen to the bottom: TilesAcross over the frame's width,
+        // the focus FocusDown of the way down the frame. On a WideScreen it draws the whole screen at the same scale, so more
+        // of the sides shows; in a landscape window only the frame, with black edges beside it (the old game's look).
         void UpdateSize()
         {
             float sw = Screen.width, sh = Screen.height;
             Rect f = UiKit.CameraFrame();
             if (f.width < 1f || f.height < 1f || sw < 1f || sh < 1f) return;
-            if (f != frame || sw != screen.x || sh != screen.y)
+            bool w = UiKit.WideScreen;
+            if (f != frame || sw != screen.x || sh != screen.y || w != wide)
             {
                 frame = f;
                 screen = new Vector2(sw, sh);
-                cam.rect = new Rect(0f, 0f, 1f, 1f);
+                wide = w;
+                cam.rect = w ? new Rect(0f, 0f, 1f, 1f) : new Rect(f.x / sw, 0f, f.width / sw, 1f);
+                SetBars(!w && f.width < sw - 1f);
             }
             upp = TilesAcross / f.width;
             lift = (0.5f * sh - f.yMax + FocusDown * f.height) * upp;
             cam.orthographicSize = 0.5f * sh * upp;
+        }
+
+        // The old game's bars camera: draws nothing and clears the whole screen black before the match camera draws its part.
+        void SetBars(bool on)
+        {
+            if (on && bars == null)
+            {
+                var go = new GameObject("BAM.CameraBars");
+                Object.DontDestroyOnLoad(go);
+                bars = go.AddComponent<Camera>();
+                bars.depth = cam.depth - 50f;
+                bars.cullingMask = 0;
+                bars.clearFlags = CameraClearFlags.SolidColor;
+                bars.backgroundColor = Color.black;
+                bars.orthographic = true;
+                var data = bars.GetUniversalAdditionalCameraData();
+                data.renderPostProcessing = false;
+                data.renderShadows = false;
+                data.antialiasing = AntialiasingMode.None;
+            }
+            if (bars != null) bars.enabled = on;
         }
 
         // ahead = towards the enemy: up the screen, which online on the top team (Coords.Turned) is down the map's z
