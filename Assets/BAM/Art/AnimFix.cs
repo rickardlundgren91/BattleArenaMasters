@@ -44,9 +44,9 @@ namespace BAM.Art
         /// (WeaponDef.GripY/GripZ, along the knuckles) instead of the bind placement (53 degrees off the knuckle line); the bow's aim,
         /// and so the silhouette, stays, but her hand turns differently (in the shot too, up to WristMax).</summary>
         public static bool AnatomicalWrist = true; // Rickard 2026-10-31: on (no 120-degree flips in the strafe, Grip Validator run 20:56)
-        /// <summary>Tyra pilot, off by default (an A/B against the silhouette): the bow is held only as her fist holds it, so its look
-        /// follows the clip's hand (level at the hip in the idle and walk) instead of Rickard's hold angles.</summary>
-        public static bool GripLockFull = false;
+        /// <summary>Tyra pilot, on since Rickard's pick 2026-10-31 (was an A/B; it replaces the hanging bow of 2026-10-30): the bow is held
+        /// only as her fist holds it, so its look follows the clip's hand (level at the hip in the idle and walk) instead of the hold angles.</summary>
+        public static bool GripLockFull = true; // Rickard 2026-10-31: "ser bättre ut på än av"
         /// <summary>Rickard 2026-10-30 ("damage nummer kommer innan träffen från vapnet nu"): a melee hero's swing (Fenn, Knut, Bonk,
         /// Oaken) shows the weapon meeting its target (the clip's Contact: the striking hand braked after its fastest moment) on the
         /// tick the rules land the blow and its number shows, instead of showing the fastest moment on the release.</summary>

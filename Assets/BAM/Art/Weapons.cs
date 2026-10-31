@@ -864,7 +864,7 @@ namespace BAM.Art
                     TurnAbout(i, Quaternion.Slerp(Quaternion.identity, Quaternion.Euler(W.SwingTurn), sw));
                 // every turn above is about the grip, so the aim is final here: the grip goes into the palm (a shift, never a turn, so
                 // the silhouette Rickard picked stays), before his Offset, which is his own grip touch-up and so stays on top of it
-                // Tyra pilot, AnimFix.GripLockFull (off by default, for an A/B against the silhouette): the weapon is held only as the
+                // Tyra pilot, AnimFix.GripLockFull (on by default since Rickard 2026-10-31): the weapon is held only as the
                 // fist holds it (the anatomical grip), whatever the hold above aimed; the wrist has nothing to take, the bow's look
                 // then follows the clip's hand
                 bool full = AnimFix.GripLockFull && hasAnat[i] && !gone && t.localScale.y > 1e-4f;

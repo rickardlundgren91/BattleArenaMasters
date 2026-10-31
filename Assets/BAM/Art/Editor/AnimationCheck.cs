@@ -72,9 +72,9 @@ namespace BAM.Art.Editor
                 "On by default. With the wrist turn on, the wrist works towards the grip her fist makes in the bow clip (the bow along "
                 + "the knuckles) instead of the bind placement. Where the bow points stays the same; her hand turns differently.",
                 AnimFix.AnatomicalWrist);
-            AnimFix.GripLockFull = Part("Bow fully in the fist (A/B, changes the look)",
-                "Off by default. The bow is held only as her fist holds it, so it follows the clip's hand: level at the hip in the "
-                + "idle and walk instead of hanging. For comparing videos; Rickard keeps the hanging bow (issue #5).",
+            AnimFix.GripLockFull = Part("Bow fully in the fist (Tyra pilot)",
+                "On by default (Rickard 2026-10-31). The bow is held only as her fist holds it, so it follows the clip's hand: level "
+                + "at the hip in the idle and walk instead of hanging. Off = the old hanging bow.",
                 AnimFix.GripLockFull);
             AnimFix.ContactTiming = Part("Weapon meets the target with the number (melee)",
                 "Fenn, Knut, Bonk and Oaken: the weapon reaches its target on the moment the damage number shows, instead of the "
@@ -110,7 +110,7 @@ namespace BAM.Art.Editor
             AnimFix.BlowTiming = AnimFix.Life = AnimFix.ArmRoom = AnimFix.GripLock = AnimFix.WristTurn = AnimFix.ContactTiming = on;
             AnimFix.PalmSocket = on;
             AnimFix.AnatomicalWrist = on;
-            AnimFix.GripLockFull = false; // an A/B alternative (changes the look), not a part: never on with "All on"
+            AnimFix.GripLockFull = on;
         }
     }
 }
