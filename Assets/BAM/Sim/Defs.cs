@@ -35,7 +35,7 @@ namespace BAM.Sim
         public ProjKind Attack;
     }
 
-    /// <summary>A bot level (the old game's bot tiers). Easy plays like Bronze, Normal like Gold, Hard like Platinum.</summary>
+    /// <summary>A bot level (the old game's bot tiers). Easy plays like Bronze, Normal like Silver, Hard like Platinum.</summary>
     public sealed class BotTier
     {
         public string Name;
@@ -123,7 +123,9 @@ namespace BAM.Sim
         public static readonly BotTier Gold = T("Gold", 0.4f, 0.6f, 0.6f, 0.7f, 2.5f, 3, 2, true, new[] { 0.4f, 0.6f, 0.9f }, 1, 5, 0.75f, 0.35f);
         public static readonly BotTier Platinum = T("Platinum", 0.5f, 0.6f, 0.69f, 0.8f, 3, 3, 2, true, new[] { 0.333f, 0.5f, 0.75f }, 1, 7, 0.9f, 0.25f);
 
-        public static BotTier Tier(Difficulty d) => d == Difficulty.Easy ? Bronze : d == Difficulty.Normal ? Gold : Platinum;
+        // Normal is Silver since 2026-10-31: with Gold, Easy -> Normal cost a mid player 25 points and Normal -> Hard only 5
+        // (real matches 30-31 Oct: 82 % wins on Easy, 27 % on Normal, 57 % on Hard); Silver splits the gap (58/42/28 %).
+        public static BotTier Tier(Difficulty d) => d == Difficulty.Easy ? Bronze : d == Difficulty.Normal ? Silver : Platinum;
     }
 
     /// <summary>The match rules' fixed numbers (the old game's shipped values).</summary>
