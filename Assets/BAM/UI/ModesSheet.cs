@@ -12,7 +12,7 @@ namespace BAM.UI
     // PLAY at the bottom, which starts the chosen mode. Home's PLAY and MODES icon follow the chosen mode too (HubPlayNow).
     // BAM's modes: CLASSIC (3v3 against bots), TRAINING (the guided match) and HERO TEST ("Try out any hero", the old mode
     // list's entry); RANKED is not in BAM. 2026-10-31 (Rickard's pick on a card): TRAINING and HERO TEST share one card, PRACTICE,
-    // which opens TUTORIAL / HERO TEST under it the way CLASSIC opens its BOT DIFFICULTY; Home still plays the one picked. Online builds add ONLINE MATCH and PLAY WITH FRIENDS under them (OnlineEntries.cs).
+    // which opens TUTORIAL / HERO TEST under it the way CLASSIC opens its BOT DIFFICULTY; Home still plays the one picked. Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
     public static partial class Screens
     {
         enum Mode { Classic, Training, HeroTest }

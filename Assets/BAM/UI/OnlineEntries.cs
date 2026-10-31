@@ -176,7 +176,7 @@ namespace BAM.UI
         {
             var list = new System.Collections.Generic.List<RectTransform>();
             if (OnlineHooks.OnlineMatch != null) list.Add(OnlineRow("ONLINE MATCH", "Quick match against another player", true, OnlineHooks.OnlineMatch));
-            if (OnlineHooks.OpenPlayFriends != null) list.Add(OnlineRow("PLAY WITH FRIENDS", "Invite friends: together or against each other", false, OnlineHooks.OpenPlayFriends));
+            // PLAY WITH FRIENDS is gone from the sheet (Rickard 2026-10-31): Home's + INVITE beside the hero does the same
             onlineRows = list.ToArray();
         }
 
