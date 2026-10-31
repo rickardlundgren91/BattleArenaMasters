@@ -617,7 +617,25 @@ namespace BAM.Art
             handS[i] = Mathf.Max(1e-6f, hd.lossyScale.y);
             shaftC[i] = Weapons.ShaftAxis(mesh, W.Grip * mh); // a hammer's box is not centred on its shaft
             Place(i);
-            Anatomy(i, W, hd, ix, th);
+            // Tyra pilot: her Avatar (Tyra.fbx.meta, made 25 Oct from a rig without them) maps only the index finger, so the
+            // Humanoid lookup finds no thumb; the FBX has the bone, so the socket's frame takes it by name (only here, so the
+            // fist and every other hero stay as they are)
+            Anatomy(i, W, hd, ix != null ? ix : HandBone(hd, W.Left, "Index1"), th != null ? th : HandBone(hd, W.Left, "Thumb1"));
+        }
+
+        /// <summary>A finger's root bone under the hand by its Mixamo name (LeftHandThumb1 and so on), for rigs whose Avatar does not
+        /// map it; null when the rig has none.</summary>
+        internal static Transform HandBone(Transform hand, bool left, string finger)
+        {
+            if (hand == null) return null;
+            string want = (left ? "LeftHand" : "RightHand") + finger;
+            foreach (Transform c in hand.GetComponentsInChildren<Transform>(true))
+            {
+                string n = c.name;
+                int colon = n.LastIndexOf(':');
+                if ((colon >= 0 ? n.Substring(colon + 1) : n) == want) return c;
+            }
+            return null;
         }
 
         // Tyra pilot: the palm socket and the anatomical grip from the hand's own frame (wrist, index knuckle, thumb root: all fixed in

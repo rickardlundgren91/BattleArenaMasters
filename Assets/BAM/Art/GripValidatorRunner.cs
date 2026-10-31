@@ -64,6 +64,7 @@ namespace BAM.Art
         int[] cellHead = new int[1 << 16], cellNext = new int[0];
         int wCount;
         Quaternion prevFist;
+        Transform knuckIx, knuckLi; // index and little finger roots (the knuckle line)
         bool hasPrev;
 
         readonly StringBuilder csv = new StringBuilder(1 << 20);
@@ -94,7 +95,7 @@ namespace BAM.Art
             body = view as BodyView;
             stepIndex = -1; stepT = 0f; runT = 0f; frame = 0; hasPrev = false;
             deadAt = -1f; windupFrom = -1f; cutAt = -1f;
-            skins = null;
+            skins = null; knuckIx = knuckLi = null;
         }
 
         void Update()
@@ -189,11 +190,16 @@ namespace BAM.Art
             bool sock = g.SocketWorld(i, out Vector3 socket);
             Vector3 rule = g.PalmRuleWorld(i);
             float gripErr = (grip - (sock ? socket : rule)).magnitude / h, gripRule = (grip - rule).magnitude / h;
-            Transform[] f = g.FingersAt(i);
-            float ang = -1f;
-            if (f != null && f.Length > 12 && f[3] != null && f[12] != null)
+            if (knuckIx == null) // the Avatar may not map the fingers (Tyra's maps only the index): then by name
             {
-                float a = Vector3.Angle(t.up, f[3].position - f[12].position);
+                Transform[] f = g.FingersAt(i);
+                knuckIx = f != null && f.Length > 12 && f[3] != null ? f[3] : HeldGear.HandBone(hd, true, "Index1");
+                knuckLi = f != null && f.Length > 12 && f[12] != null ? f[12] : HeldGear.HandBone(hd, true, "Pinky1");
+            }
+            float ang = -1f;
+            if (knuckIx != null && knuckLi != null)
+            {
+                float a = Vector3.Angle(t.up, knuckIx.position - knuckLi.position);
                 ang = Mathf.Min(a, 180f - a);
             }
             Quaternion fist = Quaternion.Inverse(hd.rotation) * t.rotation;
