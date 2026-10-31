@@ -150,6 +150,8 @@ namespace BAM.Online.UI
             float ix = x + 12, iw = w - 24, rowH = 38, y = y0 + 10;
             if (draw) Text("Play with friends", ix, y0 + 10 + 9, Treb(14, true), "#ffb43a");
             y += 22;
+            if (Previewing) { y += SearchCard(ix, y, iw, rowH, draw); return y - y0 + 6; } // BAM > Test Online Search (editor)
+            if (PreviewError) { y += SearchErrorCard(ix, y, iw, rowH, draw); return y - y0 + 6; }
             var st = MpRoom.State;
             bool signedIn = Account.State == Account.Status.Ready;
             if (!signedIn && st == MpRoom.Phase.Off)
@@ -162,33 +164,20 @@ namespace BAM.Online.UI
             }
             if (MpRoom.Quick && st != MpRoom.Phase.Match)
             {
-                // ONLINE MATCH: in the queue (the old Menu.DrawMatchmaking in short), alone or as a group of up to three
-                int mySide = MpRoom.MySide; string mates = null, them = null;
-                foreach (var m in MpRoom.Members)
-                {
-                    if (m.Id == MpRoom.MyId) continue;
-                    if (m.Side == mySide) mates = mates == null ? m.Name : mates + ", " + m.Name;
-                    else them = them == null ? m.Name : them + ", " + m.Name;
-                }
-                bool found = MpRoom.QuickFound && them != null;
-                string line = found ? "Opponents found: " + them + "!" : (MpRoom.PartySize > 1 ? "Your group is looking… " : "Looking for opponents… ") + Mathf.FloorToInt(Now - MpRoom.SearchSince) + " s";
-                var ll = Wrap(line, iw, Treb(14, true));
-                if (draw) for (int i = 0; i < ll.Count; i++) Text(ll[i], ix, y + 10 + i * 18, Treb(14, true), found ? "#8fffb0" : "#f4f1ff");
-                y += 6 + ll.Count * 18;
-                string info = found ? "Your team: you" + (mates != null ? ", " + mates : "") + ". Bots fill the empty places. Starting…"
-                    : (mates != null ? "With you: " + mates + ". " : "") + "Anyone who presses ONLINE MATCH now plays you, alone or in a group of up to 3. Bots fill the empty places.";
-                var ql = Wrap(info, iw, Treb(12));
-                TextLines(ql, ix, y, "#a9a7c7", draw); y += ql.Count * 16 + 6;
-                if (draw && !found) MpBtn("mpCancel", "CANCEL", ix, y, iw, rowH, "#39407a", MpRoom.CancelSearch);
-                if (!found) y += rowH + 6;
+                // ONLINE MATCH: in the queue, alone or as a group of up to three (OnlineSearch.cs: searching, joining, match found)
+                y += SearchCard(ix, y, iw, rowH, draw);
                 return y - y0 + 6;
             }
             if (st == MpRoom.Phase.Off)
             {
-                if (draw) StartButton("mpQuick", ix, y, iw, rowH + 8, "ONLINE MATCH", MpRoom.QuickMatch, null);
-                y += rowH + 14;
-                var qh = Wrap("Play someone who is searching right now, or wait for the next one. Bots fill the empty places.", iw, Treb(12));
-                TextLines(qh, ix, y, "#a9a7c7", draw); y += qh.Count * 16 + 10;
+                if (!string.IsNullOrEmpty(MpRoom.QuickError)) y += SearchErrorCard(ix, y, iw, rowH, draw); // the last search stopped by itself
+                else
+                {
+                    if (draw) StartButton("mpQuick", ix, y, iw, rowH + 8, "ONLINE MATCH", MpRoom.QuickMatch, null);
+                    y += rowH + 14;
+                    var qh = Wrap("Play someone who is searching right now, or wait for the next one. Bots fill the empty places.", iw, Treb(12));
+                    TextLines(qh, ix, y, "#a9a7c7", draw); y += qh.Count * 16 + 10;
+                }
                 // with friends: pick the mode, then INVITE someone (Rickard 2026-10-27: no codes to type, invite and start).
                 // The room and its code are made by the first INVITE and only carried inside the invite.
                 if (draw) Text("Or with friends:", ix, y + 8, Treb(13, true), "#ffb43a");
@@ -275,7 +264,7 @@ namespace BAM.Online.UI
                     TextLines(nl, ix, y, "#ffb0b0", draw, 15); y += nl.Count * 15 + 4;
                 }
             }
-            if (!string.IsNullOrEmpty(MpRoom.Status))
+            if (!string.IsNullOrEmpty(MpRoom.Status) && MpRoom.Status != MpRoom.QuickError) // the error card already says it
             {
                 var sl = Wrap(MpRoom.Status, iw, Treb(12)); TextLines(sl, ix, y, "#ffb0b0", draw); y += sl.Count * 16 + 6;
             }
@@ -294,6 +283,7 @@ namespace BAM.Online.UI
             // a match started: the page gives way; the match is over and the menus are back: Home, where the party is
             if (MpRoom.State == MpRoom.Phase.Match && (page == "mp" || page == "leaveparty" || page == "invite")) Close();
             if (MpRoom.WantPage && Flow.Game != null && !Flow.Game.InMatch) { MpRoom.WantPage = false; Close(); }
+            SearchTick();
             PartyTick();
         }
 

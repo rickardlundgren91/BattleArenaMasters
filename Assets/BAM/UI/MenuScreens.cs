@@ -33,6 +33,9 @@ namespace BAM.UI
             StartMatch(new MatchSetup { Hero = (HeroId)BamSettings.LastHero, Difficulty = BamSettings.LastDifficulty, Tutorial = false });
         }
 
+        /// <summary>A bot match with the last hero and bot level, as Home's PLAY in CLASSIC: for the online queue's PLAY BOTS INSTEAD.</summary>
+        public static void PlayBotMatch() => StartBotMatch();
+
         static void StartTutorial()
         {
             StartMatch(new MatchSetup { Hero = (HeroId)BamSettings.LastHero, Difficulty = Difficulty.Easy, Tutorial = true });

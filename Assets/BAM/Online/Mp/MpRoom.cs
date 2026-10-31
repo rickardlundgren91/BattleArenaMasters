@@ -69,6 +69,14 @@ namespace BAM.Online.Mp
         public static bool QuickFound { get { if (!Quick || State != Phase.Lobby) return false; foreach (var m in Members) if (m.Side == 1) return true; return false; } }
         /// <summary>ONLINE MATCH: how many are searching together on this phone's side (1 alone).</summary>
         public static int PartySize => partySize;
+        /// <summary>ONLINE MATCH: seconds until the host starts the match that was found, -1 when it is not counting down.</summary>
+        public static float StartsIn => startT;
+        /// <summary>ONLINE MATCH: a lobby was found and this phone is getting into it (State is Connecting).</summary>
+        public static bool QuickJoining { get; private set; }
+        /// <summary>Why the last ONLINE MATCH search stopped by itself (no server, the lobby closed…), for the error card;
+        /// null when it did not, or after a new search, a room, or ClearQuickError.</summary>
+        public static string QuickError { get; private set; }
+        public static void ClearQuickError() { if (QuickError == null) return; QuickError = null; Changed?.Invoke(); }
         /// <summary>The side (0 or 1) this phone is on in an ONLINE MATCH lobby.</summary>
         public static int MySide { get { var me = Me; return me != null ? me.Side : 0; } }
         static int RoomCap => Quick ? MpRelay.MaxPlayers : Capacity(Mode);
@@ -89,7 +97,7 @@ namespace BAM.Online.Mp
 
         public static void Host(int mode = -1)
         {
-            Leave();
+            Leave(); QuickError = null;
             if (mode == Together || mode == Versus) Mode = mode;
             IsHost = true; MyId = 0; nextId = 1; State = Phase.Connecting; Status = "Making a room…"; Diff = BamSettings.LastDifficulty;
             Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell });
@@ -104,7 +112,7 @@ namespace BAM.Online.Mp
         {
             code = (code ?? "").Trim().ToUpperInvariant();
             if (code.Length < 4) { Status = "Type your friend's room code first."; Changed?.Invoke(); return; }
-            Leave();
+            Leave(); QuickError = null;
             IsHost = false; State = Phase.Connecting; Status = "Finding the room…";
             relay = new MpRelay(false, code);
             Wire();
@@ -116,7 +124,7 @@ namespace BAM.Online.Mp
         public static void Leave()
         {
             CloseRelay();
-            Quick = false; ++quickTok; startT = -1; myParty = ""; partySize = 1; otherParty = null;
+            Quick = false; QuickJoining = false; ++quickTok; startT = -1; myParty = ""; partySize = 1; otherParty = null;
             State = Phase.Off; Status = ""; WantPage = false;
             Changed?.Invoke();
         }
@@ -145,7 +153,7 @@ namespace BAM.Online.Mp
                 if (Members.Count > MaxGroup) { Status = "A group for ONLINE MATCH is at most " + MaxGroup + " players."; Changed?.Invoke(); return; }
                 GroupMatch(); return;
             }
-            Leave();
+            Leave(); QuickError = null;
             Quick = true; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
             myParty = MyPlayerId; partySize = 1;
             MpRunner.Ensure();
@@ -167,7 +175,7 @@ namespace BAM.Online.Mp
         // the host of a room with friends in it: the whole group looks for another group (or a single player)
         static async void GroupMatch()
         {
-            Quick = true; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
+            Quick = true; QuickError = null; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
             myParty = MyPlayerId; partySize = Members.Count; otherParty = null; startT = -1;
             foreach (var m in Members) { m.Party = myParty; m.Side = 0; }
             Status = ""; SendRoom();
@@ -211,7 +219,7 @@ namespace BAM.Online.Mp
         static async void QuickFind()
         {
             int tok = ++quickTok;
-            CloseRelay();
+            CloseRelay(); QuickJoining = false;
             State = Phase.Connecting; Status = "Looking for an opponent…"; Changed?.Invoke();
             try
             {
@@ -224,7 +232,7 @@ namespace BAM.Online.Mp
             {
                 if (tok != quickTok) return;
                 Debug.LogWarning("[BAM.Online] queue: " + e);
-                var why = MpRelay.Explain(e); Leave(); Status = why; Changed?.Invoke();
+                var why = MpRelay.Explain(e); Leave(); Status = why; QuickError = why; Changed?.Invoke();
             }
         }
 
@@ -240,7 +248,7 @@ namespace BAM.Online.Mp
         static void QuickJoin(string lobbyId)
         {
             tried.Add(lobbyId);
-            IsHost = false;
+            IsHost = false; QuickJoining = true;
             relay = new MpRelay(false, null) { JoinId = lobbyId };
             Wire();
             relay.Start();
@@ -329,7 +337,7 @@ namespace BAM.Online.Mp
             net = new MpMatchNet(IsHost, cfg, Mode == Versus && seats[mySeat].Team != Teams.Player);
             if (IsHost) net.Lockstep.Send = SendFrames;
             else net.Lockstep.Send = m => relay?.Send(m);
-            State = Phase.Match; Status = ""; WantPage = false;
+            State = Phase.Match; Status = ""; WantPage = false; QuickJoining = false;
             Debug.Log("[BAM.Online] online match: " + seats.Length + " players, " + ModeNames[Mode] + ", seat " + mySeat + ", seed " + seed);
             Changed?.Invoke();
             Flow.Game?.StartMatch(new MatchSetup { Hero = seats[mySeat].Hero, Difficulty = diff, Seed = seed, Net = net });
@@ -410,7 +418,7 @@ namespace BAM.Online.Mp
         static void Wire()
         {
             relay.OnStatus = s => { if (!string.IsNullOrEmpty(s)) Status = s; else if (IsHost) { State = Phase.Lobby; Status = ""; } Changed?.Invoke(); };
-            relay.OnFail = s => { if (QuickRetry(s)) return; var keep = s; Leave(); Status = keep; Changed?.Invoke(); };
+            relay.OnFail = s => { if (QuickRetry(s)) return; var keep = s; bool wasQuick = Quick && State != Phase.Match; Leave(); Status = keep; if (wasQuick) QuickError = keep; Changed?.Invoke(); };
             relay.OnConnect = c =>
             {
                 if (IsHost) return;
@@ -514,7 +522,7 @@ namespace BAM.Online.Mp
         {
             switch (type)
             {
-                case MpMsg.Welcome: MyId = r.U8(); State = Phase.Lobby; Status = ""; quickTries = 0; Changed?.Invoke(); return;
+                case MpMsg.Welcome: MyId = r.U8(); State = Phase.Lobby; Status = ""; quickTries = 0; QuickJoining = false; Changed?.Invoke(); return;
                 case MpMsg.Busy: { string s = r.Str(); if (QuickRetry(s)) return; Leave(); Status = s; Changed?.Invoke(); return; }
                 case MpMsg.Room:
                 {
