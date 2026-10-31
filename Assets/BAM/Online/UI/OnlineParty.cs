@@ -123,14 +123,18 @@ namespace BAM.Online.UI
                 if (all) { startWhenBack = false; MpRoom.StartMatch(); }
             }
 
-            // the name tags are pictures: draw them again when a name changes
+            // the name tags are pictures: draw them again when a name or a ready state changes
             string sig = Account.Name ?? "";
-            var p = Party();
-            if (p != null) for (int i = 0; i < p.Count; i++) sig += "|" + p.Mates[i].Name;
+            var p = Shown();
+            if (p != null) for (int i = 0; i < p.Count; i++) sig += "|" + p.Mates[i].Name + (p.Mates[i].Ready ? "+" : "-");
             if (sig != partySig) { partySig = sig; OnlineUi.Repaint(); }
         }
 
         // ---------- the pictures for Home (OnlineHooks.Paint) ----------
+        /// <summary>The party the tags show: the editor's test party (BAM > Test Party) first, else the room (2026-10-31: the test
+        /// party's friends had no tags, Rickard's screenshot).</summary>
+        static PartyView Shown() => OnlineHooks.TestParty?.Invoke() ?? Party();
+
         /// <summary>"tag0", "tag1", "tag2": a name tag in a cw(44) x cw(9) rect; "leave": LEAVE PARTY in cw(40) x cw(9.5).</summary>
         internal static void DrawPiece(Ctx c, string key, int pw, int ph)
         {
@@ -139,17 +143,20 @@ namespace BAM.Online.UI
             ctx.scale(k, k);
             if (key == "leave") { HubLeaveBtn3(0, cw(1)); return; }
             if (key == "tag0") { HubNameTag3(cw(22), cw(4.5f), string.IsNullOrEmpty(Account.Name) ? "You" : Account.Name, null, true, true); return; }
-            var p = Party(); int i = key == "tag1" ? 0 : 1;
-            if (p != null && i < p.Count) HubNameTag3(cw(22), cw(4.5f), p.Mates[i].Name, null, false, false);
+            var p = Shown(); int i = key == "tag1" ? 0 : 1;
+            if (p != null && i < p.Count) HubNameTag3(cw(22), cw(4.5f), p.Mates[i].Name, p.Mates[i].Ready, false, false);
         }
 
-        // MenuHome3.HubNameTag3 (ONE_PLAY: the slim, see-through plate): [READY dot] [crown] name [pencil], centred on (cx, cy)
+        // MenuHome3.HubNameTag3 (ONE_PLAY: the slim, see-through plate): [READY dot] [crown] name [READY / IN A MATCH] [pencil], centred
+        // on (cx, cy). The word after the name is new (2026-10-31): the ring's colour alone did not tell a new player who was ready.
         static void HubNameTag3(float cx, float cy, string name, bool? ready, bool leader, bool pen)
         {
-            string nf = Lil(cw(3.5f)); float gap = cw(1.4f), crownW = leader ? cw(3.6f) : 0, penD = pen ? cw(5.4f) : 0, dot = ready.HasValue ? cw(1.1f) : 0;
+            string nf = Lil(cw(3.5f)), sf = Treb(cw(2.3f), true); float gap = cw(1.4f), crownW = leader ? cw(3.6f) : 0, penD = pen ? cw(5.4f) : 0, dot = ready.HasValue ? cw(1.1f) : 0;
             string nm = name ?? ""; ctx.font = nf; while (nm.Length > 3 && ctx.measureText(nm) > cw(16)) nm = nm.Substring(0, nm.Length - 2) + "…";
             float nw = ctx.measureText(nm);
-            float w = (dot > 0 ? dot * 2 + gap : 0) + crownW + (crownW > 0 ? gap : 0) + nw + (penD > 0 ? gap + penD : 0);
+            string status = !ready.HasValue ? null : ready.Value ? "READY" : "IN A MATCH";
+            float sw = 0; if (status != null) { ctx.font = sf; sw = ctx.measureText(status); }
+            float w = (dot > 0 ? dot * 2 + gap : 0) + crownW + (crownW > 0 ? gap : 0) + nw + (sw > 0 ? gap + sw : 0) + (penD > 0 ? gap + penD : 0);
             { float a1 = ctx.globalAlpha; ctx.globalAlpha = a1 * 0.5f; HubPlate3(cx, cy - cw(3.1f), w + cw(4), cw(6.2f)); ctx.globalAlpha = a1; }
             float x = cx - w / 2;
             if (dot > 0)
@@ -160,6 +167,7 @@ namespace BAM.Online.UI
             }
             if (leader) { HubCrown(x + crownW / 2, cy, cw(1.6f)); x += crownW + gap; }
             Text(nm, x, cy, nf, HUB_TEXT, shadow: "rgba(0,0,0,0.5)", sh: cw(0.3f), stroke: "rgba(6,8,26,0.9)", sw: cw(0.45f)); x += nw;
+            if (status != null) { x += gap; Text(status, x, cy + cw(0.2f), sf, ready.Value ? HUB_ACCENT : HUB_DIM); x += sw; }
             if (pen)
             {
                 x += gap; float penX = x + penD / 2;

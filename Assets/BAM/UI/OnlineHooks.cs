@@ -46,6 +46,8 @@ namespace BAM.UI
         /// <summary>A small picture the online side draws with the old menu code into the given rect: "tag0" (the player's name tag
         /// with crown and pencil), "tag1", "tag2" (the party members' name tags) and "leave" (the LEAVE PARTY pill).</summary>
         public static Func<RectTransform, string, RectTransform> Paint;
+        /// <summary>The editor's test party (BAM > Test Party), so the painter draws its name tags too; null when there is none.</summary>
+        public static Func<PartyView> TestParty;
     }
 
     /// <summary>What Home shows of the party: up to two other players beside the player's hero (Speltest PartyMembers).</summary>

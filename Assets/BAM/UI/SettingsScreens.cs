@@ -29,7 +29,6 @@ namespace BAM.UI
         static GameObject settings, licenses;
         static HubSwitch soundSwitch, musicSwitch, vibrationSwitch, leftSwitch, shareSwitch;
         static HubChoice quality, frameRate;
-        static Text activeValue;
         static GameObject tutorialRow; // hidden in a match: starting the tutorial there would drop the match unasked
         static bool licensesLoaded;
         static RectTransform licensesContent;
@@ -39,7 +38,7 @@ namespace BAM.UI
         // has one. Left-handed controls and the privacy rows are BAM's own.
         static void BuildSettings()
         {
-            var content = NewPage("Settings", out settings, out var panel);
+            var content = NewPage("Settings", out settings, out var panel, back: false); // a tab: HOME is in the bar under it
             tabPanels[2] = panel;
             VList(content, 2 * Cw, new RectOffset(0, 0, 0, Mathf.RoundToInt(6 * Cw)));
 
@@ -57,17 +56,9 @@ namespace BAM.UI
             });
 
             SetHead(content, "GRAPHICS");
-            quality = ChoiceRow(content, "Quality", new[] { "High", "Low" }, i =>
-            {
-                BamSettings.Graphics = i == 0 ? GraphicsQuality.High : GraphicsQuality.Low;
-                RefreshActive();
-            });
-            frameRate = ChoiceRow(content, "Frame rate", new[] { "30", "60" }, i =>
-            {
-                BamSettings.Fps = i == 0 ? 30 : 60;
-                RefreshActive();
-            });
-            activeValue = PlainRow(content, "Active", "");
+            quality = ChoiceRow(content, "Quality", new[] { "High", "Low" }, i => BamSettings.Graphics = i == 0 ? GraphicsQuality.High : GraphicsQuality.Low);
+            frameRate = ChoiceRow(content, "Frame rate", new[] { "30", "60" }, i => BamSettings.Fps = i == 0 ? 30 : 60);
+            // the old "Active: High · 60 fps" row is gone (2026-10-31): it only repeated the two choices above it
 
             SetHead(content, "CONTROLS");
             leftSwitch = SwitchRow(content, "Left-handed controls", on => BamSettings.LeftHanded = on);
@@ -86,6 +77,8 @@ namespace BAM.UI
 
             SetHead(content, "HELP");
             tutorialRow = LinkRow(content, "How to play", "Tutorial", () => StartTutorial());
+            // for the testers (2026-10-31): straight to the Discord, next to the version they should quote
+            if (!string.IsNullOrEmpty(BamInfo.DiscordUrl)) LinkRow(content, "Report a bug", "Discord", () => Application.OpenURL(BamInfo.DiscordUrl));
             LinkRow(content, "Licenses", "Open", () => Push(licenses));
             PlainRow(content, "Version", Application.version);
         }
@@ -164,9 +157,6 @@ namespace BAM.UI
             return t;
         }
 
-        static void RefreshActive() =>
-            activeValue.text = (BamSettings.Graphics == GraphicsQuality.High ? "High" : "Low") + " · " + BamSettings.Fps + " fps";
-
         static void RefreshSettings()
         {
             soundSwitch.Set(BamSettings.SfxVolume > 0.001f, true);
@@ -176,7 +166,6 @@ namespace BAM.UI
             frameRate.Set(BamSettings.Fps <= 30 ? 0 : 1);
             leftSwitch.Set(BamSettings.LeftHanded, true);
             shareSwitch.Set(BamSettings.AnalyticsConsent == Consent.Granted, true);
-            RefreshActive();
             tutorialRow.SetActive(Flow.Game == null || !Flow.Game.InMatch);
         }
 

@@ -44,8 +44,10 @@ namespace BAM.UI
             UiKit.Fill(clip, new Color(6 / 255f, 9 / 255f, 30 / 255f, 0.55f)).name = "Shade";
         }
 
-        /// <summary>A subpage: background, Back pill, the glass sheet and (with a title) the H2. Returns the scroll content.</summary>
-        static RectTransform NewPage(string title, out GameObject go, out RectTransform panelRt, bool scroll = true, float headExtra = 0)
+        /// <summary>A subpage: background, Back pill, the glass sheet and (with a title) the H2. Returns the scroll content.
+        /// back false (the Heroes and Settings tabs, 2026-10-31): no Back pill, the tab bar's HOME is the way back, and the sheet
+        /// starts near the top instead of under the pill. The Android back button still works (HandleBack).</summary>
+        static RectTransform NewPage(string title, out GameObject go, out RectTransform panelRt, bool scroll = true, float headExtra = 0, bool back = true)
         {
             var rt = UiKit.NewRect(title ?? "Page", root);
             UiKit.Stretch(rt);
@@ -61,7 +63,7 @@ namespace BAM.UI
 
             // DrawPage: a dark shadow, the glass from #1a1f4a to #0a0d26 with rounded top corners and the gold edge
             panelRt = UiKit.NewRect("Sheet", body);
-            UiKit.Stretch(panelRt, 0, PageTop, 0, NavH);
+            UiKit.Stretch(panelRt, 0, back ? PageTop : 4 * Cw, 0, NavH);
             float r = 4 * Cw;
             var shadow = Pic(panelRt, "Shadow", UiKit.Rounded, new Color(0, 0, 0, 0.35f));
             Radius(shadow, r);
@@ -82,6 +84,17 @@ namespace BAM.UI
             if (title != null) contentTop = H2(panelRt, title);
 
             // Back: the same as the Android back button
+            if (back) BackPill(body);
+
+            go.SetActive(false);
+            if (!scroll) return panelRt;
+            var area = UiKit.NewRect("Area", panelRt);
+            UiKit.Stretch(area, PageX, contentTop + headExtra, PageX, 0);
+            return ScrollContent(area, out _);
+        }
+
+        static void BackPill(RectTransform body)
+        {
             var back = UiKit.NewRect("Back", body);
             var pill = Pic(back, "Pill", UiKit.Rounded, new Color(1, 1, 1, 0.1f));
             float bh = 3.6f * Cw * 1.2f + 3.6f * Cw;
@@ -100,12 +113,6 @@ namespace BAM.UI
             b.onClick.AddListener(() => HandleBack());
             back.gameObject.AddComponent<ButtonFx>().PressScale = false;
             back.gameObject.AddComponent<HomePress>();
-
-            go.SetActive(false);
-            if (!scroll) return panelRt;
-            var area = UiKit.NewRect("Area", panelRt);
-            UiKit.Stretch(area, PageX, contentTop + headExtra, PageX, 0);
-            return ScrollContent(area, out _);
         }
 
         // H2: the title in Lilita with a dark drop, a short gold rule and a diamond under it. Returns where the page starts.
@@ -138,13 +145,18 @@ namespace BAM.UI
         // One grid with all heroes (Rickard 2026-10-29: no ALL / BY ROLE bar)
         static void BuildHeroSelect()
         {
-            var content = NewPage("Heroes", out heroSelect, out var panel, true);
+            var content = NewPage("Heroes", out heroSelect, out var panel, true, back: false); // a tab: HOME is in the bar under it
             tabPanels[1] = panel;
             heroScroll = panel.GetComponentInChildren<ScrollRect>();
             VList(content, 0, new RectOffset(0, 0, 0, Mathf.RoundToInt(4 * Cw)));
 
             var gridAll = HeroGrid(content, "All");
             for (int i = 0; i < HeroCatalog.Count; i++) BuildHeroCard(gridAll, i);
+            // under the grid (2026-10-31): nothing showed that a card opens the hero's own page
+            var hint = Treb(content, "Tap a hero to see what they do", 2.9f, UiKit.TextDim);
+            hint.fontStyle = FontStyle.Normal;
+            hint.alignment = TextAnchor.MiddleCenter;
+            hint.gameObject.AddComponent<LayoutElement>().preferredHeight = 8 * Cw;
             if (heroScroll != null) heroScroll.verticalNormalizedPosition = 1;
             BuildHeroPage();
         }
@@ -354,7 +366,7 @@ namespace BAM.UI
             float rowH = 5.4f * Cw;
             heroStatsSize.preferredHeight = 2.6f * Cw + 5 * rowH + 1.2f * Cw;
             CardBack(stats, 4 * Cw);
-            string[] labels = { "Health", "Damage", "Attack speed", "Range", "Move speed" };
+            string[] labels = { "Health", "Damage", "Attack time", "Range", "Move speed" }; // "Attack time": 1.85 s is a time, not a speed (2026-10-31)
             float bh = 1.5f * Cw;
             for (int i = 0; i < 5; i++)
             {
@@ -544,7 +556,8 @@ namespace BAM.UI
                 }
             }
             float[] v = { def.Hp, def.Dmg, 1 / Mathf.Max(0.1f, def.Cd), def.Range, def.Speed };
-            string[] txt = { Num(def.Hp) + " (+" + Num(def.HpGrowth) + ")", Num(def.Dmg) + " (+" + Num(def.DmgGrowth) + ")", Num(def.Cd) + " s", Num(def.Range), Num(def.Speed) };
+            // "+26/lvl" and the units (2026-10-31, Rickard's screenshot review: "(+26)" and bare "4" / "2.19" said nothing)
+            string[] txt = { Num(def.Hp) + "  +" + Num(def.HpGrowth) + "/lvl", Num(def.Dmg) + "  +" + Num(def.DmgGrowth) + "/lvl", Num(def.Cd) + " s", Num(def.Range) + " tiles", Num(def.Speed) + " tiles/s" };
             for (int i = 0; i < 5; i++)
             {
                 heroBars[i].rectTransform.anchorMax = new Vector2(Mathf.Clamp01(v[i] / Mathf.Max(0.001f, heroMax[i])), 1);

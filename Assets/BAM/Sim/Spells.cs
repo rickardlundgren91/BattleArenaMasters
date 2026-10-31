@@ -20,11 +20,11 @@ namespace BAM.Sim
 
         public static string Name(SpellId s) => s == SpellId.None ? "" : s.ToString();
         public static string Desc(SpellId s) =>
-            s == SpellId.Blink ? "Dash 3.5 tiles the way you move. " + (int)BlinkCd + " s"
+            s == SpellId.Blink ? "Dash 3.5 tiles the way you move. Cooldown " + (int)BlinkCd + " s"
             : s == SpellId.Recall ? "Channel " + (int)RecallChannel + " s to teleport to your base. Moving or damage cancels it. No cooldown."
-            : s == SpellId.Shield ? "A shield of " + (int)(ShieldPct * 100) + "% max health for " + (int)ShieldDur + " s. " + (int)ShieldCd + " s"
-            : s == SpellId.Haste ? "+" + (int)(HastePct * 100) + "% attack speed for " + (int)HasteDur + " s. " + (int)HasteCd + " s"
-            : s == SpellId.Sprint ? "+" + (int)(SprintPct * 100) + "% movement speed for " + (int)SprintDur + " s. " + (int)SprintCd + " s" : "";
+            : s == SpellId.Shield ? "A shield of " + (int)(ShieldPct * 100) + "% max health for " + (int)ShieldDur + " s. Cooldown " + (int)ShieldCd + " s"
+            : s == SpellId.Haste ? "+" + (int)(HastePct * 100) + "% attack speed for " + (int)HasteDur + " s. Cooldown " + (int)HasteCd + " s"
+            : s == SpellId.Sprint ? "+" + (int)(SprintPct * 100) + "% movement speed for " + (int)SprintDur + " s. Cooldown " + (int)SprintCd + " s" : "";
         public static float Cooldown(SpellId s) => s == SpellId.Blink ? BlinkCd : s == SpellId.Recall ? RecallCd : s == SpellId.Shield ? ShieldCd : s == SpellId.Sprint ? SprintCd : HasteCd;
         /// <summary>The spell's colour as 0xRRGGBB (old spellColor): Blink sky blue, Recall mint, Shield gold, Haste orange; Sprint lime.</summary>
         public static int Color(SpellId s) => s == SpellId.Blink ? 0x8fd8ff : s == SpellId.Recall ? 0x9fffd0 : s == SpellId.Shield ? 0xffe08a : s == SpellId.Sprint ? 0xc8ff6a : 0xff9a6a;

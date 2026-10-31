@@ -102,6 +102,7 @@ namespace BAM.UI
             // the name tags (drawn by the online side with the old HubNameTag3) and LEAVE PARTY (HubLeaveBtn3)
             void BuildPartyTags()
             {
+                OnlineHooks.TestParty = () => TestParty;
                 if (OnlineHooks.Paint == null) return;
                 myTag = PaintButton(low, "tag0", 44 * Cw, 9 * Cw, () => ShowTab(1)); // the tag's pencil: change hero
                 for (int i = 0; i < 2; i++)
@@ -153,9 +154,15 @@ namespace BAM.UI
                     if (Mathf.Abs(zoom - want) < 0.001f) zoom = want;
                     PlaceParty();
                 }
-                // the painting never gets narrower than the screen
-                float dw = homeBg != null ? homeBg.rectTransform.sizeDelta.x : 0, w = homeBackdrop != null ? homeBackdrop.rect.width : 0;
-                return dw > 0 && zoom < 0.999f ? Mathf.Max(zoom, w / dw) : 1;
+                // the painting never gets narrower than the screen, and never shorter than the room over its platform: zoomed
+                // past that its top edge came down to a third of the screen and the dark sky filled the rest (Rickard
+                // 2026-10-31 "det blev väldigt mycket mörkt"). On a phone the painting is exactly as tall as that room, so only
+                // the heroes shrink there; a wide screen, where the painting is taller than it must be, zooms a little.
+                if (homeBg == null || homeBackdrop == null || zoom >= 0.999f) return 1;
+                Vector2 d = homeBg.rectTransform.sizeDelta;
+                float w = homeBackdrop.rect.width, platY = homeBackdrop.rect.height - homePlatY;
+                if (d.x <= 0 || d.y <= 0) return 1;
+                return Mathf.Max(zoom, w / d.x, platY / (0.786f * d.y));
             }
 
             bool Changed(PartyView p)
