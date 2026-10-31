@@ -28,23 +28,27 @@ namespace BAM.UI
             return true;
         }
 
-        /// <summary>HubPill "hubFriendsTab": the round button with two people, its right edge cw(4) from the side, cw(3) above the bottom row.</summary>
-        static void OnlineFriendsPill(RectTransform low, float rowTop)
+        /// <summary>
+        /// HubPill "hubFriendsTab": the round button with two people. Since 2026-10-31 (Rickard's screenshot review) it sits in the
+        /// top bar's empty right corner, level with the profile chip, with "FRIENDS" under it: next to the mode chip nobody knew
+        /// what the unmarked circle did, and the mode chip now has the whole row. The badge with the friends online stays.
+        /// </summary>
+        static void OnlineFriendsPill(RectTransform top, float cy)
         {
             if (OnlineHooks.OpenFriends == null) return;
-            float h = 11 * Cw, r = h / 2, cx = 1080 - 4 * Cw - r, cy = rowTop + 2.2f * Cw + 4 * Cw; // level with the mode chip's middle (2026-10-31)
-            var rt = UiKit.NewRect("Friends", low);
-            rt.anchorMin = rt.anchorMax = Vector2.zero;
+            float h = 10 * Cw, r = h / 2, cx = 1080 - 4 * Cw - r;
+            var rt = UiKit.NewRect("Friends", top);
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(cx, cy);
-            rt.sizeDelta = new Vector2(h + 2 * Cw, h + 2 * Cw); // the 52 px touch area
+            rt.anchoredPosition = new Vector2(cx, -cy);
+            rt.sizeDelta = new Vector2(h + 2 * Cw, h + 5 * Cw); // the touch area takes the caption too
             var hit = rt.gameObject.AddComponent<Image>();
             hit.color = Color.clear;
 
             var calm = UiKit.NewRect("Body", rt);
             UiKit.Stretch(calm);
             var group = calm.gameObject.AddComponent<CanvasGroup>();
-            group.alpha = 0.4f; // ONE_PLAY: calmer until used, so the platform reads clean
+            group.alpha = 0.85f; // a little calmer than the profile chip, no longer the 0.4 it had next to the hero's platform
             group.blocksRaycasts = false;
             Mid(Pic(calm, "Shadow", UiKit.Circle, new Color(0, 0, 0, 0.3f)).rectTransform, 0.5f, 0.5f, 0, -0.6f * Cw, h, h);
             Mid(Pic(calm, "Face", UiKit.Circle, new Color32(0x15, 0x1a, 0x42, 0xff)).rectTransform, 0.5f, 0.5f, 0, 0, h, h);
@@ -53,7 +57,10 @@ namespace BAM.UI
             Mid(Pic(calm, "Edge", HomeArt.CircleRing(lw / (r + lw / 2)), new Color(217 / 255f, 164 / 255f, 65 / 255f, 0.5f)).rectTransform, 0.5f, 0.5f, 0, 0, h + lw, h + lw);
             var icon = UiKit.NewRect("People", calm);
             Mid(icon, 0.5f, 0.5f, 0, 0.4f * Cw, 0, 0);
-            People(icon, 2.6f * Cw, UiKit.Primary);
+            People(icon, 2.4f * Cw, UiKit.Primary);
+            var cap = Treb(calm, "FRIENDS", 2.2f, new Color32(0xcd, 0xd3, 0xfa, 0xff)); // HUB_SOFT
+            cap.alignment = TextAnchor.MiddleCenter;
+            Mid(cap.rectTransform, 0.5f, 0.5f, 0, -r - 1.7f * Cw, 20 * Cw, 3.5f * Cw);
 
             // the badge: friends online, on the top-left corner (the button is on the right side), fully visible
             var badge = UiKit.NewRect("Badge", rt);

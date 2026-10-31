@@ -190,6 +190,7 @@ namespace BAM.UI
                     s.Stage.Frame();
                 }
                 if (myTag != null) myTag.gameObject.SetActive(shownCount > 0); // alone (ONE_PLAY): no plate, the name is in the top bar
+                if (homeHeroName != null) homeHeroName.gameObject.SetActive(shownCount <= 0); // the hero's name gives its place to the tag
                 if (leaveBtn != null) leaveBtn.gameObject.SetActive(p != null);
                 if (invitePills != null)
                     for (int i = 0; i < 2; i++) invitePills[i].gameObject.SetActive(i >= shownCount);
@@ -221,14 +222,19 @@ namespace BAM.UI
         /// <summary>What Home's PLAY says it starts: "WITH YOUR PARTY" in a party (the old sub line), else the mode.</summary>
         static string HomePlaySub() => CurrentParty() != null ? "WITH YOUR PARTY" : PlaySubFor(homeMode, true);
 
-        /// <summary>The mode chip over PLAY: the mode's name in gold and what PLAY starts; the chip fits the text. And the first-win tag.</summary>
+        /// <summary>The mode chip over PLAY, two lines: the mode in gold ("CLASSIC 3V3") and its settings muted under it ("vs bots · Hard",
+        /// "With your party", "Tutorial"); the chip fits the longer line and stays narrow. And the first-win tag.</summary>
         static void SetPlaySub()
         {
-            string rest = CurrentParty() != null ? "WITH YOUR PARTY" : homeMode == Mode.Classic ? PlaySubFor(homeMode, true) : ModeSub(homeMode).ToUpperInvariant();
-            if (IsPractice(homeMode) && CurrentParty() == null) rest = ModeTitle(homeMode); // PRACTICE   TRAINING / HERO TEST
-            playSub.text = "<color=#ffd166>" + CardTitle(homeMode) + "</color>   " + rest;
-            float w = 1.4f * Cw + 5.4f * Cw + 1.4f * Cw + playSub.preferredWidth + 5 * Cw;
-            homeModeChip.sizeDelta = new Vector2(Mathf.Clamp(w, 40 * Cw, 78 * Cw), homeModeChip.sizeDelta.y);
+            bool party = CurrentParty() != null;
+            string title = homeMode == Mode.Classic ? "CLASSIC 3V3" : CardTitle(homeMode);
+            string rest = party ? "With your party"
+                : homeMode == Mode.Classic ? "vs bots · " + DifficultyNames[(int)BamSettings.LastDifficulty]
+                : homeMode == Mode.HeroTest ? "Hero test" : "Tutorial";
+            playSub.text = title;
+            playSub2.text = rest;
+            float w = 1.4f * Cw + homeModeIconSize + 1.4f * Cw + Mathf.Max(playSub.preferredWidth, playSub2.preferredWidth) + 5.5f * Cw;
+            homeModeChip.sizeDelta = new Vector2(Mathf.Clamp(w, 36 * Cw, 70 * Cw), homeModeChip.sizeDelta.y);
             int xp = homeMode == Mode.Classic && OnlineHooks.FirstWinXp != null ? OnlineHooks.FirstWinXp() : 0;
             homeFirstWinText.gameObject.SetActive(xp > 0);
             if (xp > 0) homeFirstWinText.text = "FIRST WIN TODAY · +" + xp + " XP";

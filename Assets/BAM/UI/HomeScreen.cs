@@ -22,11 +22,12 @@ namespace BAM.UI
         static HeroStage homeStage;
         static RectTransform homeHero; // the letter badge, only if the 3D model could not be made
         static RawImage homePortraitImg;
-        static Text homeName, homeTitle, playSub; // playSub: the mode chip's text over PLAY (SetPlaySub)
+        static Text homeName, homeTitle, playSub, playSub2; // the mode chip's two lines over PLAY: the mode, and its settings under it (SetPlaySub)
         static RectTransform homeModeChip, homePlayLabel;
         static Text homeFirstWinText; // "FIRST WIN TODAY +50 XP" under PLAY, as the old sub line (SetPlaySub)
         static RectTransform homeModeIcon;
         static float homeModeIconSize;
+        static Text homeHeroName; // "BONK · FIGHTER" under the hero's ring (BuildHeroName); hidden in a party, where the name tags take its place
         static int homeModeShown = -1;
         static GameObject homeTutCard;
 
@@ -59,6 +60,7 @@ namespace BAM.UI
             homePortraitImg.enabled = homePortraitImg.texture != null;
             homeName.text = info.Name;
             homeTitle.text = info.Title;
+            homeHeroName.text = "<color=#ffd166>" + info.Name.ToUpperInvariant() + "</color>  ·  " + info.Role.ToUpperInvariant();
             SetPlaySub();
             if (homeModeShown != (int)homeMode)
             {
@@ -212,7 +214,7 @@ namespace BAM.UI
             float spring = 1, springV, shineAt = -9;
             bool playWasDown;
             const float PlayW = 1080 - 8 * Cw, PlayInnerH = BrowH - 2 * 0.7f * Cw;
-            const float ChipH = 8 * Cw, ChipGap = 2.2f * Cw, ChipIcon = 5.4f * Cw;
+            const float ChipH = 10 * Cw, ChipGap = 1.8f * Cw, ChipIcon = 6.2f * Cw; // two lines since 2026-10-31 (was 8 cw, one line of 3 cw; hard to read)
 
             public void Build(RectTransform body)
             {
@@ -224,9 +226,10 @@ namespace BAM.UI
                 BuildPartySlots(); // the party members first: they stand behind the player's hero
                 BuildStage();
                 BuildRow();
-                OnlineFriendsPill(low, BrowBottom + BrowH); // online builds only
                 invitePills = OnlineInvitePills(low, FeetY, HeroH); // online builds only
+                BuildHeroName();
                 BuildTopBar();
+                OnlineFriendsPill(top, 7.5f * Cw); // online builds only: top right, level with the profile chip
                 BuildTutCard();
                 BuildPartyTags();
                 top.SetAsLastSibling(); // the top bar over the hero
@@ -340,15 +343,30 @@ namespace BAM.UI
                 homeStage.Tapped = () => { BamAudio.Play(SfxId.UiTap); ShowTab(1); };
             }
 
+            // ---- the hero's name on the platform in front of his feet, inside the mint ring: "BONK · FIGHTER" (Rickard's screenshot
+            // review 2026-10-31: the hero stood there unnamed, and a new player did not know who he was or that a tap on him changes
+            // hero). Under the ring there is no room now that the mode chip has two lines. In the unscaled group, like the party
+            // tags; HomeParty.cs hides it in a party, where the player's own name tag takes over. ----
+
+            void BuildHeroName()
+            {
+                homeHeroName = Lil(low, "", 2.8f, HubSoft);
+                homeHeroName.supportRichText = true;
+                Edge(homeHeroName, new Color(6 / 255f, 8 / 255f, 26 / 255f, 0.9f), 0.25f * Cw, new Color(0, 0, 0, 0.85f), 0.4f * Cw);
+                At(homeHeroName.rectTransform, 540, FeetY - 3f * Cw, 80 * Cw, 5 * Cw);
+            }
+
             // ---- the bottom row: the mode chip and PLAY ----
 
             void BuildRow()
             {
-                // the mode chip (was the MODES square, HubModeBtn): the mode's own icon, then its name in gold and what it is,
-                // and a small ▾; a tap opens MODES. Its width follows the text (SetPlaySub), at most to FRIENDS' round button.
+                // the mode chip (was the MODES square, HubModeBtn): the mode's own icon, then two lines (Rickard 2026-10-31, after his
+                // screenshot review): the mode big in gold ("CLASSIC 3V3") and its settings small and muted under it ("vs bots · Hard"),
+                // and a small ▾; a tap opens MODES. Its width follows the longer line (SetPlaySub) and stays narrow; the FRIENDS
+                // button moved to the top bar (OnlineFriendsPill), so nothing else sits on the row.
                 float r = ChipH / 2;
                 homeModeChip = UiKit.NewRect("Modes", low);
-                At(homeModeChip, 4 * Cw, BrowBottom + BrowH + ChipGap, 60 * Cw, ChipH, 0, 0); // on PLAY's left edge, clear of FRIENDS on the right
+                At(homeModeChip, 4 * Cw, BrowBottom + BrowH + ChipGap, 60 * Cw, ChipH, 0, 0); // on PLAY's left edge
                 var shadow = Img(homeModeChip, "Shadow", UiKit.Rounded, new Color(0, 0, 0, 0.35f));
                 Round(shadow, r);
                 UiKit.Stretch(shadow.rectTransform, 0, 0.6f * Cw, 0, -0.6f * Cw);
@@ -361,12 +379,9 @@ namespace BAM.UI
                 homeModeIcon.anchoredPosition = new Vector2(1.4f * Cw, 0);
                 homeModeIcon.sizeDelta = new Vector2(ChipIcon, ChipIcon);
                 homeModeIconSize = ChipIcon;
-                playSub = Lil(modesFace, "", 3f, HubSoft);
-                playSub.supportRichText = true;
-                playSub.alignment = TextAnchor.MiddleLeft;
-                var lr = playSub.rectTransform;
-                lr.anchorMin = new Vector2(0, 0); lr.anchorMax = new Vector2(1, 1); lr.pivot = new Vector2(0, 0.5f);
-                lr.offsetMin = new Vector2(1.4f * Cw + ChipIcon + 1.4f * Cw, 0); lr.offsetMax = new Vector2(-5 * Cw, 0);
+                float tx = 1.4f * Cw + ChipIcon + 1.4f * Cw;
+                playSub = ChipLine(Lil(modesFace, "", 3.4f, new Color32(0xff, 0xd1, 0x66, 0xff)), tx, 6.6f * Cw);
+                playSub2 = ChipLine(Lil(modesFace, "", 2.5f, UiKit.TextDim), tx, 3.1f * Cw);
                 // the ▾: a small chevron turned down
                 var down = UiKit.NewRect("Down", modesFace);
                 down.anchorMin = down.anchorMax = down.pivot = new Vector2(1, 0.5f);
@@ -383,6 +398,17 @@ namespace BAM.UI
                 modesPress = homeModeChip.gameObject.AddComponent<HomePress>();
 
                 BuildPlay(4 * Cw);
+            }
+
+            // One line of the mode chip: from x to the ▾, centred on y up from the chip's bottom.
+            static Text ChipLine(Text t, float x, float y)
+            {
+                t.alignment = TextAnchor.MiddleLeft;
+                var r = t.rectTransform;
+                r.anchorMin = new Vector2(0, 0); r.anchorMax = new Vector2(1, 0); r.pivot = new Vector2(0, 0.5f);
+                r.anchoredPosition = new Vector2(x, y);
+                r.sizeDelta = new Vector2(-(x + 5 * Cw), 4 * Cw);
+                return t;
             }
 
             // PlayButton: Rickard's orange button image in the rounded shape with a dark border, a warm pulsing glow, a shine
