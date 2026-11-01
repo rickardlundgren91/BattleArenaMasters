@@ -27,6 +27,7 @@ namespace BAM.Core
         public HeroId Hero;
         public Difficulty Difficulty;
         public bool Tutorial;
+        public bool BotsMoved;  // the bot level the player follows moved after this match (BamSettings.AfterBotMatch): the result says so
     }
 
     /// <summary>

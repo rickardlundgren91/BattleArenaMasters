@@ -121,10 +121,11 @@ namespace BAM.Core
         /// <summary>
         /// The bot level follows the player (Rickard 2026-10-31 "om man inte vinner matcher ska man inte tvingas till hard matcher
         /// och helst hållas nere på easy tills det börjar gå bra"): after an offline bot match at the picked level, 2 losses in a
-        /// row move the pick one level down, and a run of wins on Easy moves it up to Normal: 3 the first time, 2 more after every
-        /// step down (at most 7), so a new player does not bounce between Easy and Normal (real matches 30-31 Oct: Easy 82 %,
-        /// Normal 27 %). Hard and Ultra are only ever picked by hand. The player can always pick another level. Returns true
-        /// when the pick moved.
+        /// row on Normal move the pick down to Easy, and a run of wins on Easy moves it up to Normal: 3 the first time, 2 more
+        /// after every step down (at most 7), so a new player does not bounce between Easy and Normal (real matches 30-31 Oct:
+        /// Easy 82 %, Normal 27 %). Hard and Ultra change only by hand, never by themselves (Rickard 2026-11-01: a player who
+        /// picked Hard keeps Hard, its rating and its wins towards Ultra). The player can always pick another level. Returns
+        /// true when the pick moved (the result card says so).
         /// </summary>
         public static bool AfterBotMatch(BAM.Sim.Difficulty played, bool won)
         {
@@ -133,7 +134,7 @@ namespace BAM.Core
             int run = PlayerPrefs.GetInt(Key + "diffrun", 0), need = PlayerPrefs.GetInt(Key + "diffneed", 3);
             run = won ? Mathf.Max(0, run) + 1 : Mathf.Min(0, run) - 1;
             int to = lastDifficulty;
-            if (run <= -2 && lastDifficulty > 0) { to = lastDifficulty - 1; PlayerPrefs.SetInt(Key + "diffneed", Mathf.Min(7, need + 2)); }
+            if (run <= -2 && lastDifficulty == (int)BAM.Sim.Difficulty.Normal) { to = (int)BAM.Sim.Difficulty.Easy; PlayerPrefs.SetInt(Key + "diffneed", Mathf.Min(7, need + 2)); }
             else if (run >= need && lastDifficulty == (int)BAM.Sim.Difficulty.Easy) to = (int)BAM.Sim.Difficulty.Normal;
             if (to != lastDifficulty) { LastDifficulty = (BAM.Sim.Difficulty)to; return true; }
             PlayerPrefs.SetInt(Key + "diffrun", run); Commit();
