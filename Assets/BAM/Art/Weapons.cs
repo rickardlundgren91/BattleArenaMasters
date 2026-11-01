@@ -609,6 +609,10 @@ namespace BAM.Art
             int f0 = (int)(W.Left ? HumanBodyBones.LeftThumbProximal : HumanBodyBones.RightThumbProximal);
             fing[i] = new Transform[15];
             for (int k = 0; k < 15; k++) fing[i][k] = an.GetBoneTransform((HumanBodyBones)(f0 + k));
+            // an Avatar that maps only some fingers (Tyra's maps only the index, Rickard 2026-11-01: "bara ett finger som greppet
+            // styr"): the rest are taken by name from the FBX, as the socket's frame does, so Close hand curls the whole fist
+            for (int k = 0; k < 15; k++)
+                if (fing[i][k] == null) fing[i][k] = HandBone(hd, W.Left, FingerNames[k / 3] + (k % 3 + 1));
             if (W.Support >= 0f)
             {
                 // the other side's arm (a left-hand weapon is supported by the right hand)
@@ -632,6 +636,8 @@ namespace BAM.Art
 
         /// <summary>A finger's root bone under the hand by its Mixamo name (LeftHandThumb1 and so on), for rigs whose Avatar does not
         /// map it; null when the rig has none.</summary>
+        static readonly string[] FingerNames = { "Thumb", "Index", "Middle", "Ring", "Pinky" };
+
         internal static Transform HandBone(Transform hand, bool left, string finger)
         {
             if (hand == null) return null;
