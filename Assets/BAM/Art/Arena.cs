@@ -153,11 +153,10 @@ namespace BAM.Art
             return root;
         }
 
-        // Rickard's wall kit (Tripo ruin wall + pillar, 2026-10-31), placed like the old game (View3DWallModels.cs, "pillar + beam"):
-        // a pillar on every node of the wall grid (end, corner, tee, single tile) and the straight piece repeated about every two
-        // tiles between them. No pillars inside a run, so it reads as one long wall (Rickard's picture), slimmer pillars and a
-        // thicker wall so its crenellated top shows from above. Each model is merged into one mesh, so the walls cost two draw calls.
-        const float KitPillarXZ = 0.75f, KitPillarY = 0.85f, KitWallH = 0.8f, KitWallT = 1.4f, KitWallLen = 1.9f;
+        // Rickard's Meshy wall kit, placed like the old game (View3DWallModels.cs, "pillar + beam"): a pillar on every node of the
+        // wall grid (end, corner, tee, single tile) and at even steps along a long run, the straight piece stretched between two
+        // pillars. Each model is merged into one mesh, so the walls cost two draw calls.
+        const float KitPillarXZ = 0.9f, KitPillarY = 0.85f, KitWallH = 0.8f, KitWallT = 1.15f, KitWallLen = 1.9f;
 
         static void WallKit(GameObject root, ArenaInfo info, Mesh pillarM, Mesh beamM)
         {
@@ -197,6 +196,7 @@ namespace BAM.Art
                         {
                             float c = (i + 0.5f) * g;
                             Beam(x + 0.5f + dx * c, y + 0.5f + dy * c, dir == 1, g + 0.04f);
+                            if (i > 0) Pillar(x + 0.5f + dx * i * g, y + 0.5f + dy * i * g);
                         }
                     }
                 }
