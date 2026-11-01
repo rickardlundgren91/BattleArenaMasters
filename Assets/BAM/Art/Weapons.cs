@@ -90,6 +90,10 @@ namespace BAM.Art
         /// fist holds it, in the same f, t, n frame (Tyra's bow: along the knuckles, its back to the arrow's line at the draw); zero
         /// = none. Code only.</summary>
         public Vector3 GripY, GripZ;
+        /// <summary>For a model without finger bones (Knut: his clips have them, Knut.fbx has none, so the socket's frame could not be
+        /// found and the grip sat in the wrist): where the index and thumb roots are in the hand bone's own space, in lengths of
+        /// the hand bone's offset from the forearm. Read in Unity from his clips' rig (MCP, 2026-11-01); zero = from the bones.</summary>
+        public Vector3 NoFingerIndex, NoFingerThumb;
     }
 
     /// <summary>An off-hand shield in front of the left hand (old MX_SHIELD).</summary>
@@ -217,7 +221,8 @@ namespace BAM.Art
             g[(int)HeroId.Knut] = new GearDef
             {
                 HandsOff = 16f,
-                Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f, HoldUp = 80f, HoldOut = -90f, Socket = new Vector3(0.9936f, 0.7866f, 0.9747f) } },
+                Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f, HoldUp = 80f, HoldOut = -90f, Socket = new Vector3(0.9936f, 0.7866f, 0.9747f),
+                    NoFingerIndex = new Vector3(0f, 0.2811f, -0.0272f), NoFingerThumb = new Vector3(-0.1263f, 0.3211f, 0f) } },
             };
             // with her own clips the staff along the forearm hung beside the fist and the crest, face out at the side, read as a
             // torch from the front (Rickard 2026-10-26: "moa håller inte i sina vapen"): the staff now stands up through her right
@@ -631,7 +636,13 @@ namespace BAM.Art
             // Tyra pilot: her Avatar (Tyra.fbx.meta, made 25 Oct from a rig without them) maps only the index finger, so the
             // Humanoid lookup finds no thumb; the FBX has the bone, so the socket's frame takes it by name (only here, so the
             // fist and every other hero stay as they are)
-            Anatomy(i, W, hd, ix != null ? ix : HandBone(hd, W.Left, "Index1"), th != null ? th : HandBone(hd, W.Left, "Thumb1"));
+            Transform ixB = ix != null ? ix : HandBone(hd, W.Left, "Index1"), thB = th != null ? th : HandBone(hd, W.Left, "Thumb1");
+            if (ixB != null && thB != null) Anatomy(i, W, hd, ixB.position, thB.position);
+            else if (W.NoFingerIndex != Vector3.zero && W.NoFingerThumb != Vector3.zero)
+            {
+                float fl = hd.localPosition.magnitude * hd.parent.lossyScale.y / Mathf.Max(1e-6f, hd.lossyScale.y);
+                Anatomy(i, W, hd, hd.TransformPoint(W.NoFingerIndex * fl), hd.TransformPoint(W.NoFingerThumb * fl));
+            }
         }
 
         /// <summary>A finger's root bone under the hand by its Mixamo name (LeftHandThumb1 and so on), for rigs whose Avatar does not
@@ -653,14 +664,14 @@ namespace BAM.Art
 
         // Tyra pilot: the palm socket and the anatomical grip from the hand's own frame (wrist, index knuckle, thumb root: all fixed in
         // the hand bone, so whatever the fingers do the frame follows the hand exactly); measured in the bind pose, kept in hand space
-        void Anatomy(int i, WeaponDef W, Transform hd, Transform ix, Transform th)
+        void Anatomy(int i, WeaponDef W, Transform hd, Vector3 ixP, Vector3 thP)
         {
-            if (W.Socket == Vector3.zero || ix == null || th == null) return;
-            Vector3 fa = ix.position - hd.position;
+            if (W.Socket == Vector3.zero) return;
+            Vector3 fa = ixP - hd.position;
             float hl = fa.magnitude;
             if (hl < 1e-6f) return;
             Vector3 f = fa / hl;
-            Vector3 tt = Vector3.ProjectOnPlane(th.position - hd.position, f);
+            Vector3 tt = Vector3.ProjectOnPlane(thP - hd.position, f);
             if (tt.sqrMagnitude < 1e-12f) return;
             tt.Normalize();
             Vector3 n = Vector3.Cross(f, tt);
