@@ -103,8 +103,10 @@ namespace BAM.Game
     sealed class SpecialButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
         public const float Radius = 135f, DragStart = 0.5f * Radius, MaxDrag = 300f;
-        /// <summary>The cancel mark: this far above the button's centre, this big (the old CANCEL_Y, CANCEL_R).</summary>
-        public const float CancelUp = 3.6f * Radius, CancelRadius = 0.85f * Radius;
+        /// <summary>The cancel mark: this far above the button's centre, this big. The old CANCEL_Y, CANCEL_R were 3.6 and 0.85 radii,
+        /// only about one radius past full aim (1.8 radii, Hud.AimK), so a hard pull forward cancelled by mistake (tester feedback
+        /// 2026-11-01); now about two radii past full aim and a little smaller, above the ATTACK/DEFEND buttons.</summary>
+        public const float CancelUp = 4.6f * Radius, CancelRadius = 0.7f * Radius;
         const int None = int.MinValue;
 
         public RectTransform Rect;
