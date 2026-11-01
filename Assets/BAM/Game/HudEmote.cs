@@ -573,7 +573,7 @@ namespace BAM.Game
     }
 
     /// <summary>The emote heart's touch: down, moves and up in the HUD's safe-area coordinates.</summary>
-    sealed class EmoteButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+    sealed class EmoteButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IHudTouch
     {
         public Action<Vector2> Down, Move, Up;
         int pointer = int.MinValue;
@@ -583,23 +583,27 @@ namespace BAM.Game
 
         void OnDisable() => pointer = int.MinValue;
 
-        public void OnPointerDown(PointerEventData e)
+        public void OnPointerDown(PointerEventData e) { if (!HudTouch.Direct) TouchDown(e.pointerId, e.position); }
+        public void OnDrag(PointerEventData e) { if (!HudTouch.Direct) TouchMove(e.pointerId, e.position); }
+        public void OnPointerUp(PointerEventData e) { if (!HudTouch.Direct) TouchUp(e.pointerId, e.position); }
+
+        public void TouchDown(int id, Vector2 screen)
         {
             if (pointer != int.MinValue) return;
-            pointer = e.pointerId;
-            Down?.Invoke(Local(e.position));
+            pointer = id;
+            Down?.Invoke(Local(screen));
         }
 
-        public void OnDrag(PointerEventData e)
+        public void TouchMove(int id, Vector2 screen)
         {
-            if (e.pointerId == pointer) Move?.Invoke(Local(e.position));
+            if (id == pointer) Move?.Invoke(Local(screen));
         }
 
-        public void OnPointerUp(PointerEventData e)
+        public void TouchUp(int id, Vector2 screen)
         {
-            if (e.pointerId != pointer) return;
+            if (id != pointer) return;
             pointer = int.MinValue;
-            Up?.Invoke(Local(e.position));
+            Up?.Invoke(Local(screen));
         }
 
         Vector2 Local(Vector2 screen)

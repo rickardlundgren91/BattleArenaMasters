@@ -147,6 +147,7 @@ namespace BAM.Game
 
         public void CancelTouches()
         {
+            ForgetFingers();
             if (joy != null) joy.Release();
             if (special != null) special.Cancel();
             specialQueued = false;
@@ -250,6 +251,7 @@ namespace BAM.Game
         {
             if (m == null) return;
             canvas.enabled = !hidden;
+            TouchFrame(); // the fingers, straight from the screen (HudTouch.cs)
             ApplyLayout(); // a foldable opened or closed: the controls follow the screen's edges
             // the old rings' widths are in the old game's CSS pixels: 400 across the portrait frame, not the phone's own pixels
             // (on a 1080 wide phone one device pixel made them 2.7 times too thin, Rickard 2026-10-26 "jättesvag"); the camera's

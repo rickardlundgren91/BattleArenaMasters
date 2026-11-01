@@ -9,7 +9,7 @@ namespace BAM.Game
     /// in screen space (up = +y), length 0..1. Each touch is followed by its own pointer id, so the other thumb can use the
     /// special button at the same time.
     /// </summary>
-    sealed class JoystickZone : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+    sealed class JoystickZone : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IHudTouch
     {
         public const float Radius = 125f;
         // the old dead zone: 6 of the stick's 44 px; past it the hero walks at full speed (Rickard 2026-10-08, again 2026-10-26)
@@ -42,21 +42,25 @@ namespace BAM.Game
         /// <summary>How far the screen reaches past the HUD's safe area on the stick's side (canvas units; 0 on a phone).</summary>
         public float SideGap;
 
-        public void OnPointerDown(PointerEventData e)
+        public void OnPointerDown(PointerEventData e) { if (!HudTouch.Direct) TouchDown(e.pointerId, e.position); }
+        public void OnDrag(PointerEventData e) { if (!HudTouch.Direct) TouchMove(e.pointerId, e.position); }
+        public void OnPointerUp(PointerEventData e) { if (!HudTouch.Direct) TouchUp(e.pointerId, e.position); }
+
+        public void TouchDown(int id, Vector2 screen)
         {
             if (pointer != None) return;
-            pointer = e.pointerId;
-            origin = Local(e.position);
+            pointer = id;
+            origin = Local(screen);
             Base.anchoredPosition = origin;
             Knob.anchoredPosition = origin;
             Value = Vector2.zero;
             Look.alpha = 0.85f; // the old game: 0.85
         }
 
-        public void OnDrag(PointerEventData e)
+        public void TouchMove(int id, Vector2 screen)
         {
-            if (e.pointerId != pointer) return;
-            Vector2 d = Local(e.position) - origin;
+            if (id != pointer) return;
+            Vector2 d = Local(screen) - origin;
             float len = d.magnitude;
             if (len > Radius) d *= Radius / len;
             Knob.anchoredPosition = origin + d;
@@ -64,9 +68,9 @@ namespace BAM.Game
             Value = v.sqrMagnitude < DeadZone * DeadZone ? Vector2.zero : v.normalized;
         }
 
-        public void OnPointerUp(PointerEventData e)
+        public void TouchUp(int id, Vector2 screen)
         {
-            if (e.pointerId == pointer) Release();
+            if (id == pointer) Release();
         }
 
         public void Release()
@@ -100,7 +104,7 @@ namespace BAM.Game
     /// once the finger has moved half a button radius from where it touched, so a sloppy tap stays a tap. Offset is the finger
     /// relative to the button's centre in canvas units.
     /// </summary>
-    sealed class SpecialButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+    sealed class SpecialButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IHudTouch
     {
         public const float Radius = 135f, DragStart = 0.5f * Radius, MaxDrag = 300f;
         /// <summary>The cancel mark: this far above the button's centre, this big. The old CANCEL_Y, CANCEL_R were 3.6 and 0.85 radii,
@@ -119,28 +123,33 @@ namespace BAM.Game
         public Action<Vector2> Aimed;
         int pointer = None;
 
-        public void OnPointerDown(PointerEventData e)
+        public void OnPointerDown(PointerEventData e) { if (!HudTouch.Direct) TouchDown(e.pointerId, e.position); }
+        public void OnDrag(PointerEventData e) { if (!HudTouch.Direct) TouchMove(e.pointerId, e.position); }
+        public void OnPointerUp(PointerEventData e) { if (!HudTouch.Direct) TouchUp(e.pointerId, e.position); }
+
+        public void TouchDown(int id, Vector2 screen)
         {
             if (pointer != None) return;
-            pointer = e.pointerId;
+            pointer = id;
             Pressed = true; Dragging = false; OverCancel = false; Offset = Vector2.zero;
             PressedAt = Time.unscaledTime;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, e.position, null, out Vector2 local);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screen, null, out Vector2 local);
             start = local - Rect.rect.center;
         }
 
-        public void OnDrag(PointerEventData e)
+        public void TouchMove(int id, Vector2 screen)
         {
-            if (e.pointerId != pointer) return;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, e.position, null, out Vector2 local);
+            if (id != pointer) return;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screen, null, out Vector2 local);
             Offset = local - Rect.rect.center;
             if (!Dragging && (Offset - start).magnitude > DragStart) Dragging = true;
             OverCancel = Dragging && (Offset - new Vector2(0f, CancelUp)).magnitude < CancelRadius;
         }
 
-        public void OnPointerUp(PointerEventData e)
+        public void TouchUp(int id, Vector2 screen)
         {
-            if (e.pointerId != pointer) return;
+            if (id != pointer) return;
+            TouchMove(id, screen); // the last spot counts (a finger can lift between two moves)
             bool drag = Dragging, cancel = OverCancel;
             Vector2 off = Offset;
             Cancel();
