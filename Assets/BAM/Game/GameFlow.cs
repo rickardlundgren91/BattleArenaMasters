@@ -32,7 +32,7 @@ namespace BAM.Game
         Hud hud;
         readonly MatchJuice juice = new MatchJuice();
         readonly MatchIntro intro = new MatchIntro();
-        bool inMatch, paused, over, resultShown, resultMusic, endSent;
+        bool inMatch, paused, over, resultShown, resultMusic, endSent, endLogged;
         float acc, overAt;
         // online: how far the drawing is past the last stepped tick. It counts on the local clock but is used up only by ticks
         // really stepped, so a frame without a new frame from the host holds on the newest tick instead of sliding back a tick
@@ -200,7 +200,7 @@ namespace BAM.Game
             if (hud == null) hud = new Hud(this);
             hud.Intro = intro;
             hud.Begin(match, views, cam);
-            inMatch = true; paused = false; over = false; resultShown = false; resultMusic = false; endSent = false;
+            inMatch = true; paused = false; over = false; resultShown = false; resultMusic = false; endSent = false; endLogged = false;
             acc = 0f; netDraw = 0f;
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
@@ -268,6 +268,7 @@ namespace BAM.Game
                     if (IsOver())
                     {
                         over = true; overAt = Time.unscaledTime; acc = 0f;
+                        LogEnd(false);
                         if (TutorialEnd) TutorialFinished(); // done as the tower falls: leaving its end screen by Pause or a kill still counts
                         break;
                     }
@@ -368,7 +369,7 @@ namespace BAM.Game
             if (end) Debug.Log("[BAM.Online] prediction: longest frame of copying and rerunning " + Mathf.RoundToInt(predMaxMs) + " ms");
             BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f);
             net.Flush();
-            if (end) { over = true; overAt = Time.unscaledTime; acc = 0f; }
+            if (end) { over = true; overAt = Time.unscaledTime; acc = 0f; LogEnd(false); }
             string st = net.Status;
             if (st != netStatus)
             {
@@ -398,7 +399,7 @@ namespace BAM.Game
             views.AfterStep();
             juice.AfterStep();
             hud.AfterStep();
-            if (IsOver()) { over = true; overAt = Time.unscaledTime; acc = 0f; return true; }
+            if (IsOver()) { over = true; overAt = Time.unscaledTime; acc = 0f; LogEnd(false); return true; }
             return false;
         }
 
@@ -456,8 +457,19 @@ namespace BAM.Game
             if (net != null) net.MatchEnded(quit && !over);
             if (setup.HeroTest) return;
             var r = Result(quit && !over);
-            BamAnalytics.MatchEnded(setup, r);
+            LogEnd(quit);
             Flow.MatchEnded?.Invoke(r); // online: level, XP and rating are counted on the server
+        }
+
+        // The analytics' matchEnd, once per match: already as the match is decided (the tower falls), not with the result card
+        // 2 s later; a match left before that sends it from SendEnd. So a phone closed on the result card, or one that hangs as
+        // the match ends, still reports the match (bot analysis 2026-11-01: 5 of 41 matches on 0.3.1 sent no matchEnd, three of
+        // them just when matches end). The values are the same as at the card: the match stops stepping once it is over.
+        void LogEnd(bool quit)
+        {
+            if (match == null || endLogged || setup.HeroTest) return;
+            endLogged = true;
+            BamAnalytics.MatchEnded(setup, Result(quit && !over));
         }
 
         void OnApplicationPause(bool pausedByOs)

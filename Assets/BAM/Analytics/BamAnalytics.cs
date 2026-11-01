@@ -207,6 +207,7 @@ namespace BAM.Analytics
                 e["difficulty"] = difficulty;
                 e["tutorial"] = tutorial;
                 Record(e);
+                Upload();
             }
 
             public static void MatchEnd(string hero, string difficulty, bool tutorial, bool won, bool quit, int seconds, int kills, int deaths, int level)
@@ -223,6 +224,7 @@ namespace BAM.Analytics
                 e["deaths"] = deaths;
                 e["heroLevel"] = level;
                 Record(e);
+                Upload();
             }
 
             public static void TutorialStep(int step, string name)
@@ -245,6 +247,16 @@ namespace BAM.Analytics
                 if (!ready) { if (pending.Count < MaxPending) pending.Add(e); return; }
                 try { AnalyticsService.Instance.RecordEvent(e); }
                 catch (Exception ex) { Debug.LogWarning("[BAM.Analytics] RecordEvent failed: " + ex.Message); }
+            }
+
+            // A match event goes out at once instead of with the next automatic upload (about a minute later): a phone closed on
+            // the result card, or one that hangs there, would otherwise lose it (bot analysis 2026-11-01: 5 of 41 matches on 0.3.1
+            // sent no matchEnd). Tutorial steps ride along with the next match event or the automatic upload.
+            static void Upload()
+            {
+                if (!ready) return; // still starting: Start() records the kept events and the automatic upload sends them
+                try { AnalyticsService.Instance.Flush(); }
+                catch (Exception ex) { Debug.LogWarning("[BAM.Analytics] Flush failed: " + ex.Message); }
             }
         }
 #else
