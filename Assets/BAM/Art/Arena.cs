@@ -160,6 +160,52 @@ namespace BAM.Art
         const float KitPillarXZ = 0.75f, KitPillarY = 0.85f, KitWallH = 0.8f, KitWallT = 1.4f, KitWallLen = 1.9f;
         // tiles one straight piece covers: Rickard's 2026-11-01 Tripo wall is 8 blocks long, so ~7 tiles keeps its blocks square from above
         const float KitSegLen = 7f;
+        // the straight piece is 8 blocks; a run too short for all 8 gets a piece cut down to fewer whole blocks instead of 8 squeezed
+        // ones (Rickard 2026-11-01: the 3-tile wall under the tower showed thin slats). The cut ends sit inside the pillars.
+        const int KitBlocks = 8;
+        static readonly System.Collections.Generic.Dictionary<int, Mesh> cutBeams = new System.Collections.Generic.Dictionary<int, Mesh>();
+
+        static Mesh CutBeam(Mesh full, int blocks)
+        {
+            if (blocks >= KitBlocks) return full;
+            if (cutBeams.TryGetValue(blocks, out Mesh have) && have != null) return have;
+            Vector3[] v = full.vertices; Vector3[] n = full.normals; Vector2[] uv = full.uv; Color[] col = full.colors;
+            int[] tri = full.triangles;
+            float x0 = full.bounds.min.x, bw = full.bounds.size.x / KitBlocks, x1 = x0 + blocks * bw, shift = x0 + blocks * bw * 0.5f;
+            var map = new int[v.Length];
+            for (int i = 0; i < map.Length; i++) map[i] = -1;
+            var nv = new System.Collections.Generic.List<Vector3>(); var nn = new System.Collections.Generic.List<Vector3>();
+            var nuv = new System.Collections.Generic.List<Vector2>(); var ncol = new System.Collections.Generic.List<Color>();
+            var nt = new System.Collections.Generic.List<int>();
+            for (int t = 0; t < tri.Length; t += 3)
+            {
+                float cx = (v[tri[t]].x + v[tri[t + 1]].x + v[tri[t + 2]].x) / 3f;
+                if (cx < x0 || cx > x1) continue;
+                for (int j = 0; j < 3; j++)
+                {
+                    int a = tri[t + j];
+                    if (map[a] < 0)
+                    {
+                        map[a] = nv.Count;
+                        nv.Add(new Vector3(v[a].x - shift, v[a].y, v[a].z));
+                        if (n.Length == v.Length) nn.Add(n[a]);
+                        if (uv.Length == v.Length) nuv.Add(uv[a]);
+                        if (col.Length == v.Length) ncol.Add(col[a]);
+                    }
+                    nt.Add(map[a]);
+                }
+            }
+            var m = new Mesh { name = full.name + "_" + blocks };
+            m.SetVertices(nv);
+            if (nn.Count == nv.Count) m.SetNormals(nn);
+            if (nuv.Count == nv.Count) m.SetUVs(0, nuv);
+            if (ncol.Count == nv.Count) m.SetColors(ncol);
+            m.SetTriangles(nt, 0);
+            if (nn.Count != nv.Count) m.RecalculateNormals();
+            m.RecalculateBounds();
+            cutBeams[blocks] = m;
+            return m;
+        }
 
         static void WallKit(GameObject root, ArenaInfo info, Mesh pillarM, Mesh beamM)
         {
@@ -176,10 +222,10 @@ namespace BAM.Art
             // tile coords (row y grows toward the bottom of the screen) to the world
             Vector3 W(float x, float y) => new Vector3(x, 0f, h - y);
             void Pillar(float x, float y) => pillars.Add(new CombineInstance { mesh = pillarM, transform = Matrix4x4.TRS(W(x, y), Quaternion.identity, new Vector3(KitPillarXZ, KitPillarY, KitPillarXZ)) });
-            void Beam(float x, float y, bool alongRows, float len) => beams.Add(new CombineInstance
+            void Beam(float x, float y, bool alongRows, float len, int blocks) => beams.Add(new CombineInstance
             {
-                mesh = beamM,
-                transform = Matrix4x4.TRS(W(x, y), Quaternion.Euler(0f, alongRows ? 90f : 0f, 0f), new Vector3(len / KitWallLen, KitWallH, KitWallT)),
+                mesh = CutBeam(beamM, blocks),
+                transform = Matrix4x4.TRS(W(x, y), Quaternion.Euler(0f, alongRows ? 90f : 0f, 0f), new Vector3(len / (KitWallLen * blocks / KitBlocks), KitWallH, KitWallT)),
             });
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
@@ -195,10 +241,11 @@ namespace BAM.Art
                         while (!Node(x + dx * len, y + dy * len)) len++;
                         int k = Mathf.Max(1, Mathf.RoundToInt(len / KitSegLen));
                         float g = (float)len / k;
+                        int blocks = Mathf.Clamp(Mathf.RoundToInt(g * KitBlocks / KitSegLen), 1, KitBlocks);
                         for (int i = 0; i < k; i++)
                         {
                             float c = (i + 0.5f) * g;
-                            Beam(x + 0.5f + dx * c, y + 0.5f + dy * c, dir == 1, g + 0.04f);
+                            Beam(x + 0.5f + dx * c, y + 0.5f + dy * c, dir == 1, g + 0.04f, blocks);
                         }
                     }
                 }
