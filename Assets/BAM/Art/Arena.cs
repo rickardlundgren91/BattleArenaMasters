@@ -158,6 +158,8 @@ namespace BAM.Art
         // tiles between them. No pillars inside a run, so it reads as one long wall (Rickard's picture), slimmer pillars and a
         // thicker wall so its crenellated top shows from above. Each model is merged into one mesh, so the walls cost two draw calls.
         const float KitPillarXZ = 0.75f, KitPillarY = 0.85f, KitWallH = 0.8f, KitWallT = 1.4f, KitWallLen = 1.9f;
+        // tiles one straight piece covers: Rickard's 2026-11-01 Tripo wall is 8 blocks long, so ~7 tiles keeps its blocks square from above
+        const float KitSegLen = 7f;
 
         static void WallKit(GameObject root, ArenaInfo info, Mesh pillarM, Mesh beamM)
         {
@@ -191,7 +193,7 @@ namespace BAM.Art
                         if (!At(x + dx, y + dy)) continue;
                         int len = 1;
                         while (!Node(x + dx * len, y + dy * len)) len++;
-                        int k = Mathf.Max(1, Mathf.RoundToInt(len / 2f));
+                        int k = Mathf.Max(1, Mathf.RoundToInt(len / KitSegLen));
                         float g = (float)len / k;
                         for (int i = 0; i < k; i++)
                         {
