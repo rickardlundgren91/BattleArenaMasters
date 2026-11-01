@@ -112,6 +112,7 @@ namespace BAM.Build
                 PlayerSettings.Android.keyaliasPass = keyPass;
                 EditorUserBuildSettings.buildAppBundle = true;
                 EditorUserBuildSettings.development = false;
+                SymbolTableInBundle();
 
                 ok = Run(file, BuildOptions.None, "AAB " + BamVersion.Name + " (" + code + ")");
             }
@@ -188,6 +189,40 @@ namespace BAM.Build
                 EditorUtility.DisplayDialog("Bygget misslyckades", "Titta i Console efter röda rader.", "OK");
             else if (!run)
                 EditorUtility.DisplayDialog("APK klar", "Filen finns här:\n" + file, "OK");
+        }
+
+        /// <summary>
+        /// Native debug symbols (symbol table) go inside the AAB, so Play Console can read a native crash (version code 15 had none,
+        /// 2026-11-01). Unity 6: UserBuildSettings.DebugSymbols.level / .format in UnityEditor.Android, set by reflection because that
+        /// assembly only exists with Android Build Support (and our cloud compile check has no copy of it). Logs what it set; if the
+        /// API is missing it says so and the build still runs (then set Build Profiles > Android > Debug Symbols by hand once).
+        /// </summary>
+        static void SymbolTableInBundle()
+        {
+            try
+            {
+                Type ubs = null;
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    ubs = asm.GetType("UnityEditor.Android.UserBuildSettings", false);
+                    if (ubs != null) break;
+                }
+                var ds = ubs?.GetNestedType("DebugSymbols", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                var level = ds?.GetProperty("level", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                var format = ds?.GetProperty("format", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                if (level == null || format == null || !level.CanWrite || !format.CanWrite)
+                {
+                    Debug.LogWarning("[BAM.Build] Debug symbols: UserBuildSettings.DebugSymbols not found; set Build Profiles > Android > Debug Symbols = Symbol Table, Include in bundle by hand");
+                    return;
+                }
+                level.SetValue(null, Enum.Parse(level.PropertyType, "SymbolTable"));
+                format.SetValue(null, Enum.Parse(format.PropertyType, "IncludeInBundle"));
+                Debug.Log("[BAM.Build] Debug symbols: level " + level.GetValue(null) + ", format " + format.GetValue(null));
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BAM.Build] Debug symbols could not be set (" + e.Message + "); set Build Profiles > Android > Debug Symbols = Symbol Table, Include in bundle by hand");
+            }
         }
 
         static bool Run(string file, BuildOptions options, string what, string[] defines = null)
