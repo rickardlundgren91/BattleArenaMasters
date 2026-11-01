@@ -64,6 +64,18 @@ namespace BAM.Art.Editor
                 "Tyra's bow keeps its shot grip in her fist and her wrist turns up to 60 degrees instead, so the bow no longer twists "
                 + "in her hand between standing and shooting. Where the bow points stays the same.",
                 AnimFix.WristTurn);
+            AnimFix.PalmSocket = Part("Grip in the calibrated palm (Tyra pilot)",
+                "The bow's grip is locked to the palm point measured from Tyra's own fist in her Shoot clip, inside the fist, instead "
+                + "of 0.6 of the way to the index knuckle (2.78 % of her height off). Rickard's Offset is left out while this is on.",
+                AnimFix.PalmSocket);
+            AnimFix.AnatomicalWrist = Part("Wrist aims for the fist's own grip (Tyra pilot)",
+                "On by default. With the wrist turn on, the wrist works towards the grip her fist makes in the bow clip (the bow along "
+                + "the knuckles) instead of the bind placement. Where the bow points stays the same; her hand turns differently.",
+                AnimFix.AnatomicalWrist);
+            AnimFix.GripLockFull = Part("Bow fully in the fist (Tyra pilot)",
+                "On by default (Rickard 2026-10-31). The bow is held only as her fist holds it, so it follows the clip's hand: level "
+                + "at the hip in the idle and walk instead of hanging. Off = the old hanging bow.",
+                AnimFix.GripLockFull);
             AnimFix.ContactTiming = Part("Weapon meets the target with the number (melee)",
                 "Fenn, Knut, Bonk and Oaken: the weapon reaches its target on the moment the damage number shows, instead of the "
                 + "swing's fastest moment showing a little before it.",
@@ -96,6 +108,9 @@ namespace BAM.Art.Editor
         {
             AnimFix.FixedGrip = AnimFix.UpperSwing = AnimFix.LegsFollow = AnimFix.SquaredFacing = on;
             AnimFix.BlowTiming = AnimFix.Life = AnimFix.ArmRoom = AnimFix.GripLock = AnimFix.WristTurn = AnimFix.ContactTiming = on;
+            AnimFix.PalmSocket = on;
+            AnimFix.AnatomicalWrist = on;
+            AnimFix.GripLockFull = on;
         }
     }
 }
