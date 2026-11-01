@@ -158,12 +158,14 @@ namespace BAM.Game
             free.Poison = b.Has(St.Poison) && !b.Has(St.Burn);
         }
 
-        // healing on your own team's heroes (regeneration, Moa, the base): a green "+N" as the old heal(), summed and shown about once
-        // a second (Rickard 2026-10-26: "det är inga siffror eller plustecken för reg"); the enemy's heals stay hidden, as in the old game
+        // healing on the player's own hero (regeneration, Moa, the base): a green "+N" as the old heal(), summed and shown about once
+        // a second (Rickard 2026-10-26: "det är inga siffror eller plustecken för reg"). Team-mates' heals no longer show (2026-11-01:
+        // in Rickard's recording two or three green numbers a second rose over the bots at the base while he waited to respawn, noise
+        // that said nothing he needed); the enemy's heals stay hidden, as in the old game
         void OnHeal(SimEvent e)
         {
             var b = e.B;
-            if (b == null || e.V <= 0f || !b.IsRealHero || b.Team != m.Player.Team) return;
+            if (b == null || e.V <= 0f || b != m.Player) return;
             float now = Time.unscaledTime;
             TickSum free = null;
             for (int i = 0; i < tickSums.Length; i++)

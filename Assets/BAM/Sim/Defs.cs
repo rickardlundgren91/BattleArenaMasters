@@ -157,9 +157,11 @@ namespace BAM.Sim
         // towers: shots in a row at one hero hit harder, and heroes take more from towers as the match goes on (LateStart..LateFull)
         public const float TowerAggroTime = 2, TowerRamp = 0.2f, TowerRampMax = 2, TowerRampReset = 2.5f;
         public const float TowerLateMax = 2;
-        // the other side: from level 8 towers take more damage, a hero without its own minion at the tower gets half of that
-        public const int TowerTakenLevel = 8;
-        public const float TowerTakenPerMinute = 1, TowerTakenMax = 5;
+        // the other side: from level 10 towers take more damage, a hero without its own minion at the tower gets half of that.
+        // Was level 8, +100 %/min, max x5: in Rickard's recording of 2026-11-01 the tower went 60 -> 0 % in four seconds at 2:52
+        // (x2 by then, three level-11 heroes and Blast's keg), a cliff nobody could react to. Now x1 at 2:24, x1.5 at 3:24, x2 at 4:24.
+        public const int TowerTakenLevel = 10;
+        public const float TowerTakenPerMinute = 0.5f, TowerTakenMax = 3;
         // minions
         public const float MinionVision = 3.4f, MinionMaxToLane = 4;
         public const float TutorialMinionHp = 209;
