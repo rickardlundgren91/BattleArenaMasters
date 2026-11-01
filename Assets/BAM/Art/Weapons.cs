@@ -77,7 +77,7 @@ namespace BAM.Art
         /// degrees in her fist between rest and shot, Simon's audit on issue #5).</summary>
         public float WristMax;
         /// <summary>Weapon Tuner "Close hand" (Rickard 2026-10-30: "kunna göra så hon stänger händerna"): 0 = the fingers as the clip
-        /// has them, 1 = curled round the weapon's shaft (each finger joint bends up to <see cref="HeldGear.FistBend"/> degrees on
+        /// has them, 1 = curled round the weapon's shaft (each finger joint bends a share of <see cref="HeldGear.FistBend"/> degrees on
         /// top of the clip, towards the shaft; the thumb half as much).</summary>
         public float Fist;
         /// <summary>Tyra pilot (issue #5, Simon's yes 2026-10-31; AnimFix.PalmSocket): the palm socket, where the fist holds the
@@ -935,25 +935,46 @@ namespace BAM.Art
             Transform[] f = fing[i];
             if (f == null || t.localScale.y < 1e-4f) return;
             Vector3 g = t.TransformPoint(gripL[i]), ax = t.up;
+            // One shared bend axis for the four fingers: the knuckle line (index root to pinky root), turned so the index curls
+            // towards the shaft. Each finger bending round its own axis made them swing sideways into each other and read as
+            // one giant finger (Rickard 2026-11-01, Tyra); a shared axis keeps them side by side, like a real fist.
+            Vector3 knuckle = Vector3.zero;
+            if (f[3] != null && f[4] != null && f[12] != null)
+            {
+                Vector3 ix = BendAxis(f[3].position, f[4].position - f[3].position, g, ax);
+                knuckle = (f[12].position - f[3].position).normalized;
+                if (ix == Vector3.zero || knuckle == Vector3.zero) knuckle = Vector3.zero;
+                else if (Vector3.Dot(ix, knuckle) < 0f) knuckle = -knuckle;
+            }
             for (int n = 0; n < 5; n++)
             {
                 Transform a = f[n * 3], b = f[n * 3 + 1];
                 if (a == null || b == null) continue;
-                Vector3 dir = b.position - a.position;
-                if (dir.sqrMagnitude < 1e-10f) continue;
-                // towards the nearest point of the shaft, across the finger: the palm's side, whichever hand and rig
-                Vector3 onShaft = g + ax * Vector3.Dot(a.position - g, ax);
-                Vector3 toShaft = Vector3.ProjectOnPlane(onShaft - a.position, dir);
-                if (toShaft.sqrMagnitude < 1e-10f) continue;
-                Vector3 axis = Vector3.Cross(dir, toShaft).normalized;
-                Quaternion q = Quaternion.AngleAxis(FistBend * k * (n == 0 ? 0.5f : 1f), axis);
+                Vector3 axis = n > 0 && knuckle != Vector3.zero ? knuckle : BendAxis(a.position, b.position - a.position, g, ax);
+                if (axis == Vector3.zero) continue;
+                // every joint bends a share of FistBend on top of its parent, so the finger curls instead of pivoting stiffly at
+                // the knuckle; world rotations stack, so joint j ends up bent by its own share relative to joint j-1
                 for (int j = 0; j < 3; j++)
                 {
                     Transform bone = f[n * 3 + j];
                     if (bone == null) break;
-                    bone.rotation = q * bone.rotation;
+                    bone.rotation = Quaternion.AngleAxis(FistBend * k * CurlShare[j] * (n == 0 ? 0.5f : 1f), axis) * bone.rotation;
                 }
             }
+        }
+
+        /// <summary>Share of <see cref="FistBend"/> per finger joint (knuckle, middle, tip) for Close hand.</summary>
+        static readonly float[] CurlShare = { 0.5f, 0.6f, 0.4f };
+
+        /// <summary>The axis that turns a finger (root at a, pointing dir) across itself towards the nearest point of the shaft
+        /// (through g along ax); zero when undefined.</summary>
+        static Vector3 BendAxis(Vector3 a, Vector3 dir, Vector3 g, Vector3 ax)
+        {
+            if (dir.sqrMagnitude < 1e-10f) return Vector3.zero;
+            Vector3 onShaft = g + ax * Vector3.Dot(a - g, ax);
+            Vector3 toShaft = Vector3.ProjectOnPlane(onShaft - a, dir);
+            if (toShaft.sqrMagnitude < 1e-10f) return Vector3.zero;
+            return Vector3.Cross(dir, toShaft).normalized;
         }
 
         void LockGrip(int i, bool force = false)
