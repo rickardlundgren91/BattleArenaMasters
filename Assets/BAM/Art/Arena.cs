@@ -157,7 +157,8 @@ namespace BAM.Art
         // a pillar on every node of the wall grid (end, corner, tee, single tile) and the straight piece repeated about every two
         // tiles between them. No pillars inside a run, so it reads as one long wall (Rickard's picture), slimmer pillars and a
         // thicker wall so its crenellated top shows from above. Each model is merged into one mesh, so the walls cost two draw calls.
-        const float KitPillarXZ = 0.75f, KitPillarY = 0.85f, KitWallH = 0.8f, KitWallT = 1.4f, KitWallLen = 1.9f;
+        // pillar top is only 0.64 wide in the model, so 1.6 makes it ~1 tile, clearly wider and taller than the 0.77-tile wall like his reference picture (Rickard 2026-11-01: "hörnbitarna är pyttesmå")
+        const float KitPillarXZ = 1.6f, KitPillarY = 1.0f, KitWallH = 0.8f, KitWallT = 1.4f, KitWallLen = 1.9f;
         // tiles one straight piece covers: Rickard's 2026-11-01 Tripo wall is 8 blocks long, so ~7 tiles keeps its blocks square from above
         const float KitSegLen = 7f;
         // the straight piece is 8 blocks; a run too short for all 8 gets a piece cut down to fewer whole blocks instead of 8 squeezed
