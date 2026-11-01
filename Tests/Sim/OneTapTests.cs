@@ -78,6 +78,8 @@ namespace BAM.Sim
                 Check(f != null && SimMath.Hypot(f.X - p.X, f.Y - p.Y) < 0.05f, "ONETAP Moa: alone, the field lands on herself");
                 float sh = 0; for (int i = 0; i < p.StCount; i++) if (p.Sts[i].Type == St.Shield) sh += p.Sts[i].Amount;
                 Check(Math.Abs(sh - p.MaxHp * MoaS.FieldShieldOneTap) < 1, $"ONETAP Moa: the field's shield is 12 % ({sh:0} of {p.MaxHp:0})");
+                float left = 0; for (int i = 0; i < p.StCount; i++) if (p.Sts[i].Type == St.Shield) left = Math.Max(left, p.Sts[i].T);
+                Check(Math.Abs(left - MoaS.FieldShieldTimeOneTap) < 0.05f, $"ONETAP Moa: the field's shield lasts 5 s ({left:0.00} s left right after the cast)");
 
                 m = OneTapScene(HeroId.Moa, out p, out cx, out cy);
                 Unit a = null; foreach (var h in m.Heroes) if (h.Team == p.Team && h != p) { a = h; break; }

@@ -75,6 +75,8 @@ namespace BAM.Sim
         /// <summary>The honey field's shield with the one-tap special (Match.OneTap): 12 %, it is no longer placed over several
         /// allies on purpose (Rickard 2026-11-01); AreaShieldPercent (6 %) is the old drag's.</summary>
         public const float FieldShieldOneTap = 0.12f;
+        /// <summary>How long the one-tap field's shield lasts: 5 s (Rickard 2026-11-02 "minst 5"; AreaDuration 3 s is the old drag's).</summary>
+        public const float FieldShieldTimeOneTap = 5;
         public const float SpeedBonus = 0.1f, SpeedDuration = 1.5f;
         public const float QueenRange = 4, QueenThreshold = 0.25f, QueenShieldPercent = 0.08f, QueenDuration = 2, QueenCooldown = 22;
     }
@@ -602,7 +604,7 @@ namespace BAM.Sim
                 var u = Units[i];
                 if (u.Kind != UnitKind.Hero || !u.Alive || u.Team != h.Team || u.IsClone || p.HasHit(u) || SimMath.Dist(u, p.X, p.Y) > MoaS.AreaRadius + u.R) continue;
                 p.AddHit(u);
-                MoaShield(h, u, OneTap ? MoaS.FieldShieldOneTap : MoaS.AreaShieldPercent, MoaS.AreaDuration);
+                MoaShield(h, u, OneTap ? MoaS.FieldShieldOneTap : MoaS.AreaShieldPercent, OneTap ? MoaS.FieldShieldTimeOneTap : MoaS.AreaDuration);
             }
         }
 
