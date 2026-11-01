@@ -53,6 +53,8 @@ namespace BAM.Sim
         /// <summary>How far the bolt flies at most: longer than the arena's diagonal, so in practice to the first hit, wall or the edge.</summary>
         public const float Flight = 40;
         public const float Windup = 0.35f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.35f;
+        /// <summary>One-tap special (Rules.OneTapSpecial, 2026-11-01): how far her tap looks for the random enemy to shoot at.</summary>
+        public const float TapTarget = 7;
         /// <summary>Arrow Volley (the tap since 2026-10-28, XYZ 2026-10-25): after a short draw, five arrows fanned +-HalfAngle round a
         /// random enemy hero or minion within her attack range; they fly as far as her range, through enemies, and the volley hurts
         /// each enemy once (never towers).</summary>
@@ -70,6 +72,9 @@ namespace BAM.Sim
     public static class MoaS
     {
         public const float Range = 5, ShieldPercent = 0.18f, Duration = 3, AreaRadius = 1.8f, AreaShieldPercent = 0.06f, AreaDuration = 3, FieldDuration = 2;
+        /// <summary>The honey field's shield with the one-tap special (Match.OneTap): 12 %, it is no longer placed over several
+        /// allies on purpose (Rickard 2026-11-01); AreaShieldPercent (6 %) is the old drag's.</summary>
+        public const float FieldShieldOneTap = 0.12f;
         public const float SpeedBonus = 0.1f, SpeedDuration = 1.5f;
         public const float QueenRange = 4, QueenThreshold = 0.25f, QueenShieldPercent = 0.08f, QueenDuration = 2, QueenCooldown = 22;
     }
@@ -597,7 +602,7 @@ namespace BAM.Sim
                 var u = Units[i];
                 if (u.Kind != UnitKind.Hero || !u.Alive || u.Team != h.Team || u.IsClone || p.HasHit(u) || SimMath.Dist(u, p.X, p.Y) > MoaS.AreaRadius + u.R) continue;
                 p.AddHit(u);
-                MoaShield(h, u, MoaS.AreaShieldPercent, MoaS.AreaDuration);
+                MoaShield(h, u, OneTap ? MoaS.FieldShieldOneTap : MoaS.AreaShieldPercent, MoaS.AreaDuration);
             }
         }
 

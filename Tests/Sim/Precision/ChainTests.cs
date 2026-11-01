@@ -271,7 +271,7 @@ namespace BAM.Sim
         static void PrecDeterminism()
         {
             // the same seed and inputs give the same match and the same events, tick by tick
-            Match Scripted() => Create(new MatchConfig { PlayerHero = HeroId.Bonk, Seed = 4242, Difficulty = Difficulty.Hard });
+            Match Scripted() { var sm = Create(new MatchConfig { PlayerHero = HeroId.Bonk, Seed = 4242, Difficulty = Difficulty.Hard }); sm.OneTap = false; return sm; }
             var a = Scripted(); var b = Scripted();
             var ra = new Random(9); var rb = new Random(9);
             PlayerInput Inp(Random r)

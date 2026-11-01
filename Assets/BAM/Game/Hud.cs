@@ -99,11 +99,11 @@ namespace BAM.Game
             BeginHeroTest();
             rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
-            var icon = Resources.Load<Texture2D>("BAM/Menu/special_" + HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant());
+            var icon = Resources.Load<Texture2D>("BAM/Menu/" + HeroCatalog.SpecialIcon(m.Player.Hero));
             if (specialIcon.sprite != null) Object.Destroy(specialIcon.sprite); // the last match's sprite (the texture stays)
             specialIcon.sprite = icon != null ? Sprite.Create(icon, new Rect(0, 0, icon.width, icon.height), new Vector2(0.5f, 0.5f), 100f) : null;
             specialIcon.enabled = icon != null;
-            specialName.text = icon != null ? "" : HeroCatalog.Get(m.Player.Hero).SpecialName;
+            specialName.text = icon != null ? "" : HeroCatalog.Get(m.Player.Hero).SpecialTitle;
             if (BeginSplit(HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant())) { specialIcon.enabled = false; specialName.text = ""; } // its own tap and drag pictures (HudSplit.cs)
             BeginCenter();
             BeginTutorial();
@@ -194,6 +194,7 @@ namespace BAM.Game
             // after the hold card has shown, letting go only hides it (Rickard 2026-10-26: reading must not cast); Space has no hold
             if (!fromKey && m.Tut == null && Time.unscaledTime - special.PressedAt >= HoldTime) return;
             if (!m.Player.SpecialReady) { Denied("Special not ready"); return; }
+            if (m.OneTap && !m.TapHasTarget(m.Player)) { Denied("No enemy in range"); return; } // the button is grey (OneTap.cs)
             Queue(float.NaN, 0f);
         }
 
@@ -315,7 +316,8 @@ namespace BAM.Game
         void Special()
         {
             var p = m.Player;
-            bool ready = p.Alive && p.SpecialReady;
+            // one-tap special: charged but nobody in reach shows as not ready, grey (Rickard 2026-11-01)
+            bool ready = p.Alive && p.SpecialReady && (!m.OneTap || m.TapHasTarget(p));
             // the Glass HUD's button (Hud.cs 739-749, HudGlass.drawGlassSpecialRim): a dark disc, brown when ready, an orange
             // charge ring, and when ready an orange ring breathing just outside it (sin 3.5 t)
             specialFill.color = ready ? GlassOrangeHi : GlassOrange;
@@ -576,6 +578,7 @@ namespace BAM.Game
             special.Rect = specialRoot;
             special.Tapped = OnTap;
             special.Aimed = OnAimed;
+            special.NoDrag = Rules.OneTapSpecial; // one tap: no drag, so no aim, reach ring or cancel mark either
             // the old game's button pictures (ui_ingameView_specialButton_*): glow, dark disc, ring track, the charge ring
             // the Glass HUD's SPECIAL: a dark glass disc, a faint track and the orange charge (the old ring picture,
             // ui_ingameView_specialButton_fill, has the old ring's width: 0.14 of the radius)

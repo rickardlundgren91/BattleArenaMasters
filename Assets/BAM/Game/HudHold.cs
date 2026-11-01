@@ -104,8 +104,8 @@ namespace BAM.Game
 
             float y = pad;
             y = Put(holdTag, "SPECIAL", tf, pad, y, tw) + tf * 0.4f;
-            y = Put(holdName, info.SpecialName, nf, pad, y, tw) + nf * 0.2f;
-            y = Put(holdDesc, info.SpecialDesc, df, pad, y, tw, lh);
+            y = Put(holdName, info.SpecialTitle, nf, pad, y, tw) + nf * 0.2f;
+            y = Put(holdDesc, info.SpecialText, df, pad, y, tw, lh);
             y += df * 0.6f;
             y = Put(holdName2, "Passive: " + info.PassiveName, df, pad, y, tw) + df * 0.35f;
             y = Put(holdDesc2, info.PassiveDesc, df, pad, y, tw, lh);

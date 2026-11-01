@@ -10,6 +10,7 @@ namespace BAM.Sim
         static Match TiktaScene(out Unit t, out float cx, out float cy)
         {
             var m = Create(new MatchConfig { PlayerHero = HeroId.Tikta, Allies = new[] { HeroId.Moa, HeroId.Fenn }, Enemies = new[] { HeroId.Bram, HeroId.Knut, HeroId.Blast }, Seed = 7 });
+            m.OneTap = false; // these tests check the old drag and tap forms (kept behind Rules.OneTapSpecial)
             for (int i = 0; i < m.Units.Count; i++) { var u = m.Units[i]; if (u.Kind == UnitKind.Minion) u.Alive = false; u.ClearStatuses(); }
             m.State = MatchState.Play; m.Time = 10; m.WaveT = 1e9f; m.Events.Clear();
             t = m.Player;
@@ -152,6 +153,7 @@ namespace BAM.Sim
 
             // BRAM-08: the same for Bram's tapped hammer (no hit, no bounce)
             m = Create(new MatchConfig { PlayerHero = HeroId.Bram, Allies = new[] { HeroId.Moa, HeroId.Fenn }, Enemies = new[] { HeroId.Tikta, HeroId.Knut, HeroId.Blast }, Seed = 7 });
+            m.OneTap = false;
             foreach (var u in m.Units) { if (u.Kind == UnitKind.Minion) u.Alive = false; u.ClearStatuses(); }
             m.State = MatchState.Play; m.Time = 10; m.WaveT = 1e9f; m.Events.Clear();
             var b = m.Player; float px2 = 2;

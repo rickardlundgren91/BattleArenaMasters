@@ -23,6 +23,7 @@ namespace BAM.Sim
         static Match PMake(HeroId player, HeroId[] allies, HeroId[] enemies, int seed = 7)
         {
             var m = Create(new MatchConfig { PlayerHero = player, Allies = allies, Enemies = enemies, Seed = seed });
+            m.OneTap = false; // the scripted scenes aim the old drag and tap forms (kept behind Rules.OneTapSpecial)
             for (int i = 0; i < m.Units.Count; i++) { var u = m.Units[i]; if (u.Kind == UnitKind.Minion) u.Alive = false; u.ClearStatuses(); }
             m.spawns.Clear(); m.WaveT = 1e9f;
             m.Towers[0].Alive = false; m.Towers[1].Alive = false; // no tower shots in the measurements (Alive false, no TowerDown)

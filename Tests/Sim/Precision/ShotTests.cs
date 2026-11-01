@@ -26,6 +26,7 @@ namespace BAM.Sim
             for (int mi = 0; mi < 30; mi++)
             {
                 var m = PBotMatch(3000 + mi, heroes[mi % heroes.Length]);
+                m.OneTap = false; // the volley's same-tick arrows need Tyra's old tap form (kept behind Rules.OneTapSpecial)
                 live.Clear();
                 for (int k = 0; k < 60 * 60 * 6 && m.State != MatchState.Over; k++)
                 {

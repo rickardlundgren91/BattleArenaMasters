@@ -115,6 +115,8 @@ namespace BAM.Game
 
         public RectTransform Rect;
         public bool Pressed, Dragging, OverCancel;
+        /// <summary>Rules.OneTapSpecial: a finger that moves never turns into a drag, every release is a tap.</summary>
+        public bool NoDrag;
         public float PressedAt;        // when the finger landed (hold to read, HudHold.cs)
         public Vector2 Offset;
         Vector2 start;
@@ -142,7 +144,7 @@ namespace BAM.Game
             if (id != pointer) return;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screen, null, out Vector2 local);
             Offset = local - Rect.rect.center;
-            if (!Dragging && (Offset - start).magnitude > DragStart) Dragging = true;
+            if (!NoDrag && !Dragging && (Offset - start).magnitude > DragStart) Dragging = true;
             OverCancel = Dragging && (Offset - new Vector2(0f, CancelUp)).magnitude < CancelRadius;
         }
 

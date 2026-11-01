@@ -579,7 +579,7 @@ namespace BAM.UI
 
             string lower = Lower(info.Id);
             RefreshSpellCard();
-            FillAbility(heroAbilities[0], "SPECIAL · " + def.MaxCharge + " hits to charge", info.SpecialName, info.SpecialDesc, "special_" + lower);
+            FillAbility(heroAbilities[0], "SPECIAL · " + def.MaxCharge + " hits to charge", info.SpecialTitle, info.SpecialText, HeroCatalog.SpecialIcon(info.Id));
             FillAbility(heroAbilities[1], "PASSIVE", info.PassiveName, info.PassiveDesc, "passive_" + lower);
 
             heroSelectedTag.SetActive(chosen);

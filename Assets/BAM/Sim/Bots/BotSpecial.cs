@@ -43,6 +43,13 @@ namespace BAM.Sim
         bool SpecialWanted(bool dz)
         {
             var h = H; bool los = SpecialIsShot(h.Hero); var l = bufFoes; var us = M.Units;
+            if (M.OneTap && h.Hero != HeroId.Moa)
+            {   // one tap at a random enemy in reach (OneTap.cs): wanted with an enemy hero in that reach, or a minion pack of 3+ to
+                // clear; the same rule on both teams and every level (the levels differ in how fast and how often, not in the brain)
+                float r = Match.TapReach(h.Hero);
+                if (!M.TapHasTarget(h)) return false;
+                return SureShot(FoeList(r, true, true), dz) || Foes(r, false, true, l) >= 3;
+            }
             switch (h.Hero)
             {
                 case HeroId.Tyra: // the volley on an enemy hero in her range; Gold and Platinum may aim the bolt instead (DragPlan, tried first)
@@ -133,6 +140,7 @@ namespace BAM.Sim
         bool DragPlan(bool dz, out float ang, out float k)
         {
             ang = float.NaN; k = 1;
+            if (M.OneTap) return false; // no drag forms: the tap aims by itself (OneTap.cs)
             var h = H;
             if (h.Hero == HeroId.Hilde)
             {   // every tier (XYZ SimBotDrag.cs, 2026-10-25): the big keg on the enemy tower in reach, the only form that hurts it
@@ -270,6 +278,7 @@ namespace BAM.Sim
         /// <summary>The bot's cast: the drag form when it is the better play (and works), else the tap.</summary>
         bool BotCast(bool dz)
         {
+            if (M.OneTap) return M.TryTapSpecial(H); // one special, tapped like a player (OneTap.cs)
             if (DragPlan(dz, out float a, out float k) && M.TryCastSpecial(H, a, k)) return true;
             return M.TryCastSpecial(H, float.NaN, 0);
         }

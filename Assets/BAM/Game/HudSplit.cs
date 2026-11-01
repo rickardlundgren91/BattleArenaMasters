@@ -61,6 +61,7 @@ namespace BAM.Game
             tapIcon = HalfIcon(iconMask, "Tap", -1f);
             dragIcon = HalfIcon(iconMask, "Drag", 1f);
 
+            if (Rules.OneTapSpecial) return; // one special: no middle line, no TAP / DRAG labels
             // the line between the halves
             var line = UiKit.NewRect("Line", specialRoot);
             line.anchorMin = line.anchorMax = line.pivot = new Vector2(0.5f, 0.5f);
@@ -105,6 +106,7 @@ namespace BAM.Game
         // at the start of a match: the hero's own tap and drag pictures, if both are there
         bool BeginSplit(string hero)
         {
+            if (Rules.OneTapSpecial) { SetIcon(tapIcon, null); SetIcon(dragIcon, null); return false; } // one special: its one picture
             var tap = Resources.Load<Texture2D>("BAM/Menu/special_" + hero + "_tap");
             var drag = Resources.Load<Texture2D>("BAM/Menu/special_" + hero + "_drag");
             bool both = tap != null && drag != null && tap != drag;

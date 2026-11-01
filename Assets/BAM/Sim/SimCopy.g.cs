@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "cc43421f8b1aad6e";
+            Generated = true; GeneratedHash = "918b7df3780c0d04";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -287,6 +287,7 @@ namespace BAM.Sim
             SimMirror.SetRo(__t, "seatSpecBuf", SimMirror.NewArr(__s.seatSpecBuf));
             SimMirror.SetRo(__t, "spBuf", SimMirror.NewList(__s.spBuf));
             SimMirror.SetRo(__t, "spawns", SimMirror.NewList(__s.spawns));
+            SimMirror.SetRo(__t, "tapBuf", SimMirror.NewList(__s.tapBuf));
             SimMirror.SetRo(__t, "tmpBuf", SimMirror.NewList(__s.tmpBuf));
             SimMirror.SetRo(__t, "unitBuf", SimMirror.NewList(__s.unitBuf));
             return __t;
@@ -303,6 +304,7 @@ namespace BAM.Sim
             Level = __s.Level;
             if (!ReferenceEquals(Map, __m.Map(__s.Map))) SimMirror.SetRo(this, "Map", __m.Map(__s.Map));
             NoStars = __s.NoStars;
+            OneTap = __s.OneTap;
             Player = __m.Map(__s.Player);
             __m.ListMap(Projs, __s.Projs);
             if (!ReferenceEquals(Rng, __m.Map(__s.Rng))) SimMirror.SetRo(this, "Rng", __m.Map(__s.Rng));
@@ -341,6 +343,7 @@ namespace BAM.Sim
             SimMirror.Arr(seatSpecBuf, __s.seatSpecBuf);
             __m.ListMap(spBuf, __s.spBuf);
             SimMirror.List(spawns, __s.spawns);
+            __m.ListMap(tapBuf, __s.tapBuf);
             timeD = __s.timeD;
             timeSet = __s.timeSet;
             __m.ListMap(tmpBuf, __s.tmpBuf);

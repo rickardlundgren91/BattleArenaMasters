@@ -136,6 +136,10 @@ namespace BAM.Sim
     public static class Rules
     {
         public const float Tick = 1f / 60f;
+        /// <summary>One special per hero, cast with a tap at a random target in reach (Rickard 2026-11-01, Match.TryTapSpecial in
+        /// OneTap.cs). false = the old tap + drag specials, HUD split, aim ring, cancel X and tutorial drag step, all kept for at
+        /// least two versions so the change can be taken back. Not const, so both code paths stay compiled.</summary>
+        public static readonly bool OneTapSpecial = true;
         public const float Countdown = 5;          // the match clock runs from -5 to 0 before play
         public const float StartSpeedTime = 3, StartSpeedPct = 0.4f; // every hero runs +40 % for the first 3 s (was +100 % for 5 s; Rickard 2026-10-29: too much)
         public const float WaveFirst = 3, WavePeriod = 16, WaveStagger = 0.2f;

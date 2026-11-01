@@ -431,7 +431,7 @@ namespace BAM.Sim
             MoveUnit(u, seatMoveX[s], seatMoveY[s], dt);
             if (seatSpecBuf[s] > 0)
             {
-                bool cast = TryCastSpecial(u, seatBufAng[s], seatBufK[s]);
+                bool cast = OneTap ? TryTapSpecial(u) : TryCastSpecial(u, seatBufAng[s], seatBufK[s]); // one tap: any aim sent is ignored
                 if (cast) seatSpecBuf[s] = 0;
                 else if (seatSpecBuf[s] <= dt && u.SpecialReady) { if (u == Player) SpecialDeniedAt = Time; Emit(EventType.SpecialDenied, u, null); }
             }
