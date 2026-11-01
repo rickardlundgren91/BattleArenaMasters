@@ -91,8 +91,10 @@ namespace BAM.Art
         /// = none. Code only.</summary>
         public Vector3 GripY, GripZ;
         /// <summary>For a model without finger bones (Knut: his clips have them, Knut.fbx has none, so the socket's frame could not be
-        /// found and the grip sat in the wrist): where the index and thumb roots are in the hand bone's own space, in lengths of
-        /// the hand bone's offset from the forearm. Read in Unity from his clips' rig (MCP, 2026-11-01); zero = from the bones.</summary>
+        /// found and the grip sat in the wrist; Fenn.fbx has no right thumb): where the index and thumb roots are in the hand bone's
+        /// own space, from the clips' rig (Knut read in Unity via MCP, 2026-11-01; Fenn from Blender, x negated as Knut's showed).
+        /// In lengths of the hand bone's offset from the forearm, or, for the thumb of a model that has the index, of the index
+        /// root's offset. Zero = from the bones.</summary>
         public Vector3 NoFingerIndex, NoFingerThumb;
     }
 
@@ -187,7 +189,10 @@ namespace BAM.Art
             // pick A of bam-work/art/rigg-anim/spring/fenn-spring-val.png for Rickard, 2026-10-29; Clay-Fenn, redo if Original-Fenn stays)
             g[(int)HeroId.Fenn] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f, HoldUp = 45f, HoldOut = 62f, Turn = new Vector3(-33f, 55f, 0f), Run = new Hold { Up = -20f, Out = 155f } } },
+                // (2026-11-01, after Tyra and Knut) the sword in the palm socket: the centre of his four fingers' curl in his own Idle
+                // and Run (curled 109 degrees; the same within 0.002), Socket only, so his Tuner hold and swing stay as tuned
+                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f, HoldUp = 45f, HoldOut = 62f, Turn = new Vector3(-33f, 55f, 0f), Run = new Hold { Up = -20f, Out = 155f },
+                    Socket = new Vector3(0.7521f, -0.0457f, 0.2897f), NoFingerThumb = new Vector3(-0.2402f, 0.2411f, 0.0900f) } },
                 Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f, WalkOut = 0.08f },
             };
             // arms out as in the old game (MX_ARM_SPREAD 22) and, at rest, the hammer on his right shoulder as Bonk carries his club
@@ -637,11 +642,15 @@ namespace BAM.Art
             // Humanoid lookup finds no thumb; the FBX has the bone, so the socket's frame takes it by name (only here, so the
             // fist and every other hero stay as they are)
             Transform ixB = ix != null ? ix : HandBone(hd, W.Left, "Index1"), thB = th != null ? th : HandBone(hd, W.Left, "Thumb1");
-            if (ixB != null && thB != null) Anatomy(i, W, hd, ixB.position, thB.position);
-            else if (W.NoFingerIndex != Vector3.zero && W.NoFingerThumb != Vector3.zero)
+            // a model without those bones takes them from WeaponDef.NoFingerIndex/NoFingerThumb (Knut has no fingers, Fenn no thumb)
+            float fl = hd.localPosition.magnitude * hd.parent.lossyScale.y / Mathf.Max(1e-6f, hd.lossyScale.y);
+            bool hasIx = ixB != null || W.NoFingerIndex != Vector3.zero, hasTh = thB != null || W.NoFingerThumb != Vector3.zero;
+            if (hasIx && hasTh)
             {
-                float fl = hd.localPosition.magnitude * hd.parent.lossyScale.y / Mathf.Max(1e-6f, hd.lossyScale.y);
-                Anatomy(i, W, hd, hd.TransformPoint(W.NoFingerIndex * fl), hd.TransformPoint(W.NoFingerThumb * fl));
+                Vector3 ixP = ixB != null ? ixB.position : hd.TransformPoint(W.NoFingerIndex * fl);
+                Vector3 thP = thB != null ? thB.position
+                    : hd.TransformPoint(W.NoFingerThumb * (ixB != null ? hd.InverseTransformPoint(ixB.position).magnitude : fl));
+                Anatomy(i, W, hd, ixP, thP);
             }
         }
 
@@ -897,7 +906,9 @@ namespace BAM.Art
                 LockGrip(i, full);
                 // Rickard's Offset was tuned on the 0.6 palm; with the calibrated socket the grip is already in the fist (Tyra's -0.03
                 // down would move it 3 % of her height off it again), so it is left out while the grip is locked to the socket
-                bool inSocket = AnimFix.PalmSocket && hasSock[i] && (AnimFix.GripLock || full);
+                // (2026-11-01) only for a weapon with the anatomical grip (Tyra): Knut's and Fenn's socket is a grip point only, and
+                // Rickard moves their weapon on top of it with his Offset ("då antar jag att jag bara flyttar den")
+                bool inSocket = AnimFix.PalmSocket && hasSock[i] && hasAnat[i] && (AnimFix.GripLock || full);
                 if (W.Offset != Vector3.zero && !inSocket) t.position += root.TransformDirection(W.Offset) * figH;
                 if (W.Fist > 0.001f && !gone) CloseHand(i, W.Fist * liveW);
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
