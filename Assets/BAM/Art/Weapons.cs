@@ -211,7 +211,14 @@ namespace BAM.Art
             // 2026-10-29; pick A of bam-work/art/rigg-anim/spring/knut-spring-val.png; WeaponTune.json beats this until Reset Knut)
             // (ANIM-25) his right fist sank up to 5 % of his height into his hip and thigh standing and running (Unity's own poses
             // 2026-10-29): both arms 16 degrees out keep it off; with pick A's hold that also keeps the flukes off his right foot
-            g[(int)HeroId.Knut] = new GearDef { HandsOff = 16f, Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f, HoldUp = 80f, HoldOut = -90f } } };
+            // (2026-11-01, Rickard's pick after the Tyra pilot) his anchor in the palm socket: the centre of his index finger's curl in
+            // Attack1 (curled 131 degrees through the whole clip; his rig has only thumb and index), measured offline in Blender as
+            // Tyra's was (bam-work/precision/grip-knut); his Tuner Offset is skipped while the grip is locked in the socket
+            g[(int)HeroId.Knut] = new GearDef
+            {
+                HandsOff = 16f,
+                Weapons = new[] { new WeaponDef { Model = "knut_anchor", Len = 0.55f, Grip = 0.85f, HoldUp = 80f, HoldOut = -90f, Socket = new Vector3(0.9936f, 0.7866f, 0.9747f) } },
+            };
             // with her own clips the staff along the forearm hung beside the fist and the crest, face out at the side, read as a
             // torch from the front (Rickard 2026-10-26: "moa håller inte i sina vapen"): the staff now stands up through her right
             // fist, face to the front, and the crest sits on her left hand turned half to the front; (2026-10-28) it stays up through
