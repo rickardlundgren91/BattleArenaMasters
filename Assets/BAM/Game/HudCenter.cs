@@ -164,7 +164,9 @@ namespace BAM.Game
         void BuildCenter()
         {
             dim = UiKit.Fill(safe, new Color(0f, 0f, 0f, 0.35f));
-            UiKit.Stretch(dim.rectTransform, -2000f, 0f, -2000f, 0f); // out to the screen's sides on a foldable (off screen on a phone)
+            UiKit.Stretch(dim.rectTransform, -2000f, -2000f, -2000f, -2000f); // out past every screen edge: the sides on a foldable, and on a phone
+            // over the status and navigation bars too, where the game picture runs on (it stopped at the safe area's top and bottom and
+            // left a hard lighter band there while dead, Rickard 2026-11-02 "nåt filter över som inte hänger med")
             dim.transform.SetAsFirstSibling(); // under the controls
             dim.enabled = false;
 
