@@ -9,7 +9,8 @@ namespace BAM.Art
     /// One small dynamic mesh, one draw call, drawn over everything (ArtMaterials.Overlay), so a body or a raised weapon never
     /// cuts through it. The quads are written back to front: with no depth test the triangle order is the layering.
     /// Vertices are rewritten only when a value changes or the trail is catching up.
-    /// When the special is ready the row turns bright gold and a narrow white shine sweeps along it every SweepEvery seconds
+    /// When the special is ready the row turns bright gold; just as it becomes ready a narrow white shine sweeps along it Sweeps times
+    /// (every SweepEvery seconds) while a gold edge round it blinks, then the row stays a steady gold
     /// (tester 2026-11-02 "the small yellow bar could glow when a hero's ultimate is ready"; Rickard found a soft halo ugly, "glöden
     /// e ful", so it is a crisp sweep in the bar's own flat style). Shown on every hero, enemies too, so a ready enemy special can be seen.
     /// </summary>
@@ -24,7 +25,9 @@ namespace BAM.Art
         // and a gold edge round the row that blinks between dark and light gold (Rickard 2026-11-02 picked "D": the sweep plus the
         // blinking gold edge); it lies over the black frame round the row only
         const float EdgeRate = 7f;
-        bool edgeLit;
+        const int Sweeps = 3; // how many sweeps (and the edge's blinking with them) when the special becomes ready
+        bool edgeLit, edgeOn;
+        float readyAt = -100f;
 
         public readonly Transform T;
         readonly MeshRenderer r;
@@ -94,7 +97,7 @@ namespace BAM.Art
         {
             k01 = k01 < 0f ? -1f : Mathf.Clamp01(k01);
             if (Mathf.Abs(k01 - energy) > 0.001f) { energy = k01; dirty = true; }
-            if (ready != isReady) { ready = isReady; uvDirty = true; dirty = true; }
+            if (ready != isReady) { ready = isReady; uvDirty = true; dirty = true; if (isReady) readyAt = Time.unscaledTime; }
         }
 
         /// <summary>Back to full with no trail (respawn, pooled reuse).</summary>
@@ -115,16 +118,21 @@ namespace BAM.Art
                 if (trailWait > 0f) trailWait -= dt;
                 else { trail = Mathf.Max(hp, trail - dt * 0.9f); dirty = true; }
             }
+            // only right after the special becomes ready: Sweeps shines while the edge blinks, then the row just stays gold
+            // (Rickard 2026-11-02 "är det bra att den baren blinkar så? tar uppmärksamhet")
+            float since = Time.unscaledTime - readyAt;
+            bool fresh = ready && energy >= 0f && since < Sweeps * SweepEvery;
             float at = -1f;
-            if (ready && energy >= 0f)
+            if (fresh)
             {
-                float ph = Time.unscaledTime % SweepEvery;
+                float ph = since % SweepEvery;
                 if (ph < SweepTime) at = Mathf.Lerp(-ShineWide, 1f + ShineWide, ph / SweepTime);
             }
             if (at != shineAt) { shineAt = at; dirty = true; }
-            if (ready && energy >= 0f)
+            if (fresh != edgeOn) { edgeOn = fresh; dirty = true; }
+            if (fresh)
             {
-                bool lit = Mathf.Sin(Time.unscaledTime * EdgeRate) > -0.2f;
+                bool lit = Mathf.Sin(since * EdgeRate + 1.5f) > -0.2f; // starts lit
                 if (lit != edgeLit) { edgeLit = lit; uvDirty = true; }
             }
             if (dirty) { Rebuild(); mesh.vertices = v; dirty = false; }
@@ -137,7 +145,7 @@ namespace BAM.Art
             bool en = energy >= 0f;
             float ey1 = y0 - EnergyGap, ey0 = ey1 - EnergyH;
             Quad(QFrame, x0 - Border, (en ? ey0 : y0) - Border, x1 + Border, y1 + Border);
-            if (en && ready) Quad(QEnEdge, x0 - Border, ey0 - Border, x1 + Border, y0); // the frame's part round the row, up to the health
+            if (en && edgeOn) Quad(QEnEdge, x0 - Border, ey0 - Border, x1 + Border, y0); // the frame's part round the row, up to the health
             else Quad(QEnEdge, 0f, 0f, 0f, 0f);
             Quad(QBack, x0, y0, x1, y1);
             float s0 = Mathf.Min(hp, 1f - shield);           // shield sits after the health, or at the right end when full
