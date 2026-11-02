@@ -310,7 +310,7 @@ namespace BAM.Sim
             var h = H; vx = vy = 0;
             float R = Tier.ProjAvoid;
             Temperament();
-            float chance = SimMath.Clamp(BotTables.DodgeChance[tierI] + 0.1f * Skill + (v3 ? TK3(6) : 0), 0, BotTables.DodgeChanceMax);
+            float chance = SimMath.Clamp(BotTables.DodgeChance[tierI] + 0.1f * Skill + (v3 ? TK3(6) : 0), 0, tierI >= 4 ? 1 : BotTables.DodgeChanceMax);
             var ps = M.Projs;
             for (int i = 0; i < ps.Count; i++)
             {

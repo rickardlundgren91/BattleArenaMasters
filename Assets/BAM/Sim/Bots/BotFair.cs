@@ -31,6 +31,7 @@ namespace BAM.Sim
         bool AiSees(Unit e)
         {
             int tm = H.Team;
+            if (tierI >= 4) return true; // Ultra knows where everyone is, grass too (Rickard 2026-11-02 "ska veta och tänka ut vad som kommer hända")
             if (!M.IsVisibleTo(e, tm)) return false;
             if (e.Kind != UnitKind.Hero || e.IsClone || e.Team == tm || float.IsNaN(e.VisSince[tm])) return true;
             if (float.IsNaN(e.NoticeAt[tm])) e.NoticeAt[tm] = e.VisSince[tm] + BotTables.DodgeReactMin[tierI] * Srand(0.9f, 1.4f);
@@ -40,7 +41,7 @@ namespace BAM.Sim
         /// <summary>0..1: how much of t's walk the bot h has watched (scales its aim lead in Match.LeadAim).</summary>
         internal static float LeadSeen(Match m, Unit h, Unit t)
         {
-            if (t.Team == h.Team) return 1;
+            if (t.Team == h.Team || h.Bot != null && h.Bot.tierI >= 4) return 1; // Ultra leads every walk
             if (!m.IsVisibleTo(t, h.Team)) return 0;
             float s = t.VisSince[h.Team];
             return float.IsNaN(s) ? 1 : SimMath.Clamp((m.Time - s) / BotTables.LeadSeenT, 0, 1);

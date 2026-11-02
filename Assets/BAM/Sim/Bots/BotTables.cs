@@ -14,15 +14,15 @@ namespace BAM.Sim
         // tier index: Bronze 0, Silver 1, Gold 2, Platinum 3, Ultra 4 (BotTier.Name)
         internal static int Index(BotTier t) => t.Name == "Ultra" ? 4 : t.Name == "Platinum" ? 3 : t.Name == "Gold" ? 2 : t.Name == "Silver" ? 1 : 0;
 
-        internal static readonly float[] DodgeChance = { 0.15f, 0.45f, 0.6f, 0.75f, 0.8f };
+        internal static readonly float[] DodgeChance = { 0.15f, 0.45f, 0.6f, 0.75f, 0.95f };
         internal const float DodgeChanceMax = 0.8f;
         internal static readonly float[] Mistake = { 0.35f, 0.15f, 0.06f, 0.02f, 0 };
         internal static readonly float[] PanicSpecial = { 0.35f, 0.2f, 0, 0, 0 };
         internal static readonly float[] Suspicion = { 0.1f, 0.45f, 0.65f, 0.75f, 0.8f };
         internal static readonly float[] Soak = { 0, 0.5f, 0.8f, 1, 1 };
-        internal static readonly float[] DodgeReact = { 0.4f, 0.3f, 0.22f, 0.16f, 0.14f };
+        internal static readonly float[] DodgeReact = { 0.4f, 0.3f, 0.22f, 0.16f, 0.08f };
         // human reflexes: a dodge never starts sooner than a person reacts (old HUMAN_REFLEX, on by default)
-        internal static readonly float[] DodgeReactMin = { 0.45f, 0.35f, 0.3f, 0.25f, 0.22f };
+        internal static readonly float[] DodgeReactMin = { 0.45f, 0.35f, 0.3f, 0.25f, 0.12f };
         internal static readonly float[] DodgeStep = { 0.15f, 0.25f, 0.4f, 9, 9 };
 
         // V2 knobs (old TK_V2) and the V3 offsets added to some of them (TK3_OF -> TK3_DEF)
@@ -69,7 +69,7 @@ namespace BAM.Sim
         internal const float GreedT = 4;
         internal static readonly float[] Tunnel = { 1.2f, 0.6f, 0.4f, 0.15f, 0.1f }; // B: s later to notice a second enemy hero
         internal static readonly float[] Fumble = { 0.35f, 0.2f, 0.12f, 0.05f, 0.02f }; // C: an aimed special without lead
-        internal static readonly float[] FocusMul = { 0.6f, 0.8f, 1.2f, 1.5f, 1.8f }; // H: weight of "a teammate is on it"
+        internal static readonly float[] FocusMul = { 0.6f, 0.8f, 1.2f, 1.5f, 2.5f }; // H: weight of "a teammate is on it"
         internal static readonly float[] OwnTowerFight = { 0, 0.5f, 1, 1.5f, 2 }; // I: a target in our tower's reach
         internal static readonly float[] KiteWait = { 0, 0.5f, 1, 1.5f, 2 }; // J: an outranging hero with its special spent
         internal const float SaveCcR = 7; // K: an enemy hero this close keeps the stun slam off the minions

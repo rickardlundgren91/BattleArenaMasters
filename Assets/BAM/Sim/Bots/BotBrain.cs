@@ -72,7 +72,7 @@ namespace BAM.Sim
 
         float Temperament()
         {
-            if (float.IsNaN(bold)) { bold = Srand(-1, 1); if (TK(17) > 0) Skill = Srand(-1, 1) * TK(17); }
+            if (float.IsNaN(bold)) { bold = Srand(-1, 1); if (TK(17) > 0) Skill = Srand(-1, 1) * TK(17); if (tierI >= 4) Skill = 1; }
             return SimMath.Clamp(bold + Mood() + SimMath.Clamp((H.Kills - H.Deaths) * 0.1f, -0.5f, 0.5f), -1, 1);
         }
 
