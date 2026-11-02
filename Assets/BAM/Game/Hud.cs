@@ -685,13 +685,14 @@ namespace BAM.Game
         }
 
         // A bold down-pointing arrow (shaft and pointed head), gold with a dark edge. It was a V of two rounded bars, which
-        // a tester read as a little yellow butterfly on the ground (Cajsa, 2026-10-30).
+        // a tester read as a little yellow butterfly on the ground (Cajsa, 2026-10-30). Since 2026-11-02 Rickard's own picture
+        // (BAM/Menu/tut_arrow_down, yellow with a black outline, cropped to the arrow); the drawn one stays as the fallback.
         static RectTransform MakeChevron(RectTransform parent)
         {
             var rt = UiKit.NewRect("Chevron", parent);
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0f);
-            rt.sizeDelta = new Vector2(84f, 105f);
+            rt.sizeDelta = OwnArrow != null ? new Vector2(92f, 92f * OwnArrow.rect.height / OwnArrow.rect.width) : new Vector2(84f, 105f);
             var img = rt.gameObject.AddComponent<Image>();
             img.sprite = ArrowSprite;
             img.raycastTarget = false;
@@ -699,8 +700,22 @@ namespace BAM.Game
             return rt;
         }
 
-        static Sprite arrowSprite;
-        static Sprite ArrowSprite { get { if (arrowSprite == null) arrowSprite = MakeArrowSprite(); return arrowSprite; } }
+        static Sprite arrowSprite, ownArrow;
+        static bool ownArrowTried;
+        static Sprite ArrowSprite { get { if (arrowSprite == null) arrowSprite = OwnArrow ?? MakeArrowSprite(); return arrowSprite; } }
+        static Sprite OwnArrow
+        {
+            get
+            {
+                if (!ownArrowTried)
+                {
+                    ownArrowTried = true;
+                    var t = Resources.Load<Texture2D>("BAM/Menu/tut_arrow_down");
+                    if (t != null) ownArrow = Sprite.Create(t, new Rect(0f, 0f, t.width, t.height), new Vector2(0.5f, 0f), 100f);
+                }
+                return ownArrow;
+            }
+        }
 
         // drawn once: the arrow's shape in gold, a dark navy edge round it, soft (2 x 2 samples) at the edges
         static Sprite MakeArrowSprite()
