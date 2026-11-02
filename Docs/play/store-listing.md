@@ -77,6 +77,25 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.3 (next build after 15, paste in "Release notes")
+
+```
+<en-US>
+Battle Arena Masters 0.3.3
+• One tap SPECIAL: it fires at an enemy in reach
+• Special reach = your hero's attack range
+• Bonk: new Ground Slam special
+• Knut's hook flies past minions to catch heroes
+• Moa's shield lasts longer; Tikta hits harder
+• New map look: stone road, walls and towers
+• Bigger Blink button above SPECIAL
+• Steadier multi-finger controls
+• New hit effects and Knut hook sounds
+Old versions can't play online with this one.
+Bugs: Settings > Report a bug (Discord)
+</en-US>
+```
+
 ## Closed test release notes 0.3.2 (next build after 14, paste in "Release notes")
 
 ```
