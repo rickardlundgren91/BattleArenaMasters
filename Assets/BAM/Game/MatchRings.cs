@@ -228,11 +228,12 @@ namespace BAM.Game
             if (autoTarget != null && autoTarget.Alive && age >= 0f && age < 1.1f && m.IsVisibleTo(autoTarget, p.Team))
             {
                 float fa = age < 0.7f ? 1f : 1f - (age - 0.7f) / 0.4f, pop = Mathf.Max(0f, 1f - age / 0.15f);
-                float rr = autoTarget.R + 0.22f + 0.12f * pop;
+                // the gold band's OUTER edge is the target's hit edge (Unit.R), like ABC's red disc under its target (Rickard's ABC
+                // videos 2026-11-02): the range ring meeting the gold ring = in reach (it sat 0.22 tiles outside before)
+                float gw = 3.5f * px, rr = autoTarget.R + 0.12f * pop; // outer edge; Show draws the band inward from it
                 Vector3 tp = views.DrawnAt(autoTarget); tp.y = 0f;
-                float gw = 3.5f * px;
-                Show(target[0], tp, rr + gw + 1.5f * px, new Color(Dark.r, Dark.g, Dark.b, 0.55f * fa), 2f * (gw + 1.5f * px));
-                Show(target[1], tp, rr + gw, new Color(Gold.r, Gold.g, Gold.b, fa), 2f * gw);
+                Show(target[1], tp, rr, new Color(Gold.r, Gold.g, Gold.b, fa), 2f * gw);
+                Show(target[0], tp, rr - 2f * gw, new Color(Dark.r, Dark.g, Dark.b, 0.55f * fa), 1.5f * px); // dark edge inside the gold
                 // (its thinner pulsing inner ring is gone: two gold rings on one target, Rickard 2026-10-31)
             }
 
