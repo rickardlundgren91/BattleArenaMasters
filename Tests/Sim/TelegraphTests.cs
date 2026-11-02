@@ -139,11 +139,12 @@ namespace BAM.Sim
             }
             // the point of it: a player who runs away at the flash gets out of the ones that land on a spot or fly a fixed reach,
             // where without the warning they were sure hits (Knut's hook, Tikta's needles, Fenn's wolf, Blast's bomb with its 0.5 s); from Bram's anvil even
-            // 0.25 s after it (a quick human). The full table: BAM_TELEGRAPH_TABLE=1
-            foreach (var (hero, react) in new[] { (HeroId.Knut, 0f), (HeroId.Tikta, 0f), (HeroId.Fenn, 0f), (HeroId.Blast, 0f), (HeroId.Bram, 0.25f) })
+            // 0.25 s after it (a quick human). Knut's long hook (7 tiles, Franco's since 2026-11-03) is dodged sideways, as Franco's:
+            // nobody outruns it straight back. The full table: BAM_TELEGRAPH_TABLE=1
+            foreach (var (hero, react, flee) in new[] { (HeroId.Knut, 0f, Flee.Side), (HeroId.Tikta, 0f, Flee.Away), (HeroId.Fenn, 0f, Flee.Away), (HeroId.Blast, 0f, Flee.Away), (HeroId.Bram, 0.25f, Flee.Away) })
             {
-                float before = TeleRun(hero, false, Flee.Away, react, out _), after = TeleRun(hero, true, Flee.Away, react, out _);
-                Check(!float.IsNaN(before) && float.IsNaN(after), $"TELE {hero}: running away {react} s after the tap got hit before ({before:0.00} s), now gets away ({after:0.00})");
+                float before = TeleRun(hero, false, flee, react, out _), after = TeleRun(hero, true, flee, react, out _);
+                Check(!float.IsNaN(before) && float.IsNaN(after), $"TELE {hero}: running {(flee == Flee.Side ? "aside" : "away")} {react} s after the tap got hit before ({before:0.00} s), now gets away ({after:0.00})");
             }
             // the guided match keeps the old instant tap (its special lesson must never stall)
             {

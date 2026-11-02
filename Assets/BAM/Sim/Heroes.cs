@@ -86,17 +86,20 @@ namespace BAM.Sim
 
     /// <summary>Knut, Anchor Throw. Tap: Anchor Slam round him (Hero5.cs). Drag: the anchor on a chain, thrown the full
     /// HookDistance the aimed way; it flies past minions and Fenn's wolf (HookPassesMinions) and pulls the first enemy hero it touches
-    /// (a decoy too, never a tower) to him and stuns it for the pull plus 0.4 s. Passive: his auto attacks slow (Defs).</summary>
+    /// (a decoy too, never a tower) to him and stuns it for the pull plus 0.4 s; the tap throws it up to TapReach at a hero. Passive: his auto attacks slow (Defs).</summary>
     public static class KnutS
     {
         /// <summary>The anchor flies out at one steady OutSpeed (a harpoon, as Pudge's hook; Rickard 2026-11-02 "ja" to the hook
-        /// feel list). It was 14 tiles/s slowing to a stop over 1.2 s. HookDistance = his auto attack range, the white ring round him
-        /// (Defs 2.3; Rickard 2026-11-02 "samma som hans range", after the hook began to fly past minions: 6.5 tiles reached too far).</summary>
-        public const float HookRadius = 0.4f, HookDistance = 2.3f, OutSpeed = 15, OutTime = HookDistance / OutSpeed, Release = 0.5f;
-        /// <summary>The haul back is a yank: a catch hangs PullPause on the taut chain, then the reel starts at PullStart tiles/s and
-        /// speeds up by PullAccel to PullMax (6 tiles in ~0.37 s after the pause, about the old flat 15 tiles/s; an empty
-        /// anchor comes back the same way without the pause). See Reeled / PullTime.</summary>
-        public const float PullPause = 0.08f, PullStart = 8, PullMax = 22, PullAccel = 60;
+        /// feel list). A long hook as Franco's in MLBB (Rickard 2026-11-03, card "Lång hook, fortfarande tap"): it flies up to
+        /// HookDistance 7 tiles and the tap picks an enemy hero up to TapReach 6 tiles away (minions only inside his white ring, Defs
+        /// 2.3). Before: 2.3 tiles at 15 tiles/s with a 0.4 hook ("samma som hans range", 2026-11-02), which was only a short jab.</summary>
+        public const float HookRadius = 0.5f, HookDistance = 7, TapReach = 6, OutSpeed = 12, OutTime = HookDistance / OutSpeed, Release = 0.5f;
+        /// <summary>The haul back: a catch hangs PullPause on the taut chain, then the reel drags it at PullStart tiles/s, speeding up
+        /// by PullAccel to PullMax (an empty anchor comes back the same way without the pause). See Reeled / PullTime. Franco's clip
+        /// (Rickard 2026-11-03, measured frame by frame): his hook flies out at a steady, readable speed (~0.5 s to a far target) and
+        /// drags the stunned catch back at about the same steady speed (~0.7 s), so OutSpeed 12 and a flat 10 tiles/s reel
+        /// (PullStart = PullMax). Before: 15 out, 8 -> 22 tiles/s reel.</summary>
+        public const float PullPause = 0.08f, PullStart = 10, PullMax = 10, PullAccel = 60;
         public const float StunAfter = 0.4f, DamageCoeff = 1, CastTime = 0.9f;
         const float AccelTime = (PullMax - PullStart) / PullAccel, AccelDist = PullStart * AccelTime + 0.5f * PullAccel * AccelTime * AccelTime;
         /// <summary>How far the reel has hauled r s after it started (after the pause).</summary>
