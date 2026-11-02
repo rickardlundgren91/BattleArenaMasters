@@ -578,11 +578,14 @@ namespace BAM.Sim
             float ox = p.X, oy = p.Y, step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D)), ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang);
             p.X += ca * step; p.Y += sa * step; p.D += step;
             if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
+            // the guided match's special lesson ("TAP it to fire a bolt!") has only minions to shoot at and is passed by a bolt that
+            // hits: there the bolt stops at minions, as before protocol 37 (no player passed the lesson on 0.3.3, 2026-11-02)
+            bool pastMinions = TyraS.BoltPassesMinions && !(Tut != null && !Tut.Island && Tut.Step == Tutorial.StepSpecial);
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
                 bool tower = u.Kind == UnitKind.Tower && u.Alive; // either team's base stops it (TowerReach)
-                if (!tower && (!Hurtable(p.Src, u) || u.Team == p.Team || (TyraS.BoltPassesMinions && u.Kind != UnitKind.Hero)) || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue; // past minions (BoltPassesMinions)
+                if (!tower && (!Hurtable(p.Src, u) || u.Team == p.Team || (pastMinions && u.Kind != UnitKind.Hero)) || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue; // past minions (BoltPassesMinions)
                 p.Done = true;
                 if (tower) Blocked(p, p.X, p.Y); else SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
                 return;
