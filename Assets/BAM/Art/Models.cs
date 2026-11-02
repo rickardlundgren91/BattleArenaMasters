@@ -131,7 +131,7 @@ namespace BAM.Art
             int k = Key(2, 0, team);
             if (cache.TryGetValue(k, out RigDef d)) return d;
             b.Clear();
-            Mesh prop = Props.Mesh("blackbruk_tower");
+            Mesh prop = Props.Mesh("bam_tower_grass"); // Rickard's Tripo tower 2026-11-02 (O-038); blackbruk_tower goes in the pre-release prune
             d = prop != null ? BuildTowerProp(team, prop) : BuildTower(team);
             d.Mesh = b.ToSkinnedMesh("Tower t" + team, d.Pivots);
             d.BarWidth = 1.6f;
@@ -661,32 +661,22 @@ namespace BAM.Art
             return new RigDef { Pivots = piv, Parents = new[] { -1, TowerBase }, Kind = RigKind.Tower, Attack = AttackStyle.Pulse, Height = 3.3f, Radius = 1.0f };
         }
 
-        // Rickard's Meshy tower ("Arcane Crystal Forge"; the red team's texture has its crystal and banners turned red), about
-        // 2.6 high and 2.4 across like in the old game, on a stone plinth, with four small team crystals circling its top.
+        // Rickard's Tripo tower (2026-11-02, O-038; the red team's texture has its crystal turned red), about 2.6 high and 2.4 across
+        // like in the old game. The model has its own broad stone foot and team crystal, so the code plinth and the four small
+        // crystals of the old Meshy tower are gone; only a thin disc hidden inside the foot keeps the code mesh from being empty.
         static RigDef BuildTowerProp(int team, Mesh prop)
         {
             Bounds pb = prop.bounds;
             float s = Mathf.Min(2.6f / pb.size.y, 2.4f / Mathf.Max(pb.size.x, pb.size.z));
-            float top = 0.18f + pb.size.y * s;
+            float top = pb.size.y * s;
             var piv = new[] { Vector3.zero, new Vector3(0f, top * 0.86f, 0f) };
             b.Bone = TowerBase;
-            b.Color(Pal.StoneDark).Cylinder(Vector3.zero, 1.32f, 1.26f, 0.12f, 16, true, Pal.Stone);
-            b.Color(Pal.Gold).Cylinder(new Vector3(0f, 0.12f, 0f), 1.12f, 1.1f, 0.03f, 16, true, Pal.Gold);
-            b.Color(Pal.StoneTop).Cylinder(new Vector3(0f, 0.15f, 0f), 0.95f, 0.95f, 0.03f, 16, true, Pal.StoneTop);
-            b.Bone = TowerCrystal;
-            for (int k = 0; k < 4; k++)
-            {
-                float a = k * Mathf.PI * 0.5f + Mathf.PI * 0.25f;
-                Vector3 c = piv[TowerCrystal] + new Vector3(Mathf.Cos(a) * 0.75f, 0f, Mathf.Sin(a) * 0.75f);
-                b.Color(Pal.TeamLight(team)).Cylinder(c, 0.08f, 0f, 0.16f, 5);
-                b.At(c, new Vector3(180f, 0f, 0f)).Cylinder(Vector3.zero, 0.08f, 0f, 0.12f, 5);
-                b.Reset();
-            }
+            b.Color(Pal.StoneDark).Cylinder(Vector3.zero, 0.3f, 0.3f, 0.01f, 8, true, Pal.StoneDark);
             return new RigDef
             {
                 Pivots = piv, Parents = new[] { -1, TowerBase }, Kind = RigKind.Tower, Attack = AttackStyle.Pulse, Height = top + 0.2f, Radius = 1.0f,
-                PropMesh = prop, PropTex = Props.Texture(team == 1 ? "blackbruk_tower_red" : "blackbruk_tower"), PropBone = TowerBase,
-                PropOffset = new Vector3(0f, 0.18f, 0f), PropScale = s,
+                PropMesh = prop, PropTex = Props.Texture(team == 1 ? "bam_tower_grass_red" : "bam_tower_grass"), PropBone = TowerBase,
+                PropOffset = Vector3.zero, PropScale = s,
             };
         }
 
