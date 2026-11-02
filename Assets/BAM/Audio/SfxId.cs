@@ -45,7 +45,7 @@ namespace BAM.Audio
         // Knut's hook (thread "Ge Knuts hook rätt känsla", Rickard's own clips 2026-11-02, O-045/O-046): the chain rattling out and
         // back, and the hauled hero landing at his feet
         KnutChain, KnutHookLand,
-        // Tyra's Pinpoint Bolt (drag) leaving the bow: Rickard's own clip 2026-11-02 (O-048)
+        // Tyra's Pinpoint Bolt (drag) landing on its target: Rickard's own clip 2026-11-02 (O-048), its impact since 2026-11-02 03:51 CET
         TyraBolt,
     }
 }

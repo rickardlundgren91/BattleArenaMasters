@@ -644,6 +644,9 @@ namespace BAM.Game
                         : SfxId.None;
                     // Rickard 2026-10-26: minions fight silently; only heroes, the wolf and towers make combat sounds
                     if (id != SfxId.None && (e.A == null || e.A.Kind != UnitKind.Minion)) BamAudio.PlayAt(id, at, b != null && b.Kind == UnitKind.Minion ? 0.5f : 0.8f);
+                    // Tyra's Pinpoint Bolt landing on anything: its own impact, on the hit and not at the release, so a bolt shot point
+                    // blank no longer sounds after it struck (Rickard 2026-11-02 "det får vara bra impact")
+                    if (kind == ProjKind.TyraBolt && b != null) BamAudio.PlayAt(SfxId.TyraBolt, at, b.Kind == UnitKind.Minion ? 0.7f : 0.95f);
                     // someone else's Tyra bolt or Tikta needles landing on a hero you can see (Speltest tyrapierce, tiktasting); the
                     // player's own already sound in HitConfirm
                     if ((kind == ProjKind.TyraBolt || kind == ProjKind.TiktaNeedleSpecial) && b != null && b.IsRealHero && e.A != null
@@ -932,7 +935,7 @@ namespace BAM.Game
                 if (volleySoundStep.TryGetValue(srcSerial, out int at) && at == step) return; // five arrows, one twang
                 volleySoundStep[srcSerial] = step;
             }
-            Sound(mode == ProjMode.Bolt ? SfxId.TyraBolt : SfxId.TyraRelease, a, 1f); // the bolt's own crack and whistle (O-048)
+            Sound(SfxId.TyraRelease, a, 1f);
         }
 
         // the five volley arrows leave the bow on one tick: one gold pop at the bow for them (Skill Visibility 2.0), as the twang;
