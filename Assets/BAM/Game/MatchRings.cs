@@ -36,8 +36,12 @@ namespace BAM.Game
         readonly Ring[] hits = new Ring[8], ready = new Ring[2];
         // the battle spell's blink: where it lands while it is dragged (old SpellAimNow: a 0.45 ring on the ground)
         readonly Ring[] blink = new Ring[2];
-        // the island tutorial's goal spot (old HudTutorialIsland.drawIslandWorld): two white rings that grow from it, 3 px
-        readonly Ring[] goal = new Ring[2];
+        // the tutorial's goal spot (where to walk). Was the old HudTutorialIsland.drawIslandWorld pair of thin white rings growing
+        // from it; Rickard 2026-11-02 "ringarna som visar vart man ska gå måste bli tydligare": now a gold spot the size of the
+        // arrival area (GoalR, the rules' 0.9 tiles), filled faintly, with a thick gold edge on a dark outline and a gold ripple
+        // that keeps leaving it. Gold to match the guide arrow over it.
+        readonly Ring[] goal = new Ring[6];
+        public const float GoalR = 0.9f;
         bool goalOn;
         Vector3 goalAt;
         bool blinkOn;
@@ -175,11 +179,20 @@ namespace BAM.Game
             HideAll();
             if (goalOn && !hidden)
             {
-                float gk = (Time.unscaledTime / 0.9f) % 1f;
-                for (int i = 0; i < goal.Length; i++)
+                float now = Time.unscaledTime, beat = 0.5f + 0.5f * Mathf.Sin(now * 5f);
+                float gw = 5f * px, ow = 1.5f * px, er = GoalR + 0.04f * beat;
+                // the area itself, faintly filled and breathing
+                Show(goal[0], goalAt, er, new Color(Gold.r, Gold.g, Gold.b, 0.18f + 0.12f * beat), er);
+                // its edge: a dark outline either side of a thick gold band, so it reads on the light stone and on the grass
+                Color dark = new Color(Dark.r, Dark.g, Dark.b, 0.55f);
+                Show(goal[1], goalAt, er + ow, dark, ow);
+                Show(goal[2], goalAt, er, new Color(Gold.r, Gold.g, Gold.b, 1f), gw);
+                Show(goal[5], goalAt, er - gw, dark, ow);
+                // two gold ripples leaving the edge outward, fading as they go
+                for (int i = 0; i < 2; i++)
                 {
-                    float gr = ((gk + 0.5f * i) % 1f) * 0.9f + 0.2f;
-                    Show(goal[i], goalAt, gr + 1.5f * px, new Color(1f, 1f, 1f, 0.9f - gr * 0.8f), 3f * px);
+                    float gk = (now / 1.1f + 0.5f * i) % 1f;
+                    Show(goal[3 + i], goalAt, er + 0.75f * gk, new Color(Gold.r, Gold.g, Gold.b, 0.85f * (1f - gk)), (3.5f - 1.5f * gk) * px);
                 }
             }
             var p = m.Player;

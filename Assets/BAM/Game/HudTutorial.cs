@@ -307,11 +307,12 @@ namespace BAM.Game
                 }
             }
             for (int i = n; i < TrailDots; i++) { if (trailGlow[i].enabled) trailGlow[i].enabled = false; if (trailCore[i].enabled) trailCore[i].enabled = false; }
-            // moment 1's ring on the lane: the ground marks the island uses (gold pulse as the old pair of widening ellipses)
-            if (marks != null && !island)
+            // moment 1's spot on the lane: the same gold goal spot as the island's (MatchRings), Rickard 2026-11-02 "tydligare"
+            if (!island)
             {
-                marks.Hide();
-                if (play && tu.Step == Tutorial.StepMove) marks.ShowRange(Coords.World(Tutorial.MarkX, Tutorial.MarkY), 0.6f + 0.25f * ((Time.unscaledTime / 0.9f) % 1f));
+                if (marks != null) marks.Hide();
+                bool spot = play && tu.Step == Tutorial.StepMove;
+                rings.SetGoal(spot, spot ? Coords.World(Tutorial.MarkX, Tutorial.MarkY) : Vector3.zero);
             }
         }
 
