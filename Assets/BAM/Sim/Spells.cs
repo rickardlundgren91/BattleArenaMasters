@@ -13,7 +13,8 @@ namespace BAM.Sim
     {
         public const float BlinkCd = 25f, BlinkDist = 3.5f, RecallCd = 0.1f, RecallChannel = 2f, RecallCancelCd = 0.1f,
             // Recall is spammable: 0.1 s cooldown (Rickard 2026-10-26, "0.1 sec snarare"; old 15 s), the 2 s channel and its cancel rules stay
-            ShieldCd = 30f, ShieldDur = 3f, ShieldPct = 0.2f, HasteCd = 30f, HasteDur = 5f, HastePct = 0.4f,
+            ShieldCd = 25f, ShieldDur = 4f, ShieldPct = 0.25f, // Shield 20 % 3 s 30 s -> 25 % 4 s 25 s (Simon 2026-11-02 "för svag"; Hard bots 3000 matches: 47.0 -> 48.7 % wins with it); no CC immunity (only Moa's shields)
+            HasteCd = 30f, HasteDur = 5f, HastePct = 0.4f,
             SprintCd = 25f, SprintDur = 4f, SprintPct = 0.5f;
         /// <summary>The four spells in the picker's order.</summary>
         public static readonly SpellId[] All = { SpellId.Blink, SpellId.Recall, SpellId.Shield, SpellId.Haste, SpellId.Sprint };
