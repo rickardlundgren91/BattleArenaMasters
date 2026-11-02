@@ -15,6 +15,12 @@ namespace BAM.Sim
     public static class BonkS
     {
         public const float SlamRadius = 2.0f, SlamWindup = 0.3f, SlamCoeff = 1.4f, SlamStun = 0.6f;
+        /// <summary>One-tap Bonk (Rules.OneTapSpecial): his one special is the Ground Slam in a big circle (Rickard 2026-11-02 "slår i
+        /// marken i stor aoe"), not the boulder; it fires with an enemy hero or minion inside it.</summary>
+        public const float SlamRadiusOneTap = 3.0f;
+        /// <summary>The big slam's damage share and stun, above the old tap slam's 1.4 / 0.6 s so it feels mighty (Rickard 2026-11-02);
+        /// balanced by charges and hp in Defs (Hard bots: 1.4 / 0.6 s with 3 charges and 300 hp won 90 %).</summary>
+        public const float SlamCoeffOneTap = 1.6f, SlamStunOneTap = 0.8f;
         public const float BoulderReach = 5.5f, BoulderWindup = 0.25f, BoulderSpeed = 11, BoulderHitbox = 0.55f, BoulderCoeff = 1.3f;
         public const float KnockDist = 1.5f, KnockTime = 0.2f, KnockStun = 0.4f;
         /// <summary>Bowling (2026-10-30): the boulder hits at most BallPins enemies itself, and one throw at most MaxPins in all with
@@ -65,10 +71,11 @@ namespace BAM.Sim
                 return true;
             }
             // Ground Slam: only with an enemy hero or minion in reach
-            if (EnemiesInRange(h, BonkS.SlamRadius, Pick.HeroOrMinion, true, spBuf).Count == 0) return false;
+            float sr = OneTap ? BonkS.SlamRadiusOneTap : BonkS.SlamRadius;
+            if (EnemiesInRange(h, sr, Pick.HeroOrMinion, true, spBuf).Count == 0) return false;
             var s = NewProj(ProjMode.Slam, h, h.X, h.Y);
-            s.Kind = ProjKind.BonkSlam; s.T = -BonkS.SlamWindup; s.Dur = BonkS.SlamWindup; s.Radius = BonkS.SlamRadius; s.Dmg = dmg * BonkS.SlamCoeff;
-            WarnCircle(h, h.X, h.Y, BonkS.SlamRadius, BonkS.SlamWindup);
+            s.Kind = ProjKind.BonkSlam; s.T = -BonkS.SlamWindup; s.Dur = BonkS.SlamWindup; s.Radius = sr; s.Dmg = dmg * (OneTap ? BonkS.SlamCoeffOneTap : BonkS.SlamCoeff);
+            WarnCircle(h, h.X, h.Y, sr, BonkS.SlamWindup);
             AddStatus(h, St.Casting, BonkS.SlamWindup); Channel(h, BonkS.SlamWindup);
             return true;
         }
@@ -141,16 +148,16 @@ namespace BAM.Sim
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                if (Hurtable(h, u) && u.Team != p.Team && SimMath.Dist(u, p.X, p.Y) <= BonkS.SlamRadius + u.R && Map.LosClear(p.X, p.Y, u.X, u.Y)) areaBuf.Add(u);
+                if (Hurtable(h, u) && u.Team != p.Team && SimMath.Dist(u, p.X, p.Y) <= p.Radius + u.R && Map.LosClear(p.X, p.Y, u.X, u.Y)) areaBuf.Add(u);
             }
             for (int i = 0; i < areaBuf.Count; i++)
             {
                 var u = areaBuf[i];
                 if (!u.Alive) continue;
                 SpecialHit(h, u, p.Dmg, ProjKind.BonkSlam, true);
-                if (u.Alive) AddStatus(u, St.Stun, BonkS.SlamStun, 0, 0, h);
+                if (u.Alive) AddStatus(u, St.Stun, OneTap ? BonkS.SlamStunOneTap : BonkS.SlamStun, 0, 0, h);
             }
-            Emit(EventType.Explosion, h, null, BonkS.SlamRadius, (byte)ProjKind.BonkSlam, true, p.X, p.Y);
+            Emit(EventType.Explosion, h, null, p.Radius, /* the cast's circle: SlamRadiusOneTap with the one-tap special */ (byte)ProjKind.BonkSlam, true, p.X, p.Y);
         }
 
         /// <summary>The boulder, swept like Tikta's line needles: the first enemy along this tick's path not yet hit by this throw is

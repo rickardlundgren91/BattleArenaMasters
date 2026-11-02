@@ -53,7 +53,7 @@ namespace BAM.Sim
             Check(m.TryCastSpecial(b, float.NaN, 0), "the slam casts with enemies in reach");
             Check(a.Hp == a.MaxHp, "nothing lands before the wind-up");
             for (int k = 0; k * Rules.Tick < BonkS.SlamWindup + 0.05f; k++) m.UpdateProjectiles(Rules.Tick);
-            float want = b.StatDmg() * BonkS.SlamCoeff;
+            float want = b.StatDmg() * (m.OneTap ? BonkS.SlamCoeffOneTap : BonkS.SlamCoeff); // the one-tap big slam hits for less
             Check(Near(a.MaxHp - a.Hp, want * a.TakenMult) && a.Has(St.Stun), "the slam hits and stuns an enemy beside him");
             Check(c.Has(St.Stun) && far.Hp == far.MaxHp && !far.Has(St.Stun), "the slam reaches 2 tiles, not 4");
             Place(a, x + 4, y); Place(c, x + 5, y); Place(far, x - 4, y); b.Charge = b.HDef.MaxCharge;

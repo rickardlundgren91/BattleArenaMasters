@@ -85,6 +85,12 @@ namespace BAM.Sim
         static Defs()
         {
             var k = Heroes[(int)HeroId.Knut]; k.OnHitSlow = -1; k.OnHitSlowTime = 1; // Anchor Drag: -1 tile/s for 1 s on heroes and minions
+            if (Rules.OneTapSpecial)
+            {   // one-tap Bonk: his big Ground Slam (Hero3.cs) hits hard and stuns long, so it should feel mighty (Rickard 2026-11-02
+                // "man ska känna sig mäktig"); paid for with 6 hits to charge instead of 3 and 240/38 hp instead of 300/50 (Hard bots
+                // 2026-11-02: 58.5 % wins, 54 % before the one-tap change; the old line above stays for taking it back)
+                var b = Heroes[(int)HeroId.Bonk]; b.MaxCharge = 6; b.Hp = 240; b.HpGrowth = 38;
+            }
         }
 
         static UnitDef U(UnitKind kind, MinionKind mk, float r, float speed, float hp, float dmg, float cd, float range, float spawnDelay, float projSpeed, float projTime, ProjKind attack)

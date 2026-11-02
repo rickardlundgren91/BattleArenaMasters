@@ -22,12 +22,11 @@ namespace BAM.Sim
         /// (heroes 9 and 10) wait in Coming for theirs.</summary>
         public const int Count = 8;
 
-        /// <summary>The special's icon in Resources/BAM/Menu. One-tap Bonk rolls the boulder, so his slam picture gives way to the
-        /// boulder one (special_bonk_drag); the others' one pictures already show their kept form.</summary>
+        /// <summary>The special's icon in Resources/BAM/Menu (each hero's one picture shows the form the one-tap special keeps).</summary>
         public static string SpecialIcon(HeroId id)
         {
             string lower = Get(id).Name.ToLowerInvariant();
-            return Rules.OneTapSpecial && id == HeroId.Bonk ? "special_bonk_drag" : "special_" + lower;
+            return "special_" + lower;
         }
 
         public static HeroInfo Get(HeroId id) => (int)id < All.Length ? All[(int)id] : Coming[(int)id - All.Length];
@@ -87,7 +86,7 @@ namespace BAM.Sim
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Bonk, Name = "Bonk", Title = "The Caveman", Role = "Fighter", Ranged = false,
                 SpecialName = "Ground Slam", SpecialDesc = "Slams his club into the ground: enemies around him take damage and are stunned for a moment. Drag to roll a boulder along a line instead: it hits the first enemy and knocks it back. Walls stop it.",
-                OneTapName = "Boulder Toss", OneTapDesc = "Tap: rolls a boulder at a random enemy in reach. It hits the first enemy and knocks it back, then bowls on into up to two more. Walls stop it.",
+                OneTapDesc = "Tap: slams his club into the ground with all his might: every enemy in a big circle around him takes heavy damage and is stunned for 0.8 s. Only with an enemy in the circle.",
                 PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
                 Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
         };

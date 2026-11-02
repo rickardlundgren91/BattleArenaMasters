@@ -17,9 +17,9 @@ namespace BAM.Sim
         /// <summary>This match plays the one-tap special (Rules.OneTapSpecial; a test may turn it off to check the old drag forms).</summary>
         public bool OneTap = Rules.OneTapSpecial;
 
-        /// <summary>How far a tapped special looks for its target. The drag reach, except Tyra: her bolt flies on over the lane,
+        /// <summary>How far a tapped special looks for its target. The drag reach, except Bonk (his big Ground Slam's circle) and Tyra: her bolt flies on over the lane,
         /// so she takes any enemy within TyraS.TapTarget (7 tiles, about what the screen shows ahead of her).</summary>
-        public static float TapReach(HeroId id) => id == HeroId.Tyra ? TyraS.TapTarget : Defs.Hero(id).DragReach;
+        public static float TapReach(HeroId id) => id == HeroId.Tyra ? TyraS.TapTarget : id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : Defs.Hero(id).DragReach;
 
         /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line).</summary>
         List<Unit> TapTargets(Unit h) => EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
@@ -58,6 +58,7 @@ namespace BAM.Sim
             {
                 var l = TapTargets(h);
                 if (l.Count == 0) return false;
+                if (h.Hero == HeroId.Bonk) return TryCastSpecial(h, float.NaN, 0); // the big Ground Slam round him: no aim, no roll
                 t = PickRandom(l);
             }
             float dx = t.X - h.X, dy = t.Y - h.Y, d = SimMath.Hypot(dx, dy);

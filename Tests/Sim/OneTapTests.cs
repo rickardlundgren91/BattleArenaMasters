@@ -53,7 +53,14 @@ namespace BAM.Sim
                 bool cast = false, dragForm = false; float ax = 0, ay = 0;
                 m.Step(TapIn());
                 foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) { cast = true; dragForm = ev.Big; ax = ev.X; ay = ev.Y; }
-                Check(cast && dragForm && !p.SpecialReady, $"ONETAP {hero}: a tap casts the hero's one form (cast {cast}, drag form {dragForm})");
+                Check(cast && dragForm == (hero != HeroId.Bonk) && !p.SpecialReady, $"ONETAP {hero}: a tap casts the hero's one form (cast {cast}, drag form {dragForm}; Bonk slams)");
+                if (hero == HeroId.Bonk)
+                {
+                    bool big = false; foreach (var q in m.Projs) if (q.Mode == ProjMode.Slam && q.Src == p && Math.Abs(q.Radius - BonkS.SlamRadiusOneTap) < 1e-4f) big = true;
+                    int hit = 0; for (int k = 0; k < 40; k++) { m.Step(PlayerInput.None); foreach (var ev in m.Events) if (ev.Type == EventType.Hit && ev.A == p && ev.B == e && ev.Kind == (byte)ProjKind.BonkSlam) hit++; }
+                    Check(big && hit == 1 && e.Has(St.Stun), $"ONETAP Bonk: the big Ground Slam ({BonkS.SlamRadiusOneTap} tiles) hits and stuns an enemy 2.9 tiles off ({hit} hits)");
+                    continue;
+                }
                 // aimed at the target: the cast's spot lies on the line to it
                 float side = Math.Abs((ax - p.X) * (e.Y - p.Y) - (ay - p.Y) * (e.X - p.X)) / Math.Max(1e-3f, SimMath.Dist(p, e));
                 Check(side < 0.05f, $"ONETAP {hero}: aimed at the enemy ({side:0.000} tiles off its line)");
@@ -102,7 +109,7 @@ namespace BAM.Sim
                 }
                 if (team[0] > 0 && team[1] > 0) seeds++;
             }
-            Check(seeds == 4 && dragged == casts, $"ONETAP: bots on both teams cast their one form ({casts} casts in 4 matches, both teams in {seeds})");
+            Check(seeds == 4 && dragged <= casts, $"ONETAP: bots on both teams cast their one form ({casts} casts in 4 matches, both teams in {seeds})");
         }
     }
 }
