@@ -77,6 +77,7 @@ namespace BAM.Game
             public Vector3 From, To;
             public float Age, Flight, Linger;
             public bool Fresh;             // a ghost started this frame: it starts aging next frame
+            public float DustT;            // Knut's hook: time to the next dust puff under its catch
         }
 
         sealed class ZoneRec
@@ -341,6 +342,7 @@ namespace BAM.Game
                 if (s.Ghost || s.Seen == step) continue;
                 shotBySerial.Remove(s.Serial);
                 droppedNow.Add(s.Serial);
+                HookLanded(s.P);
                 s.Hit = shotHitAt.TryGetValue(s.Serial, out Vector3 hitAt);
                 // where the rules ended it: on what it hit, at the wall, else its own last spot (its Proj is pooled, not yet reused)
                 Vector3 end = s.Hit ? hitAt : shotStopAt.TryGetValue(s.Serial, out Vector3 stop) ? stop
@@ -430,7 +432,28 @@ namespace BAM.Game
             s.Age = 0f; s.Flight = 0f; s.Linger = 0f; s.LastT = -1f; s.Hit = false; s.EverHit = false;
         }
 
-        void FreeShot(ShotRec s) { s.P = null; s.V = null; shotRecPool.Push(s); }
+        void FreeShot(ShotRec s) { s.P = null; s.V = null; s.DustT = 0f; shotRecPool.Push(s); }
+
+        // Knut's hook hauling its catch (the hook feel list, 2026-11-02): dust kicked up under the dragged hero while the reel
+        // runs, and a thud with a dust ring where it lands at Knut's feet
+        const float HookDustEvery = 0.05f;
+        void HookDust(ShotRec s, Proj p, float dt)
+        {
+            var c = p.Caught;
+            if (p.Out || c == null || !c.Alive || p.D > p.Travel - 0.05f || !m.IsVisibleTo(c, Mine)) return;
+            s.DustT -= dt;
+            if (s.DustT > 0f) return;
+            s.DustT = HookDustEvery;
+            ArtKit.PlayFx(FxKind.HookDrag, Coords.Of(c), 1f, Side(c.Team));
+        }
+
+        void HookLanded(Proj p)
+        {
+            if (p == null || p.Mode != ProjMode.Hook || p.Caught == null || !p.Caught.Alive || !m.IsVisibleTo(p.Caught, Mine)) return;
+            Vector3 at = Coords.Of(p.Caught);
+            ArtKit.PlayFx(FxKind.GroundSmash, at, 0.45f, Side(p.Caught.Team));
+            BamAudio.PlayAt(SfxId.BonkKnock, at, 0.7f); // borrowed until Knut's own landing thud is made (ORDERS)
+        }
 
         Vector3 From(int srcSerial, float x, float y) =>
             unitBySerial.TryGetValue(srcSerial, out UnitRec r) ? r.V.transform.position : Coords.World(x, y);
@@ -1015,6 +1038,7 @@ namespace BAM.Game
                 {
                     var p = s.P;
                     s.V.transform.position = Coords.Lerp(p.PX, p.PY, p.X, p.Y, alpha);
+                    if (p.Mode == ProjMode.Hook && !paused) HookDust(s, p, dt);
                     // a homing shot's arc (Blast's bomb) by the share of the way it has flown to where its target is now, so it
                     // comes down on the target even when the target walks (SHOT-05)
                     if (p.Mode == ProjMode.Auto && p.Tgt != null && p.Launched && p.Speed > 0f)

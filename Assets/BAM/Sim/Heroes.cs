@@ -86,8 +86,19 @@ namespace BAM.Sim
     /// (a decoy too, never a tower) to him and stuns it for the pull plus 0.4 s. Passive: his auto attacks slow (Defs).</summary>
     public static class KnutS
     {
-        public const float HookRadius = 0.4f, HookDistance = 6.5f, OutSpeed = 14, OutTime = 1.2f, Release = 0.5f;
-        public const float PullSpeed = 15, StunAfter = 0.4f, DamageCoeff = 1, CastTime = 0.9f;
+        /// <summary>The anchor flies out at one steady OutSpeed (a harpoon, as Pudge's hook; Rickard 2026-11-02 "ja" to the hook
+        /// feel list): 6.5 tiles in 0.43 s. It was 14 tiles/s slowing to a stop over 1.2 s (0.63 s to full reach, ~6.7 tiles/s left).</summary>
+        public const float HookRadius = 0.4f, HookDistance = 6.5f, OutSpeed = 15, OutTime = HookDistance / OutSpeed, Release = 0.5f;
+        /// <summary>The haul back is a yank: a catch hangs PullPause on the taut chain, then the reel starts at PullStart tiles/s and
+        /// speeds up by PullAccel to PullMax (6 tiles in ~0.37 s after the pause, about the old flat 15 tiles/s; an empty
+        /// anchor comes back the same way without the pause). See Reeled / PullTime.</summary>
+        public const float PullPause = 0.08f, PullStart = 8, PullMax = 22, PullAccel = 60;
+        public const float StunAfter = 0.4f, DamageCoeff = 1, CastTime = 0.9f;
+        const float AccelTime = (PullMax - PullStart) / PullAccel, AccelDist = PullStart * AccelTime + 0.5f * PullAccel * AccelTime * AccelTime;
+        /// <summary>How far the reel has hauled r s after it started (after the pause).</summary>
+        public static float Reeled(float r) => r <= 0 ? 0 : r < AccelTime ? PullStart * r + 0.5f * PullAccel * r * r : AccelDist + PullMax * (r - AccelTime);
+        /// <summary>How long the reel takes to haul d tiles (the inverse of Reeled).</summary>
+        public static float PullTime(float d) => d <= 0 ? 0 : d <= AccelDist ? (SimMath.Sqrt(PullStart * PullStart + 2 * PullAccel * d) - PullStart) / PullAccel : AccelTime + (d - AccelDist) / PullMax;
         /// <summary>The hook flies past minions and Fenn's wolf and catches only heroes (Rickard 2026-11-02, "man kan ju inte träffa
         /// minions så då kan man sikta på heroes bakom"), as Pudge's hook feels; the one-tap aims it only at heroes (OneTap.cs).
         /// false = the old rule: the first enemy of any kind it touches.</summary>
@@ -652,7 +663,7 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>The anchor flies out slowing to a stop, catches the first enemy hero it touches (past minions and wolves:
+        /// <summary>The anchor flies out at OutSpeed, catches the first enemy hero it touches (past minions and wolves:
         /// KnutS.HookPassesMinions; a hero under
         /// Moa's shield only takes the hit) and comes back, pulling its catch to Knut; the catch is stunned for the pull and 0.4 s more.</summary>
         void HookUpdate(Proj p, float dt)
@@ -662,7 +673,7 @@ namespace BAM.Sim
             float ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang), back = KnutS.Release + h.R;
             if (p.Out)
             {
-                float k = SimMath.Clamp(p.T / KnutS.OutTime, 0, 1), sp = SimMath.Lerp(KnutS.OutSpeed, 0, k);
+                float sp = KnutS.OutSpeed;
                 float ox = h.X + ca * p.D, oy = h.Y + sa * p.D, od = p.D;
                 // never past HookDistance, so it reaches exactly as far as the aim shows (it overshot up to 0.1 on its last tick)
                 p.D = Math.Min(p.D + sp * dt, KnutS.HookDistance); p.X = h.X + ca * p.D; p.Y = h.Y + sa * p.D;
@@ -677,28 +688,28 @@ namespace BAM.Sim
                 }
                 if (hit != null)
                 {
-                    p.Out = false; h.RemoveAll(St.Channel);
+                    p.Out = false; h.RemoveAll(St.Channel); p.Dur = p.T; p.Travel = p.D; // the reel counts from here (Proj.Dur / Travel are free on a hook)
                     bool free = CcImmune(hit);
                     if (!free) p.Caught = hit;
                     SpecialHit(h, hit, p.Dmg, p.Kind, true);
                     if (!free)
                     {
                         Emit(EventType.Pull, h, hit, 0, (byte)p.Kind, false, hit.X, hit.Y);
-                        float pull = Math.Max(0, p.D - back) / KnutS.PullSpeed;
+                        float pull = KnutS.PullPause + KnutS.PullTime(Math.Max(0, p.D - back));
                         if (hit.Alive) AddStatus(hit, St.Stun, pull + KnutS.StunAfter, 0, 0, h);
                         AddStatus(h, St.Casting, pull); // he stands till the catch is in, so it never trails a walking Knut
                     }
                 }
-                else if (p.D >= KnutS.HookDistance || k >= 1 || wall)
+                else if (p.D >= KnutS.HookDistance - 1e-4f || wall)
                 {
-                    p.Out = false; h.RemoveAll(St.Channel);
+                    p.Out = false; h.RemoveAll(St.Channel); p.Dur = p.T; p.Travel = p.D;
                     if (wall) Blocked(p, p.X, p.Y);
                 }
             }
             else
             {
-                p.D -= KnutS.PullSpeed * dt;
                 var c = p.Caught;
+                p.D = p.Travel - KnutS.Reeled(p.T - p.Dur - (c != null ? KnutS.PullPause : 0)); // a catch hangs on the taut chain first
                 if (c != null && c.Alive) { float cd = Math.Max(back, p.D); c.X = h.X + ca * cd; c.Y = h.Y + sa * cd; c.MovedAt = Time; }
                 p.X = h.X + ca * Math.Max(0, p.D); p.Y = h.Y + sa * Math.Max(0, p.D);
                 if (p.D <= back)

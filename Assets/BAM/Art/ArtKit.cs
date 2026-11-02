@@ -168,6 +168,7 @@ namespace BAM.Art
         // Rickard's own pictures 2026-10-31 (thread "ultgra"): the heal plus signs and the player's kill burst
         Heal = 30,          // a green "+N" shows on a friendly hero (HudTop): his plus signs float up over it
         Kill = 31,          // the player's kill on an enemy hero: his gold burst on the body
+        HookDrag = 32,      // a hero hauled in by Knut's hook: a small puff of ground dust at its feet (sent every few frames)
     }
 
     public static class ArtKit

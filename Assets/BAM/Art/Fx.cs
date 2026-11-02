@@ -1256,6 +1256,9 @@ namespace BAM.Art
                     Flash(p, 0.15f * size, 0.6f * size, (Color)teamL, 0.15f);
                     Glow(p, 6, teamL, 0.2f * size, 2f, 0.25f);
                     break;
+                case FxKind.HookDrag:
+                    Dust(p + Vector3.up * 0.08f, 2, C(Pal.Ground, 200), 0.35f * size, 0.9f, 0.45f, 0.5f, 0.15f);
+                    break;
                 case FxKind.AnchorHit:
                     SpecialHit((int)HeroId.Knut, mid, 1.1f * size);
                     Pic("tx_fx_knut_splash", p, Color.white, 2.4f * size, 0.5f); // his water splash on the ground

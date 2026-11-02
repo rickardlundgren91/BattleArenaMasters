@@ -303,19 +303,24 @@ namespace BAM.Art
         }
 
         /// <summary>A chain of links along z from 0 to 1 (scaled to the tether length).</summary>
-        public static Mesh Chain()
+        public static Mesh Chain() => Chain(16);
+
+        /// <summary>Knut's chain, one unit long (scaled to its length) with this many links: the view picks the count by the
+        /// length, so every link stays ChainLink long instead of stretching (2026-11-02).</summary>
+        public static Mesh Chain(int links)
         {
-            if (Cached(410, out Mesh m)) return m;
+            links = Mathf.Clamp(links, 2, 64);
+            int key = links == 16 ? 410 : 90000 + links;
+            if (Cached(key, out Mesh m)) return m;
             b.Clear();
             b.Color(Pal.MetalDark);
-            const int links = 16;
             for (int i = 0; i < links; i++)
             {
                 float z = (i + 0.5f) / links;
                 if (i % 2 == 0) b.Box(new Vector3(0f, 0f, z), new Vector3(0.07f, 0.025f, 1f / links * 1.1f));
                 else b.Box(new Vector3(0f, 0f, z), new Vector3(0.025f, 0.07f, 1f / links * 1.1f));
             }
-            return Store(410, "Chain");
+            return Store(key, "Chain");
         }
 
         // ---------------------------------------------------------------- projectiles (forward = +z, centred)

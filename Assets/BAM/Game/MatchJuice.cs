@@ -137,9 +137,16 @@ namespace BAM.Game
                         if (e.A == p) { AddTrauma(0.3f); Punch(ZoomFor(p.Hero)); buzz = Mathf.Max(buzz, 0.4f); }
                         break;
                     case EventType.Pull:
-                        // Knut's anchor catching a hero: a signature moment
-                        if (e.A == p && e.B != null && e.B.IsRealHero) { Stop(0.08f); AddTrauma(0.35f); Punch(0.05f); buzz = Mathf.Max(buzz, 0.6f); }
+                    {
+                        // Knut's anchor catching a hero: a signature moment, for everyone who sees it (Rickard 2026-11-02, the hook
+                        // feel list): Knut's player and the caught one get the full stop, shake and buzz, a player near it a shorter stop
+                        var b = e.B;
+                        if (b == null || !b.IsRealHero) break;
+                        if (e.A == p) { Stop(0.1f); AddTrauma(0.4f); Punch(0.06f); buzz = Mathf.Max(buzz, 0.6f); }
+                        else if (b == p) { Stop(0.1f); AddTrauma(0.5f); buzz = Mathf.Max(buzz, 0.7f); }
+                        else if (p.Alive && Dist(b, p) < 7f && m.IsVisibleTo(b, p.Team)) { Stop(0.07f); AddTrauma(0.2f); }
                         break;
+                    }
                 }
             }
             // one buzz for the whole tick: the strongest wins (a kill and its killing hit must not cancel each other)

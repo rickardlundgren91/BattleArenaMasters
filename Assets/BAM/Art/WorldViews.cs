@@ -17,6 +17,9 @@ namespace BAM.Art
         int team;
         Transform vis, chainT;
         MeshRenderer visR, chainR;
+        MeshFilter chainF;
+        int chainLinks = 16;
+        const float ChainLink = 0.17f; // tiles per chain link, whatever the chain's length
         TrailRenderer trail;
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
@@ -225,7 +228,8 @@ namespace BAM.Art
                 var cg = new GameObject("Chain");
                 chainT = cg.transform;
                 chainT.SetParent(transform, false);
-                cg.AddComponent<MeshFilter>().sharedMesh = Shapes.Chain();
+                chainF = cg.AddComponent<MeshFilter>();
+                chainF.sharedMesh = Shapes.Chain(chainLinks = 16);
                 chainR = cg.AddComponent<MeshRenderer>();
                 chainR.sharedMaterial = ArtMaterials.Lit;
                 chainR.shadowCastingMode = ShadowCastingMode.Off;
@@ -465,6 +469,8 @@ namespace BAM.Art
                     chainT.position = a;
                     chainT.rotation = Quaternion.LookRotation(ab / len);
                     chainT.localScale = new Vector3(1f, 1f, len);
+                    int n = Mathf.Clamp(Mathf.CeilToInt(len / ChainLink), 2, 64);
+                    if (n != chainLinks && chainF != null) chainF.sharedMesh = Shapes.Chain(chainLinks = n);
                 }
             }
         }

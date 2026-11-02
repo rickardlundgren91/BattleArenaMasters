@@ -156,7 +156,7 @@ namespace BAM.Sim
                 var hs = FoeHeroes(h, KnutS.HookDistance - 0.5f); Unit t = null;
                 for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (HpR(e) < 0.6f && LineFree(e, KnutS.HookRadius, KnutS.HookPassesMinions) && (t == null || e.Hp < t.Hp)) t = e; }
                 if (t == null) return false;
-                M.LeadAim(h, t, Match.Flight.Hook, KnutS.OutTime, KnutS.OutSpeed * KnutS.OutTime / 2, out float ax, out float ay);
+                M.LeadAim(h, t, Match.Flight.Linear, 0, KnutS.OutSpeed, out float ax, out float ay); // a steady flight since 2026-11-02
                 ang = AngTo(ax, ay); return true;
             }
             if (!DragTier) return false;
