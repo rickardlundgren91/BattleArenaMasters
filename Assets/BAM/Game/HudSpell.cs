@@ -8,9 +8,9 @@ using EventType = BAM.Sim.EventType;
 namespace BAM.Game
 {
     /// <summary>
-    /// The battle spell button (ABC2 HudSpell.cs, Rickard 2026-10-23; Sprint added 2026-10-26): a round button beside the heart,
-    /// on its inner side, above the SPECIAL (mirrored left-handed); 1.4 times its old size (testers 2026-11-02 "a bit bigger",
-    /// "beside the heart button"; it sat small left of and below the SPECIAL). A tap casts it; Blink goes the way the joystick
+    /// The battle spell button (ABC2 HudSpell.cs, Rickard 2026-10-23; Sprint added 2026-10-26): a round button straight above the
+    /// SPECIAL (Rickard 2026-11-02); 1.4 times its old size (testers 2026-11-02 "a bit bigger"; it sat small left of and below
+    /// the SPECIAL). A tap casts it; Blink goes the way the joystick
     /// steers, or the way the hero faces.
     /// Blink can also be dragged to aim (direction and distance, the landing ring on the ground) and fires on release; letting
     /// go on the cancel mark above the button casts nothing, as with the SPECIAL. The ring round the glyph fills while it
@@ -101,13 +101,14 @@ namespace BAM.Game
         float SpellR => SafeW * 0.07f; // the button (0.05 before 2026-11-02)
         float SpellAimR => SafeW * 0.05f; // the drag's measures (reach, cancel mark, finger dot) stay as they were
 
-        // beside the heart on its inner side, level with it, a 0.02 W gap between them (HeartCentre in HudEmote.cs sits 0.105 W to
-        // the outer side of the SPECIAL's centre and 0.27 W up, radius 0.034 W); its lower edge stays well clear of the SPECIAL.
-        // Was SPELL_BTN: 1.58 SPECIAL radii to the inner side of the SPECIAL's centre, 0.7 radii lower.
+        // straight above the SPECIAL's centre, a 0.02 W gap over its rim (Rickard 2026-11-02 "ha blinken mitt över ankaret"); the
+        // heart, ATTACK and DEFEND moved further to the outer side to make room (HeartCentre in HudEmote.cs).
+        // Was beside the heart on its inner side (2026-11-02), and before that SPELL_BTN: 1.58 SPECIAL radii to the inner side
+        // of the SPECIAL's centre, 0.7 radii lower.
         Vector2 SpellCentre()
         {
-            float side = leftHanded ? -1f : 1f; // the heart's outer side
-            return HeartCentre() - new Vector2(side * (SafeW * (0.034f + 0.02f) + SpellR), 0f);
+            Vector3 c = safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
+            return new Vector2(c.x, c.y + SpecialButton.Radius + SafeW * 0.02f + SpellR);
         }
 
         Vector2 SpellCancelCentre() => SpellCentre() + new Vector2(0f, SpellAimR * 3.8f);

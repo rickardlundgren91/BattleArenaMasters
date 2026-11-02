@@ -239,13 +239,14 @@ namespace BAM.Game
         float WheelR => SafeW * 0.21f;
         float SlotR => SafeW * 0.065f;
 
-        // the heart: up and to the right of the SPECIAL, where the old first item button's arc put it (mirrored left-handed)
+        // the heart: up and to the right of the SPECIAL, where the old first item button's arc put it (mirrored left-handed);
+        // 0.13 W to the side since 2026-11-02 (was 0.105), to make room for the spell button straight above the SPECIAL
         Vector2 HeartCentre()
         {
             float W = SafeW;
             Vector3 c = safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
             float side = leftHanded ? -1f : 1f;
-            return new Vector2(c.x + side * 0.105f * W, c.y + 0.27f * W);
+            return new Vector2(c.x + side * 0.13f * W, c.y + 0.27f * W);
         }
 
         // the wheel opens above the button, kept on screen, so the thumb and the SPECIAL never cover it
@@ -281,7 +282,7 @@ namespace BAM.Game
             if (!button || m.State != MatchState.Play) { holding = false; wheelPick = -1; }
             if (button)
             {
-                float r = SafeW * 0.034f;
+                float r = SafeW * 0.038f; // as big as ATTACK and DEFEND (Rickard 2026-11-02; was 0.034)
                 heartRoot.sizeDelta = new Vector2(2f * r, 2f * r);
                 heartRoot.localPosition = HeartCentre(); // all of the button's and the wheel's places are local to the safe area's pivot
                 heartGroup.alpha = EmoteReady ? 1f : 0.5f;

@@ -523,7 +523,9 @@ namespace BAM.Game
             joy.SideGap = leftHanded ? gapR : gapL;
             float side = leftHanded ? 0f : 1f, edge = leftHanded ? -gapL : gapR;
             UiKit.Place(specialRoot, side, 0f, (leftHanded ? 70f : -70f) + edge, 150f, 270f, 270f);
-            UiKit.Place(deniedText, side, 0f, (leftHanded ? 30f : -30f) + edge, 440f, 520f, 70f);
+            // "Special not ready" etc.: just inside of the spell button above the SPECIAL, level with it (was 30 from the edge, 440
+            // up, which the spell button now covers; 2026-11-02)
+            UiKit.Place(deniedText, side, 0f, (leftHanded ? 300f : -300f) + edge, 475f, 520f, 70f);
             deniedText.alignment = leftHanded ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
             Canvas.ForceUpdateCanvases();
             joy.Rest();
