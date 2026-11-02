@@ -82,7 +82,7 @@ namespace BAM.Game
         void OverheadFrame(bool hidden)
         {
             bool on = !hidden && !(m.Tut != null && m.Tut.Island) && m.State != MatchState.Over;
-            // one tile in canvas units: the camera frames 11.5 tiles over the standing frame, which is narrower than the canvas
+            // one tile in canvas units: the camera frames MatchCamera's TilesAcross over the standing frame, which is narrower than the canvas
             // on a wide window, so the marks are sized from the camera, not from the canvas
             float ts = cam.PixelsPerTile * (Screen.width > 1f ? canvasRect.rect.width / Screen.width : 1f);
             float dt = Time.unscaledDeltaTime;

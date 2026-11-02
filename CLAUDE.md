@@ -25,4 +25,4 @@ orders per area in `Docs/briefs/`, asset rights in `Docs/LICENSES.md`. Read ARCH
    before it is committed. New or removed files under `Assets/BAM` need `python3 /mnt/project-files/bam-tools/metagen.py`.
 5. ProjectSettings change only through BAM's setup menu in Rickard's Unity, never by hand from a thread.
 6. Game rules that Rickard set: every attack is always visible; Fenn's wolf is thrown 6 tiles and never walks or bites
-   through walls; the camera stays as wide as the old game's (11.5 tiles), no further out; the menus keep the old look.
+   through walls; the camera shows 10.5 tiles across (Rickard 2026-11-02, was the old game's 11.5), no further out; the menus keep the old look.
