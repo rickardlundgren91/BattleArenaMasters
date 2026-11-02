@@ -48,8 +48,8 @@ namespace BAM.Sim
                 // clear; the same rule on both teams and every level (the levels differ in how fast and how often, not in the brain)
                 float r = Match.TapReach(h.Hero);
                 if (!M.TapHasTarget(h)) return false;
-                // Knut's hook flies past minions (KnutS.HookPassesMinions): a minion pack is no reason to throw it
-                return SureShot(FoeList(r, true, true), dz) || (!(h.Hero == HeroId.Knut && KnutS.HookPassesMinions) && Foes(r, false, true, l) >= 3);
+                // Knut's hook and Tyra's bolt fly past minions (Match.PassesMinions): a minion pack is no reason to throw them
+                return SureShot(FoeList(r, true, true), dz) || (!Match.PassesMinions(h.Hero) && Foes(r, false, true, l) >= 3);
             }
             switch (h.Hero)
             {
@@ -166,7 +166,7 @@ namespace BAM.Sim
                 case HeroId.Tyra:
                     {   // the bolt at the lowest enemy hero with no minion in front (it stops in the first enemy)
                         var hs = FoeHeroes(h, TyraS.Length - 0.3f); Unit t = null;
-                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (LineFree(e, TyraS.Hitbox) && (t == null || e.Hp < t.Hp)) t = e; }
+                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (LineFree(e, TyraS.Hitbox, TyraS.BoltPassesMinions) && (t == null || e.Hp < t.Hp)) t = e; }
                         if (t == null) return false;
                         // a second enemy hero in the volley's cone round that one: the tap hits both, so tap instead (XYZ SimBotDrag.cs)
                         float ta = AngTo(t.X, t.Y); var vs = FoeHeroes(h, h.Range);

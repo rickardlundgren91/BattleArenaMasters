@@ -61,7 +61,7 @@ namespace BAM.Sim
                 Health = 2, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tyra, Name = "Tyra", Title = "The Longshot", Role = "Marksman", Ranged = true,
                 SpecialName = "Pinpoint Bolt", SpecialDesc = "Tap: Arrow Volley, five arrows in a cone at a random enemy in her range; each enemy in it is hit once. Drag: a heavy bolt after a short draw that flies until it hits something: the first enemy in its path, a tower or a wall.",
-                OneTapDesc = "Tap: after a short draw, a heavy bolt at a random enemy in her range. It flies until it hits something: the first enemy in its path, a tower or a wall.",
+                OneTapDesc = "Tap: after a short draw, a heavy bolt at a random enemy hero in her range, or through a minion when no hero is near. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall.",
                 PassiveName = "Featherstep", PassiveDesc = "When her attack hurts an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,

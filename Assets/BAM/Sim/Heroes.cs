@@ -47,6 +47,9 @@ namespace BAM.Sim
     /// enemy it meets, an enemy tower or a wall (or it leaves the arena). The tap is Arrow Volley and the passive Featherstep (Hero5.cs).</summary>
     public static class TyraS
     {
+        /// <summary>Her bolt flies past minions and Fenn's wolf and hits only heroes (decoys too), as Knut's hook (Rickard 2026-11-02 "tyras
+        /// pil ska likt knut gå genom creeps ändå men ändå kunna sikta på dom"); towers and walls still stop it. false = the old rule.</summary>
+        public const bool BoltPassesMinions = true;
         /// <summary>The bolt's old length: 2 x (her attack range 4 + 0.5), as the old boltLen. Since 2026-10-30 (Rickard: "tyras pil ska
         /// fortsätta tills den träffar något") only how far the bots look for a bolt target and fear hers; the bolt flies Flight.</summary>
         public const float Length = 2 * (4f + 0.5f);
@@ -579,7 +582,7 @@ namespace BAM.Sim
             {
                 var u = Units[i];
                 bool tower = u.Kind == UnitKind.Tower && u.Alive; // either team's base stops it (TowerReach)
-                if (!tower && (!Hurtable(p.Src, u) || u.Team == p.Team) || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue;
+                if (!tower && (!Hurtable(p.Src, u) || u.Team == p.Team || (TyraS.BoltPassesMinions && u.Kind != UnitKind.Hero)) || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue; // past minions (BoltPassesMinions)
                 p.Done = true;
                 if (tower) Blocked(p, p.X, p.Y); else SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
                 return;

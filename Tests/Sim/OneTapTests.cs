@@ -101,6 +101,17 @@ namespace BAM.Sim
                 Check(heroPicks == 8, $"ONETAP Knut: with a hero and a minion in reach the hero is picked ({heroPicks}/8)");
             }
 
+            // Tyra: her bolt flies past a minion in front and hits the hero behind it (TyraS.BoltPassesMinions); a minion alone lights the button
+            {
+                var m = OneTapScene(HeroId.Tyra, out var p, out float cx, out float cy);
+                var mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, cx - 0.2f, cy); m.AddStatus(mn, St.Stun, 999);
+                Check(m.TapHasTarget(p), "ONETAP Tyra: a minion alone in reach lights the button");
+                var e = m.Heroes.Find(h => h.Team != p.Team); Place(e, cx + 1.4f, cy); m.AddStatus(e, St.Stun, 999);
+                float mh = mn.Hp, eh = e.Hp;
+                m.Step(TapIn()); for (int k = 0; k < 90; k++) m.Step(PlayerInput.None);
+                Check(mn.Hp == mh && e.Hp < eh, $"ONETAP Tyra: the bolt passes the minion ({mh:0} -> {mn.Hp:0}) and hits the hero behind ({eh:0} -> {e.Hp:0})");
+            }
+
             // Moa: the field on a random ally hero in her range, on herself with none near; never grey
             {
                 var m = OneTapScene(HeroId.Moa, out var p, out float cx, out float cy);
