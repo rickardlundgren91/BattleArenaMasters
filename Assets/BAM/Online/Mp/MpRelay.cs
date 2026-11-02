@@ -282,6 +282,9 @@ namespace BAM.Online.Mp
         /// <summary>Guest: to the host.</summary>
         public bool Send(MpWriter w) => conns.Count > 0 && SendOn(conns[0].Value, w);
 
+        /// <summary>Out on the wire now, not at the next Update (the app is about to sleep).</summary>
+        public void Flush() { if (!closed && driver.IsCreated) driver.ScheduleFlushSend(default).Complete(); }
+
         public void Kick(int conn)
         {
             for (int i = 0; i < conns.Count; i++)

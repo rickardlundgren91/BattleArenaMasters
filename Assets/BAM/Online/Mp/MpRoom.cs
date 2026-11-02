@@ -26,6 +26,12 @@ namespace BAM.Online.Mp
         public static readonly string[] ModeNames = { "Together", "Against each other" };
         const float LoadWait = 15f;        // host: seconds to wait for every phone's match before its seat goes to a bot
         const float PingEvery = 1f;
+        // guest, in a match: the host is the clock, so a host that went quiet stops the match for everyone. Its app in the background
+        // or swiped away (Rickard 2026-11-02: "när man som host lämnar spelet tillfälligt och stänger ner det så fryser det för dom
+        // andra") sends nothing, and Relay may not report it gone at all. The host pings every second and sends 60 frames a second:
+        // this long without a byte from it and the guest plays on with bots (PAUSE RULE: a match with other people never stands still).
+        const float HostQuiet = 3f, HostQuietLoading = 25f; // before the first frame the host may still be loading (LoadWait 15 s)
+        static float hostHeardT;
 
         public sealed class Member
         {
@@ -337,7 +343,7 @@ namespace BAM.Online.Mp
             net = new MpMatchNet(IsHost, cfg, Mode == Versus && seats[mySeat].Team != Teams.Player);
             if (IsHost) net.Lockstep.Send = SendFrames;
             else net.Lockstep.Send = m => relay?.Send(m);
-            State = Phase.Match; Status = ""; WantPage = false; QuickJoining = false;
+            State = Phase.Match; Status = ""; WantPage = false; QuickJoining = false; hostHeardT = Time.realtimeSinceStartup;
             Debug.Log("[BAM.Online] online match: " + seats.Length + " players, " + ModeNames[Mode] + ", seat " + mySeat + ", seed " + seed);
             Changed?.Invoke();
             Flow.Game?.StartMatch(new MatchSetup { Hero = seats[mySeat].Hero, Difficulty = diff, Seed = seed, Net = net });
@@ -374,6 +380,13 @@ namespace BAM.Online.Mp
             if (relay == null) return;
             relay.Update();
             if (relay == null) return;
+            if (!IsHost && State == Phase.Match && net != null && !net.Lockstep.Solo
+                && Time.realtimeSinceStartup - hostHeardT > (net.Lockstep.Stepped > 0 ? HostQuiet : HostQuietLoading))
+            {
+                Debug.Log("[BAM.Online] nothing from the host for " + Mathf.RoundToInt(Time.realtimeSinceStartup - hostHeardT) + " s: it is gone");
+                OnDisconnect(0);
+                return;
+            }
             pingT += dt;
             if (pingT >= PingEvery)
             {
@@ -403,7 +416,19 @@ namespace BAM.Online.Mp
             }
         }
 
-        internal static void Pause(bool p) => relay?.Pause(p);
+        internal static void Pause(bool p)
+        {
+            if (p && IsHost && State == Phase.Match && net != null && relay != null)
+            {
+                // the host's app goes to the background: its match stops, so the others must not wait for it. Tell them now (they
+                // play on with bots at once) and make their seats bots here, for when this phone comes back
+                w.Begin(MpMsg.MatchOver); Broadcast(w, true); relay.Flush();
+                foreach (var m in Members) if (m.InMatch) { m.InMatch = false; m.Behind = -1; net.Lockstep.SeatLeft(m.Seat); }
+                Debug.Log("[BAM.Online] the host's app went to the background: the others play on with bots");
+            }
+            if (!p) hostHeardT = Time.realtimeSinceStartup; // this phone slept itself: the host's silence was ours
+            relay?.Pause(p);
+        }
 
         /// <summary>For the HUD: who the host is still waiting for.</summary>
         internal static string Waiting()
@@ -460,6 +485,7 @@ namespace BAM.Online.Mp
 
         static void OnData(int conn, byte[] data, int len)
         {
+            if (!IsHost) hostHeardT = Time.realtimeSinceStartup;
             var r = new MpReader(data, len);
             int type = r.U8();
             if (type == MpMsg.Ping) { float t = r.F32(); w.Begin(MpMsg.Pong); w.F32(t); if (IsHost) relay.SendTo(conn, w); else relay.Send(w); return; }
