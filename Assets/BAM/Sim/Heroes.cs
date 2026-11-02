@@ -734,9 +734,9 @@ namespace BAM.Sim
                     var p = NewProj(ProjMode.NeedleLine, h, h.X, h.Y);
                     p.Kind = ProjKind.TiktaNeedleSpecial; p.T = -i * TiktaS.Interval; p.Ang = aa; p.Speed = TiktaS.Speed; p.Dmg = dmg; p.Radius = TiktaS.LineHitbox; p.TiktaCast = cast;
                 }
-                WarnLine(h, aa, TiktaS.LineReach, 0.25f, (TiktaS.Count - 1) * TiktaS.Interval + TiktaS.LineReach / TiktaS.Speed);
+                WarnLine(h, aa, NeedleReach, 0.25f, (TiktaS.Count - 1) * TiktaS.Interval + NeedleReach / TiktaS.Speed);
                 Channel(h, (TiktaS.Count - 1) * TiktaS.Interval);
-                castX = h.X + SimMath.Cos(aa) * TiktaS.LineReach; castY = h.Y + SimMath.Sin(aa) * TiktaS.LineReach;
+                castX = h.X + SimMath.Cos(aa) * NeedleReach; castY = h.Y + SimMath.Sin(aa) * NeedleReach;
                 return true;
             }
             if (EnemiesInRange(h, TiktaS.Reach, Pick.HeroOrMinion, true, spBuf).Count == 0) return false; // any enemy, no hero first (Rickard 2026-10-27)
@@ -794,7 +794,7 @@ namespace BAM.Sim
         void NeedleLineUpdate(Proj p, float dt)
         {
             if (p.D == 0 && p.Src != null && p.Src.Alive) { p.X = p.Src.X; p.Y = p.Src.Y; } // leaves from where she is now, as her warning (TIKTA-01)
-            float ox = p.X, oy = p.Y, step = p.Speed * dt, len = Math.Max(0, Math.Min(step, TiktaS.LineReach - p.D));
+            float ox = p.X, oy = p.Y, step = p.Speed * dt, len = Math.Max(0, Math.Min(step, NeedleReach - p.D));
             var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, len, TiktaS.LineHitbox, out float at);
             if (u != null)
             {
@@ -807,7 +807,7 @@ namespace BAM.Sim
                     return;
                 }
             }
-            float move = Math.Max(0, Math.Min(step, TiktaS.LineReach - p.D)); // the last step ends at the reach, not past it (TIKTA-04)
+            float move = Math.Max(0, Math.Min(step, NeedleReach - p.D)); // the last step ends at the reach, not past it (TIKTA-04)
             p.X += SimMath.Cos(p.Ang) * move; p.Y += SimMath.Sin(p.Ang) * move; p.D += move;
             if (Map.ShotBlocked(ox, oy, p.X, p.Y))
             {   // the spark where the line first meets the wall, not at the start of the step (TIKTA-04)
@@ -816,7 +816,7 @@ namespace BAM.Sim
                 p.X = ox + SimMath.Cos(p.Ang) * lo; p.Y = oy + SimMath.Sin(p.Ang) * lo;
                 p.Done = true; Blocked(p, p.X, p.Y); return;
             }
-            if (p.D >= TiktaS.LineReach - 1e-4f) p.Done = true;
+            if (p.D >= NeedleReach - 1e-4f) p.Done = true;
         }
 
         /// <summary>Tikta still holds a needle of her drag, or it leaves this tick (from where she is then).</summary>
@@ -830,7 +830,7 @@ namespace BAM.Sim
         float NeedleFlightLeft(Unit h)
         {
             float left = 0;
-            for (int i = 0; i < Projs.Count; i++) { var q = Projs[i]; if (q.Src == h && !q.Done && q.Mode == ProjMode.NeedleLine && q.T >= 0) left = Math.Max(left, (TiktaS.LineReach - q.D) / q.Speed); }
+            for (int i = 0; i < Projs.Count; i++) { var q = Projs[i]; if (q.Src == h && !q.Done && q.Mode == ProjMode.NeedleLine && q.T >= 0) left = Math.Max(left, (NeedleReach - q.D) / q.Speed); }
             return left;
         }
 

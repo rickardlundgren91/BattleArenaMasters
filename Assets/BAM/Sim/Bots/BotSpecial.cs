@@ -48,7 +48,8 @@ namespace BAM.Sim
                 // clear; the same rule on both teams and every level (the levels differ in how fast and how often, not in the brain)
                 float r = Match.TapReach(h.Hero);
                 if (!M.TapHasTarget(h)) return false;
-                return SureShot(FoeList(r, true, true), dz) || Foes(r, false, true, l) >= 3;
+                // Knut's hook flies past minions (KnutS.HookPassesMinions): a minion pack is no reason to throw it
+                return SureShot(FoeList(r, true, true), dz) || (!(h.Hero == HeroId.Knut && KnutS.HookPassesMinions) && Foes(r, false, true, l) >= 3);
             }
             switch (h.Hero)
             {

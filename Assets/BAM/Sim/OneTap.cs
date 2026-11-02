@@ -17,13 +17,28 @@ namespace BAM.Sim
         /// <summary>This match plays the one-tap special (Rules.OneTapSpecial; a test may turn it off to check the old drag forms).</summary>
         public bool OneTap = Rules.OneTapSpecial;
 
-        /// <summary>How far a tapped special looks for its target. The drag reach, except Bonk (his big Ground Slam's circle) and Tyra: her bolt flies on over the lane,
-        /// so she takes any enemy within TyraS.TapTarget (7 tiles, about what the screen shows ahead of her).</summary>
-        public static float TapReach(HeroId id) => id == HeroId.Tyra ? TyraS.TapTarget : id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : Defs.Hero(id).DragReach;
+        /// <summary>How far a tapped special looks for its target: the hero's auto attack range, the white ring round them (Rickard
+        /// 2026-11-02, Knut "samma som hans range", then Tikta, Bram, Tyra, Moa and Blast "fel range"), except Bonk, whose one special
+        /// is the big Ground Slam's circle. Tyra's bolt still flies on until it hits something; Tikta's needles stop at the ring.</summary>
+        public static float TapReach(HeroId id) => id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : Defs.Hero(id).Range;
 
-        /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line). Knut's hook flies
-        /// past minions (KnutS.HookPassesMinions), so his tap picks only heroes: with no hero in reach his button is grey.</summary>
-        List<Unit> TapTargets(Unit h) => EnemiesInRange(h, TapReach(h.Hero), h.Hero == HeroId.Knut && KnutS.HookPassesMinions ? Pick.Heroes : Pick.HeroOrMinion, true, tapBuf);
+        /// <summary>How far Tikta's needle line flies: her ring in the one-tap game (TapReach), TiktaS.LineReach for the old drag.</summary>
+        float NeedleReach => OneTap ? TapReach(HeroId.Tikta) : TiktaS.LineReach;
+
+        /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line).</summary>
+        List<Unit> TapTargets(Unit h) => EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
+
+        /// <summary>Knut's hook flies past minions (KnutS.HookPassesMinions): his tap takes a random enemy hero in reach, else a random
+        /// minion, and the hook flies through it toward a hero behind (Rickard 2026-11-02 "man ska ju kunna skjuta hooken på minions
+        /// ändå ... siktar man på en hero bakom"), so the button is lit with only minions near too.</summary>
+        Unit KnutTapPick(List<Unit> l)
+        {
+            int heroes = 0;
+            for (int i = 0; i < l.Count; i++) if (l[i].Kind == UnitKind.Hero) heroes++;
+            if (heroes == 0 || heroes == l.Count) return PickRandom(l);
+            for (int i = l.Count - 1; i >= 0; i--) if (l[i].Kind != UnitKind.Hero) l.RemoveAt(i);
+            return PickRandom(l);
+        }
 
         /// <summary>Would a tap of h's special fire now (target-wise; the charge is SpecialReady)? Moa always can: herself.
         /// The HUD greys the button when this is false.</summary>
@@ -34,7 +49,7 @@ namespace BAM.Sim
             return TapTargets(h).Count > 0;
         }
 
-        /// <summary>A random ally hero (not Moa herself, not a clone) within Moa's range; null when none.</summary>
+        /// <summary>A random ally hero (not Moa herself, not a clone) within Moa's ring (TapReach); null when none.</summary>
         Unit TapAlly(Unit h)
         {
             tapBuf.Clear();
@@ -42,7 +57,7 @@ namespace BAM.Sim
             {
                 var u = Units[i];
                 if (u == h || !u.Alive || u.Kind != UnitKind.Hero || u.IsClone || u.Team != h.Team || u.Has(St.Untargetable)) continue;
-                if (SimMath.Dist(h, u) > MoaS.Range + u.R) continue;
+                if (SimMath.Dist(h, u) > TapReach(HeroId.Moa) + u.R) continue; // her ring, as every tap (TapReach)
                 tapBuf.Add(u);
             }
             return tapBuf.Count > 0 ? PickRandom(tapBuf) : null;
@@ -60,7 +75,7 @@ namespace BAM.Sim
                 var l = TapTargets(h);
                 if (l.Count == 0) return false;
                 if (h.Hero == HeroId.Bonk) return TryCastSpecial(h, float.NaN, 0); // the big Ground Slam round him: no aim, no roll
-                t = PickRandom(l);
+                t = h.Hero == HeroId.Knut && KnutS.HookPassesMinions ? KnutTapPick(l) : PickRandom(l);
             }
             float dx = t.X - h.X, dy = t.Y - h.Y, d = SimMath.Hypot(dx, dy);
             float ang = d > 1e-4f ? SimMath.Atan2(dy, dx) : h.Facing;

@@ -49,7 +49,7 @@ namespace BAM.Sim
                 m = OneTapScene(hero, out p, out cx, out cy);
                 Unit e = null; foreach (var h in m.Heroes) if (h.Team != p.Team) { e = h; break; }
                 // 2.9 tiles from the hero; Knut's hook reaches only his auto attack range (2.3, Rickard 2026-11-02), so his enemy stands at 2.0
-                float ex = hero == HeroId.Knut ? cx + 0.5f : cx + 1.4f;
+                float ex = cx - 1.5f + Math.Min(2.9f, TapReach(hero) - 0.3f); // inside every hero's ring (TapReach = the auto range)
                 Place(e, ex, cy); m.AddStatus(e, St.Stun, 999);
                 Check(m.TapHasTarget(p), $"ONETAP {hero}: an enemy in reach lights the button");
                 bool cast = false, dragForm = false; float ax = 0, ay = 0;
@@ -70,12 +70,35 @@ namespace BAM.Sim
                     Check(SimMath.Hypot(ax - e.X, ay - e.Y) < 0.05f, $"ONETAP {hero}: lands on the target's spot ({SimMath.Hypot(ax - e.X, ay - e.Y):0.000} off)");
                 // a drag sent anyway (an old HUD) is a tap too
                 m = OneTapScene(hero, out p, out cx, out cy);
-                Place(m.Heroes.Find(h => h.Team != p.Team), hero == HeroId.Knut ? cx + 0.5f : cx + 1.4f, cy);
+                Place(m.Heroes.Find(h => h.Team != p.Team), cx - 1.5f + Math.Min(2.9f, TapReach(hero) - 0.3f), cy);
                 var drag = PlayerInput.None; drag.Special = true; drag.AimAngle = SimMath.PI; drag.AimK = 1;
                 bool toward = false;
                 m.Step(drag);
                 foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) toward = ev.X > p.X - 0.01f;
                 Check(toward, $"ONETAP {hero}: a dragged aim is ignored, the tap picks the target");
+            }
+
+            // Knut: only a minion in reach still lights the button; the hook flies through it and never catches it (KnutS.HookPassesMinions)
+            {
+                var m = OneTapScene(HeroId.Knut, out var p, out float cx, out float cy);
+                var mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, cx - 0.2f, cy); m.AddStatus(mn, St.Stun, 999);
+                Check(m.TapHasTarget(p), "ONETAP Knut: a minion alone in reach lights the button");
+                bool cast = false; m.Step(TapIn());
+                foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) cast = true;
+                bool caught = false; for (int k = 0; k < 60; k++) { m.Step(PlayerInput.None); foreach (var q in m.Projs) if (q.Mode == ProjMode.Hook && q.Caught == mn) caught = true; }
+                Check(cast && !caught && mn.Hp == mn.MaxHp, "ONETAP Knut: the tap throws the hook through the minion, which is never caught or hurt");
+                // a hero and a minion in reach: the hero is picked every time
+                int heroPicks = 0;
+                for (int s = 0; s < 8; s++)
+                {
+                    m = OneTapScene(HeroId.Knut, out p, out cx, out cy);
+                    mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, cx - 0.2f, cy + 1f); m.AddStatus(mn, St.Stun, 999);
+                    var e = m.Heroes.Find(h => h.Team != p.Team); Place(e, cx + 0.5f, cy); m.AddStatus(e, St.Stun, 999);
+                    for (int r = 0; r < s; r++) m.Rng.Range(0f, 1f); // a different roll each round
+                    m.Step(TapIn());
+                    foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p && ev.X > p.X + 0.5f && Math.Abs(ev.Y - p.Y) < 0.5f) heroPicks++;
+                }
+                Check(heroPicks == 8, $"ONETAP Knut: with a hero and a minion in reach the hero is picked ({heroPicks}/8)");
             }
 
             // Moa: the field on a random ally hero in her range, on herself with none near; never grey
