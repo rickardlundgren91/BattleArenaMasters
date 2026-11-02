@@ -452,7 +452,7 @@ namespace BAM.Game
             if (p == null || p.Mode != ProjMode.Hook || p.Caught == null || !p.Caught.Alive || !m.IsVisibleTo(p.Caught, Mine)) return;
             Vector3 at = Coords.Of(p.Caught);
             ArtKit.PlayFx(FxKind.GroundSmash, at, 0.45f, Side(p.Caught.Team));
-            BamAudio.PlayAt(SfxId.BonkKnock, at, 0.7f); // borrowed until Knut's own landing thud is made (ORDERS)
+            BamAudio.PlayAt(SfxId.KnutHookLand, at); // Rickard's own clip (O-046)
         }
 
         Vector3 From(int srcSerial, float x, float y) =>
@@ -704,6 +704,7 @@ namespace BAM.Game
                     ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, Side(a.Team), e.Kind);
                     if (a == m.Player) BamAudio.Duck(0.8f);
                     Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
+                    if ((HeroId)e.Kind == HeroId.Knut && e.Big) Sound(SfxId.KnutChain, a, 1f); // the chain rattles out with the anchor
                     // Tyra's tap is the Arrow Volley: a gold cone through the draw and the big bow draw (Speltest tyravolley)
                     if ((HeroId)e.Kind == HeroId.Tyra && !e.Big)
                     {
@@ -814,6 +815,7 @@ namespace BAM.Game
                     break;
                 case EventType.Pull:
                     if (e.B != null) BamAudio.PlayAt(SfxId.KnutAnchorHook, Coords.Of(e.B));
+                    if (e.A != null && e.B != null) BamAudio.PlayAt(SfxId.KnutChain, Coords.Of(e.A), 0.8f); // and is reeled in
                     break;
                 // Hilde's keg slid a hero into a wall and stunned it (Wall Crash; Oaken's quake hurts at a wall but never stuns, so it
                 // sends none): Speltest's own crack, flash and sound at the wall
