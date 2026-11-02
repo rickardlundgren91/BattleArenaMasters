@@ -9,6 +9,9 @@ namespace BAM.Art
     /// One small dynamic mesh, one draw call, drawn over everything (ArtMaterials.Overlay), so a body or a raised weapon never
     /// cuts through it. The quads are written back to front: with no depth test the triangle order is the layering.
     /// Vertices are rewritten only when a value changes or the trail is catching up.
+    /// When the special is ready, a soft gold glow pulses round the charge row (tester 2026-11-02 "the small yellow bar could glow
+    /// when a hero's ultimate is ready"): a second small mesh behind the bar, additive, shown for every hero (enemies too, so a
+    /// ready enemy special can be seen and played around).
     /// </summary>
     sealed class HealthBar
     {
@@ -25,6 +28,13 @@ namespace BAM.Art
         float hp = 1f, shield, trail = 1f, trailWait, maxHp, energy = -1f;
         bool ready, readyLit;
         byte fill = Pal.BarAlly;
+        // the ready glow: 8 vertices (two rows of four: a soft left cap, the stretched middle, a soft right cap) over the Dot texture
+        const float GlowPad = 0.11f, GlowHalfH = 0.1f, GlowRate = 7f;
+        static Material glowMat;
+        readonly Mesh glowMesh;
+        readonly MeshRenderer glowR;
+        readonly Color32[] glowCol = new Color32[8];
+        bool shown = true;
         bool dirty = true, uvDirty = true;
 
         /// <param name="thick">Bar height in tiles: heroes 0.13, minions thinner.</param>
@@ -55,9 +65,50 @@ namespace BAM.Art
             r.sharedMaterial = ArtMaterials.Overlay;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
+
+            if (glowMat == null)
+            {
+                glowMat = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.ParticleAdd));
+                glowMat.name = "BAM_BarGlow (BAM)";
+                glowMat.renderQueue = 3990; // after the world's see-through things, just before the bar (Overlay, 4000)
+            }
+            var g = new GameObject("BarGlow");
+            g.transform.SetParent(T, false);
+            g.transform.localPosition = new Vector3(0f, 0f, 0.01f); // just behind the bar (the bar faces -z)
+            glowMesh = new Mesh { name = "BarGlow", hideFlags = HideFlags.DontSave };
+            glowMesh.MarkDynamic();
+            float gy1 = -h * 0.5f - EnergyGap, gy = gy1 - EnergyH * 0.5f, ga = -w * 0.5f, gb = w * 0.5f;
+            float[] gx = { ga - GlowPad, ga, gb, gb + GlowPad }, gu = { 0f, 0.5f, 0.5f, 1f };
+            var gv = new Vector3[8];
+            var guv = new Vector2[8];
+            for (int i = 0; i < 4; i++)
+            {
+                gv[i] = new Vector3(gx[i], gy - GlowHalfH, 0f); guv[i] = new Vector2(gu[i], 0f);
+                gv[i + 4] = new Vector3(gx[i], gy + GlowHalfH, 0f); guv[i + 4] = new Vector2(gu[i], 1f);
+            }
+            glowMesh.vertices = gv;
+            glowMesh.uv = guv;
+            glowMesh.colors32 = glowCol;
+            glowMesh.triangles = new[] { 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7, 3 };
+            glowMesh.bounds = new Bounds(new Vector3(0f, gy, 0f), new Vector3(w + 2f * GlowPad + 0.1f, 2f * GlowHalfH + 0.1f, 0.1f));
+            g.AddComponent<MeshFilter>().sharedMesh = glowMesh;
+            glowR = g.AddComponent<MeshRenderer>();
+            glowR.sharedMaterial = glowMat;
+            glowR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            glowR.receiveShadows = false;
+            glowR.enabled = false;
         }
 
-        public bool Visible { set { if (r.enabled != value) r.enabled = value; } }
+        public bool Visible
+        {
+            set
+            {
+                shown = value;
+                if (r.enabled != value) r.enabled = value;
+                bool glow = value && ready && energy >= 0f;
+                if (glowR.enabled != glow) glowR.enabled = glow;
+            }
+        }
 
         public void Set(float hp01, float shield01)
         {
@@ -85,6 +136,8 @@ namespace BAM.Art
             k01 = k01 < 0f ? -1f : Mathf.Clamp01(k01);
             if (Mathf.Abs(k01 - energy) > 0.001f) { energy = k01; dirty = true; }
             if (ready != isReady) { ready = isReady; uvDirty = true; }
+            bool glow = shown && ready && energy >= 0f;
+            if (glowR.enabled != glow) glowR.enabled = glow;
         }
 
         /// <summary>Back to full with no trail (respawn, pooled reuse).</summary>
@@ -109,6 +162,17 @@ namespace BAM.Art
             {
                 bool lit = Mathf.Sin(Time.unscaledTime * 7f) > -0.2f; // a slow blink while the special is ready
                 if (lit != readyLit) { readyLit = lit; uvDirty = true; }
+                if (glowR.enabled)
+                {
+                    // gold, breathing with the row's blink: brightest when the row is lit, never fully gone
+                    float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * GlowRate);
+                    var c = new Color32(255, 200, 70, (byte)(150f + 105f * k));
+                    if (c.a != glowCol[0].a || glowCol[0].r == 0)
+                    {
+                        for (int i = 0; i < 8; i++) glowCol[i] = c;
+                        glowMesh.colors32 = glowCol;
+                    }
+                }
             }
             if (dirty) { Rebuild(); mesh.vertices = v; dirty = false; }
             if (uvDirty) { RebuildUV(); mesh.uv = uv; uvDirty = false; }
