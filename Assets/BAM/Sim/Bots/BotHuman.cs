@@ -41,8 +41,10 @@ namespace BAM.Sim
             float r;
             switch (H.Hero)
             {
-                case HeroId.Knut: r = KnutS.SlamRadius; break;
-                case HeroId.Bonk: r = BonkS.SlamRadius; break;
+                // one tap (Rules.OneTapSpecial): the tap's own reach (Match.TapReach, + the widest hero's R as TapTargets counts it);
+                // the old slam radii 1.8 / 2.0 kept the special back with a hero already in reach (bug review 2026-11-02, nr 4)
+                case HeroId.Knut: r = M.OneTap ? Match.TapReach(H.Hero) + 0.4f : KnutS.SlamRadius; break;
+                case HeroId.Bonk: r = M.OneTap ? Match.TapReach(H.Hero) + 0.4f : BonkS.SlamRadius; break;
                 default: return false;
             }
             return !AnyFoeHeroSeenWithin(H, r) && AnyFoeHeroSeenWithin(H, BotTables.SaveCcR);

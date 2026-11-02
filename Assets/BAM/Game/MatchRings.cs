@@ -252,7 +252,7 @@ namespace BAM.Game
                     Show(hits[i], up, u.R + 0.25f, new Color(hc.r, hc.g, hc.b, 0.9f), 3f * px);
                 }
             }
-            else if (p.SpecialReady && p.Hero == HeroId.Moa)
+            else if (p.SpecialReady && p.Hero == HeroId.Moa && !m.OneTap) // the one-tap special picks a random ally in her ring (Sim OneTap.TapAlly), not this one (bug review 2026-11-02, nr 5)
             {
                 // Moa's tap shields the ally hero (or herself) with the lowest health share in reach: show who that is now (MOA-02)
                 var pick = m.MostHurtAlly(p, MoaS.Range);

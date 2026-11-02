@@ -39,7 +39,10 @@ namespace BAM.Online
         public static int RatingCapOf(string kind) => RatingCap[Math.Max(0, Array.IndexOf(RatingKinds, kind))];
         static string KindOf(MatchReport m) => string.IsNullOrEmpty(m.vs) ? m.difficulty : Players;
         public const int MinSeconds = 45;
-        const int MaxPending = 50;
+        // a player who never signs in has only these: 50 dropped the oldest from the 51st match on, so the level stalled at ~13 and
+        // the XP bar could go back (bug review 2026-11-02, nr 6). 1000 (~230 KB) covers level 30 (~300 matches); the server takes
+        // them in batches of 20 (ReportMatch.js MAX_BATCH) once the player signs in
+        const int MaxPending = 1000;
 
         const string ServerKey = "bam.online.state", PendingKey = "bam.online.pending";
 

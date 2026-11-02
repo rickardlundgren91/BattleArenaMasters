@@ -95,12 +95,14 @@ namespace BAM.Sim
         const float TutMoveDist = 2.5f;   // tiles walked (any way) that end moment 1
         const float TutLineMin = 1.3f;    // the least time a line stays up
         const float TutAfter = 0.7f;      // a pause after a lesson is done, before the next line
-        const float TutRefillAfter = 1.2f; // moment 4: the charge refills this long after the last press
+        const float TutRefillAfter = 1.2f; // moments 3 and 4: the charge refills this long after the last press until a bolt lands
         // the enemy wave: it comes from just in front of the enemy tower, a new pair when none is left before the tap is learned
         const float TutWaveY = 9.5f, TutWaveGap = 1.5f;
         // Knut fights for real (long enough that Tyra feels it and has something to heal); Tyra never drops below 40 %
         const float TutKnutHp = 380f, TutKnutDmg = 1.6f, TutKnutPace = 0.85f, TutAfterFight = 0.8f, TutPlayerFloor = 0.4f;
         const float TutHookAfter = 0.6f;  // moment 5: Knut throws his anchor this long after Tyra's aimed bolt hit him
+        /// <summary>Where the guided match's Knut stops walking at Tyra and stands to swing: his reach, a little inside.</summary>
+        static float TutKnutStop(Unit k, Unit p) => (k.Range + p.R) * 0.9f;
         // moment 7 ends when Tyra has healed back to this share (from 40 % about 8 s of the real regen)
         const float TutHealed = 0.95f;
 
@@ -116,6 +118,9 @@ namespace BAM.Sim
             State = MatchState.Play; Time = 0;
             // the towers never shoot in the guided match (their health and damage are untouched)
             for (int t = 0; t < 2; t++) AddStatus(Towers[t], St.Disarm, 1e9f);
+            // and the player's own tower cannot fall: a new player who wanders off (the side grass) while the first enemy waves
+            // walk down must not lose the guided match and get it again at every start (bug review 2026-11-02, nr 1)
+            Towers[Teams.Player].TutUnkillable = true;
 
             // Tyra, made stronger as the old onboarding match did (FirstOnboardingMatch)
             var p = NewHero(HeroId.Tyra, Teams.Player, TutStartX, TutStartY);
@@ -228,7 +233,7 @@ namespace BAM.Sim
             {
                 // Knut's simple fight: walk at Tyra until she is in his reach, then stand and swing (the real auto attack)
                 float dx = p.X - k.X, dy = p.Y - k.Y, dist = SimMath.Hypot(dx, dy);
-                if (p.Alive && dist > (k.Range + p.R) * 0.9f) MoveUnit(k, dx / dist * TutKnutPace, dy / dist * TutKnutPace, dt);
+                if (p.Alive && dist > TutKnutStop(k, p)) MoveUnit(k, dx / dist * TutKnutPace, dy / dist * TutKnutPace, dt);
                 else if (dist > 0.01f) k.Facing = SimMath.Atan2(dy, dx);
             }
             else if (k != null && !k.Alive) k.RespawnT = 1e9f; // Knut stays down
@@ -252,6 +257,9 @@ namespace BAM.Sim
                     break;
                 case Tutorial.StepSpecial:
                     if (!tu.Burst && !TutEnemyMinions() && Time - tu.WaveAt > 2f) TutWave(false); // something for the bolt
+                    // a bolt that hit nothing (its minion died in the wind-up, it flew on into a wall): the charge comes back a moment
+                    // after the press, as in moment 4, instead of ~11 s of autos with no line (bug review 2026-11-02, nr 3)
+                    if (!tu.Burst && !p.SpecialReady && Time - tu.PressAt >= TutRefillAfter) p.Charge = p.HDef.MaxCharge;
                     if (tu.Burst && Time - tu.BurstAt >= TutAfter)
                     {
                         TutNext(Tutorial.StepThrow);
@@ -266,7 +274,7 @@ namespace BAM.Sim
                     // the charge comes back full until an aimed bolt hits Knut, a moment after the last press so a bolt in the air
                     // lands first
                     if (!tu.Burst) { if (!p.SpecialReady && Time - tu.PressAt >= TutRefillAfter) p.Charge = p.HDef.MaxCharge; }
-                    else if (Time - tu.BurstAt >= TutHookAfter && (!OneTap || k == null || !k.Alive || SimMath.Dist(k, p) <= KnutS.HookDistance - 0.3f || tu.T > 5f)) // one tap: wait for Knut to come within his hook
+                    else if (Time - tu.BurstAt >= TutHookAfter && (!OneTap || k == null || !k.Alive || SimMath.Dist(k, p) <= TutKnutStop(k, p) + 0.05f || tu.T > 5f)) // one tap: wait for Knut to come up and stand (his hook reaches HookDistance + HookRadius + R from there; review 2026-11-02 nr 2: HookDistance - 0.3 = 2.0 was never reached, he stops at 2.3, so every player waited 5 s with no line)
                     {
                         TutNext(Tutorial.StepBlink);
                         tu.SpellOn = true; p.Spell = SpellId.Blink; p.SpellAt = Time; p.SpellChanEnd = -1;
