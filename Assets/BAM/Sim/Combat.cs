@@ -126,7 +126,7 @@ namespace BAM.Sim
             if (src != null && src.Kind == UnitKind.Hero && tgt.Kind == UnitKind.Hero && !tgt.IsClone)
             {
                 var t = Towers[tgt.Team]; // a hero hitting a hero under its tower draws the tower's fire
-                if (t != null && t.Alive && SimMath.Dist(t, src) <= t.UDef.Range + src.R) t.Target = src;
+                if (t != null && t.Alive && SimMath.Dist(t, src) <= t.UDef.Range + src.R && !TowerLocked(t)) t.Target = src;
             }
             for (int i = 0; i < tgt.StCount && amount > 0; i++)
             {
@@ -232,6 +232,14 @@ namespace BAM.Sim
             }
             return false;
         }
+        /// <summary>Tower aggro holds (Rickard 2026-11-02 "man ska inte kunna tappa aggro från tornet om man har fått det förrän man
+        /// går ut ur range"): once a tower aims at an enemy hero it stays on that hero while the hero lives and stands in its reach,
+        /// even in grass, behind a wall, or when another hero starts a fight under it. Only leaving the reach or dying ends it.</summary>
+        internal bool TowerLocked(Unit tw)
+        {
+            var k = tw.Target;
+            return k != null && k.Kind == UnitKind.Hero && k.Team != tw.Team && k.Alive && SimMath.Dist(tw, k) <= tw.Range + k.R;
+        }
         /// <summary>Heroes take more from tower shots as the match clock runs: x1 until 1:30, straight up to x2 at 6:00 (LateRamp).</summary>
         internal float TowerLateMult(Unit h) => 1 + (Rules.TowerLateMax - 1) * LateRamp();
         /// <summary>From level 8 towers take more damage, growing with the match clock (at most x5).</summary>
@@ -264,9 +272,10 @@ namespace BAM.Sim
             if (u.Kind == UnitKind.Tower)
             {
                 var k = u.Target;
-                if (k != null && (!k.Alive || SimMath.Dist(u, k) > u.Range + k.R || !IsVisibleTo(k, u.Team) || !Map.LosClear(u, k))) u.Target = null;
+                bool locked = TowerLocked(u);
+                if (k != null && !locked && (!k.Alive || SimMath.Dist(u, k) > u.Range + k.R || !IsVisibleTo(k, u.Team) || !Map.LosClear(u, k))) u.Target = null;
                 // minions first, but an enemy hero fighting one of the tower's heroes is shot instead
-                if (!(u.Target != null && TowerAggro(u, u.Target)))
+                if (!locked && !(u.Target != null && TowerAggro(u, u.Target)))
                 {
                     Unit fighter = null; float bd = float.MaxValue;
                     for (int i = 0; i < targets.Count; i++) { var t = targets[i]; if (!TowerAggro(u, t)) continue; float d = SimMath.Dist(u, t); if (d < bd) { bd = d; fighter = t; } }
@@ -279,6 +288,9 @@ namespace BAM.Sim
                     u.Target = m ?? Nearest(targets, u.X, u.Y);
                 }
                 tgt = u.Target;
+                // a locked hero behind a wall or untargetable for a moment keeps the aggro: the tower holds its shot instead of
+                // turning to someone else (heroes in its reach are always seen, grass or not; Rickard 2026-11-02)
+                if (locked && tgt != null && (!Map.LosClear(u, tgt) || tgt.Has(St.Untargetable))) tgt = null;
                 // shots in a row at the same hero hit harder; it starts over on another target or after 2.5 s without a shot
                 if (tgt != null)
                 {
