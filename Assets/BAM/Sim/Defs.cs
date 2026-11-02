@@ -96,6 +96,9 @@ namespace BAM.Sim
                     // Tikta 49.7 -> 43.7). Paid back in how often, never in how strong (Rickard's rule): Bonk 7 hits to charge instead of
                     // 6, Bram 6 instead of 8, Tikta 8 instead of 10 (Hard then: Bonk 55.3, Bram 45.4, Tikta 47.1; Normal top Moa 62.3, was 60.6)
                     b.MaxCharge = 7; Heroes[(int)HeroId.Bram].MaxCharge = 6; Heroes[(int)HeroId.Tikta].MaxCharge = 8;
+                    // Fenn's thrown wolf no longer turns onto a hero (it lands on the warned spot): his special comes one hit sooner
+                    // instead, 5 instead of 6, so the bite and root stay as strong (Rickard 2026-11-02, his rule: never weaken the effect)
+                    Heroes[(int)HeroId.Fenn].MaxCharge = 5;
                 }
             }
         }
