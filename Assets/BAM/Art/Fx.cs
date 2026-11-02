@@ -321,7 +321,14 @@ namespace BAM.Art
             "tx_fx_blast_scorch",
             // his set of 2026-10-31 (thread "ultgra"): Tyra's arrow hit, the tower's hit on you, heal, kill, the wolf coming and landing
             "tx_fx_tyra_hit", "tx_fx_tower_hit", "tx_fx_heal", "tx_fx_kill", "tx_fx_fenn_summon", "tx_fx_fenn_land",
+            // his hits of 2026-11-02 (O-033): Knut, Bram, Tikta
+            "tx_fx_knut_hit", "tx_fx_bram_hit", "tx_fx_tikta_hit",
         };
+
+        // the heroes whose autoattack hit has Rickard's own picture (Tyra 2026-10-31; Knut, Bram, Tikta 2026-11-02); the rest his hit stars
+        static string OwnHitPic(int hero) =>
+            hero == (int)HeroId.Tyra ? "tx_fx_tyra_hit" : hero == (int)HeroId.Knut ? "tx_fx_knut_hit"
+            : hero == (int)HeroId.Bram ? "tx_fx_bram_hit" : hero == (int)HeroId.Tikta ? "tx_fx_tikta_hit" : null;
 
         // mode: 0 white on black (additive), 1 white + alpha (additive weighed by alpha), 2 a coloured picture (alpha blended)
         static ParticleSystem PicSystem(string name, bool flat, int mode = 0, float s0 = 0.75f, float s1 = 1.1f)
@@ -897,8 +904,9 @@ namespace BAM.Art
             switch (kind)
             {
                 case FxKind.Hit when hero >= 0:
-                    // Tyra's arrows get his own small sharp hit (2026-10-31); the others his hit stars
-                    if (!(hero == (int)HeroId.Tyra && Pic("tx_fx_tyra_hit", mid, Color.white, 0.9f * size, 0.16f)))
+                    // Tyra, Knut, Bram and Tikta get his own hit pictures (OwnHitPic); the others his hit stars
+                    string ownHit = OwnHitPic(hero);
+                    if (!(ownHit != null && Pic(ownHit, mid, Color.white, 0.9f * size, 0.16f)))
                         if (!HitStar(mid, Color.white, 0.8f * size, 0.14f)) Pow(mid, 1, C(Pal.Cream, 230), 0.55f * size, 0.14f);
                     if (hero == (int)HeroId.Fenn) Pic("tx_wow_sword_slash", mid, (Color)heroMain[hero], 1.2f * size, 0.14f); // his sword cuts
                     Sparks(mid, 6, heroMain[hero], 0.12f * size, 3f, 0.25f, 1f);

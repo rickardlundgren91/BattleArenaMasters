@@ -21,7 +21,7 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched, mirror, struck, arc, hit, honey, boulder, boltPic;
+        bool melee, launched, mirror, struck, arc, hit, honey, boulder, boltPic, towerPic;
         bool spent;                  // it hurt someone earlier and flew on: ends without a splash or a fizzle
         float prog = -1f;            // the rules' share of the flight done (SetProgress), -1 = by the clock
         Vector3 launchOff;           // the hand's offset from the rules' path at the release, eased out over LaunchEase
@@ -36,6 +36,9 @@ namespace BAM.Art
         // Tyra's bolt: Rickard's own arrow picture (tx_fx_tyra_bolt, head to the right) when it exists, else the code-made bolt
         static Texture2D boltTex;
         static bool boltLoaded;
+        // the tower's shot: Rickard's own bolt picture (tx_fx_tower_bolt, 2026-11-02, white + alpha, head to the right) in the team's colour
+        static Texture2D towerBoltTex;
+        static bool towerBoltLoaded;
         static Material texTrail; // Rickard's comet trail picture (tx_fx_trail), shared by every shot that leaves one
         static bool texTrailLoaded;
         MeshFilter visF;
@@ -97,6 +100,8 @@ namespace BAM.Art
             boulder = k == ProjKind.BonkBoulder && boulderTex != null;
             if (k == ProjKind.TyraBolt && !boltLoaded) { boltLoaded = true; boltTex = RickardFx.Load("tx_fx_tyra_bolt"); }
             boltPic = k == ProjKind.TyraBolt && boltTex != null;
+            if (k == ProjKind.TowerShot && (!towerBoltLoaded || towerBoltTex == null)) { towerBoltLoaded = true; towerBoltTex = RickardFx.Load("tx_fx_tower_bolt"); }
+            towerPic = k == ProjKind.TowerShot && towerBoltTex != null;
             // Knut's thrown anchor: the same model he holds (Props/knut_anchor), not the code-made one (Rickard 2026-10-30 "knuts
             // ankare måste göras om"): flukes first, the ring (where the chain hangs) back toward Knut, the flat side up to the camera
             Mesh anchorMesh = k == ProjKind.KnutAnchor ? Props.Mesh("knut_anchor") : null;
@@ -117,7 +122,7 @@ namespace BAM.Art
                 ar.sharedMaterial = am;
                 ar.shadowCastingMode = ShadowCastingMode.Off;
             }
-            visF.sharedMesh = boulder || boltPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            visF.sharedMesh = boulder || boltPic || towerPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
             if (anchorMesh != null) visR.enabled = false;
@@ -148,6 +153,15 @@ namespace BAM.Art
                 visR.sharedMaterial = ArtMaterials.Instance(ArtMaterials.UnlitFade);
                 visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, boltTex);
                 visR.sharedMaterial.mainTexture = boltTex;
+                visR.sharedMaterial.renderQueue = 3020;
+            }
+            else if (towerPic)
+            {
+                visR.sharedMaterial = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, towerBoltTex);
+                visR.sharedMaterial.mainTexture = towerBoltTex;
+                Color tc = Pal.Get(Pal.TeamLight(t)); tc.a = 1f;
+                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, tc); // white picture tinted: the red team shoots red
                 visR.sharedMaterial.renderQueue = 3020;
             }
             else if (boulder)
@@ -338,6 +352,16 @@ namespace BAM.Art
                     float ang = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg;
                     vis.rotation = cam * Quaternion.Euler(0f, 0f, ang) * Quaternion.Euler(-90f, 0f, 0f);
                     vis.localScale = new Vector3(1.8f, 1.8f, 1.8f);
+                    break;
+                }
+                case ProjKind.TowerShot when towerPic:
+                {
+                    // the same as Tyra's bolt: facing the camera, its head (the picture's right) the way it flies on screen
+                    Quaternion cam = ArtDriver.CamRot;
+                    Vector3 r = cam * Vector3.right, u = cam * Vector3.up;
+                    float ang = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg;
+                    vis.rotation = cam * Quaternion.Euler(0f, 0f, ang) * Quaternion.Euler(-90f, 0f, 0f);
+                    vis.localScale = new Vector3(1.1f, 1.1f, 1.1f);
                     break;
                 }
                 case ProjKind.BonkBoulder when boulder:
