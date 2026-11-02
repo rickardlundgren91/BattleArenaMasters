@@ -16,7 +16,6 @@ namespace BAM.UI
         static GameObject mainMenu, heroSelect, modes;
 
         static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard", "Ultra" };
-        static readonly string[] StatNames = { "Health", "Damage", "Speed", "Difficulty" };
 
         static void SetBadge(RectTransform badge, HeroId id)
         {

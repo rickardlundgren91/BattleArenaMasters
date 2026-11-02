@@ -279,8 +279,9 @@ namespace BAM.UI
         static Texture heroSelectMintTex;
         static GameObject heroSelectLock;
         static RectTransform heroRolePill, heroRoleIcon;
-        static readonly Image[] heroBars = new Image[5];
-        static readonly Text[] heroValues = new Text[5];
+        const int StatRows = 7;
+        static readonly Image[] heroBars = new Image[StatRows];
+        static readonly Text[] heroValues = new Text[StatRows];
         static readonly AbilityCard[] heroAbilities = new AbilityCard[2];
         static float[] heroMax;
 
@@ -364,11 +365,13 @@ namespace BAM.UI
             var stats = UiKit.NewRect("Stats", content);
             heroStatsSize = stats.gameObject.AddComponent<LayoutElement>();
             float rowH = 5.4f * Cw;
-            heroStatsSize.preferredHeight = 2.6f * Cw + 5 * rowH + 1.2f * Cw;
+            heroStatsSize.preferredHeight = 2.6f * Cw + StatRows * rowH + 1.2f * Cw;
             CardBack(stats, 4 * Cw);
-            string[] labels = { "Health", "Damage", "Attack time", "Range", "Move speed" }; // "Attack time": 1.85 s is a time, not a speed (2026-10-31)
+            // "Attack time": 1.85 s is a time, not a speed (2026-10-31). "Damage/s" and "Special" added from the tester's wish for exact
+            // numbers (2026-11-02): damage per second of steady attacking, and the hits the special needs with the fastest time to fill it.
+            string[] labels = { "Health", "Damage", "Attack time", "Damage/s", "Range", "Move speed", "Special" };
             float bh = 1.5f * Cw;
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < StatRows; i++)
             {
                 float cy = 1.3f * Cw + i * rowH + rowH / 2 + 0.6f * Cw;
                 var lab = Treb(stats, labels[i], 2.9f, UiKit.TextColor);
@@ -544,21 +547,24 @@ namespace BAM.UI
             bool chosen = BamSettings.LastHero == heroPeek;
 
             if (heroMax == null)
-            {
-                heroMax = new float[5];
-                foreach (var d in Defs.Heroes)
+            {   // the bars against the best of the heroes in the game (HeroCatalog.All), not Hilde and Oaken who wait
+                heroMax = new float[StatRows];
+                foreach (var hi in HeroCatalog.All)
                 {
-                    heroMax[0] = Mathf.Max(heroMax[0], d.Hp);
-                    heroMax[1] = Mathf.Max(heroMax[1], d.Dmg);
-                    heroMax[2] = Mathf.Max(heroMax[2], 1 / Mathf.Max(0.1f, d.Cd));
-                    heroMax[3] = Mathf.Max(heroMax[3], d.Range);
-                    heroMax[4] = Mathf.Max(heroMax[4], d.Speed);
+                    var d = Defs.Hero(hi.Id);
+                    float[] dv = StatBarValues(d);
+                    for (int i = 0; i < StatRows; i++) heroMax[i] = Mathf.Max(heroMax[i], dv[i]);
                 }
             }
-            float[] v = { def.Hp, def.Dmg, 1 / Mathf.Max(0.1f, def.Cd), def.Range, def.Speed };
+            float[] v = StatBarValues(def);
             // "+26/lvl" and the units (2026-10-31, Rickard's screenshot review: "(+26)" and bare "4" / "2.19" said nothing)
-            string[] txt = { Num(def.Hp) + "  +" + Num(def.HpGrowth) + "/lvl", Num(def.Dmg) + "  +" + Num(def.DmgGrowth) + "/lvl", Num(def.Cd) + " s", Num(def.Range) + " tiles", Num(def.Speed) + " tiles/s" };
-            for (int i = 0; i < 5; i++)
+            string[] txt =
+            {
+                Num(def.Hp) + "  +" + Num(def.HpGrowth) + "/lvl", Num(def.Dmg) + "  +" + Num(def.DmgGrowth) + "/lvl", Num(def.Cd) + " s",
+                Num(Round1(def.Dmg / Mathf.Max(0.1f, def.Cd))), Num(def.Range) + " tiles", Num(def.Speed) + " tiles/s",
+                def.MaxCharge + " hits · " + Num(Round1(def.MaxCharge * def.Cd)) + " s",
+            };
+            for (int i = 0; i < StatRows; i++)
             {
                 heroBars[i].rectTransform.anchorMax = new Vector2(Mathf.Clamp01(v[i] / Mathf.Max(0.001f, heroMax[i])), 1);
                 heroValues[i].text = txt[i];
@@ -620,6 +626,16 @@ namespace BAM.UI
             float dh = a.Desc.cachedTextGeneratorForLayout.GetPreferredHeight(desc, settingsFor) / a.Desc.pixelsPerUnit;
             a.Size.preferredHeight = Mathf.Max(10.5f * Cw + 4 * Cw, 10.2f * Cw + dh + 1.6f * Cw);
         }
+
+        // What each stat bar measures, longer = better: faster attacks and a quicker special give longer bars.
+        // The special fills one charge per hit (Combat.OnHeroHit), so hits x attack time is the fastest it can be ready.
+        static float[] StatBarValues(HeroDef d)
+        {
+            float cd = Mathf.Max(0.1f, d.Cd);
+            return new[] { d.Hp, d.Dmg, 1 / cd, d.Dmg / cd, d.Range, d.Speed, 1 / Mathf.Max(0.1f, d.MaxCharge * cd) };
+        }
+
+        static float Round1(float x) => Mathf.Round(x * 10) / 10;
 
         static string Num(float x) => x.ToString(Mathf.Approximately(x, Mathf.Round(x)) ? "0" : "0.##", System.Globalization.CultureInfo.InvariantCulture);
 
