@@ -98,7 +98,7 @@ namespace BAM.Sim
     /// health.</summary>
     public static class TiktaS
     {
-        public const float Reach = 2.9f, Interval = 0.2f, DamageCoeff = 1.2f, Speed = 16, LineReach = 5, LineHitbox = 0.2f;
+        public const float Reach = 2.9f, Interval = 0.2f, DamageCoeff = 1.5f, Speed = 16, LineReach = 5, LineHitbox = 0.2f; // needles 1.2 -> 1.5 (Rickard 2026-11-02 "buffa henne lite": one-tap Tikta 43 % on Hard bots)
         public const int Count = 4;
         public const float PoisonPerSecond = 0.1f, PoisonDuration = 2;
     }
