@@ -115,7 +115,7 @@ namespace BAM.Core
         /// <summary>Ultra opens after this many won matches against Hard bots (Rickard 2026-10-31), counted on this phone.</summary>
         public const int UltraWins = 30;
         public static int HardWins => PlayerPrefs.GetInt(Key + "hardwins", 0);
-        public static bool UltraOpen => HardWins >= UltraWins;
+        public static bool UltraOpen => HardWins >= UltraWins || Application.isEditor; // open in the Unity editor for testing, like the heroes
         public static void AddHardWin() { PlayerPrefs.SetInt(Key + "hardwins", HardWins + 1); Commit(); }
 
         /// <summary>
