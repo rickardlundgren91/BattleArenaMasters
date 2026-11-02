@@ -101,14 +101,16 @@ namespace BAM.Game
         float SpellR => SafeW * 0.07f; // the button (0.05 before 2026-11-02)
         float SpellAimR => SafeW * 0.05f; // the drag's measures (reach, cancel mark, finger dot) stay as they were
 
-        // straight above the SPECIAL's centre, a 0.02 W gap over its rim (Rickard 2026-11-02 "ha blinken mitt över ankaret"); the
+        // straight above the SPECIAL's centre, a 0.06 W gap over its rim (Rickard 2026-11-02 "ha blinken mitt över ankaret"; the gap was
+        // 0.02 W, about 1.4 mm on a phone, then "liiite längre upp ... så man inte råkar trycka på båda": now about 4 mm); the
         // heart, ATTACK and DEFEND moved further to the outer side to make room (HeartCentre in HudEmote.cs).
         // Was beside the heart on its inner side (2026-11-02), and before that SPELL_BTN: 1.58 SPECIAL radii to the inner side
         // of the SPECIAL's centre, 0.7 radii lower.
+        float SpellGap => SafeW * 0.06f;
         Vector2 SpellCentre()
         {
             Vector3 c = safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
-            return new Vector2(c.x, c.y + SpecialButton.Radius + SafeW * 0.02f + SpellR);
+            return new Vector2(c.x, c.y + SpecialButton.Radius + SpellGap + SpellR);
         }
 
         Vector2 SpellCancelCentre() => SpellCentre() + new Vector2(0f, SpellAimR * 3.8f);
