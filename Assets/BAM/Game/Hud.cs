@@ -36,7 +36,7 @@ namespace BAM.Game
         float gapL, gapR;
         Text deniedText, specialName;
         RectTransform specialRoot, joyArea;
-        Image specialFill, specialFace, specialGlow, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
+        Image specialFill, specialFace, specialGlow, specialHalo, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
         RectTransform cancelMark, dragRing;
         Text cancelText;
         readonly Image[] cancelCross = new Image[2];
@@ -325,8 +325,13 @@ namespace BAM.Game
             Split(p.Alive ? p.Charge01 : 0f, ready); // the two halves: ring, grey and gold level (HudSplit.cs)
             float pulse = Mathf.Sin(Time.unscaledTime * 3.5f);
             specialGlow.enabled = ready;
+            specialHalo.enabled = ready;
             if (ready)
             {
+                // the old game's soft glow picture behind the button blinks while the special is ready (Rickard 2026-11-02
+                // "gör blinkande animation för special knappen också"), in step with the charge row's gold edge (HealthBar, sin 7 t)
+                float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f);
+                specialHalo.color = new Color(1f, 0.72f, 0.25f, 0.15f + 0.8f * k);
                 specialGlow.color = new Color(1f, 0.55f, 0.12f, 0.5f + 0.3f * pulse);
                 specialGlow.rectTransform.localScale = Vector3.one * ((1.1f + 0.03f * pulse) / 1.1f);
             }
@@ -585,6 +590,9 @@ namespace BAM.Game
             // the Glass HUD's SPECIAL: a dark glass disc, a faint track and the orange charge (the old ring picture,
             // ui_ingameView_specialButton_fill, has the old ring's width: 0.14 of the radius)
             const float D = 2f * SpecialButton.Radius;
+            specialHalo = Picture(specialRoot, "Halo", D * 1.5f, "ui_ingameView_specialButton_glow", Color.clear); // behind everything
+            specialHalo.raycastTarget = false;
+            specialHalo.enabled = false;
             specialGlow = Circle(specialRoot, "Ready", D * 1.1f, Color.clear).GetComponent<Image>();
             RoundRing(specialGlow, D * 0.55f, 3f);
             specialGlow.enabled = false;
