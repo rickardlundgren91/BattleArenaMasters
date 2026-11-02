@@ -23,7 +23,10 @@ namespace BAM.UI
         {
             if (OnlineHooks.HomeChip == null) return false;
             var slot = UiKit.NewRect("Profile", top);
-            TopLeft(slot, 3 * Cw, cy - 6 * Cw, 40 * Cw, 12 * Cw); // the old chip: cw(3) in, cw(40) x cw(12), on the bar's middle
+            // the old chip was cw(40) x cw(12); 1.35 times bigger since 2026-11-02 (Rickard: "gör spelaren lite större"), its middle
+            // cw(2) lower so the bigger chip keeps clear of the screen's top; the chip draws itself to fit (OnlineMenu.DrawChip)
+            const float k = 1.35f;
+            TopLeft(slot, 3 * Cw, cy + 2 * Cw - 6 * Cw * k, 40 * Cw * k, 12 * Cw * k);
             OnlineHooks.HomeChip(slot).gameObject.AddComponent<ButtonFx>().PressScale = false;
             return true;
         }
