@@ -52,6 +52,7 @@ namespace BAM.Art
             Texture2D painted = !info.Island && w == 15 && h == 35 ? Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_ArenaGround_v1_2") : null;
             if (painted != null) PaintedGround(root, painted, w, h);
             if (painted != null) TowerRunes.Build(root);
+            if (painted != null) RoadRunes.Build(root);
             Mesh pillarM = Props.Mesh("wallkit_pillar"), beamM = Props.Mesh("wallkit_straight");
             bool kit = pillarM != null && beamM != null && !info.Island;
             Texture2D rockPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_Pillar_C");
@@ -708,6 +709,111 @@ namespace BAM.Art
                 any = true;
             }
             if (!any) enabled = false;
+        }
+
+        void OnDestroy() { if (live == this) live = null; }
+    }
+
+    /// <summary>
+    /// "Show the way" at the start of a match (Rickard 2026-11-02): the carved runes down the middle of the road light up in a
+    /// wave from the player's base to the enemy's, their plazas flash, the runes stay softly lit and go out when the first
+    /// minions come. The road is cut in 20 one-tile slices (additive quads over the painted ground, the runes cut out of the
+    /// ground picture by bam-work/art/karta/detaljer/make_vagrunor.py), each switched off while dark.
+    /// </summary>
+    sealed class RoadRunes : MonoBehaviour
+    {
+        static RoadRunes live;
+        const string Pic = "T_BAM_RoadRunes";
+        // the picture is the strip x 448-512, y 480-1760 px of the 960 x 2240 ground picture: tiles x 7-8, rows 7.5-27.5
+        const int N = 20;
+        const float X0 = 7f, X1 = 8f, ZTop = 27.5f;
+        const float Speed = 14f;                        // slices (tiles) a second the light runs along the road
+        const float Front = 0.95f, Hold = 0.5f;         // brightness as the light passes, then while it waits for the minions
+        const float Rise = 0.1f, Settle = 0.5f, Out = 0.9f, MaxOn = 8f;
+        readonly Renderer[] quad = new Renderer[N];
+        readonly Material[] mat = new Material[N];
+        float t = -1f, outT = -1f;
+        bool fromTop, arrived;
+        Color own, foe;
+        Vector3 to;
+
+        internal static void Build(GameObject root)
+        {
+            Texture2D tex = Resources.Load<Texture2D>("BAMArt/Arena/" + Pic);
+            if (tex == null) return;
+            var rr = root.AddComponent<RoadRunes>();
+            const float y = 0.015f;
+            for (int i = 0; i < N; i++)
+            {
+                float z1 = ZTop - i, z0 = z1 - 1f, v1 = 1f - (float)i / N, v0 = 1f - (float)(i + 1) / N;
+                var mesh = new Mesh { name = Pic + "_" + i };
+                mesh.vertices = new[] { new Vector3(X0, y, z0), new Vector3(X0, y, z1), new Vector3(X1, y, z1), new Vector3(X1, y, z0) };
+                mesh.uv = new[] { new Vector2(0f, v0), new Vector2(0f, v1), new Vector2(1f, v1), new Vector2(1f, v0) };
+                mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+                mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+                mesh.RecalculateBounds();
+                var m = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                m.SetTexture(ArtMaterials.BaseMap, tex);
+                m.mainTexture = tex;
+                m.SetColor(ArtMaterials.BaseColor, Color.black);
+                GameObject go = Arena.Add(root, Pic + "_" + i, mesh, m, false);
+                go.isStatic = false;
+                rr.quad[i] = go.GetComponent<Renderer>();
+                rr.quad[i].enabled = false;
+                rr.mat[i] = m;
+            }
+            rr.enabled = false;
+            live = rr;
+        }
+
+        /// <summary>Run the light from the tower at <paramref name="from"/> to the one at <paramref name="target"/>.</summary>
+        internal static void Show(Vector3 from, Vector3 target, Color ownColour, Color foeColour)
+        {
+            if (live == null) return;
+            live.fromTop = from.z > ZTop - N * 0.5f;
+            live.to = target;
+            live.own = ownColour;
+            live.foe = foeColour;
+            live.t = 0f;
+            live.outT = -1f;
+            live.arrived = false;
+            live.enabled = true;
+            TowerRunes.Pulse(from, ownColour);
+        }
+
+        /// <summary>The first minions came: the road goes dark.</summary>
+        internal static void Hide()
+        {
+            if (live == null || live.t < 0f || live.outT >= 0f) return;
+            live.outT = 0f;
+        }
+
+        void Update()
+        {
+            float dt = Time.deltaTime;
+            t += dt;
+            if (outT < 0f && t > MaxOn) outT = 0f;
+            if (outT >= 0f) outT += dt;
+            float fade = outT < 0f ? 1f : 1f - outT / Out;
+            if (!arrived && t >= N / Speed) { arrived = true; TowerRunes.Pulse(to, foe); }
+            if (fade <= 0f)
+            {
+                for (int i = 0; i < N; i++) if (quad[i] != null) quad[i].enabled = false;
+                t = -1f;
+                enabled = false;
+                return;
+            }
+            for (int i = 0; i < N; i++)
+            {
+                if (quad[i] == null) continue;
+                int k = fromTop ? i : N - 1 - i;          // the slice's place along the run
+                float since = t - (k + 0.5f) / Speed;     // how long ago the light reached it
+                if (since < 0f) { quad[i].enabled = false; continue; }
+                float b = since < Rise ? since / Rise * Front : Mathf.Lerp(Front, Hold, Mathf.Clamp01((since - Rise) / Settle));
+                b *= fade;
+                quad[i].enabled = true;
+                mat[i].SetColor(ArtMaterials.BaseColor, new Color(own.r * b, own.g * b, own.b * b, 1f));
+            }
         }
 
         void OnDestroy() { if (live == this) live = null; }

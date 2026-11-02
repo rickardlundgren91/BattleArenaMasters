@@ -137,6 +137,7 @@ namespace BAM.Game
         }
 
         bool Island => m.Tut != null && m.Tut.Island;
+        bool roadShown; // the start-of-match road light ran (ArtKit.RoadRunesShow)
 
         // The training island's bridge and the lane below it appear only when the bridge opens: until then the arena is
         // built with those rows left out, then built again whole.
@@ -297,7 +298,7 @@ namespace BAM.Game
             if (u.Kind == UnitKind.Hero)
                 v.SetMarker(u.IsPlayer ? UnitMarker.Player : u.Team == Mine ? UnitMarker.Ally : UnitMarker.Enemy);
             if (!u.Alive) { r.Dead = true; v.SetDead(true); }
-            else if (u.Kind == UnitKind.Minion && m.Time > 0f && u != TutDummy) ArtKit.PlayFx(FxKind.MinionSpawn, t.position, 1f, Side(u.Team));
+            else if (u.Kind == UnitKind.Minion && m.Time > 0f && u != TutDummy) { ArtKit.PlayFx(FxKind.MinionSpawn, t.position, 1f, Side(u.Team)); ArtKit.RoadRunesOff(); }
             units.Add(r);
             unitBySerial[u.Serial] = r;
             return r;
@@ -1015,6 +1016,14 @@ namespace BAM.Game
         /// <summary>paused: the ghost shots wait with the game (the art layer's own shots and zones wait on ArtKit.SetPaused).</summary>
         public void Frame(float alpha, float dt, bool paused = false)
         {
+            // a second before GO the road's runes run from our tower to theirs, showing the way; the first minions put them out
+            if (!roadShown && m.Time >= -1f)
+            {
+                roadShown = true;
+                Unit own = m.Towers[Mine], foe = m.Towers[1 - Mine];
+                if (m.Tut == null && !m.HeroTest && m.Time < 2f && own != null && foe != null)
+                    ArtKit.RoadRunesShow(Coords.Of(own), Coords.Of(foe), Teams.Player);
+            }
             for (int i = 0; i < units.Count; i++) DrawUnit(units[i], alpha, dt);
             for (int i = dying.Count - 1; i >= 0; i--)
             {

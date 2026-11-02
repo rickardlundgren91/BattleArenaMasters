@@ -443,6 +443,13 @@ namespace BAM.Art
         /// <summary>A tower fired: the carved runes round its plaza glow briefly in its team's light (Rickard 2026-11-02).</summary>
         public static void TowerFired(Vector3 tower, int team) => TowerRunes.Pulse(tower, Pal.Get(Pal.TeamLight(team)));
 
+        /// <summary>Match start: the road's runes light up from the player's tower to the enemy's, showing the way (Rickard 2026-11-02).</summary>
+        public static void RoadRunesShow(Vector3 ownTower, Vector3 enemyTower, int team)
+            => RoadRunes.Show(ownTower, enemyTower, Pal.Get(Pal.TeamLight(team)), Pal.Get(Pal.TeamLight(1 - team)));
+
+        /// <summary>The first minions came: the road's runes go out.</summary>
+        public static void RoadRunesOff() => RoadRunes.Hide();
+
         public static void PlayFx(FxKind kind, Vector3 position, float size = 1f, int team = 0, int hero = -1)
         {
             if (!ready) return;
