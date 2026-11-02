@@ -77,6 +77,23 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.4 (next build after 16, paste in "Release notes")
+
+```
+<en-US>
+Battle Arena Masters 0.3.4
+• Tutorial fixed: the SPECIAL step can be passed again
+• Clearer gold goal spots and a new guide arrow
+• Auto attacks hit enemies at the edge of your range
+• Gold target ring sits on the enemy's edge
+• Towers keep shooting you until you leave range
+• Rune road lights the way at match start
+• Bigger player badge on Home
+Old versions can't play online with this one.
+Bugs: Settings > Report a bug (Discord)
+</en-US>
+```
+
 ## Closed test release notes 0.3.3 (next build after 15, paste in "Release notes")
 
 ```

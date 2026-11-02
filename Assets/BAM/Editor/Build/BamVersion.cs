@@ -14,7 +14,7 @@ namespace BAM.Build
     public static class BamVersion
     {
         /// <summary>The version players see. Raise it here when a release deserves a new number.</summary>
-        public const string Name = "0.3.3";
+        public const string Name = "0.3.4";
 
         const string PrefsKey = "BAM.Build.VersionCode";
         const string FileName = "VersionCode.txt";
