@@ -8,8 +8,10 @@ using EventType = BAM.Sim.EventType;
 namespace BAM.Game
 {
     /// <summary>
-    /// The battle spell button (ABC2 HudSpell.cs, Rickard 2026-10-23; Sprint added 2026-10-26): a round button left of and below
-    /// the SPECIAL (mirrored left-handed). A tap casts it; Blink goes the way the joystick steers, or the way the hero faces.
+    /// The battle spell button (ABC2 HudSpell.cs, Rickard 2026-10-23; Sprint added 2026-10-26): a round button beside the heart,
+    /// on its inner side, above the SPECIAL (mirrored left-handed); 1.4 times its old size (testers 2026-11-02 "a bit bigger",
+    /// "beside the heart button"; it sat small left of and below the SPECIAL). A tap casts it; Blink goes the way the joystick
+    /// steers, or the way the hero faces.
     /// Blink can also be dragged to aim (direction and distance, the landing ring on the ground) and fires on release; letting
     /// go on the cancel mark above the button casts nothing, as with the SPECIAL. The ring round the glyph fills while it
     /// recharges with the seconds in the middle, and shows the recall's channel. "Recall", "Haste", "Sprint" and "Cancelled"
@@ -96,17 +98,19 @@ namespace BAM.Game
         }
 
         bool SpellShown => m.SpellsOn && m.State == MatchState.Play && m.Player != null && m.Player.Spell != SpellId.None;
-        float SpellR => SafeW * 0.05f;
+        float SpellR => SafeW * 0.07f; // the button (0.05 before 2026-11-02)
+        float SpellAimR => SafeW * 0.05f; // the drag's measures (reach, cancel mark, finger dot) stay as they were
 
-        // SPELL_BTN: 1.58 SPECIAL radii to the inner side of the SPECIAL's centre, 0.7 radii lower
+        // beside the heart on its inner side, level with it, a 0.02 W gap between them (HeartCentre in HudEmote.cs sits 0.105 W to
+        // the outer side of the SPECIAL's centre and 0.27 W up, radius 0.034 W); its lower edge stays well clear of the SPECIAL.
+        // Was SPELL_BTN: 1.58 SPECIAL radii to the inner side of the SPECIAL's centre, 0.7 radii lower.
         Vector2 SpellCentre()
         {
-            Vector3 c = safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
-            float sr = SpecialButton.Radius, side = leftHanded ? 1f : -1f;
-            return new Vector2(c.x + side * sr * 1.58f, c.y - sr * 0.7f);
+            float side = leftHanded ? -1f : 1f; // the heart's outer side
+            return HeartCentre() - new Vector2(side * (SafeW * (0.034f + 0.02f) + SpellR), 0f);
         }
 
-        Vector2 SpellCancelCentre() => SpellCentre() + new Vector2(0f, SpellR * 3.8f);
+        Vector2 SpellCancelCentre() => SpellCentre() + new Vector2(0f, SpellAimR * 3.8f);
 
         static Color SpellColor(SpellId s)
         {
@@ -126,7 +130,7 @@ namespace BAM.Game
         void SpellMove(Vector2 at)
         {
             if (!spellAiming) return;
-            float r = SpellR;
+            float r = SpellAimR;
             Vector2 b = SpellCentre(), d = at - b;
             if (!spellMoved && (at - spellFrom).magnitude > r * 0.5f) spellMoved = true;
             if (!spellMoved) return;
@@ -224,6 +228,7 @@ namespace BAM.Game
 
             if (!aim) return;
             // the drag: reach ring, the cancel mark, the finger's dot, and the landing ring on the ground
+            r = SpellAimR;
             spellAimRoot.localPosition = b;
             float mx = r * 2.85f;
             spellMaxRing.sizeDelta = new Vector2(2f * mx, 2f * mx);
