@@ -14,6 +14,7 @@ namespace BAM.Sim
             var m = Create(new MatchConfig { PlayerHero = hero, Allies = new[] { others[0], others[1] }, Enemies = new[] { others[2], others[3], others[4] }, Seed = 11 });
             foreach (var u in m.Units) { if (u.Kind == UnitKind.Minion) u.Alive = false; u.ClearStatuses(); }
             m.State = MatchState.Play; m.Time = 10; m.WaveT = 1e9f; m.Events.Clear();
+            m.Telegraph = false; // these checks test the cast itself; the warning before it has its own (TelegraphTests.cs)
             p = m.Player; float px = 2;
             foreach (var h in m.Heroes) if (h != p) { Place(h, px, m.Map.H - 1.5f); px += 1.2f; m.AddStatus(h, St.Stun, 999); }
             cx = -1; cy = -1;

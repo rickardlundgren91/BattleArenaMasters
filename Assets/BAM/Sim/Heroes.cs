@@ -243,6 +243,8 @@ namespace BAM.Sim
             if (s == null) return;
             // Tikta's drag: her needles still in the hand leave from where she is then, so the strip moves with her (TIKTA-01)
             if (p.Mode == ProjMode.WarnLine && s.Kind == UnitKind.Hero && s.Hero == HeroId.Tikta && NeedleInHand(s)) { p.X = s.X; p.Y = s.Y; }
+            // a line or Bonk's circle round him in a tapped special's warning (Telegraph.cs): it starts where the hero stands
+            else if (s.Kind == UnitKind.Hero && s.TeleAt >= 0 && (p.Mode == ProjMode.WarnLine ? !PlacedForm(s.Hero) : s.Hero == HeroId.Bonk)) { p.X = s.X; p.Y = s.Y; }
         }
 
         // ---------- Bram ----------
@@ -317,7 +319,7 @@ namespace BAM.Sim
                 gx = wx + SimMath.Cos(ga) * gd; gy = wy + SimMath.Sin(ga) * gd;
                 h.Facing = aa; w.Facing = aa; w.Wolf = WolfMode.Fly; w.WolfGx = gx; w.WolfGy = gy; w.WolfOx = wx; w.WolfOy = wy;
                 // red warning over the whole flight (it can turn onto a hero anywhere along it) and the landing spot
-                WarnLine(w, ga, gd, FennS.HomeRadius, gd / FennS.ThrowSpeed + 0.05f, true);
+                WarnLine(w, ga, gd, TeleOn ? Defs.Wolf.Radius : FennS.HomeRadius, gd / FennS.ThrowSpeed + 0.05f, true); // a warned throw homes on nobody: a thin line
                 WarnCircle(w, gx, gy, FennS.PounceRadius, gd / FennS.ThrowSpeed + 0.05f, true);
                 castX = gx; castY = gy;
             }
@@ -381,9 +383,11 @@ namespace BAM.Sim
         void WolfFly(Unit w, float dt)
         {
             var prey = w.WolfPrey;
+            // a warned throw (Telegraph.cs) homes on nobody: it lands on the locked spot and pounces there (WolfPounce)
+            if (TeleOn) prey = w.WolfPrey = null;
             // it lets go of a prey that died, vanished or left the red strip (a dash or blink), and flies on to the red circle
-            if (prey != null && (!prey.Alive || prey.Has(St.Untargetable) || !InWolfStrip(w, prey))) prey = w.WolfPrey = null;
-            if (prey == null)
+            else if (prey != null && (!prey.Alive || prey.Has(St.Untargetable) || !InWolfStrip(w, prey))) prey = w.WolfPrey = null;
+            if (prey == null && !TeleOn)
             {
                 float bd = float.MaxValue;
                 for (int i = 0; i < Units.Count; i++)

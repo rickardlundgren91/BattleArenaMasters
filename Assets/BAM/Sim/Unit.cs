@@ -107,6 +107,8 @@ namespace BAM.Sim
         internal float OakenLastLoss, OakenReadyAt;                 // Oaken: when he last lost health, when Stored Impact is ready again
         public float OakenStored, OakenStoredUntil;                 // Oaken: the damage stored for his next attack, and until when
         internal float AimAng = float.NaN, AimK;                    // the aim of the cast being made (NaN = a tap)
+        // a tapped special's warning (Rules.SpecialTelegraph, Telegraph.cs): it goes at TeleAt (-1 = none) with the aim locked at the tap
+        public float TeleAt = -1; internal float TeleAng, TeleK, TeleX, TeleY;
         // the battle spell (Spells.cs): which, when it is ready again, the recall channel (end -1 = none) and where it started
         public SpellId Spell; public float SpellAt, SpellChanEnd = -1, SpellChanStart; internal float SpellChanX, SpellChanY;
         // the last team signal this hero called and when (Signals.cs; NaN = never)

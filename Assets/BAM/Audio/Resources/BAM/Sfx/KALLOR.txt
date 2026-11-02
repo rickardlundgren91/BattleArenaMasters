@@ -21,3 +21,4 @@ Rickard's own 2026-10-30 23:25 CET (ElevenLabs, "short energetic speed boost" ta
 TowerImpact = Rickard's own clip 2026-11-02, cut to 0.34 s (the tower hitting you, O-036)
 Knut's hook, Rickard's own 2026-11-02 (ElevenLabs; trimmed, EQ'd for phone speakers (low shelf -5 dB, +6 dB at 2.2 kHz, soft clip), faded, peak about -2 dB; raw files in bam-work/knut-hook/ljud): KnutAnchorHook (replaces clink, O-044) | KnutChain (O-045) | KnutHookLand (O-046)
 TyraBolt (Rickard's own 2026-11-02, ElevenLabs, O-048): Pinpoint Bolt's IMPACT on whatever it hits (Rickard 03:51 CET: at the release it sounded after a point-blank hit). Cut from his clip: the thwack from its first transient (0.425 s) + 0.45 s of the icy crackle, 0.78 s, peak -1 dB. The release plays TyraRelease again
+SpecialWarn = Rickard's own clip 2026-11-02 (delivered 15:33 UTC): the 0.3 s warning before every tapped special lands (Rules.SpecialTelegraph)

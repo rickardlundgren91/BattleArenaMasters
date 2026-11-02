@@ -373,7 +373,7 @@ namespace BAM.Sim
                 }
                 if (u.Kind == UnitKind.Hero)
                 {
-                    if (!u.IsClone) { UpdateSpecial(u, dt); SpellTick(u); }
+                    if (!u.IsClone) { TelegraphTick(u); UpdateSpecial(u, dt); SpellTick(u); }
                     if (!u.InFight(Time) && !u.IsClone)
                     {
                         u.RegenT += dt;

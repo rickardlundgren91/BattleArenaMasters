@@ -724,6 +724,16 @@ namespace BAM.Game
                     if ((HeroId)e.Kind == HeroId.Hilde) LobGhost(a, Coords.World(e.X, e.Y), e.Big ? ProjKind.HildeKeg : ProjKind.HildeBurst, e.Big ? 0.4f : 0.3f);
                     break;
                 }
+                case EventType.Telegraph:
+                {
+                    // a tapped special's warning (Rules.SpecialTelegraph): the hero flashes and a ring closes in on it while the
+                    // rules' red warning of the special's shape lies on the ground; a hidden caster in a bush stays hidden
+                    var a = e.A;
+                    if (a == null || !m.IsVisibleTo(a, Mine)) break;
+                    ArtKit.PlayCastWarn(Coords.Of(a), Side(a.Team), e.Kind, e.V);
+                    Sound(SfxId.SpecialWarn, a, a.Team == Mine ? 0.6f : 1f); // silent until Rickard's own clip SpecialWarn.mp3 exists (O-049)
+                    break;
+                }
                 case EventType.Interrupt:
                     // the cut swing or cast stops in the picture too (BONK-01/CHAINMAP-03); only a stun cuts the auto attack
                     if (e.A != null) { BamAudio.PlayAt(SfxId.Stunned, Coords.Of(e.A)); V(e.A)?.Interrupt(e.A.Has(St.Stun)); }

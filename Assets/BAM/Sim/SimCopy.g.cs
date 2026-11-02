@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "918b7df3780c0d04";
+            Generated = true; GeneratedHash = "faecdd3beef2da0f";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -311,6 +311,7 @@ namespace BAM.Sim
             SpecialDeniedAt = __s.SpecialDeniedAt;
             SimMirror.Arr(Stars, __s.Stars);
             State = __s.State;
+            Telegraph = __s.Telegraph;
             Ticks = __s.Ticks;
             Time = __s.Time;
             __m.ArrMap(Towers, __s.Towers);
@@ -344,6 +345,7 @@ namespace BAM.Sim
             __m.ListMap(spBuf, __s.spBuf);
             SimMirror.List(spawns, __s.spawns);
             __m.ListMap(tapBuf, __s.tapBuf);
+            teleFire = __s.teleFire;
             timeD = __s.timeD;
             timeSet = __s.timeSet;
             __m.ListMap(tmpBuf, __s.tmpBuf);
@@ -646,6 +648,11 @@ namespace BAM.Sim
             Target = __m.Map(__s.Target);
             TargetT = __s.TargetT;
             Team = __s.Team;
+            TeleAng = __s.TeleAng;
+            TeleAt = __s.TeleAt;
+            TeleK = __s.TeleK;
+            TeleX = __s.TeleX;
+            TeleY = __s.TeleY;
             TiktaBonusCast = __s.TiktaBonusCast;
             TiktaCastId = __s.TiktaCastId;
             TowerDeaths = __s.TowerDeaths;

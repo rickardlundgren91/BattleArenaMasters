@@ -680,6 +680,22 @@ namespace BAM.Art
             Sparks(at + Vector3.up * 0.6f, 8, new Color32(255, 245, 209, 255), 0.1f, 2.5f, 0.2f, 1.2f);
         }
 
+        /// <summary>A tapped special's warning on the caster (ArtKit.PlayCastWarn): a white-hot flash at the chest, Rickard's telegraph
+        /// ring closing in from 1.4 tiles round the feet to the body over the warning (red on an enemy, white on ours) and a spray of
+        /// sparks in the hero's own colour. No new picture: the ring is tx_fx_telegraph_ring, as Blast's and Bram's warnings.</summary>
+        public static void CastWarn(Vector3 at, int team, int hero, float time)
+        {
+            if (!teleLoaded) { teleLoaded = true; teleTex = RickardFx.Load("tx_fx_telegraph_ring"); }
+            bool foe = team == 1;
+            Color edge = foe ? new Color(1f, 0.16f, 0.12f, 1f) : new Color(1f, 1f, 1f, 0.8f);
+            const float r = 1.4f;
+            if (teleTex != null) SpawnTele(at, r * 2.255f, 0.35f * 2.255f, edge, time, true);
+            else { Spawn(Shapes.RingMesh(0.85f, Pal.White), at, r, 0.35f, edge, time, true, 0); live[live.Count - 1].Linear = true; }
+            Flash(at + Vector3.up * 0.8f, 0.2f, 0.95f, foe ? new Color(1f, 0.55f, 0.45f, 1f) : new Color(1f, 0.97f, 0.88f, 0.9f), 0.16f);
+            Color32 spark = hero >= 0 && hero < heroMain.Length ? heroMain[hero] : C(Pal.TeamLight(team));
+            Sparks(at + Vector3.up * 0.8f, 10, spark, 0.12f, 3f, 0.25f, 1.3f);
+        }
+
         /// <summary>Bram's Anvil Drop warning (ArtKit.PlayAnvilWarn), on top of the rules' red circle: his forge gold on the edge for
         /// the whole fall and a second ring closing in from the edge to the middle, so where and when it lands reads at a glance.</summary>
         public static void AnvilWarn(Vector3 at, float radius, float fall)

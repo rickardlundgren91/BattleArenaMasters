@@ -506,6 +506,15 @@ namespace BAM.Art
             Fx.ChainWarn(at, Mathf.Max(0.1f, radius), Mathf.Max(0.05f, fuse));
         }
 
+        /// <summary>A hero's tapped special in its warning (Sim EventType.Telegraph, Rules.SpecialTelegraph): a bright flash on the
+        /// hero and Rickard's telegraph ring closing in on its feet over the warning, strong red on an enemy, white on our side, so
+        /// who is about to fire reads at a glance. hero = HeroId for its colour in the sparks (-1 none).</summary>
+        public static void PlayCastWarn(Vector3 at, int team, int hero, float time)
+        {
+            if (!ready) return;
+            Fx.CastWarn(at, team == 1 ? 1 : 0, hero, Mathf.Max(0.05f, time));
+        }
+
         /// <summary>Bram's Anvil Drop on its way down: a forge-gold edge on the radius and a ring closing in to the middle as it lands.</summary>
         public static void PlayAnvilWarn(Vector3 at, float radius, float fall)
         {

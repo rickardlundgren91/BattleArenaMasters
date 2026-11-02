@@ -72,7 +72,7 @@ namespace BAM.Sim
             }
             // Ground Slam: only with an enemy hero or minion in reach
             float sr = OneTap ? BonkS.SlamRadiusOneTap : BonkS.SlamRadius;
-            if (EnemiesInRange(h, sr, Pick.HeroOrMinion, true, spBuf).Count == 0) return false;
+            if (!teleFire && EnemiesInRange(h, sr, Pick.HeroOrMinion, true, spBuf).Count == 0) return false; // after its warning it goes off anyway (Telegraph.cs)
             var s = NewProj(ProjMode.Slam, h, h.X, h.Y);
             s.Kind = ProjKind.BonkSlam; s.T = -BonkS.SlamWindup; s.Dur = BonkS.SlamWindup; s.Radius = sr; s.Dmg = dmg * (OneTap ? BonkS.SlamCoeffOneTap : BonkS.SlamCoeff);
             WarnCircle(h, h.X, h.Y, sr, BonkS.SlamWindup);

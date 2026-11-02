@@ -47,5 +47,8 @@ namespace BAM.Audio
         KnutChain, KnutHookLand,
         // Tyra's Pinpoint Bolt (drag) landing on its target: Rickard's own clip 2026-11-02 (O-048), its impact since 2026-11-02 03:51 CET
         TyraBolt,
+        // a hero taps its special and the warning starts (Rules.SpecialTelegraph, 2026-11-02): a short sharp wind-up cue so a player hears
+        // that a special is coming, before it lands. Silent until Rickard's own clip SpecialWarn.mp3 is in Resources/BAM/Sfx (O-049)
+        SpecialWarn,
     }
 }

@@ -90,6 +90,13 @@ namespace BAM.Sim
                 // "man ska känna sig mäktig"); paid for with 6 hits to charge instead of 3 and 240/38 hp instead of 300/50 (Hard bots
                 // 2026-11-02: 58.5 % wins, 54 % before the one-tap change; the old line above stays for taking it back)
                 var b = Heroes[(int)HeroId.Bonk]; b.MaxCharge = 6; b.Hp = 240; b.HpGrowth = 38;
+                if (Rules.SpecialTelegraph && !Rules.TelegraphTopUp)
+                {   // the warning before every tapped special (2026-11-02) moved the balance without touching any effect: Bram's anvil
+                    // and Tikta's needles are dodged more, Bonk is caught less (Hard bots 1600 matches: Bonk 52.6 -> 62.8 %, Bram 55.2 -> 40.2,
+                    // Tikta 49.7 -> 43.7). Paid back in how often, never in how strong (Rickard's rule): Bonk 7 hits to charge instead of
+                    // 6, Bram 6 instead of 8, Tikta 8 instead of 10 (Hard then: Bonk 55.3, Bram 45.4, Tikta 47.1; Normal top Moa 62.3, was 60.6)
+                    b.MaxCharge = 7; Heroes[(int)HeroId.Bram].MaxCharge = 6; Heroes[(int)HeroId.Tikta].MaxCharge = 8;
+                }
             }
         }
 
@@ -152,6 +159,18 @@ namespace BAM.Sim
         /// OneTap.cs). false = the old tap + drag specials, HUD split, aim ring, cancel X and tutorial drag step, all kept for at
         /// least two versions so the change can be taken back. Not const, so both code paths stay compiled.</summary>
         public static readonly bool OneTapSpecial = true;
+        /// <summary>A tapped special warns before it goes (Rickard's tester 2026-11-02: "the reaction window is very short once an
+        /// ultimate is activated ... some ultimates seem to be guaranteed hits as long as the target is within range"). The tap locks
+        /// the aim at once (the line's direction, the placed form's spot), the hero stands and flashes, and a red warning of the real
+        /// shape shows for TelegraphTime before the special's own cast starts (Match.StartTelegraph in Telegraph.cs). Nothing homes
+        /// after the tap: Fenn's thrown wolf lands on the locked spot. Moa's shield on a friend waits as long (flash, no red warning). Only with
+        /// OneTapSpecial; false = the special goes at the tap, as protocol 40. Same for players and bots.</summary>
+        public static readonly bool SpecialTelegraph = true;
+        public const float TelegraphTime = 0.3f;
+        /// <summary>true = the warning only where a special had none (Knut's hook, Tikta's needles, Fenn's wolf, Moa): Tyra's draw,
+        /// Bram's anvil, Blast's fuse and Bonk's wind-up already warn with their aim fixed, so they keep their own time and only get
+        /// the flash. false = every special waits TelegraphTime more.</summary>
+        public static readonly bool TelegraphTopUp = false;
         public const float Countdown = 5;          // the match clock runs from -5 to 0 before play
         public const float StartSpeedTime = 3, StartSpeedPct = 0.4f; // every hero runs +40 % for the first 3 s (was +100 % for 5 s; Rickard 2026-10-29: too much)
         public const float WaveFirst = 3, WavePeriod = 16, WaveStagger = 0.2f;

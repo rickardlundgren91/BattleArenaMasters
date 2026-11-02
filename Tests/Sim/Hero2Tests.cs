@@ -17,6 +17,7 @@ namespace BAM.Sim
             for (int i = 0; i < m.Units.Count; i++) { var u = m.Units[i]; if (u.Kind == UnitKind.Minion) u.Alive = false; u.ClearStatuses(); }
             m.State = MatchState.Play; m.Time = 10; // past the countdown
             m.Events.Clear();
+            m.Telegraph = false; // the forms' own rules; the warning before a tapped special has its own checks (TelegraphTests.cs)
             return m;
         }
         Unit Foe(HeroId h) { for (int i = 0; i < Heroes.Count; i++) if (Heroes[i].Hero == h && Heroes[i].Team != Player.Team) return Heroes[i]; return null; }
@@ -230,7 +231,7 @@ namespace BAM.Sim
 
         public static int RunHero2Tests()
         {
-            Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); TowerStopChecks(); TowerLockChecks();
+            Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); TowerStopChecks(); TowerLockChecks(); TelegraphChecks();
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;
         }

@@ -71,6 +71,7 @@ namespace BAM.Sim
             if (u.Kind != UnitKind.Hero || !u.Alive) return;
             bool any = false, cut = false;
             if (u.Needles > 0) { u.Needles = 0; any = true; }
+            if (CancelTelegraph(u)) any = cut = true; // a tapped special still in its warning (Telegraph.cs): no cast, the warning goes
             for (int i = 0; i < Projs.Count; i++)
             {
                 var p = Projs[i];
@@ -213,7 +214,7 @@ namespace BAM.Sim
         {
             u.Alive = true; u.Hp = u.MaxHp; u.X = u.PX = u.SpawnX; u.Y = u.PY = u.SpawnY;
             if (!Config.HeroTest) AddStatus(u, St.Invulnerable, Rules.RespawnInvulnerable); // HERO TEST: hittable at once (old herotestTick)
-            u.AtkTimer = 0; u.RespawnT = 0; u.MoInit = false; u.SpellChanEnd = -1;
+            u.AtkTimer = 0; u.RespawnT = 0; u.MoInit = false; u.SpellChanEnd = -1; u.TeleAt = -1;
             if (u.Bot != null) u.Bot.Reset(true);
             Emit(EventType.Respawn, u, null);
         }

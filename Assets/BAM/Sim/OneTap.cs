@@ -80,20 +80,21 @@ namespace BAM.Sim
         /// no random roll) when it cannot fire now.</summary>
         public bool TryTapSpecial(Unit h)
         {
-            if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play) return false;
+            if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
             Unit t;
             if (h.Hero == HeroId.Moa) t = TapAlly(h) ?? h;
             else
             {
                 var l = TapTargets(h);
                 if (l.Count == 0) return false;
-                if (h.Hero == HeroId.Bonk) return TryCastSpecial(h, float.NaN, 0); // the big Ground Slam round him: no aim, no roll
+                if (h.Hero == HeroId.Bonk) return !TeleOn ? TryCastSpecial(h, float.NaN, 0) : TeleTime(h.Hero) > 0 ? StartTelegraph(h, null, float.NaN, 0) : CastWithFlash(h, null, float.NaN, 0); // the big Ground Slam round him: no aim, no roll
                 t = PassesMinions(h.Hero) ? HeroFirstPick(l) : PickRandom(l);
             }
             float dx = t.X - h.X, dy = t.Y - h.Y, d = SimMath.Hypot(dx, dy);
             float ang = d > 1e-4f ? SimMath.Atan2(dy, dx) : h.Facing;
             float reach = Math.Max(0.01f, h.HDef.DragReach);
             float k = SimMath.Clamp(d / reach, 0, 1); // placed forms (Bram, Fenn, Blast, Moa) land on the target's spot
+            if (TeleOn) return TeleTime(h.Hero) > 0 ? StartTelegraph(h, t, ang, k) : CastWithFlash(h, t, ang, k); // the warning first, aim locked now (Telegraph.cs)
             return TryCastSpecial(h, ang, k);
         }
     }
