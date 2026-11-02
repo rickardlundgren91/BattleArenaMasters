@@ -51,6 +51,7 @@ namespace BAM.Art
             // bushes), baked offline exactly like the old game painted it (bam-work/art/ground/bake.py); only for that map's size
             Texture2D painted = !info.Island && w == 15 && h == 35 ? Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_ArenaGround_v1_2") : null;
             if (painted != null) PaintedGround(root, painted, w, h);
+            if (painted != null) TowerRunes.Build(root);
             Mesh pillarM = Props.Mesh("wallkit_pillar"), beamM = Props.Mesh("wallkit_straight");
             bool kit = pillarM != null && beamM != null && !info.Island;
             Texture2D rockPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_Pillar_C");
@@ -72,8 +73,9 @@ namespace BAM.Art
 
                     if (code == TWall && !inRock && kit)
                     {
-                        // Rickard's Meshy wall kit stands here (WallKit below); only the contact shadow on the ground
-                        marks.Color(Pal.ShadowSoft).Face(new Vector3(x0 - 0.2f, 0.012f, z0 - 0.2f), new Vector3(x0 - 0.2f, 0.012f, z1 + 0.2f), new Vector3(x1 + 0.2f, 0.012f, z1 + 0.2f), new Vector3(x1 + 0.2f, 0.012f, z0 - 0.2f));
+                        // Rickard's Meshy wall kit stands here (WallKit below); only the contact shadow on the ground, which the BAM
+                        // arena's painted ground already carries, soft (bam-work/art/karta/detaljer/bake_skuggor.py, 2026-11-02)
+                        if (painted == null) marks.Color(Pal.ShadowSoft).Face(new Vector3(x0 - 0.2f, 0.012f, z0 - 0.2f), new Vector3(x0 - 0.2f, 0.012f, z1 + 0.2f), new Vector3(x1 + 0.2f, 0.012f, z1 + 0.2f), new Vector3(x1 + 0.2f, 0.012f, z0 - 0.2f));
                     }
                     else if (code == TWall && !inRock)
                     {
@@ -630,6 +632,85 @@ namespace BAM.Art
 
     /// <summary>On the arena root: the meshes and materials Arena and Island made for this one arena. Destroying a GameObject
     /// leaves them alive (they are DontSave), so every match and the tutorial's bridge rebuild would keep the old arena's.</summary>
+    /// <summary>
+    /// The carved runes round each tower's plaza light up briefly in the tower's team colour when that tower fires, and only
+    /// then (Rickard 2026-11-01: glowing runes all the time distracted from the fight). Two additive quads over the painted
+    /// ground, one per plaza, with the runes cut out of the ground picture (bam-work/art/karta/detaljer/make_runmask.py);
+    /// each is switched off while dark, so it costs nothing between shots.
+    /// </summary>
+    sealed class TowerRunes : MonoBehaviour
+    {
+        static TowerRunes live;
+        static readonly string[] Pics = { "T_BAM_TowerRunes_Top", "T_BAM_TowerRunes_Bottom" };
+        // each picture is 448 px (7 tiles at 64 px a tile) round its plaza's centre in the 960 x 2240 ground picture: (480, 361) and (480, 1889)
+        static readonly Vector2[] Centre = { new Vector2(7.5f, 35f - 361f / 64f), new Vector2(7.5f, 35f - 1889f / 64f) };
+        const float Size = 7f, Peak = 0.8f, Rise = 0.06f, Fade = 0.55f;
+        readonly Renderer[] quad = new Renderer[2];
+        readonly Material[] mat = new Material[2];
+        readonly float[] age = { 99f, 99f };
+        readonly Color[] tint = new Color[2];
+
+        internal static void Build(GameObject root)
+        {
+            TowerRunes tr = null;
+            for (int i = 0; i < 2; i++)
+            {
+                Texture2D t = Resources.Load<Texture2D>("BAMArt/Arena/" + Pics[i]);
+                if (t == null) continue;
+                if (tr == null) tr = root.AddComponent<TowerRunes>();
+                Vector2 c = Centre[i];
+                float s = Size * 0.5f, y = 0.014f;
+                var mesh = new Mesh { name = Pics[i] };
+                mesh.vertices = new[] { new Vector3(c.x - s, y, c.y - s), new Vector3(c.x - s, y, c.y + s), new Vector3(c.x + s, y, c.y + s), new Vector3(c.x + s, y, c.y - s) };
+                mesh.uv = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+                mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+                mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+                mesh.RecalculateBounds();
+                var m = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                m.SetTexture(ArtMaterials.BaseMap, t);
+                m.mainTexture = t;
+                m.SetColor(ArtMaterials.BaseColor, Color.black);
+                GameObject go = Arena.Add(root, Pics[i], mesh, m, false);
+                go.isStatic = false;
+                tr.quad[i] = go.GetComponent<Renderer>();
+                tr.quad[i].enabled = false;
+                tr.mat[i] = m;
+            }
+            if (tr != null) { tr.enabled = false; live = tr; }
+        }
+
+        /// <summary>The tower at <paramref name="at"/> fired: its plaza's runes flash in <paramref name="c"/>.</summary>
+        internal static void Pulse(Vector3 at, Color c)
+        {
+            if (live == null) return;
+            int i = Mathf.Abs(at.z - Centre[0].y) <= Mathf.Abs(at.z - Centre[1].y) ? 0 : 1;
+            if (live.quad[i] == null) return;
+            live.age[i] = 0f;
+            live.tint[i] = c;
+            live.quad[i].enabled = true;
+            live.enabled = true;
+        }
+
+        void Update()
+        {
+            bool any = false;
+            for (int i = 0; i < 2; i++)
+            {
+                if (quad[i] == null || !quad[i].enabled) continue;
+                age[i] += Time.deltaTime;
+                if (age[i] >= Rise + Fade) { quad[i].enabled = false; continue; }
+                float k = age[i] < Rise ? age[i] / Rise : 1f - (age[i] - Rise) / Fade;
+                k = Mathf.Clamp01(k) * Peak;
+                Color c = tint[i];
+                mat[i].SetColor(ArtMaterials.BaseColor, new Color(c.r * k, c.g * k, c.b * k, 1f));
+                any = true;
+            }
+            if (!any) enabled = false;
+        }
+
+        void OnDestroy() { if (live == this) live = null; }
+    }
+
     sealed class ArenaOwned : MonoBehaviour
     {
         internal readonly System.Collections.Generic.List<Object> Items = new System.Collections.Generic.List<Object>(128);

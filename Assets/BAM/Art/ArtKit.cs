@@ -439,6 +439,9 @@ namespace BAM.Art
         }
 
         /// <summary>One-shot effect at a world position. size scales it (1 = default for that kind).</summary>
+        /// <summary>A tower fired: the carved runes round its plaza glow briefly in its team's light (Rickard 2026-11-02).</summary>
+        public static void TowerFired(Vector3 tower, int team) => TowerRunes.Pulse(tower, Pal.Get(Pal.TeamLight(team)));
+
         public static void PlayFx(FxKind kind, Vector3 position, float size = 1f, int team = 0, int hero = -1)
         {
             if (!ready) return;

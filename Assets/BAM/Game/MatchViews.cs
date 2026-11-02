@@ -574,6 +574,7 @@ namespace BAM.Game
                     // Bonk's club has no shot: it lands e.V s later as an Explosion of ProjKind.BonkClub (cracks and dust)
                     if ((ProjKind)e.Kind == ProjKind.BonkClub) { if (heard) Sound(SfxId.BonkSlamWindup, a, e.Big ? 0.8f : 0.55f); break; }
                     pending.Add(new Pending { A = a.Serial, Src = a, Tgt = e.B, Kind = (ProjKind)e.Kind });
+                    if (a.Kind == UnitKind.Tower) ArtKit.TowerFired(Coords.Of(a), Side(a.Team)); // its plaza's runes flash
                     if (!heard) break;
                     // a tower's shot is heard only when it aims at you (Speltest), sharper from its third shot in a row on you, as its
                     // damage ramps up (Speltest towerHot at towerStreak 2; the rules' TowerRamp resets after TowerRampReset)
