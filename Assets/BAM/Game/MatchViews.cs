@@ -932,7 +932,7 @@ namespace BAM.Game
                 if (volleySoundStep.TryGetValue(srcSerial, out int at) && at == step) return; // five arrows, one twang
                 volleySoundStep[srcSerial] = step;
             }
-            Sound(SfxId.TyraRelease, a, 1f);
+            Sound(mode == ProjMode.Bolt ? SfxId.TyraBolt : SfxId.TyraRelease, a, 1f); // the bolt's own crack and whistle (O-048)
         }
 
         // the five volley arrows leave the bow on one tick: one gold pop at the bow for them (Skill Visibility 2.0), as the twang;
