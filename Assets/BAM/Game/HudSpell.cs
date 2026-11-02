@@ -103,7 +103,8 @@ namespace BAM.Game
 
         // straight above the SPECIAL's centre, a 0.03 W gap over its rim (Rickard 2026-11-02 "ha blinken mitt över ankaret"; the gap was
         // 0.02 W, about 1.4 mm on a phone, then "liiite längre upp ... så man inte råkar trycka på båda": 0.06 W (4 mm) was too far, Rickard: "2mm lagom": now about 2 mm); the
-        // heart, ATTACK and DEFEND moved further to the outer side to make room (HeartCentre in HudEmote.cs).
+        // heart, ATTACK and DEFEND moved further to the outer side to make room; later that day the heart went under the glass
+        // tool at the top right and ATTACK and DEFEND into a row above this button, 7.6 mm each (HudEmote.cs, proposal B).
         // Was beside the heart on its inner side (2026-11-02), and before that SPELL_BTN: 1.58 SPECIAL radii to the inner side
         // of the SPECIAL's centre, 0.7 radii lower.
         float SpellGap => SafeW * 0.03f;

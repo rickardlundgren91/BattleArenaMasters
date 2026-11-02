@@ -10,13 +10,16 @@ namespace BAM.Game
 {
     /// <summary>
     /// The old game's emotes (ABC2 Hud.cs playerEmote and drawGlassHeart, HudEmote.cs; Rickard 2026-10-26 "vi ska ha emotes"):
-    /// a small glass heart button up and to the right of the SPECIAL. A short tap sends the heart; holding it (0.22 s, or moving the
-    /// finger) opens a wheel of emotes above the button, and letting go on one sends it (anywhere else sends nothing). The emote
+    /// a glass heart button under the glass tool at the top right edge (7.6 mm, reached with a regrip; until 2026-11-02 it sat up
+    /// and to the right of the SPECIAL, 5.2 mm with 1 mm gaps in the thumb's zone, UI/HUD analysis). A short tap sends the heart;
+    /// holding it (0.22 s, or moving the finger) opens a wheel of emotes below the button, and letting go on one sends it (anywhere
+    /// else sends nothing). The emote
     /// shows above the hero for 2 s as a white bubble (the heart) or a white pill with the word, and the button waits 2 s before
     /// the next one. A random other hero answers with a heart 60 % of the time, 0.6 to 1.6 s later. The heart and GG are seen by
-    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. Above the heart sit the
-    /// two team signal buttons (old HudSignal.cs; Rickard 2026-10-29 "Attack och defend", then own buttons rather than wheel
-    /// slots): ATTACK (red, crossed swords) and DEFEND (blue, shield). A tap goes to the rules through PlayerInput (Signals.cs),
+    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. Above the spell button sit
+    /// the two team signal buttons in a row, 7.6 mm each, ATTACK on the thumb's side (old HudSignal.cs; Rickard 2026-10-29 "Attack
+    /// och defend", then own buttons rather than wheel slots): ATTACK (red, crossed swords) and DEFEND (blue, shield). A tap goes
+    /// to the rules through PlayerInput (Signals.cs),
     /// so bot teammates follow it and online teammates see it; the word shows above the hero for 2 s to its own team. Not shown
     /// without a teammate.
     /// </summary>
@@ -24,6 +27,9 @@ namespace BAM.Game
     {
         static readonly string[] Emotes = { "", "GG", "Nice!", "Thanks!", "Haha", "Oops", "Help!", "Wow!" }; // 0 = the heart (drawn)
         const float EmoteTime = 2f, WheelOpenTime = 0.22f;
+        // the heart and the signal buttons: 0.11 W across = 7.6 mm on a 68 mm wide phone (Android's 48 dp), 3 mm between the squares
+        // (UI/HUD analysis 2026-11-02, proposal B; they were 0.076 W = 5.2 mm with 1 to 1.8 mm gaps)
+        const float BigButtonR = 0.055f, ButtonGap = 0.044f;
         static readonly Color BubbleWhite = Hex(0xf4f4f7), BubbleInk = Hex(0x2b2350), HeartRed = Hex(0xe8243c);
         static readonly string[] Signals = { "ATTACK", "DEFEND" }; // wheel slots Emotes.Length + 0 and + 1 (TeamSignal 1 and 2)
         static readonly Color SignalAttack = Hex(0xc8323c), SignalDefend = Hex(0x2a6fd0);
@@ -88,8 +94,8 @@ namespace BAM.Game
             var heart = UiKit.Fill(heartRoot, HeartRed, HeartSprite);
             heart.preserveAspect = true;
             UiKit.Stretch(heart.rectTransform);
-            heart.rectTransform.anchorMin = new Vector2(0.25f, 0.27f);
-            heart.rectTransform.anchorMax = new Vector2(0.75f, 0.77f);
+            heart.rectTransform.anchorMin = new Vector2(0.22f, 0.24f); // a bit more of the bigger button (0.25 to 0.75 before)
+            heart.rectTransform.anchorMax = new Vector2(0.78f, 0.80f);
             heartButton = heartRoot.gameObject.AddComponent<EmoteButton>();
             heartButton.Down = HeartDown;
             heartButton.Move = HeartMove;
@@ -239,23 +245,38 @@ namespace BAM.Game
         float WheelR => SafeW * 0.21f;
         float SlotR => SafeW * 0.065f;
 
-        // the heart: up and to the right of the SPECIAL, where the old first item button's arc put it (mirrored left-handed);
-        // 0.13 W to the side since 2026-11-02 (was 0.105), to make room for the spell button straight above the SPECIAL
+        // the heart: under the glass tool (score tab, or pause in the guided match) at the top right edge, its right edge level with
+        // the tool's plate and 3 mm below it, for both hands: an emote is rare and never in a hurry, so it may cost a regrip, and
+        // MLBB and Brawl Stars keep theirs at the edge too. Until 2026-11-02 it sat up and to the right of the SPECIAL (0.13 W to
+        // the side, 0.27 W up), where it took the thumb's room from the spell and the signals.
         Vector2 HeartCentre()
         {
-            float W = SafeW;
-            Vector3 c = safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
-            float side = leftHanded ? -1f : 1f;
-            return new Vector2(c.x + side * 0.13f * W, c.y + 0.27f * W);
+            float W = SafeW, r = W * BigButtonR;
+            Rect s = safe.rect;
+            Vector2 ap = pauseRoot.anchoredPosition, sz = pauseRoot.sizeDelta; // anchored at the safe area's top right (HudCenter.cs)
+            float right = s.xMax + ap.x, bottom = s.yMax + ap.y - sz.y;
+            return new Vector2(right - r, bottom - W * ButtonGap - r);
         }
 
-        // the wheel opens above the button, kept on screen, so the thumb and the SPECIAL never cover it
+        // the signal buttons: a row above the spell button, 3 mm up from its square and 3 mm apart, ATTACK (k = 0) on the thumb's
+        // side; the outer one's edge ends 5.5 mm from the screen's edge, both within the thumb's reach (48 mm up)
+        Vector2 SignalCentre(int k)
+        {
+            float W = SafeW, r = W * BigButtonR;
+            Vector2 b = SpellCentre();
+            float side = (leftHanded ? -1f : 1f) * (k == 0 ? 1f : -1f);
+            return new Vector2(b.x + side * (r + W * ButtonGap * 0.5f), b.y + SpellR + W * ButtonGap + r);
+        }
+
+        // the wheel opens below the button now that the heart sits at the top (above it while the heart sat by the SPECIAL), kept
+        // on screen, so the thumb never covers it
         Vector2 WheelCentre()
         {
             Rect r = HudArea();
             Vector2 e = HeartCentre();
             float mrg = WheelR + SlotR * 1.25f;
-            return new Vector2(Mathf.Clamp(e.x, r.xMin + mrg, r.xMax - mrg), Mathf.Clamp(e.y + mrg * 1.1f, r.yMin + mrg, r.yMax - mrg));
+            float dir = e.y > r.center.y ? -1f : 1f;
+            return new Vector2(Mathf.Clamp(e.x, r.xMin + mrg, r.xMax - mrg), Mathf.Clamp(e.y + dir * mrg * 1.1f, r.yMin + mrg, r.yMax - mrg));
         }
 
         // the whole HUD (wider than the safe area on a foldable or tablet, where the SPECIAL sits at the screen's edge), in the
@@ -282,21 +303,22 @@ namespace BAM.Game
             if (!button || m.State != MatchState.Play) { holding = false; wheelPick = -1; }
             if (button)
             {
-                float r = SafeW * 0.038f; // as big as ATTACK and DEFEND (Rickard 2026-11-02; was 0.034)
+                float r = SafeW * BigButtonR; // 7.6 mm, as ATTACK and DEFEND (0.038 W = 5.2 mm until 2026-11-02)
                 heartRoot.sizeDelta = new Vector2(2f * r, 2f * r);
                 heartRoot.localPosition = HeartCentre(); // all of the button's and the wheel's places are local to the safe area's pivot
                 heartGroup.alpha = EmoteReady ? 1f : 0.5f;
             }
 
-            // the signal buttons: above the heart, the lower one ATTACK (SIGNAL_BTN: W * (0.1 + 0.09 i) up, radius W * 0.038)
+            // the signal buttons: a row above the spell button, ATTACK (k = 0) on the thumb's side (SignalCentre; until 2026-11-02
+            // stacked above the heart, SIGNAL_BTN: W * (0.1 + 0.09 k) up, radius W * 0.038)
             bool sigs = button && SignalsShown;
             for (int k = 0; k < 2; k++)
             {
                 if (sigRoot[k].gameObject.activeSelf != sigs) sigRoot[k].gameObject.SetActive(sigs);
                 if (!sigs) continue;
-                float r = SafeW * 0.038f;
+                float r = SafeW * BigButtonR;
                 sigRoot[k].sizeDelta = new Vector2(2f * r, 2f * r);
-                sigRoot[k].localPosition = HeartCentre() + new Vector2(0f, SafeW * (0.1f + 0.09f * k));
+                sigRoot[k].localPosition = SignalCentre(k);
                 sigGroup[k].alpha = SignalReady ? 0.9f : 0.45f;
             }
 
