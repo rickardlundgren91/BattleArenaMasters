@@ -933,6 +933,7 @@ namespace BAM.Art
                 for (int i = 0; i < rends.Length; i++) rends[i].enabled = on;
             }
             decalR.enabled = on && !dead && !Preview;
+            if (towerGlow != null) towerGlow.gameObject.SetActive(on && !dead && !Preview);
             bar.Visible = vis > 0.01f && !dead && !Preview;
             status.Visible = vis > 0.01f && !dead && !Preview;
             if (!on) return;
@@ -2087,6 +2088,45 @@ namespace BAM.Art
             bones[Models.TargetBoard].localRotation = Quaternion.Euler(wob, 0f, Mathf.Sin(idleT * 1.3f) * 1.5f);
         }
 
+        // a soft halo round the Tripo tower's crystal in the team colour (Rickard 2026-11-02: the model's crystal looked flat without
+        // the painted glow of his concept): it breathes slowly and flares while the tower fires. Only for the prop tower, whose
+        // crystal is in the model; the code-built tower has its own crystals on the TowerCrystal bone.
+        Transform towerGlow;
+        Material towerGlowMat;
+
+        void TowerGlow(float pulse)
+        {
+            if (def.PropMesh == null || def.Kind != RigKind.Tower) return;
+            bool show = !dead && renderersOn && !Preview;
+            if (towerGlow == null)
+            {
+                if (!show) return;
+                Texture2D t = RickardFx.Load("tx_fx_glow_soft");
+                if (t == null) return;
+                towerGlowMat = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                towerGlowMat.SetTexture(ArtMaterials.BaseMap, t);
+                towerGlowMat.mainTexture = t;
+                towerGlowMat.renderQueue = 3060;
+                var go = new GameObject("CrystalGlow");
+                towerGlow = go.transform;
+                towerGlow.SetParent(transform, false);
+                go.AddComponent<MeshFilter>().sharedMesh = FxAtlas.FullQuad();
+                var r = go.AddComponent<MeshRenderer>();
+                r.sharedMaterial = towerGlowMat;
+                r.shadowCastingMode = ShadowCastingMode.Off;
+                r.receiveShadows = false;
+            }
+            if (towerGlow.gameObject.activeSelf != show) towerGlow.gameObject.SetActive(show);
+            if (!show) return;
+            // the crystal's middle, a little under the bone (the bone sits near its tip)
+            towerGlow.position = transform.position + new Vector3(0f, def.Pivots[Models.TowerCrystal].y - 0.1f, 0f);
+            towerGlow.rotation = ArtDriver.CamRot * Quaternion.Euler(-90f, 0f, 0f); // the flat quad turned to face the camera
+            float sz = 1.3f + pulse * 0.8f, a = 0.42f + 0.1f * Mathf.Sin(idleT * 2.2f) + pulse * 0.9f;
+            towerGlow.localScale = new Vector3(sz, 1f, sz);
+            Color c = Pal.Get(Pal.TeamLight(Team));
+            towerGlowMat.SetColor(ArtMaterials.BaseColor, new Color(c.r * a, c.g * a, c.b * a, 1f));
+        }
+
         void PoseTower(float dt)
         {
             float pulse = 0f;
@@ -2102,6 +2142,7 @@ namespace BAM.Art
             bones[Models.TowerCrystal].localRotation = Quaternion.Euler(0f, idleT * 45f, 0f);
             float s = 1f + pulse;
             bones[Models.TowerCrystal].localScale = new Vector3(s, s, s);
+            TowerGlow(pulse);
             model.localPosition = new Vector3(Mathf.Sin(idleT * 60f) * 0.03f * recoil, 0f, 0f);
             // the old game's tower (View3DWorld.SyncTower): it rocks when hit, smokes under half health and also sparks under a quarter
             model.localRotation = Quaternion.Euler(Mathf.Sin(idleT * 18f) * 3f * recoil, 0f, Mathf.Cos(idleT * 14f) * 2f * recoil);
