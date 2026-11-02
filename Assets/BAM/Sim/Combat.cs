@@ -258,7 +258,7 @@ namespace BAM.Sim
             return 0.5f;
         }
         float TowerCoeff(Unit tw, Unit tgt) => tgt.Kind != UnitKind.Hero || Tut != null ? 1
-            : TowerLateMult(tgt) * (tgt == tw.TowerFocus ? 1 + Math.Min(Rules.TowerRampMax, Rules.TowerRamp * tw.TowerStreak) : 1);
+            : Rules.TowerVsHero * TowerLateMult(tgt) * (tgt == tw.TowerFocus ? 1 + Math.Min(Rules.TowerRampMax, Rules.TowerRamp * tw.TowerStreak) : 1);
 
         // ---------- auto attacks ----------
         void UpdateAttack(Unit u, float dt)

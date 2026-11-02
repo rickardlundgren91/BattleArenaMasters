@@ -122,7 +122,7 @@ namespace BAM.Sim
         float TowerDpsOn(Unit tw, Unit h)
         {
             float k = tw.TowerFocus == h && Now - tw.TowerShotT < Rules.TowerRampReset ? tw.TowerStreak + 1 : 0;
-            return DpsOf(tw) * M.TowerLateMult(h) * (1 + Math.Min(Rules.TowerRampMax, Rules.TowerRamp * (k + 1.5f)));
+            return DpsOf(tw) * Rules.TowerVsHero * M.TowerLateMult(h) * (1 + Math.Min(Rules.TowerRampMax, Rules.TowerRamp * (k + 1.5f)));
         }
 
         bool TowerBlocks(Unit h, float x, float y)
