@@ -16,10 +16,10 @@ namespace BAM.Game
     /// else sends nothing). The emote
     /// shows above the hero for 2 s as a white bubble (the heart) or a white pill with the word, and the button waits 2 s before
     /// the next one. A random other hero answers with a heart 60 % of the time, 0.6 to 1.6 s later. The heart and GG are seen by
-    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. Above the spell button sit
-    /// the two team signal buttons in a row, 7.6 mm each, ATTACK on the thumb's side (old HudSignal.cs; Rickard 2026-10-29 "Attack
-    /// och defend", then own buttons rather than wheel slots): ATTACK (red, crossed swords) and DEFEND (blue, shield). A tap goes
-    /// to the rules through PlayerInput (Signals.cs),
+    /// everyone, the other words only by the sender's team. Picture only: the rules never see an emote. Along the screen's edge
+    /// above the spell button sit the two team signal buttons in a column, 7.6 mm each, ATTACK lowest (old HudSignal.cs; Rickard
+    /// 2026-10-29 "Attack och defend", then own buttons rather than wheel slots): ATTACK (red, crossed swords) and DEFEND (blue,
+    /// shield). A tap goes to the rules through PlayerInput (Signals.cs),
     /// so bot teammates follow it and online teammates see it; the word shows above the hero for 2 s to its own team. Not shown
     /// without a teammate.
     /// </summary>
@@ -109,8 +109,15 @@ namespace BAM.Game
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
                 sigGroup[k] = rt.gameObject.AddComponent<CanvasGroup>();
                 var sp = UiKit.Fill(rt, atk ? SignalAttack : SignalDefend, UiKit.Circle);
-                sp.raycastTarget = true;
-                UiKit.Fill(rt, atk ? Hex(0xffb3b9) : Hex(0xb3d4ff), UiKit.CircleRing).raycastTarget = false;
+                sp.raycastTarget = true; // the whole square takes the finger (7.6 mm); the disc shows 88 % of it, 6.7 mm (B2)
+                UiKit.Stretch(sp.rectTransform);
+                sp.rectTransform.anchorMin = new Vector2(0.06f, 0.06f);
+                sp.rectTransform.anchorMax = new Vector2(0.94f, 0.94f);
+                var sr = UiKit.Fill(rt, atk ? Hex(0xffb3b9) : Hex(0xb3d4ff), UiKit.CircleRing);
+                sr.raycastTarget = false;
+                UiKit.Stretch(sr.rectTransform);
+                sr.rectTransform.anchorMin = new Vector2(0.06f, 0.06f);
+                sr.rectTransform.anchorMax = new Vector2(0.94f, 0.94f);
                 var icon = UiKit.Fill(rt, Color.white, SignalSprite(atk));
                 icon.raycastTarget = false;
                 icon.preserveAspect = true;
@@ -258,14 +265,19 @@ namespace BAM.Game
             return new Vector2(right - r, bottom - W * ButtonGap - r);
         }
 
-        // the signal buttons: a row above the spell button, 3 mm up from its square and 3 mm apart, ATTACK (k = 0) on the thumb's
-        // side; the outer one's edge ends 5.5 mm from the screen's edge, both within the thumb's reach (48 mm up)
+        // the signal buttons: a column along the screen's edge above the spell button, ATTACK (k = 0) lowest, their outer edge 1 mm
+        // from the edge like the heart's, so they cover the wall and the grass rather than the lane (Rickard 2026-11-02 "dom ligger
+        // lite i vägen för det man ser på mapen", B2; B had them in a row above the spell, 48 mm up). ATTACK sits where its disc
+        // clears the spell's by 3 mm (about 43 mm up), DEFEND 3 mm above it (about 54 mm, a small stretch for a rare button).
         Vector2 SignalCentre(int k)
         {
-            float W = SafeW, r = W * BigButtonR;
+            float W = SafeW, r = W * BigButtonR, gap = W * ButtonGap;
+            Rect a = HudArea();
+            float x = leftHanded ? a.xMin + W * 0.015f + r : a.xMax - W * 0.015f - r;
             Vector2 b = SpellCentre();
-            float side = (leftHanded ? -1f : 1f) * (k == 0 ? 1f : -1f);
-            return new Vector2(b.x + side * (r + W * ButtonGap * 0.5f), b.y + SpellR + W * ButtonGap + r);
+            float dx = Mathf.Abs(b.x - x), need = SpellR + r + gap;
+            float dy = Mathf.Sqrt(Mathf.Max(0f, need * need - dx * dx));
+            return new Vector2(x, b.y + dy + k * (2f * r + gap));
         }
 
         // the wheel opens below the button now that the heart sits at the top (above it while the heart sat by the SPECIAL), kept
@@ -319,7 +331,7 @@ namespace BAM.Game
                 float r = SafeW * BigButtonR;
                 sigRoot[k].sizeDelta = new Vector2(2f * r, 2f * r);
                 sigRoot[k].localPosition = SignalCentre(k);
-                sigGroup[k].alpha = SignalReady ? 0.9f : 0.45f;
+                sigGroup[k].alpha = SignalReady ? 0.75f : 0.35f; // 0.9 and 0.45 until B2: the map shows through them more
             }
 
             bool wheel = WheelShown;
