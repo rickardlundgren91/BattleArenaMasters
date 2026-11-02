@@ -30,7 +30,10 @@ namespace BAM.Online.Mp
         // or swiped away (Rickard 2026-11-02: "när man som host lämnar spelet tillfälligt och stänger ner det så fryser det för dom
         // andra") sends nothing, and Relay may not report it gone at all. The host pings every second and sends 60 frames a second:
         // this long without a byte from it and the guest plays on with bots (PAUSE RULE: a match with other people never stands still).
-        const float HostQuiet = 3f, HostQuietLoading = 25f; // before the first frame the host may still be loading (LoadWait 15 s)
+        // 6 s, not 3: the host's own app going to the background is told at once (Pause), so this only catches a killed app or a
+        // phone without network, and a guest's own short dead spot (lift, cell handover) must not split the match (review 2026-11-02).
+        // This phone without any network: it waits (the host makes it a bot after 8 s anyway) up to HostQuietOffline, then plays on.
+        const float HostQuiet = 6f, HostQuietOffline = 15f, HostQuietLoading = 25f; // before the first frame the host may still be loading (LoadWait 15 s)
         static float hostHeardT;
 
         public sealed class Member
@@ -381,7 +384,8 @@ namespace BAM.Online.Mp
             relay.Update();
             if (relay == null) return;
             if (!IsHost && State == Phase.Match && net != null && !net.Lockstep.Solo
-                && Time.realtimeSinceStartup - hostHeardT > (net.Lockstep.Stepped > 0 ? HostQuiet : HostQuietLoading))
+                && Time.realtimeSinceStartup - hostHeardT > (net.Lockstep.Stepped == 0 ? HostQuietLoading
+                    : Application.internetReachability == NetworkReachability.NotReachable ? HostQuietOffline : HostQuiet))
             {
                 Debug.Log("[BAM.Online] nothing from the host for " + Mathf.RoundToInt(Time.realtimeSinceStartup - hostHeardT) + " s: it is gone");
                 OnDisconnect(0);
@@ -570,6 +574,9 @@ namespace BAM.Online.Mp
                     for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }
                     int mine = r.U8();
                     if (mine <= 0 || mine >= n) return;
+                    // still playing on with bots after the host left a match (its app in the background, EXIT GAME): the host came
+                    // back and started a new one. Do not tear this phone's match down (it would count as a quit); our seat is a bot there
+                    if (net != null) { w.Begin(MpMsg.LeftMatch); relay?.Send(w); return; }
                     Begin(seed, diff, seats, mine);
                     return;
                 }
