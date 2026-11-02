@@ -307,7 +307,9 @@ namespace BAM.Sim
                 AutoAttack(u, tgt); u.AtkTimer = 0;
                 if (u.Kind != UnitKind.Tower) { u.Target = tgt; u.TargetT = Time; }
             }
-            else if (u.Kind == UnitKind.Hero) u.AtkTimer = 0; // a hero's swing runs out; others hold it ready
+            // a hero's ready swing waits Rules.AutoHold s for a target before it runs out (ABC feel, tester 2026-11-02: an enemy
+            // just slipping out or stepping in at the ring's edge still gets the shot); others hold it ready
+            else if (u.Kind == UnitKind.Hero) { if (u.AtkTimer >= cd + Rules.AutoHold) u.AtkTimer = 0; }
             else u.AtkTimer = cd;
         }
 

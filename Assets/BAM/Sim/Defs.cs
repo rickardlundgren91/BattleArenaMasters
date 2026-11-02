@@ -143,6 +143,11 @@ namespace BAM.Sim
     public static class Rules
     {
         public const float Tick = 1f / 60f;
+        /// <summary>How long a hero's ready auto attack waits for a target in reach before the swing runs out and the
+        /// cooldown starts over (Rickard's tester 2026-11-02: "i ABC fanns ett litet fönster där man kunde få in ett skott lite
+        /// senare"). 0 = the old rule: a swing with nobody in reach runs out at once, so an enemy at the ring's edge waited a whole
+        /// cooldown. Same for players and bots (Combat.UpdateAttack).</summary>
+        public const float AutoHold = 0.3f;
         /// <summary>One special per hero, cast with a tap at a random target in reach (Rickard 2026-11-01, Match.TryTapSpecial in
         /// OneTap.cs). false = the old tap + drag specials, HUD split, aim ring, cancel X and tutorial drag step, all kept for at
         /// least two versions so the change can be taken back. Not const, so both code paths stay compiled.</summary>
