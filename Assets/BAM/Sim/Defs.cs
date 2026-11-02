@@ -167,6 +167,9 @@ namespace BAM.Sim
         /// OneTapSpecial; false = the special goes at the tap, as protocol 40. Same for players and bots.</summary>
         public static readonly bool SpecialTelegraph = true;
         public const float TelegraphTime = 0.3f;
+        /// <summary>Blast's bomb lands on the target's feet with a 1.5-tile blast and a 0.5 s fuse: with 0.3 s it still always hit, so it
+        /// warns 0.5 s and a hero that runs at the flash gets out (Rickard 2026-11-02).</summary>
+        public const float TelegraphTimeBlast = 0.5f;
         /// <summary>true = the warning only where a special had none (Knut's hook, Tikta's needles, Fenn's wolf, Moa): Tyra's draw,
         /// Bram's anvil, Blast's fuse and Bonk's wind-up already warn with their aim fixed, so they keep their own time and only get
         /// the flash. false = every special waits TelegraphTime more.</summary>

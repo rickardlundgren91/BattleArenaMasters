@@ -59,9 +59,9 @@ namespace BAM.Sim
         {
             Check(Rules.SpecialTelegraph && Rules.TelegraphTime > 0.25f, "TELE: tapped specials warn first");
             if (Environment.GetEnvironmentVariable("BAM_TELEGRAPH_TABLE") == "1") Console.Write(TelegraphTable());
-            int ticks = (int)Math.Round(Rules.TelegraphTime / Rules.Tick);
             foreach (var hero in OneTapHeroes)
             {
+                int ticks = (int)Math.Round(TeleTime(hero) / Rules.Tick);
                 var m = OneTapScene(hero, out var p, out float cx, out float cy);
                 m.Telegraph = true;
                 Unit e = null; foreach (var h in m.Heroes) if (h.Team != p.Team) { e = h; break; }
@@ -89,7 +89,7 @@ namespace BAM.Sim
                     m.Step(PlayerInput.None);
                     foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) { castAt = k; ax = ev.X; ay = ev.Y; }
                 }
-                Check(castAt >= ticks - 1 && castAt <= ticks + 1, $"TELE {hero}: the cast follows {Rules.TelegraphTime} s after the tap (tick {castAt}, want {ticks})");
+                Check(castAt >= ticks - 1 && castAt <= ticks + 1, $"TELE {hero}: the cast follows {TeleTime(hero)} s after the tap (tick {castAt}, want {ticks})");
                 if (hero != HeroId.Bonk)
                 {
                     float off = Math.Abs(ay - cy); // the enemy stood on y = cy at the tap: a locked aim stays on that line
@@ -138,9 +138,9 @@ namespace BAM.Sim
                 Check(cast && !hit && !p.SpecialReady, $"TELE Bonk: the warned slam goes off even when the enemy ran out (cast {cast}, hit {hit})");
             }
             // the point of it: a player who runs away at the flash gets out of the ones that land on a spot or fly a fixed reach,
-            // where without the warning they were sure hits (Knut's hook, Tikta's needles, Fenn's wolf); from Bram's anvil even
+            // where without the warning they were sure hits (Knut's hook, Tikta's needles, Fenn's wolf, Blast's bomb with its 0.5 s); from Bram's anvil even
             // 0.25 s after it (a quick human). The full table: BAM_TELEGRAPH_TABLE=1
-            foreach (var (hero, react) in new[] { (HeroId.Knut, 0f), (HeroId.Tikta, 0f), (HeroId.Fenn, 0f), (HeroId.Bram, 0.25f) })
+            foreach (var (hero, react) in new[] { (HeroId.Knut, 0f), (HeroId.Tikta, 0f), (HeroId.Fenn, 0f), (HeroId.Blast, 0f), (HeroId.Bram, 0.25f) })
             {
                 float before = TeleRun(hero, false, Flee.Away, react, out _), after = TeleRun(hero, true, Flee.Away, react, out _);
                 Check(!float.IsNaN(before) && float.IsNaN(after), $"TELE {hero}: running away {react} s after the tap got hit before ({before:0.00} s), now gets away ({after:0.00})");

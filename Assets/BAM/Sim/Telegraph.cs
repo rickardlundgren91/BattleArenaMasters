@@ -21,7 +21,7 @@ namespace BAM.Sim
 
         /// <summary>How long h's special waits before its cast starts: one number for every hero. Moa too: her shield on a friend
         /// shows no red warning (it hurts nobody) but she stands and flashes as long, so no special is quicker than another.</summary>
-        public static float TeleTime(HeroId id) => Rules.TelegraphTopUp && OwnWarning(id) > 0 ? 0 : Rules.TelegraphTime;
+        public static float TeleTime(HeroId id) => Rules.TelegraphTopUp && OwnWarning(id) > 0 ? 0 : id == HeroId.Blast ? Rules.TelegraphTimeBlast : Rules.TelegraphTime;
 
         /// <summary>The red warning h's special already shows at its cast before anything can land, its aim already fixed: Tyra's draw,
         /// Bram's falling anvil, Blast's fuse, Bonk's wind-up (0 = none: Knut's hook, Tikta's needles and Fenn's homing wolf hit at
