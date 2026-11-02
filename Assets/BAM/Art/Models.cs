@@ -667,7 +667,8 @@ namespace BAM.Art
         static RigDef BuildTowerProp(int team, Mesh prop)
         {
             Bounds pb = prop.bounds;
-            float s = Mathf.Min(2.6f / pb.size.y, 2.4f / Mathf.Max(pb.size.x, pb.size.z));
+            // about 3 tiles wide so it fills the plaza (Rickard 2026-11-02 "gör tornet lite större"; was 2.4 wide, 2.6 high)
+            float s = Mathf.Min(3.1f / pb.size.y, 3.0f / Mathf.Max(pb.size.x, pb.size.z));
             float top = pb.size.y * s;
             var piv = new[] { Vector3.zero, new Vector3(0f, top * 0.86f, 0f) };
             b.Bone = TowerBase;

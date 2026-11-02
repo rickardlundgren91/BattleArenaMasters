@@ -122,7 +122,9 @@ namespace BAM.Art
                     solid.Color(Pal.StoneDark).Boulder(p + new Vector3(-rad * 0.5f, rad * 0.15f, -rad * 0.4f), new Vector3(rad * 0.3f, rad * 0.25f, rad * 0.3f), 103 + i);
                 }
 
-            if (info.Towers != null)
+            // tower plinth with the team ring: only under the old code tower; Rickard's Tripo tower (bam_tower_grass) stands on its
+            // own stone foot straight on the plaza (Rickard 2026-11-02 "bort med blåa cirkeln")
+            if (info.Towers != null && Props.Mesh("bam_tower_grass") == null)
                 for (int t = 0; t < info.Towers.Length; t++)
                 {
                     Vector3 p = info.Towers[t];
