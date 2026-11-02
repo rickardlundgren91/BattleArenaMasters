@@ -35,7 +35,7 @@ namespace BAM.Sim
             foreach (float k in new[] { 0f, 0.5f, 1f })
             {
                 var m = Scene(out var f, out var e); Place(e, 0.5f, 34);
-                float want = m.WolfReach(2, 13, 0, Math.Min(FennS.ThrowReach, Math.Max(1.5f, k * FennS.ThrowReach)));
+                float want = m.WolfReach(2, 13, 0, Math.Min(FennS.ThrowReach, Math.Max(1.5f, k * FennS.ThrowReach)), f.Team);
                 FennThrow(m, f, k, null, out float d);
                 Check(Near(d, want, 0.001f), $"the thrown wolf lands on the aim preview (k {k})");
             }

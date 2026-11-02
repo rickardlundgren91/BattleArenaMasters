@@ -195,12 +195,14 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>One volley arrow: straight through enemies (never towers), each enemy hurt once by the whole volley; it ends at its
-        /// reach or a wall.</summary>
+        /// <summary>One volley arrow: straight through enemies, each enemy hurt once by the whole volley; it ends at its reach, a
+        /// wall or the enemy base (TowerReach; no damage to it).</summary>
         void VolleyUpdate(Proj p, float dt)
         {
             // the last step stops on the reach (precision TYRA-01: a full 0.3-tile step took it to 4.2, half a tile past the ring)
-            var s = p.Src; float ox = p.X, oy = p.Y, step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
+            var s = p.Src; float ox = p.X, oy = p.Y, full = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
+            float step = TowerReach(p.Team, ox, oy, p.Ang, full, p.Radius);
+            bool tower = step < full - 1e-5f;
             p.X += SimMath.Cos(p.Ang) * step; p.Y += SimMath.Sin(p.Ang) * step; p.D += step;
             if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
             bool shared = s.VolleyCast == p.VolleyCast;
@@ -212,6 +214,7 @@ namespace BAM.Sim
                 if (shared) s.VolleyHit.Add(u); else p.AddHit(u);
                 SpecialHit(s, u, p.Dmg, p.Kind, false);
             }
+            if (tower) { p.Done = true; Blocked(p, p.X, p.Y); return; }
             if (p.D >= p.Travel - 1e-5f) p.Done = true;
         }
 

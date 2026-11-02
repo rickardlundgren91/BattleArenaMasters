@@ -168,7 +168,9 @@ namespace BAM.Sim
             float step = p.Speed * dt;
             for (int n = 0; n <= BonkS.BallPins && !p.Done; n++)
             {
-                float ox = p.X, oy = p.Y, ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang), len = Math.Max(0, Math.Min(step, p.Travel - p.D));
+                float ox = p.X, oy = p.Y, ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang), full = Math.Max(0, Math.Min(step, p.Travel - p.D));
+                float len = TowerReach(p.Team, ox, oy, p.Ang, full, BonkS.BoulderHitbox); // the enemy base stops it as a wall
+                bool tower = len < full - 1e-5f;
                 var u = NextPin(p, ox, oy, ca, sa, len, out float at);
                 if (u != null && !Map.ShotBlocked(ox, oy, ox + ca * at, oy + sa * at))
                 {
@@ -180,6 +182,7 @@ namespace BAM.Sim
                 }
                 p.X += ca * len; p.Y += sa * len; p.D += len;
                 if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
+                if (tower) { p.Done = true; Blocked(p, p.X, p.Y); return; }
                 if (p.D >= p.Travel - 1e-4f) p.Done = true;
                 return;
             }

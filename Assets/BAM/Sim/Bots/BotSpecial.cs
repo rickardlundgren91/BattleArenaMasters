@@ -200,7 +200,7 @@ namespace BAM.Sim
                         for (int i = 0; i < hs.Count; i++)
                         {
                             var e = hs[i]; float d = Dist(h, e);
-                            if (M.Map.ShotBlocked(h.X, h.Y, e.X, e.Y) || M.WolfReach(h.X, h.Y, AngTo(e.X, e.Y), d) < d - FennS.HomeRadius - e.R) continue;
+                            if (M.Map.ShotBlocked(h.X, h.Y, e.X, e.Y) || M.WolfReach(h.X, h.Y, AngTo(e.X, e.Y), d, h.Team) < d - FennS.HomeRadius - e.R) continue;
                             if (t == null || e.Hp < t.Hp) t = e;
                         }
                         if (t == null) return false;

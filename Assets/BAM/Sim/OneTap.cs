@@ -25,8 +25,18 @@ namespace BAM.Sim
         /// <summary>How far Tikta's needle line flies: her ring in the one-tap game (TapReach), TiktaS.LineReach for the old drag.</summary>
         float NeedleReach => OneTap ? TapReach(HeroId.Tikta) : TiktaS.LineReach;
 
-        /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line).</summary>
-        List<Unit> TapTargets(Unit h) => EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
+        /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line). A straight
+        /// shot (Tyra's bolt, Tikta's needles, Knut's hook) or Fenn's thrown wolf never picks one behind the enemy base, which would
+        /// stop it (TowerReach), so the tap is not wasted on the tower and the button stays grey with only such targets.</summary>
+        List<Unit> TapTargets(Unit h)
+        {
+            var l = EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
+            float half = h.Hero == HeroId.Tyra ? TyraS.Hitbox : h.Hero == HeroId.Tikta ? TiktaS.LineHitbox : h.Hero == HeroId.Knut ? KnutS.HookRadius
+                : h.Hero == HeroId.Fenn ? Defs.Wolf.Radius : -1;
+            if (half < 0) return l;
+            for (int i = l.Count - 1; i >= 0; i--) if (TowerInWay(h, l[i], half)) l.RemoveAt(i);
+            return l;
+        }
 
         /// <summary>Knut's hook flies past minions (KnutS.HookPassesMinions): his tap takes a random enemy hero in reach, else a random
         /// minion, and the hook flies through it toward a hero behind (Rickard 2026-11-02 "man ska ju kunna skjuta hooken på minions

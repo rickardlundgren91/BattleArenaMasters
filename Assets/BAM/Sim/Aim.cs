@@ -37,10 +37,10 @@ namespace BAM.Sim
             k = SimMath.Clamp(k, 0, 1);
             switch (h.Hero)
             {
-                case HeroId.Tyra: Line(ref a, BoltReach(h, ang), TyraS.Hitbox, true); break; // to the first wall, enemy tower or the edge
-                case HeroId.Knut: Line(ref a, Map.ShotReach(h.X, h.Y, ang, KnutS.HookDistance), KnutS.HookRadius, true); break;
-                case HeroId.Tikta: Line(ref a, Map.ShotReach(h.X, h.Y, ang, TiktaS.LineReach), TiktaS.LineHitbox, true); break;
-                case HeroId.Bonk: Line(ref a, Map.ShotReach(h.X, h.Y, ang, BonkS.BoulderReach), BonkS.BoulderHitbox, true); break;
+                case HeroId.Tyra: Line(ref a, BoltReach(h, ang), TyraS.Hitbox, true); break; // to the first wall, enemy tower or the edge; every line below stops on the enemy base too (TowerReach)
+                case HeroId.Knut: Line(ref a, TowerReach(h.Team, h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, KnutS.HookDistance), KnutS.HookRadius), KnutS.HookRadius, true); break;
+                case HeroId.Tikta: Line(ref a, TowerReach(h.Team, h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, NeedleReach), TiktaS.LineHitbox), TiktaS.LineHitbox, true); break;
+                case HeroId.Bonk: Line(ref a, TowerReach(h.Team, h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, BonkS.BoulderReach), BonkS.BoulderHitbox), BonkS.BoulderHitbox, true); break;
                 case HeroId.Blast: BombPoint(h, ang, k, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = BlastS.Radius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break; // Supernova (the drag since 2026-10-30)
                 case HeroId.Oaken: Line(ref a, Map.LaneReach(h.X, h.Y, ang, OakenS.QuakeRange), OakenS.QuakeHalfWidth, false); a.Tip = 0; a.Los = true; break; // flat ends (OakenQuake)
                 case HeroId.Bram:
@@ -53,7 +53,7 @@ namespace BAM.Sim
                 {
                     // as CastFenn: the aimed point, then cut where a wall stops the flying wolf (it leaves from Fenn's spot)
                     AimPoint(h, ang, k, FennS.ThrowReach, out float gx, out float gy);
-                    float ga = SimMath.Atan2(gy - h.Y, gx - h.X), gd = WolfReach(h.X, h.Y, ga, SimMath.Hypot(gx - h.X, gy - h.Y));
+                    float ga = SimMath.Atan2(gy - h.Y, gx - h.X), gd = WolfReach(h.X, h.Y, ga, SimMath.Hypot(gx - h.X, gy - h.Y), h.Team);
                     a.Shape = AimShape.Circle; a.Ang = ga; a.Length = gd; a.CX = h.X + SimMath.Cos(ga) * gd; a.CY = h.Y + SimMath.Sin(ga) * gd;
                     a.Radius = FennS.PounceRadius; a.PathHalf = FennS.HomeRadius; a.Los = true;
                     break;
