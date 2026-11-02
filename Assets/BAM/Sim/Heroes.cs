@@ -310,7 +310,7 @@ namespace BAM.Sim
             {
                 AimPoint(h, aa, ak, FennS.ThrowReach, out float gx, out float gy);
                 // the throw ends where a wall would stop the wolf, so the red circle shows where it really lands
-                float ga = SimMath.Atan2(gy - wy, gx - wx), gd = WolfReach(wx, wy, ga, SimMath.Hypot(gx - wx, gy - wy), h.Team);
+                float ga = SimMath.Atan2(gy - wy, gx - wx), gd = WolfReach(wx, wy, ga, SimMath.Hypot(gx - wx, gy - wy));
                 gx = wx + SimMath.Cos(ga) * gd; gy = wy + SimMath.Sin(ga) * gd;
                 h.Facing = aa; w.Facing = aa; w.Wolf = WolfMode.Fly; w.WolfGx = gx; w.WolfGy = gy; w.WolfOx = wx; w.WolfOy = wy;
                 // red warning over the whole flight (it can turn onto a hero anywhere along it) and the landing spot
@@ -401,7 +401,7 @@ namespace BAM.Sim
             // never past the 6-tile throw (Rickard 2026-10-25): at the edge it lands where it is
             float ox = nx - w.WolfOx, oy = ny - w.WolfOy, od = SimMath.Hypot(ox, oy);
             if (od > FennS.ThrowReach) { nx = w.WolfOx + ox * (FennS.ThrowReach / od); ny = w.WolfOy + oy * (FennS.ThrowReach / od); last = true; }
-            bool wall = !Map.Free(nx, ny, w.R) || EnemyTowerAt(w.Team, nx, ny, w.R); // a wall or the enemy base stops the flight: it lands where it is (the old rush, wall = true)
+            bool wall = !Map.Free(nx, ny, w.R) || TowerAt(nx, ny, w.R); // a wall or a base stops the flight: it lands where it is (the old rush, wall = true)
             if (!wall) { w.X = nx; w.Y = ny; w.WalkT += dist * k; w.MovedAt = Time; }
             if (last || wall) WolfPounce(w, prey);
         }
@@ -419,13 +419,13 @@ namespace BAM.Sim
 
         /// <summary>How far the thrown wolf flies from (x, y) along ang (map space) before a wall stops it, at most want: the
         /// steps it really flies (the old rushStop), so the aim preview and the red circle can show where it lands.</summary>
-        public float WolfReach(float x, float y, float ang, float want, int team)
+        public float WolfReach(float x, float y, float ang, float want)
         {
             float c = SimMath.Cos(ang), s = SimMath.Sin(ang), step = FennS.ThrowSpeed * Rules.Tick, d = 0;
             while (d < want - 1e-4f)
             {
                 float nd = Math.Min(want, d + step);
-                if (!Map.Free(x + c * nd, y + s * nd, Defs.Wolf.Radius) || EnemyTowerAt(team, x + c * nd, y + s * nd, Defs.Wolf.Radius)) break; // a wall or the enemy base
+                if (!Map.Free(x + c * nd, y + s * nd, Defs.Wolf.Radius) || TowerAt(x + c * nd, y + s * nd, Defs.Wolf.Radius)) break; // a wall or a base
                 d = nd;
             }
             return d;
@@ -523,22 +523,22 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>How far Tyra's bolt aimed at ang flies with no hero or minion in the way: to the first wall, enemy tower or the
+        /// <summary>How far Tyra's bolt aimed at ang flies with no hero or minion in the way: to the first wall, tower or the
         /// arena's edge (what the aim and the red warning draw).</summary>
         internal float BoltReach(Unit h, float ang)
-            => TowerReach(h.Team, h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, Map.EdgeReach(h.X, h.Y, ang, TyraS.Flight)), TyraS.Hitbox);
+            => TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, Map.EdgeReach(h.X, h.Y, ang, TyraS.Flight)), TyraS.Hitbox);
 
-        /// <summary>How far a straight shot of team's from (x, y) along ang, half wide, flies before it touches a living tower of the
-        /// other team, at most len. The base stops every hero's shot as a wall does, with no damage (specials never hurt towers):
-        /// it used to stop only Tyra's bolt, while Tikta's needles, Knut's hook, Bonk's boulder and Fenn's wolf flew through
-        /// (tester 2026-11-02, Rickard "alla heroes ska stanna mot basen, inte orättvist"). A team's own tower lets its shots by.</summary>
-        internal float TowerReach(int team, float x, float y, float ang, float len, float half)
+        /// <summary>How far a straight shot from (x, y) along ang, half wide, flies before it touches a living tower, at most len. Both
+        /// bases stop every hero's shot as a wall does, with no damage (specials never hurt towers): the enemy tower used to stop only
+        /// Tyra's bolt, while Tikta's needles, Knut's hook, Bonk's boulder and Fenn's wolf flew through (tester 2026-11-02, Rickard
+        /// "alla heroes ska stanna mot basen, inte orättvist"), and the team's own tower stops its shots too (Rickard 2026-11-02 "ja").</summary>
+        internal float TowerReach(float x, float y, float ang, float len, float half)
         {
             float ca = SimMath.Cos(ang), sa = SimMath.Sin(ang);
             for (int t = 0; t < Towers.Length; t++)
             {
                 var u = Towers[t];
-                if (u == null || !u.Alive || u.Team == team) continue;
+                if (u == null || !u.Alive) continue;
                 float dx = u.X - x, dy = u.Y - y, along = dx * ca + dy * sa, side = Math.Abs(dy * ca - dx * sa), rr = u.R + half;
                 if (along <= 0 || side >= rr) continue;
                 len = Math.Min(len, Math.Max(0, along - (float)Math.Sqrt(rr * rr - side * side)));
@@ -546,28 +546,28 @@ namespace BAM.Sim
             return len;
         }
 
-        /// <summary>Does a body of radius r at (x, y) touch a living tower of the other team than team's (where Fenn's thrown wolf stops)?</summary>
-        internal bool EnemyTowerAt(int team, float x, float y, float r)
+        /// <summary>Does a body of radius r at (x, y) touch a living tower, either team's (where Fenn's thrown wolf stops)?</summary>
+        internal bool TowerAt(float x, float y, float r)
         {
             for (int t = 0; t < Towers.Length; t++)
             {
                 var u = Towers[t];
-                if (u != null && u.Alive && u.Team != team && SimMath.Hypot(u.X - x, u.Y - y) < u.R + r) return true;
+                if (u != null && u.Alive && SimMath.Hypot(u.X - x, u.Y - y) < u.R + r) return true;
             }
             return false;
         }
 
-        /// <summary>Does an enemy tower stand on the straight line from h to u before the shot (half wide) reaches u's body? A tapped
+        /// <summary>Does a tower (either team's) stand on the straight line from h to u before the shot (half wide) reaches u's body? A tapped
         /// straight special never picks a target hidden behind the base, so the tap is not spent on the tower.</summary>
         bool TowerInWay(Unit h, Unit u, float half)
         {
             float dx = u.X - h.X, dy = u.Y - h.Y, d = SimMath.Hypot(dx, dy);
             if (d < 1e-4f) return false;
             float need = Math.Max(0, d - u.R - half);
-            return TowerReach(h.Team, h.X, h.Y, SimMath.Atan2(dy, dx), need, half) < need - 1e-4f;
+            return TowerReach(h.X, h.Y, SimMath.Atan2(dy, dx), need, half) < need - 1e-4f;
         }
 
-        /// <summary>Tyra's bolt flies straight and stops in the first enemy, enemy tower (no damage: specials never hurt towers) or wall
+        /// <summary>Tyra's bolt flies straight and stops in the first enemy, tower of either team (no damage: specials never hurt towers) or wall
         /// it meets.</summary>
         void BoltUpdate(Proj p, float dt)
         {
@@ -578,8 +578,8 @@ namespace BAM.Sim
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                bool tower = u.Kind == UnitKind.Tower && u.Alive && u.Team != p.Team;
-                if (!tower && !Hurtable(p.Src, u) || u.Team == p.Team || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue;
+                bool tower = u.Kind == UnitKind.Tower && u.Alive; // either team's base stops it (TowerReach)
+                if (!tower && (!Hurtable(p.Src, u) || u.Team == p.Team) || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue;
                 p.Done = true;
                 if (tower) Blocked(p, p.X, p.Y); else SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
                 return;
@@ -705,7 +705,7 @@ namespace BAM.Sim
                 float sp = KnutS.OutSpeed;
                 float ox = h.X + ca * p.D, oy = h.Y + sa * p.D, od = p.D;
                 // never past HookDistance, so it reaches exactly as far as the aim shows (it overshot up to 0.1 on its last tick)
-                float cap = TowerReach(h.Team, h.X, h.Y, p.Ang, KnutS.HookDistance, KnutS.HookRadius); // the enemy base stops it as a wall
+                float cap = TowerReach(h.X, h.Y, p.Ang, KnutS.HookDistance, KnutS.HookRadius); // a base (either team's) stops it as a wall
                 p.D = Math.Min(p.D + sp * dt, cap); p.X = h.X + ca * p.D; p.Y = h.Y + sa * p.D;
                 bool tower = cap < KnutS.HookDistance - 1e-4f && p.D >= cap - 1e-4f;
                 // a wall on this tick's path (swept as the other shots, so it never slips a corner): the anchor stops before it
@@ -764,7 +764,7 @@ namespace BAM.Sim
                     var p = NewProj(ProjMode.NeedleLine, h, h.X, h.Y);
                     p.Kind = ProjKind.TiktaNeedleSpecial; p.T = -i * TiktaS.Interval; p.Ang = aa; p.Speed = TiktaS.Speed; p.Dmg = dmg; p.Radius = TiktaS.LineHitbox; p.TiktaCast = cast;
                 }
-                float wr = TowerReach(h.Team, h.X, h.Y, aa, NeedleReach, TiktaS.LineHitbox); // the warning ends on the enemy base too
+                float wr = TowerReach(h.X, h.Y, aa, NeedleReach, TiktaS.LineHitbox); // the warning ends on a base too
                 WarnLine(h, aa, wr, 0.25f, (TiktaS.Count - 1) * TiktaS.Interval + NeedleReach / TiktaS.Speed);
                 Channel(h, (TiktaS.Count - 1) * TiktaS.Interval);
                 castX = h.X + SimMath.Cos(aa) * wr; castY = h.Y + SimMath.Sin(aa) * wr;
@@ -826,7 +826,7 @@ namespace BAM.Sim
         {
             if (p.D == 0 && p.Src != null && p.Src.Alive) { p.X = p.Src.X; p.Y = p.Src.Y; } // leaves from where she is now, as her warning (TIKTA-01)
             float ox = p.X, oy = p.Y, step = p.Speed * dt, len = Math.Max(0, Math.Min(step, NeedleReach - p.D));
-            float tc = TowerReach(p.Team, ox, oy, p.Ang, len, TiktaS.LineHitbox); // the enemy base stops it as a wall (TowerReach)
+            float tc = TowerReach(ox, oy, p.Ang, len, TiktaS.LineHitbox); // a base (either team's) stops it as a wall (TowerReach)
             var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, tc, TiktaS.LineHitbox, out float at); // nobody behind the base
             if (u != null)
             {

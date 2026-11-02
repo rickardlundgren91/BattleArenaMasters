@@ -26,7 +26,7 @@ namespace BAM.Sim
         float NeedleReach => OneTap ? TapReach(HeroId.Tikta) : TiktaS.LineReach;
 
         /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line). A straight
-        /// shot (Tyra's bolt, Tikta's needles, Knut's hook) or Fenn's thrown wolf never picks one behind the enemy base, which would
+        /// shot (Tyra's bolt, Tikta's needles, Knut's hook) or Fenn's thrown wolf never picks one behind a base (either team's), which would
         /// stop it (TowerReach), so the tap is not wasted on the tower and the button stays grey with only such targets.</summary>
         List<Unit> TapTargets(Unit h)
         {

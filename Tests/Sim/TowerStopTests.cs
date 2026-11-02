@@ -2,8 +2,8 @@ using System;
 
 namespace BAM.Sim
 {
-    // The enemy base stops every hero's straight special and Fenn's thrown wolf (Match.TowerReach; tester 2026-11-02, Rickard
-    // "alla heroes ska stanna mot basen, inte orättvist"): it used to stop only Tyra's bolt, Tikta's needles flew through.
+    // Both bases stop every hero's straight special and Fenn's thrown wolf (Match.TowerReach; tester 2026-11-02, Rickard
+    // "alla heroes ska stanna mot basen, inte orättvist", own tower too: "ja"): it used to stop only Tyra's bolt at the enemy tower.
     public sealed partial class Match
     {
         static readonly HeroId[] TowerStopHeroes = { HeroId.Tyra, HeroId.Tikta, HeroId.Knut, HeroId.Bonk, HeroId.Fenn };
@@ -47,7 +47,7 @@ namespace BAM.Sim
                 for (int k = 0; k < 120; k++)
                 {
                     m.Step(k == 0 ? drag : PlayerInput.None);
-                    foreach (var ev in m.Events) { if (ev.Type == EventType.Blocked && ev.A == p) blocked = true; if (ev.Type == EventType.Hit && ev.A == p && ev.B == e) hits++; }
+                    foreach (var ev in m.Events) { if (ev.Type == EventType.Blocked && ev.A == p) blocked = true; if (ev.Type == EventType.Hit && ev.A == p && ev.B == e && ev.Dmg != DmgKind.Auto) hits++; }
                     foreach (var ev in m.Events) if (ev.Type == EventType.WolfPounce && !landed && ev.A != null && ev.A.Owner == p) { landed = true; ly = ev.Y; }
                 }
                 Check(hits == 0, $"BASE {hero}: the enemy behind the enemy tower takes no hit from the special ({hits} hits)");
@@ -56,8 +56,8 @@ namespace BAM.Sim
                         $"BASE Fenn: the thrown wolf lands on the base's near side ({(landed ? ly - tw.Y : 0):0.00} from its middle)");
                 else Check(blocked, $"BASE {hero}: the special puffs out on the enemy tower");
 
-                // an own tower lets its team's shots by: the same line through the player's own base hits
-                if (hero == HeroId.Fenn || hero == HeroId.Bonk) continue;
+                // the own tower stops its team's shots too (Rickard 2026-11-02 "ja"): the same line through the player's own base misses
+                if (hero == HeroId.Fenn) continue;
                 m = TowerScene(hero, out p, out e, out tw);
                 m.OneTap = false;
                 var own = m.Towers[p.Team];
@@ -66,9 +66,9 @@ namespace BAM.Sim
                 Place(e, own.X, own.Y - dir * (own.R + e.R + 0.15f)); m.AddStatus(e, St.Stun, 999);
                 ang = SimMath.Atan2(e.Y - p.Y, e.X - p.X);
                 drag.AimAngle = ang;
-                hits = 0;
-                for (int k = 0; k < 120; k++) { m.Step(k == 0 ? drag : PlayerInput.None); foreach (var ev in m.Events) if (ev.Type == EventType.Hit && ev.A == p && ev.B == e) hits++; }
-                Check(hits > 0, $"BASE {hero}: the hero's own tower does not stop its special ({hits} hits)");
+                hits = 0; blocked = false;
+                for (int k = 0; k < 120; k++) { m.Step(k == 0 ? drag : PlayerInput.None); foreach (var ev in m.Events) { if (ev.Type == EventType.Hit && ev.A == p && ev.B == e && ev.Dmg != DmgKind.Auto) hits++; if (ev.Type == EventType.Blocked && ev.A == p) blocked = true; } }
+                Check(hits == 0 && blocked, $"BASE {hero}: the hero's own tower stops its special too ({hits} hits, puff {blocked})");
             }
         }
     }
