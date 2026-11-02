@@ -82,12 +82,16 @@ namespace BAM.Sim
     }
 
     /// <summary>Knut, Anchor Throw. Tap: Anchor Slam round him (Hero5.cs). Drag: the anchor on a chain, thrown the full
-    /// HookDistance the aimed way; it pulls the first enemy it touches (hero, minion, Fenn's wolf or decoy, never a tower) to him
-    /// and stuns it for the pull plus 0.4 s. Passive: his auto attacks slow (Defs).</summary>
+    /// HookDistance the aimed way; it flies past minions and Fenn's wolf (HookPassesMinions) and pulls the first enemy hero it touches
+    /// (a decoy too, never a tower) to him and stuns it for the pull plus 0.4 s. Passive: his auto attacks slow (Defs).</summary>
     public static class KnutS
     {
         public const float HookRadius = 0.4f, HookDistance = 6.5f, OutSpeed = 14, OutTime = 1.2f, Release = 0.5f;
         public const float PullSpeed = 15, StunAfter = 0.4f, DamageCoeff = 1, CastTime = 0.9f;
+        /// <summary>The hook flies past minions and Fenn's wolf and catches only heroes (Rickard 2026-11-02, "man kan ju inte träffa
+        /// minions så då kan man sikta på heroes bakom"), as Pudge's hook feels; the one-tap aims it only at heroes (OneTap.cs).
+        /// false = the old rule: the first enemy of any kind it touches.</summary>
+        public const bool HookPassesMinions = true;
         /// <summary>Anchor Slam (the tap since 2026-10-28, Rickard's idea "en slow aoe och den andra hooken"): after a short wind-up
         /// where he stands, every enemy hero and minion round him with a clear line takes the hit and a 40 % slow.</summary>
         public const float SlamRadius = 1.8f, SlamWindup = 0.3f, SlamCoeff = 1.0f, SlamSlow = 0.4f, SlamSlowTime = 1.5f;
@@ -648,7 +652,8 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>The anchor flies out slowing to a stop, catches the first enemy hero or minion it touches (a hero under
+        /// <summary>The anchor flies out slowing to a stop, catches the first enemy hero it touches (past minions and wolves:
+        /// KnutS.HookPassesMinions; a hero under
         /// Moa's shield only takes the hit) and comes back, pulling its catch to Knut; the catch is stunned for the pull and 0.4 s more.</summary>
         void HookUpdate(Proj p, float dt)
         {
@@ -668,7 +673,7 @@ namespace BAM.Sim
                 for (int i = 0; i < Units.Count; i++)
                 {
                     var u = Units[i];
-                    if (u.Alive && u.Team != h.Team && u.Kind != UnitKind.Tower && !u.Has(St.Untargetable) && SimMath.Hypot(u.X - p.X, u.Y - p.Y) <= KnutS.HookRadius + u.R) { hit = u; break; }
+                    if (u.Alive && u.Team != h.Team && u.Kind != UnitKind.Tower && (u.Kind == UnitKind.Hero || !KnutS.HookPassesMinions) && !u.Has(St.Untargetable) && SimMath.Hypot(u.X - p.X, u.Y - p.Y) <= KnutS.HookRadius + u.R) { hit = u; break; }
                 }
                 if (hit != null)
                 {

@@ -89,6 +89,7 @@ namespace BAM.Sim
                 if (!u.Alive || u.Kind == UnitKind.Tower || u.Has(St.Untargetable) || !IsVisibleTo(u, h.Team)) continue;
                 if (a.Allies) { if (u.Team == h.Team && u.Kind == UnitKind.Hero && !u.IsClone && SimMath.Dist(u, a.CX, a.CY) <= a.Radius + u.R) buf.Add(u); continue; }
                 if (u.Team == h.Team) continue;
+                if (h.Hero == HeroId.Knut && KnutS.HookPassesMinions && u.Kind != UnitKind.Hero) continue; // the hook flies past minions
                 if (a.PathHalf > 0) continue; // the wolf: after this loop
                 if (a.Shape == AimShape.Circle)
                 {

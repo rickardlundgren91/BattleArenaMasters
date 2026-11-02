@@ -106,8 +106,9 @@ namespace BAM.Sim
         }
         float AngTo(float x, float y) => SimMath.Atan2(y - H.Y, x - H.X);
 
-        /// <summary>No enemy minion or hero (other than t) close to the line from h to t, and no wall: a line form would stop on it.</summary>
-        bool LineFree(Unit t, float w)
+        /// <summary>No enemy minion or hero (other than t) close to the line from h to t, and no wall: a line form would stop on it.
+        /// heroesOnly: only heroes block (Knut's hook flies past minions).</summary>
+        bool LineFree(Unit t, float w, bool heroesOnly = false)
         {
             var h = H;
             if (M.Map.ShotBlocked(h.X, h.Y, t.X, t.Y)) return false;
@@ -116,7 +117,7 @@ namespace BAM.Sim
             for (int i = 0; i < us.Count; i++)
             {
                 var u = us[i];
-                if (u == t || !u.Alive || u.Team == h.Team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable) || !Sees(u)) continue; // only what the team sees
+                if (u == t || !u.Alive || u.Team == h.Team || u.Kind == UnitKind.Tower || (heroesOnly && u.Kind != UnitKind.Hero) || u.Has(St.Untargetable) || !Sees(u)) continue; // only what the team sees
                 float dx = u.X - h.X, dy = u.Y - h.Y, along = dx * cx + dy * cy, perp = Math.Abs(-dx * cy + dy * cx);
                 if (along > 0 && along < L && perp < w + u.R) return false;
             }
@@ -153,7 +154,7 @@ namespace BAM.Sim
                 // line (XYZ SimBotDrag.cs, where the tap was Anchor Leap); with someone in slam reach the slam is better
                 if (dz || FoeHeroes(h, KnutS.SlamRadius - 0.4f).Count > 0) return false;
                 var hs = FoeHeroes(h, KnutS.HookDistance - 0.5f); Unit t = null;
-                for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (HpR(e) < 0.6f && LineFree(e, KnutS.HookRadius) && (t == null || e.Hp < t.Hp)) t = e; }
+                for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (HpR(e) < 0.6f && LineFree(e, KnutS.HookRadius, KnutS.HookPassesMinions) && (t == null || e.Hp < t.Hp)) t = e; }
                 if (t == null) return false;
                 M.LeadAim(h, t, Match.Flight.Hook, KnutS.OutTime, KnutS.OutSpeed * KnutS.OutTime / 2, out float ax, out float ay);
                 ang = AngTo(ax, ay); return true;

@@ -21,8 +21,9 @@ namespace BAM.Sim
         /// so she takes any enemy within TyraS.TapTarget (7 tiles, about what the screen shows ahead of her).</summary>
         public static float TapReach(HeroId id) => id == HeroId.Tyra ? TyraS.TapTarget : id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : Defs.Hero(id).DragReach;
 
-        /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line).</summary>
-        List<Unit> TapTargets(Unit h) => EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
+        /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line). Knut's hook flies
+        /// past minions (KnutS.HookPassesMinions), so his tap picks only heroes: with no hero in reach his button is grey.</summary>
+        List<Unit> TapTargets(Unit h) => EnemiesInRange(h, TapReach(h.Hero), h.Hero == HeroId.Knut && KnutS.HookPassesMinions ? Pick.Heroes : Pick.HeroOrMinion, true, tapBuf);
 
         /// <summary>Would a tap of h's special fire now (target-wise; the charge is SpecialReady)? Moa always can: herself.
         /// The HUD greys the button when this is false.</summary>
