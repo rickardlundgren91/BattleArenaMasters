@@ -9,15 +9,22 @@ namespace BAM.Art
     /// One small dynamic mesh, one draw call, drawn over everything (ArtMaterials.Overlay), so a body or a raised weapon never
     /// cuts through it. The quads are written back to front: with no depth test the triangle order is the layering.
     /// Vertices are rewritten only when a value changes or the trail is catching up.
-    /// When the special is ready, a soft gold glow pulses round the charge row (tester 2026-11-02 "the small yellow bar could glow
-    /// when a hero's ultimate is ready"): a second small mesh behind the bar, additive, shown for every hero (enemies too, so a
-    /// ready enemy special can be seen and played around).
+    /// When the special is ready the row turns bright gold and a narrow white shine sweeps along it every SweepEvery seconds
+    /// (tester 2026-11-02 "the small yellow bar could glow when a hero's ultimate is ready"; Rickard found a soft halo ugly, "glöden
+    /// e ful", so it is a crisp sweep in the bar's own flat style). Shown on every hero, enemies too, so a ready enemy special can be seen.
     /// </summary>
     sealed class HealthBar
     {
-        const int QFrame = 0, QBack = 1, QTrail = 2, QHpLo = 3, QHpMid = 4, QHpHi = 5, QShLo = 6, QShMid = 7, QShHi = 8, QShEdge = 9, QEnBack = 10, QEn = 11, QTicks = 12,
+        const int QFrame = 0, QEnEdge = 1, QBack = 2, QTrail = 3, QHpLo = 4, QHpMid = 5, QHpHi = 6, QShLo = 7, QShMid = 8, QShHi = 9, QShEdge = 10, QEnBack = 11, QEn = 12, QShineWide = 13, QShine = 14, QTicks = 15,
             MaxTicks = 24, Quads = QTicks + MaxTicks;
         const float Border = 0.035f, EnergyH = 0.045f, EnergyGap = 0.015f, TickStep = 100f;
+        // the ready sweep: SweepTime to cross the row, then a rest; the shine is a white core inside a wider pale gold band
+        const float SweepTime = 0.45f, SweepEvery = 1.6f, ShineWide = 0.16f, ShineCore = 0.05f;
+        float shineAt = -1f; // where the shine's centre is along the row, 0..1; below 0 = none
+        // and a gold edge round the row that blinks between dark and light gold (Rickard 2026-11-02 picked "D": the sweep plus the
+        // blinking gold edge); it lies over the black frame round the row only
+        const float EdgeRate = 7f;
+        bool edgeLit;
 
         public readonly Transform T;
         readonly MeshRenderer r;
@@ -26,15 +33,8 @@ namespace BAM.Art
         readonly Vector2[] uv = new Vector2[Quads * 4];
         readonly float w, h;
         float hp = 1f, shield, trail = 1f, trailWait, maxHp, energy = -1f;
-        bool ready, readyLit;
+        bool ready;
         byte fill = Pal.BarAlly;
-        // the ready glow: 8 vertices (two rows of four: a soft left cap, the stretched middle, a soft right cap) over the Dot texture
-        const float GlowPad = 0.11f, GlowHalfH = 0.1f, GlowRate = 7f;
-        static Material glowMat;
-        readonly Mesh glowMesh;
-        readonly MeshRenderer glowR;
-        readonly Color32[] glowCol = new Color32[8];
-        bool shown = true;
         bool dirty = true, uvDirty = true;
 
         /// <param name="thick">Bar height in tiles: heroes 0.13, minions thinner.</param>
@@ -65,50 +65,9 @@ namespace BAM.Art
             r.sharedMaterial = ArtMaterials.Overlay;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
-
-            if (glowMat == null)
-            {
-                glowMat = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.ParticleAdd));
-                glowMat.name = "BAM_BarGlow (BAM)";
-                glowMat.renderQueue = 3990; // after the world's see-through things, just before the bar (Overlay, 4000)
-            }
-            var g = new GameObject("BarGlow");
-            g.transform.SetParent(T, false);
-            g.transform.localPosition = new Vector3(0f, 0f, 0.01f); // just behind the bar (the bar faces -z)
-            glowMesh = new Mesh { name = "BarGlow", hideFlags = HideFlags.DontSave };
-            glowMesh.MarkDynamic();
-            float gy1 = -h * 0.5f - EnergyGap, gy = gy1 - EnergyH * 0.5f, ga = -w * 0.5f, gb = w * 0.5f;
-            float[] gx = { ga - GlowPad, ga, gb, gb + GlowPad }, gu = { 0f, 0.5f, 0.5f, 1f };
-            var gv = new Vector3[8];
-            var guv = new Vector2[8];
-            for (int i = 0; i < 4; i++)
-            {
-                gv[i] = new Vector3(gx[i], gy - GlowHalfH, 0f); guv[i] = new Vector2(gu[i], 0f);
-                gv[i + 4] = new Vector3(gx[i], gy + GlowHalfH, 0f); guv[i + 4] = new Vector2(gu[i], 1f);
-            }
-            glowMesh.vertices = gv;
-            glowMesh.uv = guv;
-            glowMesh.colors32 = glowCol;
-            glowMesh.triangles = new[] { 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7, 3 };
-            glowMesh.bounds = new Bounds(new Vector3(0f, gy, 0f), new Vector3(w + 2f * GlowPad + 0.1f, 2f * GlowHalfH + 0.1f, 0.1f));
-            g.AddComponent<MeshFilter>().sharedMesh = glowMesh;
-            glowR = g.AddComponent<MeshRenderer>();
-            glowR.sharedMaterial = glowMat;
-            glowR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            glowR.receiveShadows = false;
-            glowR.enabled = false;
         }
 
-        public bool Visible
-        {
-            set
-            {
-                shown = value;
-                if (r.enabled != value) r.enabled = value;
-                bool glow = value && ready && energy >= 0f;
-                if (glowR.enabled != glow) glowR.enabled = glow;
-            }
-        }
+        public bool Visible { set { if (r.enabled != value) r.enabled = value; } }
 
         public void Set(float hp01, float shield01)
         {
@@ -135,9 +94,7 @@ namespace BAM.Art
         {
             k01 = k01 < 0f ? -1f : Mathf.Clamp01(k01);
             if (Mathf.Abs(k01 - energy) > 0.001f) { energy = k01; dirty = true; }
-            if (ready != isReady) { ready = isReady; uvDirty = true; }
-            bool glow = shown && ready && energy >= 0f;
-            if (glowR.enabled != glow) glowR.enabled = glow;
+            if (ready != isReady) { ready = isReady; uvDirty = true; dirty = true; }
         }
 
         /// <summary>Back to full with no trail (respawn, pooled reuse).</summary>
@@ -158,21 +115,17 @@ namespace BAM.Art
                 if (trailWait > 0f) trailWait -= dt;
                 else { trail = Mathf.Max(hp, trail - dt * 0.9f); dirty = true; }
             }
-            if (ready)
+            float at = -1f;
+            if (ready && energy >= 0f)
             {
-                bool lit = Mathf.Sin(Time.unscaledTime * 7f) > -0.2f; // a slow blink while the special is ready
-                if (lit != readyLit) { readyLit = lit; uvDirty = true; }
-                if (glowR.enabled)
-                {
-                    // gold, breathing with the row's blink: brightest when the row is lit, never fully gone
-                    float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * GlowRate);
-                    var c = new Color32(255, 200, 70, (byte)(150f + 105f * k));
-                    if (c.a != glowCol[0].a || glowCol[0].r == 0)
-                    {
-                        for (int i = 0; i < 8; i++) glowCol[i] = c;
-                        glowMesh.colors32 = glowCol;
-                    }
-                }
+                float ph = Time.unscaledTime % SweepEvery;
+                if (ph < SweepTime) at = Mathf.Lerp(-ShineWide, 1f + ShineWide, ph / SweepTime);
+            }
+            if (at != shineAt) { shineAt = at; dirty = true; }
+            if (ready && energy >= 0f)
+            {
+                bool lit = Mathf.Sin(Time.unscaledTime * EdgeRate) > -0.2f;
+                if (lit != edgeLit) { edgeLit = lit; uvDirty = true; }
             }
             if (dirty) { Rebuild(); mesh.vertices = v; dirty = false; }
             if (uvDirty) { RebuildUV(); mesh.uv = uv; uvDirty = false; }
@@ -184,6 +137,8 @@ namespace BAM.Art
             bool en = energy >= 0f;
             float ey1 = y0 - EnergyGap, ey0 = ey1 - EnergyH;
             Quad(QFrame, x0 - Border, (en ? ey0 : y0) - Border, x1 + Border, y1 + Border);
+            if (en && ready) Quad(QEnEdge, x0 - Border, ey0 - Border, x1 + Border, y0); // the frame's part round the row, up to the health
+            else Quad(QEnEdge, 0f, 0f, 0f, 0f);
             Quad(QBack, x0, y0, x1, y1);
             float s0 = Mathf.Min(hp, 1f - shield);           // shield sits after the health, or at the right end when full
             float hpEnd = x0 + w * hp;
@@ -205,6 +160,13 @@ namespace BAM.Art
                 Quad(QEn, x0, ey0, x0 + w * energy, ey1);
             }
             else { Quad(QEnBack, 0f, 0f, 0f, 0f); Quad(QEn, 0f, 0f, 0f, 0f); }
+            if (en && shineAt >= -ShineWide)
+            {
+                float c = x0 + w * shineAt;
+                Quad(QShineWide, Mathf.Clamp(c - w * ShineWide * 0.5f, x0, x1), ey0, Mathf.Clamp(c + w * ShineWide * 0.5f, x0, x1), ey1);
+                Quad(QShine, Mathf.Clamp(c - w * ShineCore * 0.5f, x0, x1), ey0, Mathf.Clamp(c + w * ShineCore * 0.5f, x0, x1), ey1);
+            }
+            else { Quad(QShineWide, 0f, 0f, 0f, 0f); Quad(QShine, 0f, 0f, 0f, 0f); }
             // a notch every 100 HP, every 500 a wider one; a very big bar notches every 200, 300... so it never runs out of quads
             float step = TickStep;
             if (maxHp > 0f) while (maxHp / step > MaxTicks + 1) step += TickStep;
@@ -232,6 +194,7 @@ namespace BAM.Art
         void RebuildUV()
         {
             Col(QFrame, Pal.BarFrame);
+            Col(QEnEdge, edgeLit ? Pal.BarEnergyReady : Pal.BarShieldLo);
             Col(QBack, Pal.BarBack);
             Col(QTrail, Pal.BarTrail);
             Col(QHpLo, Pal.BarLo(fill));
@@ -242,7 +205,9 @@ namespace BAM.Art
             Col(QShHi, Pal.BarShieldHi);
             Col(QShEdge, Pal.BarFrame);
             Col(QEnBack, Pal.BarBack);
-            Col(QEn, !ready ? Pal.BarEnergy : readyLit ? Pal.BarEnergyReady : Pal.Gold);
+            Col(QEn, ready ? Pal.Gold : Pal.BarEnergy);
+            Col(QShineWide, Pal.BarEnergyReady);
+            Col(QShine, Pal.White);
             for (int i = 0; i < MaxTicks; i++) Col(QTicks + i, Pal.BarFrame);
         }
 
