@@ -329,10 +329,11 @@ namespace BAM.Game
             if (ready)
             {
                 // the old game's soft glow picture behind the button blinks while the special is ready (Rickard 2026-11-02
-                // "gör blinkande animation för special knappen också"), in step with the charge row's gold edge (HealthBar, sin 7 t)
-                float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f);
-                specialHalo.color = new Color(1f, 0.72f, 0.25f, 0.15f + 0.8f * k);
-                specialGlow.color = new Color(1f, 0.55f, 0.12f, 0.5f + 0.3f * pulse);
+                // "gör blinkande animation för special knappen också"); toned down the same evening ("för mycket med den glödande
+                // effekten när man har personen i range"): smaller, fainter and a slow soft breath with the ring (sin 3.5 t)
+                float k = 0.5f + 0.5f * pulse;
+                specialHalo.color = new Color(1f, 0.72f, 0.25f, 0.12f + 0.3f * k);
+                specialGlow.color = new Color(1f, 0.55f, 0.12f, 0.4f + 0.2f * pulse); // a faint slow breath (was 0.5 + 0.3, Rickard 2026-11-02)
                 specialGlow.rectTransform.localScale = Vector3.one * ((1.1f + 0.03f * pulse) / 1.1f);
             }
             // a charge just came in: a short gold ring swells out of the button
@@ -590,7 +591,7 @@ namespace BAM.Game
             // the Glass HUD's SPECIAL: a dark glass disc, a faint track and the orange charge (the old ring picture,
             // ui_ingameView_specialButton_fill, has the old ring's width: 0.14 of the radius)
             const float D = 2f * SpecialButton.Radius;
-            specialHalo = Picture(specialRoot, "Halo", D * 1.5f, "ui_ingameView_specialButton_glow", Color.clear); // behind everything
+            specialHalo = Picture(specialRoot, "Halo", D * 1.3f, "ui_ingameView_specialButton_glow", Color.clear); // behind everything
             specialHalo.raycastTarget = false;
             specialHalo.enabled = false;
             specialGlow = Circle(specialRoot, "Ready", D * 1.1f, Color.clear).GetComponent<Image>();
