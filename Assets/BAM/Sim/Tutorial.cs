@@ -266,7 +266,7 @@ namespace BAM.Sim
                     // the charge comes back full until an aimed bolt hits Knut, a moment after the last press so a bolt in the air
                     // lands first
                     if (!tu.Burst) { if (!p.SpecialReady && Time - tu.PressAt >= TutRefillAfter) p.Charge = p.HDef.MaxCharge; }
-                    else if (Time - tu.BurstAt >= TutHookAfter && (!OneTap || k == null || !k.Alive || SimMath.Dist(k, p) <= KnutS.HookDistance - 1f || tu.T > 5f)) // one tap: wait for Knut to come within his hook
+                    else if (Time - tu.BurstAt >= TutHookAfter && (!OneTap || k == null || !k.Alive || SimMath.Dist(k, p) <= KnutS.HookDistance - 0.3f || tu.T > 5f)) // one tap: wait for Knut to come within his hook
                     {
                         TutNext(Tutorial.StepBlink);
                         tu.SpellOn = true; p.Spell = SpellId.Blink; p.SpellAt = Time; p.SpellChanEnd = -1;

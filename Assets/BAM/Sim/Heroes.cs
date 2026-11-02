@@ -87,8 +87,9 @@ namespace BAM.Sim
     public static class KnutS
     {
         /// <summary>The anchor flies out at one steady OutSpeed (a harpoon, as Pudge's hook; Rickard 2026-11-02 "ja" to the hook
-        /// feel list): 6.5 tiles in 0.43 s. It was 14 tiles/s slowing to a stop over 1.2 s (0.63 s to full reach, ~6.7 tiles/s left).</summary>
-        public const float HookRadius = 0.4f, HookDistance = 6.5f, OutSpeed = 15, OutTime = HookDistance / OutSpeed, Release = 0.5f;
+        /// feel list). It was 14 tiles/s slowing to a stop over 1.2 s. HookDistance = his auto attack range, the white ring round him
+        /// (Defs 2.3; Rickard 2026-11-02 "samma som hans range", after the hook began to fly past minions: 6.5 tiles reached too far).</summary>
+        public const float HookRadius = 0.4f, HookDistance = 2.3f, OutSpeed = 15, OutTime = HookDistance / OutSpeed, Release = 0.5f;
         /// <summary>The haul back is a yank: a catch hangs PullPause on the taut chain, then the reel starts at PullStart tiles/s and
         /// speeds up by PullAccel to PullMax (6 tiles in ~0.37 s after the pause, about the old flat 15 tiles/s; an empty
         /// anchor comes back the same way without the pause). See Reeled / PullTime.</summary>

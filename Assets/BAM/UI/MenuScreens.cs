@@ -177,10 +177,11 @@ namespace BAM.UI
             cam.transform.position = Spot + new Vector3(0, viewH / 2 - FeetAt * viewH, -6f);
         }
 
-        /// <summary>Plays one attack (a tap on the hero page's stage).</summary>
+        /// <summary>Plays one attack (a tap on the hero page's stage). Not Knut: his swing broke loose on the stage (Rickard 2026-11-02
+        /// "ta bort knuts autoattack när man klickar på bilden"), so a tap on him does nothing.</summary>
         public void Swing()
         {
-            if (!hasHero) return;
+            if (!hasHero || shownId == HeroId.Knut) return;
             view.PlayAttack(0.3f);
             swingTill = Time.unscaledTime + 3f; // the longest attack clip is 2.4 s; the swing may leave the picture, as in the old game
         }
