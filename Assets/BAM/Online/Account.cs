@@ -91,7 +91,7 @@ namespace BAM.Online
                 if (UnityServices.State != ServicesInitializationState.Initialized) throw new Exception("Unity Services did not start (" + UnityServices.State + ")");
                 var auth = AuthenticationService.Instance;
                 // after a long pause the session may have expired: IsSignedIn stays true, but every call fails until we sign in again
-                if (auth.IsSignedIn && auth.IsExpired) auth.SignOut();
+                if (auth.IsSignedIn && auth.IsExpired) { Social.Stop(); auth.SignOut(); }   // Friends shuts down on sign-out: stop ours with it
                 if (!auth.IsSignedIn)
                 {
                     if (Platform != null)
@@ -107,7 +107,7 @@ namespace BAM.Online
                         if (!p.Ok) { lastError = p.Error ?? ""; Set(Status.NeedsSignIn); return; }
                         PlatformName = p.DisplayName ?? "";
                         // every start uses a fresh Play Games code: a cached Unity session could belong to another Google account
-                        if (auth.SessionTokenExists) auth.SignOut(true);
+                        if (auth.SessionTokenExists) { Social.Stop(); auth.SignOut(true); }
                         await auth.SignInWithGooglePlayGamesAsync(p.ServerCode);
                     }
                     else if (Application.isEditor)

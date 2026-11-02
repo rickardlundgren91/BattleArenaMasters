@@ -83,14 +83,19 @@ namespace BAM.Online
 
         public static Relation RelationTo(string playerId) => playerId != null && relation.TryGetValue(playerId, out var r) ? r : Relation.None;
 
-        internal static async void Start()
+        internal static void Start() { _ = StartAsync(); }
+
+        // Answers true when Friends is running afterwards. A start already under way is waited for, not doubled.
+        static async Task<bool> StartAsync()
         {
-            if (active || starting || Account.State != Account.Status.Ready) return;
+            while (starting) await Task.Delay(50);
+            if (active) return true;
+            if (Account.State != Account.Status.Ready) return false;
             starting = true;
             try
             {
                 await FriendsService.Instance.InitializeAsync();
-                if (Account.State != Account.Status.Ready) return;   // signed out or deleted while the service started
+                if (Account.State != Account.Status.Ready) return false;   // signed out or deleted while the service started
                 var f = FriendsService.Instance;
                 f.RelationshipAdded += OnChange;
                 f.RelationshipDeleted += OnChange;
@@ -100,10 +105,12 @@ namespace BAM.Online
                 await SyncName();
                 await SendPresence();
                 Rebuild();
+                return true;
             }
             catch (Exception e)
             {
                 Debug.LogWarning("[BAM.Online] friends off: " + e.Message);
+                return false;
             }
             finally
             {
@@ -111,14 +118,22 @@ namespace BAM.Online
             }
         }
 
+        // Unity Friends shuts itself down when Authentication signs out. Account signs out and in again after the session
+        // expired in the background (and before every Play Games sign-in), so Friends could be off while we still said active:
+        // every call then failed with "Unable to call FriendsService.AddFriendAsync because the Friends..." (Rickard's phone,
+        // 2026-11-02). Account now stops us before it signs out, and a call that still meets a stopped service restarts it once.
         internal static void Stop()
         {
             if (!active) return;
-            var f = FriendsService.Instance;
-            f.RelationshipAdded -= OnChange;
-            f.RelationshipDeleted -= OnChange;
-            f.PresenceUpdated -= OnChange;
-            f.MessageReceived -= OnMessage;
+            try
+            {
+                var f = FriendsService.Instance;
+                f.RelationshipAdded -= OnChange;
+                f.RelationshipDeleted -= OnChange;
+                f.PresenceUpdated -= OnChange;
+                f.MessageReceived -= OnMessage;
+            }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] friends stop: " + e.Message); }
             active = false;
             seenIncoming = -1;   // a new account must not toast the old one's requests
             friends.Clear(); incoming.Clear(); outgoing.Clear(); blocked.Clear(); relation.Clear();
@@ -145,7 +160,7 @@ namespace BAM.Online
         /// <summary>Send a friend request to a name. Answers null when sent, else why not.</summary>
         public static async Task<string> Add(string name)
         {
-            if (!active) return "Friends is not available right now";
+            if (!active && !await StartAsync()) return Offline;
             name = NameRules.Clean(name);
             if (name.Length == 0) return "Type a player name";
             if (string.Equals(name, Account.Name, StringComparison.OrdinalIgnoreCase)) return "That is you";
@@ -179,12 +194,25 @@ namespace BAM.Online
         // "Could not send the request", yet FUL got it), so after an error we look whether Friends now knows the link before saying so.
         static async Task<string> Run(Func<Task> call, string ok, string fail, string target = null)
         {
-            if (!active) return "Friends is not available right now";
+            if (!active && !await StartAsync()) return Offline;
             try
             {
-                await call();
-                if (ok != null) Say?.Invoke(ok);
-                return null;
+                for (int attempt = 0; ; attempt++)
+                {
+                    try
+                    {
+                        await call();
+                        if (ok != null) Say?.Invoke(ok);
+                        return null;
+                    }
+                    catch (Exception e) when (attempt == 0 && ServiceStopped(e))
+                    {
+                        // Friends was shut down under us (a sign-out and in again): start it again and try once more
+                        Debug.LogWarning("[BAM.Online] friends restart: " + e.Message);
+                        Stop();
+                        if (!await StartAsync()) return Offline;
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -195,14 +223,38 @@ namespace BAM.Online
                         try { if (Linked(target)) { if (ok != null) Say?.Invoke(ok); return null; } } catch (Exception) { }
                         await Task.Delay(250);
                     }
-                string why = e.Message ?? "";
-                if (why.Length > 60) why = why.Substring(0, 60) + "…";
-                return why.Length > 0 ? fail + " (" + why + ")" : fail;
+                return Friendly(e, fail);
             }
             finally
             {
                 dirty = true;
             }
+        }
+
+        const string Offline = "Friends is not available right now. Try again in a moment";
+
+        // the SDK says "Unable to call FriendsService.X because the Friends service is not initialized" (or similar) when it
+        // was shut down; the exact words vary between versions, so look for the parts that stay
+        static bool ServiceStopped(Exception e)
+        {
+            string m = e.Message ?? "";
+            return m.IndexOf("Unable to call", StringComparison.OrdinalIgnoreCase) >= 0
+                || m.IndexOf("not initialized", StringComparison.OrdinalIgnoreCase) >= 0
+                || m.IndexOf("not been initialized", StringComparison.OrdinalIgnoreCase) >= 0
+                || m.IndexOf("not signed in", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        // a short line a player understands, never the raw exception (that goes to the log above)
+        static string Friendly(Exception e, string fail)
+        {
+            string m = (e.Message ?? "").ToLowerInvariant();
+            if (ServiceStopped(e)) return Offline;
+            if (m.Contains("network") || m.Contains("timeout") || m.Contains("timed out") || m.Contains("connection") || m.Contains("resolve host"))
+                return fail + ". Check your internet and try again";
+            if (m.Contains("block")) return fail + ". This player is blocked";
+            if (m.Contains("limit") || m.Contains("too many") || m.Contains("429")) return fail + ". Too many requests, wait a moment";
+            if (m.Contains("already") || m.Contains("exist")) return fail + ". You already have a request or friendship with this player";
+            return fail + ". Try again in a moment";
         }
 
         // ---------- keeping the service up to date ----------
