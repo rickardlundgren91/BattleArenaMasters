@@ -142,7 +142,8 @@ namespace BAM.Game
             // the arrows over the joystick (moment 1) and over SPECIAL when it is ready (moment 3), and SPECIAL's gold pulse
             bool joyOn = play && !opening && tu.Step == Tutorial.StepMove;
             Arrow(joyArrow, joyOn, joyOn ? Local(RectTransformUtility.WorldToScreenPoint(null, joy.Base.position)) : Vector2.zero, JoystickZone.Radius * 1.25f);
-            bool spOn = play && (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow) && !tu.BurstDone && p.Alive && p.SpecialReady;
+            bool spOn = play && (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow) && !tu.BurstDone && p.Alive && p.SpecialReady
+                && (tu.Step != Tutorial.StepSpecial || tu.Line != null); // with its line: not over a grey button (bug review 2026-11-02, nr 13)
             Arrow(specialArrow, spOn, spOn ? Local(RectTransformUtility.WorldToScreenPoint(null, specialRoot.position)) : Vector2.zero, SpecialButton.Radius);
             bool blinkOn = play && tu.Step == Tutorial.StepBlink && p.Alive && m.SpellReady(p) && spellRoot.gameObject.activeSelf;
             Arrow(blinkArrow, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR);

@@ -47,6 +47,7 @@ namespace BAM.UI
         static Text hintText;
         static string hintShown;
         static float hintBaseY, hintBobSign;
+        static float hintHideAt = -1f; // a menu hint goes by itself (ShowMenuHint); the guided match hides its own
 
         static void BuildHint()
         {
@@ -73,6 +74,7 @@ namespace BAM.UI
         public static void ShowHint(string text, Vector2? anchorScreenPos = null)
         {
             Init();
+            hintCanvas.sortingOrder = HintOrder; hintHideAt = -1f; // the match's place: between the HUD and the menus
             var canvasRt = (RectTransform)hintCanvas.transform;
             hintBubble.gameObject.SetActive(true);
             Vector2 size = canvasRt.rect.size;
@@ -117,6 +119,15 @@ namespace BAM.UI
             hintBubble.anchoredPosition = pos;
         }
 
+        /// <summary>A menu says why a choice is locked (MODES: Ultra): the same bubble, above the menus, gone after a few seconds.
+        /// The match's hint canvas sits under the menus (HintOrder), so there it was never seen (bug review 2026-11-02, nr 14).</summary>
+        public static void ShowMenuHint(string text, float seconds = 3f)
+        {
+            ShowHint(text);
+            hintCanvas.sortingOrder = MenuOrder + 1;
+            hintHideAt = Time.unscaledTime + seconds;
+        }
+
         public static void HideHint()
         {
             if (hintBubble != null) hintBubble.gameObject.SetActive(false);
@@ -127,6 +138,7 @@ namespace BAM.UI
         static void TickHint()
         {
             if (hintBubble == null || !hintBubble.gameObject.activeSelf) return;
+            if (hintHideAt >= 0f && Time.unscaledTime >= hintHideAt) { hintHideAt = -1f; HideHint(); return; }
             float bob = Mathf.Sin(Time.unscaledTime * 5f) * 8f;
             var p = hintBubble.anchoredPosition;
             p.y = hintBaseY - hintBobSign * (bob + 8f);

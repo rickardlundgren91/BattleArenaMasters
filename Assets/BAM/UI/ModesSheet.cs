@@ -116,7 +116,7 @@ namespace BAM.UI
             {
                 if (i == (int)Difficulty.Ultra && !BamSettings.UltraOpen) // locked: says why only when tapped, the label stays short (Rickard 2026-10-31)
                 {
-                    ShowHint("Ultra opens after " + BamSettings.UltraWins + " wins against Hard (" + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins + ")");
+                    ShowMenuHint("Ultra opens after " + BamSettings.UltraWins + " wins against Hard (" + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins + ")");
                     RefreshModes(); return;
                 }
                 // in a party the leader picks the bots for everyone (MpRoom.SetDiff); the others are told and the choice goes back

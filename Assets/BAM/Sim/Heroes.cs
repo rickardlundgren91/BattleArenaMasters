@@ -718,7 +718,9 @@ namespace BAM.Sim
         void HookUpdate(Proj p, float dt)
         {
             var h = p.Src;
-            if (!h.Alive) { p.Done = true; return; }
+            // Knut died: the anchor is gone. A catch pulled along a wall's edge is set free as at the normal end, never left inside
+            // the wall (bug review 2026-11-02, nr 12)
+            if (!h.Alive) { p.Done = true; if (p.Caught != null && p.Caught.Alive) Unstick(p.Caught); return; }
             float ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang), back = KnutS.Release + h.R;
             if (p.Out)
             {

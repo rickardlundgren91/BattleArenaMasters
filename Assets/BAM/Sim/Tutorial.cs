@@ -186,7 +186,9 @@ namespace BAM.Sim
                 case Tutorial.StepMove: return tu.Opening ? null : LineMove;
                 case Tutorial.StepAuto: return LineAuto;
                 // no line until the special is ready: the screen flies "+ CHARGE" into the button instead
-                case Tutorial.StepSpecial: return !tu.Burst && Player.SpecialReady ? LineSpecial : null;
+                // one tap: only while the tap has a target, never over a grey button (a tap there only says "No enemy in range");
+                // the gold trail leads to the minions meanwhile (bug review 2026-11-02, nr 13)
+                case Tutorial.StepSpecial: return !tu.Burst && Player.SpecialReady && (!OneTap || TapHasTarget(Player)) ? LineSpecial : null;
                 case Tutorial.StepThrow: return !tu.Burst ? LineThrow : null;
                 case Tutorial.StepBlink: return tu.Hooked && Player.SpellAt <= Time ? LineBlink : null;
                 case Tutorial.StepFight: return tu.Guard != null && tu.Guard.Alive ? LineFight : null;
