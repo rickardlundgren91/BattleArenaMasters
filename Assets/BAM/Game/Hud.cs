@@ -37,7 +37,7 @@ namespace BAM.Game
         Text deniedText, specialName;
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialHalo, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
-        Image specialVeil, specialFlash, specialFaceBack, specialRim; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
+        Image specialVeil, specialFlash, specialFaceBack, specialRim, specialIconRim; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
         float readyAt = -99f; bool wasReady;
         RectTransform cancelMark, dragRing;
         Text cancelText;
@@ -348,7 +348,7 @@ namespace BAM.Game
             if (g > 0f)
             {
                 gainRing.enabled = true;
-                gainRing.color = new Color(1f, 0.86f, 0.45f, 0.85f * g);
+                gainRing.color = ready ? new Color(1f, 0.86f, 0.45f, 0.85f * g) : new Color(0.86f, 0.88f, 0.92f, 0.6f * g); // grey until ready, like the other thin lines
                 gainRing.rectTransform.localScale = Vector3.one * (1.18f - 0.18f * g);
             }
             else if (gainRing.enabled) gainRing.enabled = false;
@@ -374,7 +374,11 @@ namespace BAM.Game
             // orange-gold rim; the soft glow behind stays as it was
             specialIcon.color = ready ? FaceCream : full ? IconNoTarget : IconCharging;
             specialFaceBack.color = ready ? FaceOrange : Color.clear;
-            specialRim.color = ready ? RimReady : RimGold;
+            // the thin lines (the frame, the line round the icon and the charge arc) stay neutral grey until it is ready; only
+            // the inner fill shows the charge (Rickard 2026-11-03 "inte riktat i färg de tunna strecken inte förrän laddningen är där")
+            specialRim.color = ready ? RimReady : LineGrey;
+            specialIconRim.color = ready ? IconRimGold : LineGreyFaint;
+            if (!ready) specialFill.color = specialFillRight.color = ChargeArcGrey;
             if (ready && Rules.OneTapSpecial) splitLevelImg[0].enabled = splitLevelImg[1].enabled = false; // the pale level would wash the orange out
             var veil = specialVeil.rectTransform;
             specialVeil.enabled = !full;
@@ -395,6 +399,8 @@ namespace BAM.Game
 
         const float ReadyPopTime = 0.4f;
         static readonly Color FaceOrange = Hex(0xf2782a), FaceCream = new Color(1f, 0.9f, 0.76f, 1f), RimGold = Hex(0xd9a441), RimReady = Hex(0xffc04d);
+        static readonly Color IconRimGold = new Color(1f, 214f / 255f, 130f / 255f, 0.55f), LineGrey = new Color(0.62f, 0.64f, 0.7f, 1f),
+            LineGreyFaint = new Color(0.75f, 0.77f, 0.82f, 0.4f), ChargeArcGrey = new Color(0.86f, 0.88f, 0.92f, 0.9f);
         static readonly Color VeilColor = new Color(0.03f, 0.04f, 0.1f, 0.62f);
         static readonly Color IconCharging = new Color(0.62f, 0.62f, 0.62f, 1f), IconNoTarget = new Color(0.55f, 0.55f, 0.55f, 1f);
 
@@ -681,7 +687,8 @@ namespace BAM.Game
             // the gold frame round it all and a thin gold line round the icon, so it reads as a framed metal button
             specialRim = Circle(specialRoot, "Rim", D, RimGold).GetComponent<Image>();
             RoundRing(specialRim, D * 0.5f, Mathf.Max(1.5f, SpecialButton.Radius * 0.035f));
-            RoundRing(Circle(specialRoot, "IconRim", D * 0.86f, new Color(1f, 214f / 255f, 130f / 255f, 0.55f)).GetComponent<Image>(), D * 0.43f, 1f);
+            specialIconRim = Circle(specialRoot, "IconRim", D * 0.86f, IconRimGold).GetComponent<Image>();
+            RoundRing(specialIconRim, D * 0.43f, 1f);
             gainRing = Circle(specialRoot, "Gain", 290f, Color.clear).GetComponent<Image>();
             gainRing.sprite = UiKit.CircleRing;
             gainRing.enabled = false;
