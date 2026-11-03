@@ -609,7 +609,7 @@ namespace BAM.Game
                         if (towerRun >= 2) { Sound(SfxId.TowerHot, a, 0.9f); break; }
                     }
                     // Tyra's twang plays when her arrow leaves the bow, not at the draw (ReleaseSound, TYRA-03/04)
-                    if ((a.Kind != UnitKind.Tower || e.B == m.Player) && !(a.Kind == UnitKind.Hero && a.Hero == HeroId.Tyra)) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : 0.8f);
+                    if ((a.Kind != UnitKind.Tower || e.B == m.Player) && !(a.Kind == UnitKind.Hero && a.Hero == HeroId.Tyra)) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : a.Kind == UnitKind.Hero && a.Hero == HeroId.Tikta ? TiktaAutoVolume(a) : 0.8f);
                     // a tower shooting someone else within 8 tiles of the player is heard softly (VIS-02, Rickard 2026-10-29)
                     else if (a.Kind == UnitKind.Tower && m.Player != null && e.B != null && SimMath.Dist(e.B, m.Player) <= 8f) Sound(SfxId.TowerShot, a, 0.35f);
                     break;
@@ -956,6 +956,13 @@ namespace BAM.Game
             volleyFlashStep[srcSerial] = step;
             ArtKit.PlayFx(FxKind.VolleyRelease, at, 1f, Side(r.U.Team), (int)HeroId.Tyra);
         }
+
+        // Tikta's needle "tsip" sits wholly in 2.5-4 kHz, where the ear and a phone speaker are loudest, while the other autos are
+        // mostly low thuds a phone barely plays; and she attacks fastest (1.3 s). At 0.8 it stood about 7 dB over the rest on a phone
+        // and testers found it loud and pushy, most of all from someone else's Tikta (2026-11-03). Her own: -6 dB, level with
+        // Knut's; anyone else's: -10 dB, a little under the others' autos. Rickard's clip stays as it is.
+        const float TiktaAutoOwn = 0.4f, TiktaAutoOthers = 0.25f;
+        float TiktaAutoVolume(Unit a) => a == m.Player ? TiktaAutoOwn : TiktaAutoOthers;
 
         void Sound(SfxId id, Unit a, float volume)
         {

@@ -41,8 +41,11 @@ namespace BAM.Audio
                 case SfxId.Defeat: return new SfxInfo(0.85f, 1, 1f, 5, 0f);
 
                 case SfxId.AttackBram: case SfxId.AttackFenn: case SfxId.AttackTyra: case SfxId.AttackMoa:
-                case SfxId.AttackKnut: case SfxId.AttackTikta: case SfxId.AttackBlast:
+                case SfxId.AttackKnut: case SfxId.AttackBlast:
                     return new SfxInfo(0.62f, 3, 0.07f, 2, 0.06f);
+                // Tikta attacks fastest and her "tsip" is one bright tone: two at a time, a wider gap and more pitch spread so a
+                // fight with two Tiktas does not turn into a drill (tester feedback 2026-11-03; her volume is set in MatchViews)
+                case SfxId.AttackTikta: return new SfxInfo(0.62f, 2, 0.12f, 2, 0.1f);
 
                 case SfxId.BramHammerThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);
                 case SfxId.BramHammerBounce: return new SfxInfo(0.85f, 3, 0.08f, 3, 0.05f);
