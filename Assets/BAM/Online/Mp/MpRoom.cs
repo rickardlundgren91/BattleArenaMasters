@@ -65,6 +65,8 @@ namespace BAM.Online.Mp
 
         static MpRelay relay;
         static MpMatchNet net;
+        /// <summary>A match of this room is running on this phone.</summary>
+        internal static bool Playing => net != null;
         static readonly MpWriter w = new MpWriter();
         static int nextId = 1;
         static float pingT, loadT;
@@ -336,6 +338,7 @@ namespace BAM.Online.Mp
                 w.U8(i);
                 relay.SendTo(Members[i].Conn, w);
             }
+            relay.Flush(); // out now, not with the next frame's sends after this phone has built its scene (bug review NET-6)
             loadT = 0;
             Begin(seed, diff, seats, 0);
         }
@@ -668,6 +671,7 @@ namespace BAM.Online.Mp
         public void Predict(long f, PlayerInput[] inputs) => Lockstep.Predict(f, inputs);
         public void PredictedStep(long f, Match shown) => Lockstep.PredictedStep(f, shown);
         public bool TakeMiss() => Lockstep.TakeMiss();
+        public bool ConfirmedInputs(long f, PlayerInput[] inputs) => Lockstep.ConfirmedInputs(f, inputs);
 
         public MatchConfig Config => cfg;
         public bool Turned => turned;

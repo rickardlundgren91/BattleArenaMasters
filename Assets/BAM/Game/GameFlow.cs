@@ -347,12 +347,6 @@ namespace BAM.Game
             int n = 0;
             while (acc >= Rules.Tick && n < MaxTicksPerFrame) { acc -= Rules.Tick; n++; }
             if (acc >= Rules.Tick) acc = 0f;
-            n = Mathf.Max(0, n + net.Adjust()); // keep this phone's controls arriving just before their frame at the host
-            if (net.Display + n < net.Confirmed) n = (int)(net.Confirmed - net.Display); // never behind what is confirmed
-            long room = MaxAhead - (net.Display - net.Confirmed);
-            if (n > room) n = (int)Mathf.Max(0, room);
-            for (int i = 0; i < n; i++) { PlayerInput input = paused ? PlayerInput.None : hud.TakeInput(); net.Submit(in input); }
-
             bool moved = false;
             while (net.Next(confirmed, netInputs))
             {
@@ -362,10 +356,30 @@ namespace BAM.Game
                 if (confirmed.State == MatchState.Over) break;
             }
             bool end = confirmed.State == MatchState.Over;
+
+            // (after the frames: "never behind what is confirmed" counts the ones that just came)
+            n = Mathf.Max(0, n + net.Adjust()); // keep this phone's controls arriving just before their frame at the host
+            if (net.Display + n < net.Confirmed) n = (int)(net.Confirmed - net.Display);
+            long room = MaxAhead - (net.Display - net.Confirmed);
+            if (n > room) n = (int)Mathf.Max(0, room);
+            for (int i = 0; i < n; i++) { PlayerInput input = paused ? PlayerInput.None : hud.TakeInput(); net.Submit(in input); }
+
+            predWatch.Restart();
+            // confirmed past what was ever shown (this phone hitched, or the frames stalled and came in a heap): the shown match runs
+            // those ticks itself with the confirmed controls, each shown (swings, hits, numbers, sounds, the kill feed), and only then
+            // is copied. Copying straight to the confirmed frame skipped them unseen (bug review NET-1, 2026-11-03: every attack visible)
+            if (moved && pFrame < net.Confirmed)
+            {
+                while (pFrame < net.Confirmed && net.ConfirmedInputs(pFrame, netInputs))
+                {
+                    match.Step(netInputs);
+                    pFrame++;
+                    if (pFrame > shownFrame) { shownFrame = pFrame; ShownStep(); }
+                }
+            }
             // copied again only when a guess was wrong: most frames the host's frames are just what the shown match already ran with
             // (this phone's controls in time, the others holding their stick), and then the shown match is kept as it is
             bool sync = moved && (net.TakeMiss() || end || pFrame < net.Confirmed);
-            predWatch.Restart();
             long was = pFrame; // the frame shown so far: where the corrections are measured
             if (sync) { views.BeginCorrect(); mirror.Sync(); pFrame = net.Confirmed; }
             long to = end ? pFrame : net.Display;

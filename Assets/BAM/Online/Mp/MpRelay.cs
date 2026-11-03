@@ -48,6 +48,7 @@ namespace BAM.Online.Mp
         int nextConn = 1;
         string lobbyId, relayCode; float heartbeatT, reallocAt; bool busy, closed, paused;
         NetworkReachability reach;
+        bool reachChanged;
         byte[] inBuf = new byte[4096];
 
         public Action<int> OnConnect, OnDisconnect;
@@ -199,11 +200,15 @@ namespace BAM.Online.Mp
         public void Update()
         {
             // wifi <-> mobile data: the host's Relay seat is probably gone, take a new one at once
+            // Not during a match (bug review NET-2, 2026-11-03): Reallocate drops every guest, so the match fell apart into separate bot
+            // matches although the old seat often still works. During a match only a seat Relay itself calls invalid (below) is replaced;
+            // a change of network seen during it is acted on once the match is over.
             var nr = Application.internetReachability;
-            if (nr != reach)
+            if (nr != reach) { reach = nr; reachChanged = true; }
+            if (reachChanged && nr != NetworkReachability.NotReachable && host && !closed && !paused && !busy && bound && lobbyId != null && !MpRoom.Playing)
             {
-                reach = nr;
-                if (nr != NetworkReachability.NotReachable && host && !closed && !paused && !busy && bound && lobbyId != null) Reallocate();
+                reachChanged = false;
+                Reallocate();
             }
             if (closed || paused || !driver.IsCreated || !bound) { Heartbeat(); return; }
             driver.ScheduleUpdate().Complete();

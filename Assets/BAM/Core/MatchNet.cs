@@ -47,5 +47,7 @@ namespace BAM.Core
         /// the last copy was wrong (the others' controls, a late own one, a seat turned into a bot) or a fingerprint differed. False:
         /// the shown match already is the confirmed one run ahead with the right controls, and is kept as it is (no copy, no rerun).</summary>
         bool TakeMiss();
+        /// <summary>The controls confirmed frame f was stepped with; false when f is not confirmed (or too old).</summary>
+        bool ConfirmedInputs(long f, PlayerInput[] inputs);
     }
 }

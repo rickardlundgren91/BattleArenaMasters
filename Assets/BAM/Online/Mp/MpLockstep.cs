@@ -64,6 +64,8 @@ namespace BAM.Online.Mp
         readonly PlayerInput[] mine = new PlayerInput[Cap];
         const int NoLead = 127, LeadMin = 1, LeadTarget = 3, LeadMax = 7, AdjustEvery = 20;
         int lead = NoLead, leadSeen, leadUsed, adjWait;
+        int shrink, shrinkTick;
+        const int StartAhead = 12; // ticks ahead before the host's first word: about a trip there and back on mobile data
         /// <summary>Guest: the game shows a predicted match ahead of the frames (SimMirror), so frames are taken as soon as they come
         /// (no jitter buffer) and the controls carry the tick they are for.</summary>
         public bool Predicting;
@@ -342,11 +344,22 @@ namespace BAM.Online.Mp
         public int Adjust()
         {
             if (Host || solo || !Predicting) return 0;
+            // no word from the host yet (it is still loading, or its first frames are on their way): run no further ahead than a
+            // usual trip, instead of up to MaxAhead and then minutes of shrinking back (bug review NET-5, 2026-11-03)
+            if (lead == NoLead) return g - stepped >= StartAhead ? -1000 : 0;
+            // too far ahead: one tick less every other frame until the lead is back at the target (2/3 s for 20 ticks; it was one
+            // tick per 20 frames, ~8 s of heavy reruns and blinking heroes after an uneven start). New words about the lead are
+            // left alone meanwhile: they were sent before the shrinking showed at the host
+            if (shrink > 0)
+            {
+                if ((++shrinkTick & 1) == 0) { if (--shrink == 0) { adjWait = AdjustEvery; leadUsed = leadSeen; } return -1; }
+                return 0;
+            }
             if (adjWait > 0) { adjWait--; return 0; }
-            if (leadSeen == leadUsed || lead == NoLead) return 0;
+            if (leadSeen == leadUsed) return 0;
             leadUsed = leadSeen;
             if (lead < LeadMin) { adjWait = AdjustEvery; return Math.Min(6, LeadTarget - lead); }
-            if (lead > LeadMax) { adjWait = AdjustEvery; return -1; }
+            if (lead > LeadMax) { shrink = lead - LeadTarget; shrinkTick = 0; return 0; }
             return 0;
         }
 
@@ -365,6 +378,15 @@ namespace BAM.Online.Mp
             int gi = (int)(f % GuessCap);
             guessAt[gi] = f;
             for (int s = 0; s < Seats && s < into.Length; s++) guess[gi * Seats + s] = into[s];
+        }
+
+        /// <summary>Guest: the controls confirmed frame f was stepped with (false when f is not stepped yet, or long gone).</summary>
+        public bool ConfirmedInputs(long f, PlayerInput[] into)
+        {
+            if (f < 0 || f >= stepped || stepped - f >= Cap) return false;
+            int b = (int)(f % Cap) * Seats;
+            for (int s = 0; s < Seats && s < into.Length; s++) into[s] = ring[b + s];
+            return true;
         }
 
         /// <summary>Guest (tests): the controls the shown match last ran frame f with; false when not kept any more.</summary>
