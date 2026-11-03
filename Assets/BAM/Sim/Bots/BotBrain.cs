@@ -137,6 +137,7 @@ namespace BAM.Sim
                 {
                     float d = Dist(h, f); if (d == 0) d = 1; float keep = gStop - 0.1f;
                     gX = f.X + (h.X - f.X) / d * keep; gY = f.Y + (h.Y - f.Y) / d * keep; gFx = f.X; gFy = f.Y; gHasF = true;
+                    SpreadGoal(); // not on top of a teammate (BotSquad.cs)
                     M.Map.FindPath(h.X, h.Y, gX, gY, Now, path);
                 }
             }
@@ -164,6 +165,7 @@ namespace BAM.Sim
         void BotMove(float dx, float dy, float dt, float turn)
         {
             var h = H; float m = Hyp(dx, dy);
+            if (turn > 0) SpreadStepAside(ref dx, ref dy); // don't walk into a teammate (BotSquad.cs)
             turn = HmTurn(turn) * TK(7); // softer turns (BotMove.cs)
             if (m == 0 || turn <= 0 || Now - mT > 0.25f) { M.MoveUnit(h, dx, dy, dt); if (m > 0) { mdx = dx / m; mdy = dy / m; mT = Now; } return; }
             float ux = dx / m, uy = dy / m, a = SimMath.Atan2(mdx * uy - mdy * ux, mdx * ux + mdy * uy), lim = turn * dt;
@@ -212,6 +214,7 @@ namespace BAM.Sim
                 line = SimMath.Clamp(line - (fightNear ? 0.12f : 0) - (winning ? 0.15f : 0) - (h.SpecialReady ? 0.05f : 0) + (foesNear > matesNear.Count + 1 ? 0.1f : 0)
                     + (ttk < 2.5f ? 0.1f : 0) + (h.Has(St.SlowPct) && h.InCombat(now) ? 0.12f : 0), 0.12f, 0.6f);
             line += TK(0);
+            if (tierI >= 2) line = Math.Max(line, RotateHp); // step out and regenerate instead of standing in on low health (BotSquad.cs)
             bool wasRetreat = retreat;
             if (Tier.LowHealth > 0 && hpR < line
                 || (!allyMinionsNear && hpR < Tier.NoMinionLowHealth && fo != null && !winning && foesNear >= matesNear.Count + 1)
@@ -274,6 +277,7 @@ namespace BAM.Sim
                 || hpR > 0.6f && tank >= 10 && StarDiff >= 2);
             if (!shouldTower && !retreat && PushWindow(enemyTower, hpR)) shouldTower = true;
             if (!shouldTower && !retreat && TeamTower(enemyTower, hpR)) shouldTower = true; // hit the tower with the human
+            bool leadPush = !retreat && LeadPush(enemyTower, hpR); if (leadPush) shouldTower = true; // use a lead on the tower (BotSquad.cs)
             if (shouldTower && towerUp && tierI == 0 && !BronzeMinionsAtTower(enemyTower)) shouldTower = false; // beginners' tier: no tower rush without own minions
             if (finish) { shouldTower = true; target = null; }
             if (target != null && shouldTower && !urgent && Dist(h, enemyTower) < Dist(h, target) + 4) target = null;
@@ -286,7 +290,7 @@ namespace BAM.Sim
                 Mode = BotMode.Danger; focus = null;
                 if (SafestSpot(out float sx, out float sy)) SetGoal(sx, sy); else SetGoal(myTower.X, myTower.Y - fwd);
             }
-            else if (towerOnMe && tank < 25 && !soloTower && !chip && !finish && !(target != null && (target.Hp + ShieldOf(target)) / myDps < 1.5f))
+            else if (towerOnMe && tank < 25 && !soloTower && !chip && !finish && !leadPush && !(target != null && (target.Hp + ShieldOf(target)) / myDps < 1.5f))
             {
                 Mode = BotMode.LeaveTower; focus = null;
                 float a = SimMath.Atan2(h.Y - enemyTower.Y, h.X - enemyTower.X), r = enemyTower.UDef.Range + h.R + 0.8f;
@@ -314,6 +318,7 @@ namespace BAM.Sim
             if (!finish) SignalGoal(target, myTower, fwd); // a teammate's ATTACK or DEFEND (BotSignal.cs)
             if (hasGoal && hasBlocked && now < blockedT && Hyp(gX - blockedX, gY - blockedY) < 1.5f) hasGoal = false;
             if (target == null && !retreat && !danger && Mode != BotMode.BushChase && Mode != BotMode.Tower) HmOffset(); // own line per bot (BotMove.cs)
+            SpreadGoal(); // not on top of a teammate (BotSquad.cs)
             if (HmKeepGoal(oHas, oX, oY, oStop, oFollow)) { gX = oX; gY = oY; } // barely moved: keep the old goal and path
             else if (!hasGoal || !M.Map.FindPath(h.X, h.Y, gX, gY, now, path)) path.Clear();
             if (!h.SpecialReady) spWantT = 0;
@@ -397,7 +402,7 @@ namespace BAM.Sim
             var fl = LaneTarget(h.Team);
             int si = 0; var us = M.Units;
             for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a == h) break; if (a.Kind == UnitKind.Hero && a.Team == h.Team) si++; }
-            float slot = (si - 1) * 0.9f;
+            float slot = (si - 1) * 1.6f; // 0.9 until 2026-11-03: the three walked as one clump
             Mode = shouldTower ? BotMode.Tower : BotMode.Lane;
             float tr = enemyTower.UDef.Range;
             if (shouldTower) SetGoal(enemyTower.X + slot * 0.6f, enemyTower.Y - fwd * (h.Range * 0.85f + enemyTower.R), h.Range * 0.85f + enemyTower.R, enemyTower);
@@ -422,6 +427,7 @@ namespace BAM.Sim
             if (!shouldTower && hasGoal && safety && Mode == BotMode.Lane && BushSpot(gX, gY, Math.Max(1.5f, h.Range - 0.5f), enemyTower, 0, out float ax, out float ay)) SetGoal(ax, ay, 0.3f);
             // people don't stand perfectly still while they wait at the wave: shuffle a little around the spot
             // (a new spot every 1.5-3 s, not every decision: BotMove.cs)
+            FlankGrass(enemyTower, HpR(h)); // one bot per team waits in the side grass (BotSquad.cs)
             if (TK(8) > 0 && Mode == BotMode.Lane && hasGoal && gStop == 0 && Hyp(h.X - gX, h.Y - gY) < 1.2f) HmShuffle();
         }
 
