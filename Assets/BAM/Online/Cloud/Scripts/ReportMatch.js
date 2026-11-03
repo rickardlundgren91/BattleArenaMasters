@@ -24,7 +24,9 @@ const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
 const MAX_LEVEL = 30, XP_WIN = 100, XP_LOSS = 60, XP_KILL = 5, XP_FIGHT_MAX = 60, XP_FIRST_WIN = 50;
 const RATING = { Easy: { win: 15, loss: 0, cap: 300 }, Normal: { win: 35, loss: 0, cap: 700 }, Hard: { win: 75, loss: -25, cap: 0 }, Ultra: { win: 100, loss: -30, cap: 0 }, Players: { win: 150, loss: -50, cap: 0 } };
 const SEASON = 2;
-const MIN_SECONDS = 45, MAX_SECONDS = 1800, MAX_PER_DAY = 60, MAX_AGE = 7 * 86400, MAX_BATCH = 20, KEEP_IDS = 300;
+// MAX_AGE 7 -> 30 days (bug review 2026-11-02 nr 15): the phone counts offline matches at once, and a player offline over a week
+// lost level at the first sync when the server refused the older ones
+const MIN_SECONDS = 45, MAX_SECONDS = 1800, MAX_PER_DAY = 60, MAX_AGE = 30 * 86400, MAX_BATCH = 20, KEEP_IDS = 300;
 const WAIT_SECONDS = 1800, MAX_WAIT = 20, PVP = "bam-pvp";
 // Rating from real players: at most this many wins a day against the same opponent (bug review 2026-11-02 nr 39: a second
 // account kept at 0 Rating loses nothing and could feed +150 again and again)
@@ -163,7 +165,7 @@ module.exports = async ({ params, context, logger }) => {
     if (seen.ids.length > KEEP_IDS) seen.ids = seen.ids.slice(seen.ids.length - KEEP_IDS);
     spans.sort((a, b) => a[1] - b[1]);
     seen.spans = spans.filter(sp => sp[1] >= now - MAX_AGE - 3600).slice(-KEEP_SPANS);
-    for (const d of Object.keys(seen.days)) if (Number(d) < today - 8) delete seen.days[d];
+    for (const d of Object.keys(seen.days)) if (Number(d) < today - 31) delete seen.days[d];
     await data.setProtectedItemBatch(projectId, playerId, { data: [{ key: "bam-progress", value: t }, { key: "bam-matches", value: seen }] });
     await lb.addLeaderboardPlayerScore(projectId, "rating", playerId, { score: t.rating, metadata: { n: name, l: t.level } });
   }
