@@ -32,11 +32,29 @@ namespace BAM.Sim
             return m;
         }
 
+        /// <summary>Bug review 2026-11-02 nr 16: a special tapped in a Recall's last moment is cut when the hero lands at base, with
+        /// its charge kept, instead of firing from the base at the old aim.</summary>
+        static void RecallTapCheck()
+        {
+            var m = OneTapScene(HeroId.Bram, out var p, out float cx, out float cy);
+            m.Telegraph = true;
+            var e = m.Heroes.Find(h => h.Team != p.Team); Place(e, p.X + 2f, p.Y); m.AddStatus(e, St.Stun, 999);
+            p.Spell = SpellId.Recall; p.SpellChanStart = m.Time; p.SpellChanEnd = m.Time + 0.1f; p.SpellChanX = p.X; p.SpellChanY = p.Y;
+            bool cast = false, recalled = false;
+            for (int k = 0; k < 40; k++)
+            {
+                m.Step(k == 0 ? TapIn() : PlayerInput.None);
+                foreach (var ev in m.Events) { if (ev.Type == EventType.Cast && ev.A == p) cast = true; if (ev.Type == EventType.Recall && ev.A == p) recalled = true; }
+            }
+            Check(recalled && !cast && p.SpecialReady && p.TeleAt < 0, $"ONETAP recall: a special tapped as the Recall ends is cut at base with its charge kept (recalled {recalled}, cast {cast}, ready {p.SpecialReady})");
+        }
+
         static PlayerInput TapIn() { var i = PlayerInput.None; i.Special = true; i.AimAngle = float.NaN; return i; }
 
         static void OneTapChecks()
         {
             Check(Rules.OneTapSpecial, "ONETAP: the one-tap special is on");
+            RecallTapCheck();
             foreach (var hero in OneTapHeroes)
             {
                 if (hero == HeroId.Moa) continue;

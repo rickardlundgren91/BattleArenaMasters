@@ -133,6 +133,9 @@ namespace BAM.Sim
                 {
                     h.SpellChanEnd = -1;
                     float fx = h.X, fy = h.Y;
+                    // a special tapped in the channel's last moment is still in its red warning: cut it, the charge stays, so it never
+                    // fires from the base at the old aim (bug review 2026-11-02 nr 16)
+                    if (h.TeleAt >= 0) InterruptSpecial(h);
                     LoseShots(h);
                     h.X = h.PX = h.SpawnX; h.Y = h.PY = h.SpawnY; h.MoInit = false;
                     if (h.Bot != null) h.Bot.Reset(false);
