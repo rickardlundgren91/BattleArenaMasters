@@ -71,7 +71,10 @@ namespace BAM.Sim
             H(HeroId.Tikta, 0.225f, 2.66f, 10, false, 220, 37, 25, 4.5f, 1.3f, -0.036f, 2.35f, 0.15f, 0, 0.1f, ProjKind.TiktaNeedle, TiktaS.Reach, AimShape.Line, TiktaS.LineReach, 0.2f), // hp 195/33 -> 210/35 (balance 2026-10-28: 41-43 %); 210/35 -> 220/37 (balance 2026-10-30)
             H(HeroId.Blast, 0.25f, 2.25f, 10, false, 210, 29, 16.5f, 3.5f, 1.4f, -0.036f, 3.8f, 0.2f, 7, 0, ProjKind.BlastFire, BlastS.LaneLength, AimShape.Circle, BlastS.Reach, BlastS.Radius), // hp 190/26 -> 210/29, damage 16 -> 16.5 (balance 2026-10-30); tap = fire strip, drag = bomb (Rickard 2026-10-30)
             // Bonk (BAM's own, 2026-10-26): a melee bruiser between Fenn and Knut; balanced with bot matches (Hero3.cs)
-            H(HeroId.Bonk, 0.4f, 2.5f, 3, false, 300, 50, 37, 9, 2.6f, -0.03f, 2.4f, 0.7f, 0, 0.075f, ProjKind.BonkClub, BonkS.SlamRadius, AimShape.Line, BonkS.BoulderReach, BonkS.BoulderHitbox), // damage 56 -> 40 when his club began to follow its target (2026-10-28); 40 -> 37 (balance 2026-10-30)
+            H(HeroId.Bonk, 0.4f, 2.5f, 3, false, 300, 50, 28.5f, 6.9f, 2.0f, -0.03f, 2.4f, 0.5f, 0, 0.075f, ProjKind.BonkClub, BonkS.SlamRadius, AimShape.Line, BonkS.BoulderReach, BonkS.BoulderHitbox), // damage 56 -> 40 when his club began to follow its target (2026-10-28); 40 -> 37 (balance 2026-10-30)
+            // faster swing, same damage per second (tester via Discord 2026-11-03, Rickard "bonk slå lite snabbare"): every 2.0 s instead of 2.6,
+            // 28.5/6.9 instead of 37/9, wind-up 0.5 s instead of 0.7 so the club lands before the chance is gone; the special charges in
+            // 14 s instead of 18. Hard bots 3200 matches (with round 2): 41.5 -> 52.7 %, Normal 38.7 -> 49.7 %
             // Hilde (XYZ main 2026-10-28, SimHeroes6.cs: 225/42 hp, 21/5 dmg, 1.5 s, range 3.2, speed 2.0 x HERO_SPEED 1.25, 7 charges;
             // her own radius and wind-up from HeroLooks.OWN_STATS, the shell's 0.2 s flight from the 2026-10-18 combat feel pass)
             H(HeroId.Hilde, 0.4f, 2.5f, 7, false, 235, 44, 21, 5, 1.5f, -0.036f, 3.2f, 0.175f, 0, 0.2f, ProjKind.HildeShell, HildeS.Reach, AimShape.Circle, HildeS.Reach, HildeS.KegRadius), // hp 225/42 -> 235/44 (balance 2026-10-30)
