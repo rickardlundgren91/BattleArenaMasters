@@ -189,6 +189,15 @@ namespace BAM.Build
                 SetInt(level, "antiAliasing", 0, "Quality " + LevelNames[i] + " quality-level MSAA (URP asset decides)", log);
                 SetInt(level, "realtimeReflectionProbes", 0, "Quality " + LevelNames[i] + " realtime reflection probes", log);
                 SetInt(level, "softParticles", 0, "Quality " + LevelNames[i] + " soft particles", log);
+                // Both levels on every platform: the URP template left its "PC" level (now High) out of Android and iOS, so a phone
+                // only ever had Low (QualitySettings.count 1, Boot.ApplyQuality could not pick High) whatever the Graphics setting
+                // said (bug review 2026-11-02, nr 7)
+                var excluded = level.FindPropertyRelative("excludedTargetPlatforms");
+                if (excluded != null && excluded.isArray && excluded.arraySize > 0)
+                {
+                    log.Change("Quality " + LevelNames[i] + " left out of platforms", excluded.arraySize, 0);
+                    excluded.ClearArray();
+                }
             }
 
             SetInt(so.FindProperty("m_CurrentQuality"), 1, "Quality level used in the editor", log);
