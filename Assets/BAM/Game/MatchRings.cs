@@ -42,8 +42,10 @@ namespace BAM.Game
         // that keeps leaving it. Gold to match the guide arrow over it.
         readonly Ring[] goal = new Ring[6];
         public const float GoalR = 0.9f;
-        /// <summary>The gold target ring's outer edge round a tower: just outside its model (rig Radius 1.0), not its hit edge.</summary>
-        const float TowerRingR = 1.15f;
+        /// <summary>The gold target ring's outer edge round a tower: just outside its model, not its hit edge. Rickard's Tripo tower
+        /// is about 3 tiles across (Models.BuildTowerProp), so its stone foot hid the first ring at 1.15 (Rickard 2026-11-03 "märkte
+        /// ingenting som visade att jag attackerade tornet").</summary>
+        const float TowerRingR = 1.75f;
         bool goalOn;
         Vector3 goalAt;
         bool blinkOn;

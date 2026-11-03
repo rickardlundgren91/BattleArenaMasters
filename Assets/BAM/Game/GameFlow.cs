@@ -137,6 +137,20 @@ namespace BAM.Game
         /// online) the match never pauses and never shows the pause screen, whatever asks (back button, focus loss, background).</summary>
         public bool CanPause => net == null;
 
+        /// <summary>Editor only (menu BAM > Test > Immortal in matches, Rickard 2026-11-03 "kunna vara odödlig i match för att kunna
+        /// testa"): the player is topped up to full health before and after every tick of a match against bots, so hits, rings and
+        /// damage numbers still show but he never dies. Never online, never in a phone build; the rules (Sim) are untouched.</summary>
+        void EditorImmortal()
+        {
+#if UNITY_EDITOR
+            var p = match.Player;
+            if (net == null && p != null && p.Alive && p.Hp < p.MaxHp && UnityEditor.EditorPrefs.GetBool(ImmortalKey, false)) p.Hp = p.MaxHp;
+#endif
+        }
+
+        /// <summary>The EditorPrefs key the BAM > Test > Immortal in matches menu sets (Editor/Build/BamImmortal.cs).</summary>
+        public const string ImmortalKey = "BAM.ImmortalInMatch";
+
         public void Pause()
         {
             if (!inMatch || paused || resultShown || !CanPause) return;
@@ -256,7 +270,9 @@ namespace BAM.Game
                 while (acc >= Rules.Tick && n < MaxTicksPerFrame)
                 {
                     PlayerInput input = hud.TakeInput();
+                    EditorImmortal();
                     match.Step(in input);
+                    EditorImmortal();
                     BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f); // a swing started by this tick's events counts from this tick
                     Screens.CountEvents(match); // the result card's ratings (damage, healing, shields per hero)
                     views.AfterStep();
