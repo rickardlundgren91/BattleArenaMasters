@@ -31,6 +31,9 @@ const WAIT_SECONDS = 1800, MAX_WAIT = 20, PVP = "bam-pvp";
 // Rating from real players: at most this many wins a day against the same opponent (bug review 2026-11-02 nr 39: a second
 // account kept at 0 Rating loses nothing and could feed +150 again and again)
 const PVP_WINS_PER_OPP_DAY = 3, KEEP_SPANS = 120;
+// this player's entries in "bam-pvp" are taken out a day after they were written (bug review 2026-11-02 nr 50): they are only
+// needed while the other side may still confirm (WAIT_SECONDS), and they hold the player ID. DeleteMe takes them out at once.
+const PVP_KEEP = 86400, PVP_CLEAN_PER_CALL = 10;
 const HEROES = ["Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk", "Hilde", "Oaken"], LEVELS = ["Easy", "Normal", "Hard", "Ultra"];
 
 const xpToNext = l => 100 + 50 * (l - 1);
@@ -43,6 +46,18 @@ function ratingChange(rating, kind, won) {
   const r = RATING[kind];
   if (!won) return Math.max(r.loss, -rating);
   return r.cap > 0 ? Math.max(0, Math.min(r.win, r.cap - rating)) : r.win;
+}
+
+/// Takes the player out of one "bam-pvp" entry, deleting the entry when nobody is left in it (DeleteMe has a copy: Cloud Code scripts cannot share code).
+async function leavePvp(data, projectId, playerId, key) {
+  try {
+    const g = await data.getPrivateCustomItems(projectId, PVP, [key]);
+    if (!g.data.results.length) return;
+    const side = g.data.results[0].value;
+    if (side.p) delete side.p[playerId];
+    if (!side.p || Object.keys(side.p).length === 0) await data.deletePrivateCustomItem(key, projectId, PVP);
+    else await data.setPrivateCustomItem(projectId, PVP, { key: key, value: side });
+  } catch (e) { }
 }
 
 module.exports = async ({ params, context, logger }) => {
@@ -86,6 +101,16 @@ module.exports = async ({ params, context, logger }) => {
     else still.push(w);
   }
   seen.wait = still;
+
+  // take this player out of the "bam-pvp" entries it wrote over a day ago; an entry nobody is left in is deleted
+  const mineKeys = Array.isArray(seen.pvpKeys) ? seen.pvpKeys : [];
+  let cleaned = 0;
+  for (let i = 0; i < mineKeys.length && cleaned < PVP_CLEAN_PER_CALL; ) {
+    if (now - mineKeys[i].at <= PVP_KEEP) { i++; continue; }
+    await leavePvp(data, projectId, playerId, mineKeys[i].k);
+    mineKeys.splice(i, 1); cleaned++; changed = true;
+  }
+  seen.pvpKeys = mineKeys;
 
   const list = Array.isArray(params.matches) ? params.matches.slice(0, MAX_BATCH) : [];
   list.sort((a, b) => (a.at || 0) - (b.at || 0));
@@ -141,6 +166,7 @@ module.exports = async ({ params, context, logger }) => {
       const side = mine.data.results.length ? mine.data.results[0].value : { at: at, p: {} };
       side.p[playerId] = won;
       await data.setPrivateCustomItem(projectId, PVP, { key: key, value: side });
+      if (!mineKeys.some(e => e.k === key)) mineKeys.push({ k: key, at: now });
       const opps = opponents(await otherSide(vs, m.team), won);
       if (quit) rate("Players", won);
       else if (opps.length) ratePlayers(won, opps);
@@ -173,3 +199,4 @@ module.exports = async ({ params, context, logger }) => {
 };
 
 module.exports.params = { matches: { type: "JSON", required: true } };
+
