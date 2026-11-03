@@ -348,7 +348,7 @@ namespace BAM.Game
             if (g > 0f)
             {
                 gainRing.enabled = true;
-                gainRing.color = ready ? new Color(1f, 0.86f, 0.45f, 0.85f * g) : new Color(0.86f, 0.88f, 0.92f, 0.6f * g); // grey until ready, like the other thin lines
+                gainRing.color = ready ? new Color(1f, 0.86f, 0.45f, 0.85f * g) : new Color(1f, 0.6f, 0.2f, 0.6f * g); // orange like the charge arc until ready
                 gainRing.rectTransform.localScale = Vector3.one * (1.18f - 0.18f * g);
             }
             else if (gainRing.enabled) gainRing.enabled = false;
@@ -359,7 +359,7 @@ namespace BAM.Game
         }
 
         // The SPECIAL's icon tells charging from ready at a glance (Rickard 2026-11-03): charging = the icon greyed and a dark veil
-        // over the part not charged yet (it fills up from the bottom); charged but nobody in reach = a darker orange face with thin gold lines;
+        // over the part not charged yet while the charged part is orange (it fills up from the bottom); charged but nobody in reach = a darker orange face with thin gold lines;
         // ready = full colour, and the moment it turns ready the button pops (a short bounce, a white flash and the gold ring).
         // No stronger glow: Rickard found the glow too much on 2026-11-02.
         void ReadyLook(float frac, bool ready)
@@ -375,17 +375,23 @@ namespace BAM.Game
             bool waiting = full && !ready;
             // ready = the Midjourney look Rickard sent 2026-11-03: a solid orange face with the hero's picture light cream on it, and a bright
             // orange-gold rim; the soft glow behind stays as it was
+            // while charging the charged part is orange inside and on the arc outside, rising together; the rest stays grey
+            // (Rickard 2026-11-03 "den ska ändå fyllas med orange färg undertiden som den laddas och likadant med strecken utanpå")
             specialIcon.color = ready ? FaceCream : waiting ? FaceCreamWaiting : IconCharging;
-            specialFaceBack.color = ready ? FaceOrange : waiting ? FaceOrangeWaiting : Color.clear;
-            // the thin lines (the frame, the line round the icon and the charge arc) stay neutral grey until it is ready; only
-            // the inner fill shows the charge (Rickard 2026-11-03 "inte riktat i färg de tunna strecken inte förrän laddningen är där")
+            specialFaceBack.color = ready ? FaceOrange : FaceOrangeWaiting;
+            var back = specialFaceBack.rectTransform;
+            back.anchorMin = Vector2.zero;
+            back.anchorMax = new Vector2(1f, full ? 1f : RingHeight(frac));
+            back.offsetMin = back.offsetMax = Vector2.zero;
+            specialFaceBack.enabled = frac > 0.001f;
+            // the whole frame and the line round the icon stay grey until it is charged
             specialRim.color = ready ? RimReady : waiting ? RimGold : LineGrey;
             specialIconRim.color = ready || waiting ? IconRimGold : LineGreyFaint;
-            if (!ready) specialFill.color = specialFillRight.color = waiting ? GlassOrange : ChargeArcGrey;
-            if ((ready || waiting) && Rules.OneTapSpecial)
+            if (!ready) specialFill.color = specialFillRight.color = GlassOrange;
+            if (Rules.OneTapSpecial)
             {
-                splitLevelImg[0].enabled = splitLevelImg[1].enabled = false; // the pale level would wash the orange out
-                splitGrey.enabled = false; // and the grey cover would make it look uncharged
+                splitLevelImg[0].enabled = splitLevelImg[1].enabled = false; // the orange face shows the charge; the pale level would wash it out
+                splitGrey.enabled = false; // and the grey cover would dull the orange
             }
             var veil = specialVeil.rectTransform;
             specialVeil.enabled = !full;
@@ -408,9 +414,9 @@ namespace BAM.Game
         static readonly Color FaceOrange = Hex(0xf2782a), FaceCream = new Color(1f, 0.9f, 0.76f, 1f), RimGold = Hex(0xd9a441), RimReady = Hex(0xffc04d);
         static readonly Color FaceOrangeWaiting = Hex(0xb85a22), FaceCreamWaiting = new Color(1f, 0.9f, 0.76f, 0.8f);
         static readonly Color IconRimGold = new Color(1f, 214f / 255f, 130f / 255f, 0.55f), LineGrey = new Color(0.62f, 0.64f, 0.7f, 1f),
-            LineGreyFaint = new Color(0.75f, 0.77f, 0.82f, 0.4f), ChargeArcGrey = new Color(0.86f, 0.88f, 0.92f, 0.9f);
+            LineGreyFaint = new Color(0.75f, 0.77f, 0.82f, 0.4f);
         static readonly Color VeilColor = new Color(0.03f, 0.04f, 0.1f, 0.62f);
-        static readonly Color IconCharging = new Color(0.62f, 0.62f, 0.62f, 1f);
+        static readonly Color IconCharging = new Color(1f, 0.9f, 0.76f, 0.7f); // cream, a little faded; the veil darkens the uncharged part
 
         static readonly Color CancelOff = new Color(0.04f, 0.05f, 0.1f, 0.5f), CancelOn = new Color(0.9f, 0.2f, 0.2f, 0.55f), DotRed = new Color(1f, 0.35f, 0.35f, 0.85f);
 
