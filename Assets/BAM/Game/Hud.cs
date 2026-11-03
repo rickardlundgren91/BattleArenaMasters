@@ -37,7 +37,7 @@ namespace BAM.Game
         Text deniedText, specialName;
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialHalo, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
-        Image specialVeil, specialFlash; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
+        Image specialVeil, specialFlash, specialFaceBack, specialRim; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
         float readyAt = -99f; bool wasReady;
         RectTransform cancelMark, dragRing;
         Text cancelText;
@@ -365,9 +365,17 @@ namespace BAM.Game
         void ReadyLook(float frac, bool ready)
         {
             if (ready && !wasReady) { readyAt = Time.unscaledTime; gainAt = Time.unscaledTime; }
+            if (ready != wasReady) // the rim twice as thick while ready, like the Midjourney button
+                RoundRing(specialRim, SpecialButton.Radius, Mathf.Max(1.5f, SpecialButton.Radius * (ready ? 0.07f : 0.035f)));
             wasReady = ready;
+            Sparks(ready);
             bool full = frac >= 0.999f;
-            specialIcon.color = ready ? Color.white : full ? IconNoTarget : IconCharging;
+            // ready = the Midjourney look Rickard sent 2026-11-03: a solid orange face with the hero's picture light cream on it, and a bright
+            // orange-gold rim; the soft glow behind stays as it was
+            specialIcon.color = ready ? FaceCream : full ? IconNoTarget : IconCharging;
+            specialFaceBack.color = ready ? FaceOrange : Color.clear;
+            specialRim.color = ready ? RimReady : RimGold;
+            if (ready && Rules.OneTapSpecial) splitLevelImg[0].enabled = splitLevelImg[1].enabled = false; // the pale level would wash the orange out
             var veil = specialVeil.rectTransform;
             specialVeil.enabled = !full;
             if (!full) { veil.anchorMin = new Vector2(0f, frac); veil.anchorMax = Vector2.one; veil.offsetMin = veil.offsetMax = Vector2.zero; }
@@ -386,6 +394,7 @@ namespace BAM.Game
         }
 
         const float ReadyPopTime = 0.4f;
+        static readonly Color FaceOrange = Hex(0xf2782a), FaceCream = new Color(1f, 0.9f, 0.76f, 1f), RimGold = Hex(0xd9a441), RimReady = Hex(0xffc04d);
         static readonly Color VeilColor = new Color(0.03f, 0.04f, 0.1f, 0.62f);
         static readonly Color IconCharging = new Color(0.62f, 0.62f, 0.62f, 1f), IconNoTarget = new Color(0.55f, 0.55f, 0.55f, 1f);
 
@@ -642,6 +651,13 @@ namespace BAM.Game
             specialFill.fillClockwise = true;
             specialFace = Circle(specialRoot, "Face", D * 0.87f, Color.white).GetComponent<Image>();
             specialFace.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            // behind the icon: solid orange when ready, with the icon light cream on top (Midjourney look,
+            // Rickard 2026-11-03); clear otherwise
+            var backRt = UiKit.NewRect("FaceBack", specialFace.transform);
+            UiKit.Stretch(backRt);
+            specialFaceBack = backRt.gameObject.AddComponent<Image>();
+            specialFaceBack.color = Color.clear;
+            specialFaceBack.raycastTarget = false;
             var iconRt = UiKit.NewRect("Icon", specialFace.transform);
             UiKit.Stretch(iconRt);
             specialIcon = iconRt.gameObject.AddComponent<Image>();
@@ -663,11 +679,13 @@ namespace BAM.Game
             specialFlash.enabled = false;
             BuildSplit(specialFill.rectTransform); // split down the middle: tap left, drag right (HudSplit.cs)
             // the gold frame round it all and a thin gold line round the icon, so it reads as a framed metal button
-            RoundRing(Circle(specialRoot, "Rim", D, Hex(0xd9a441)).GetComponent<Image>(), D * 0.5f, Mathf.Max(1.5f, SpecialButton.Radius * 0.035f));
+            specialRim = Circle(specialRoot, "Rim", D, RimGold).GetComponent<Image>();
+            RoundRing(specialRim, D * 0.5f, Mathf.Max(1.5f, SpecialButton.Radius * 0.035f));
             RoundRing(Circle(specialRoot, "IconRim", D * 0.86f, new Color(1f, 214f / 255f, 130f / 255f, 0.55f)).GetComponent<Image>(), D * 0.43f, 1f);
             gainRing = Circle(specialRoot, "Gain", 290f, Color.clear).GetComponent<Image>();
             gainRing.sprite = UiKit.CircleRing;
             gainRing.enabled = false;
+            BuildSparks(); // small lightning on the rim while ready (HudSparks.cs)
             dragRing = Circle(specialRoot, "Reach", 2f * SpecialButton.MaxDrag, new Color(1f, 1f, 1f, 0.35f));
             dragRing.GetComponent<Image>().sprite = UiKit.CircleRing;
             dragRing.gameObject.SetActive(false);
