@@ -95,9 +95,6 @@ namespace BAM.Game
                 int s = Mathf.Max(1, Mathf.CeilToInt(p.RespawnT));
                 if (s != shownRespawn) { shownRespawn = s; respawnText.text = Num(s); }
             }
-
-            bool denied = Time.unscaledTime < deniedUntil;
-            if (deniedText.gameObject.activeSelf != denied) deniedText.gameObject.SetActive(denied);
         }
 
         static void BamAudioCountdown() => BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.Countdown);

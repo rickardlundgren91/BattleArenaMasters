@@ -26,6 +26,12 @@ namespace BAM.Game
             public Image Eye, Diamond, ChanBack, ChanFill;
             public Outline NameEdge, DiamondEdge;   // kept from the build, so no GetComponent every frame
             public float EyeA;
+            // name tags pushed apart where they collide (video review 2026-11-03: "MTyraFenn" when three stood together):
+            // NameW = the label's width, measured only when its text or size changes; NameX = the sideways shift now, PushX = the
+            // shift it eases towards (Declutter)
+            public float NameW, NameX, PushX;
+            public int NameFont;
+            public bool Shown;
         }
 
         readonly Overhead[] overheads = new Overhead[10];
@@ -76,7 +82,7 @@ namespace BAM.Game
 
         void BeginOverhead()
         {
-            for (int i = 0; i < overheads.Length; i++) { overheads[i].EyeA = 0f; overheads[i].Root.gameObject.SetActive(false); }
+            for (int i = 0; i < overheads.Length; i++) { overheads[i].EyeA = 0f; overheads[i].NameX = overheads[i].PushX = 0f; overheads[i].Root.gameObject.SetActive(false); }
         }
 
         void OverheadFrame(bool hidden)
@@ -98,7 +104,8 @@ namespace BAM.Game
                 Vector3 bar = Vector3.zero; float bw = 0f;
                 bool show = on && u != null && u.Alive && views.BarOf(u, out bar, out bw);
                 if (o.Root.gameObject.activeSelf != show) o.Root.gameObject.SetActive(show);
-                if (!show) { o.EyeA = 0f; continue; }
+                o.Shown = show;
+                if (!show) { o.EyeA = 0f; o.NameX = o.PushX = 0f; continue; }
                 Vector3 sp = cam.Camera.WorldToScreenPoint(bar);
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, sp, null, out Vector2 at);
                 o.Root.anchoredPosition = at;
@@ -114,11 +121,15 @@ namespace BAM.Game
                 var seats = m.Config.Seats;
                 string person = !mine && seats != null && who.Seat >= 0 && who.Seat < seats.Length ? seats[who.Seat].Name : null;
                 string label = mine ? "You" : !string.IsNullOrEmpty(person) ? person : HeroCatalog.Get(who.Hero).Name;
-                if (o.Name.text != label) o.Name.text = label;
+                int font = Mathf.Max(8, Mathf.RoundToInt(ts * (mine ? 0.27f : 0.23f)));
+                if (o.Name.text != label || o.NameFont != font)
+                {
+                    o.Name.text = label; o.Name.fontSize = font; o.NameFont = font;
+                    o.NameW = o.Name.preferredWidth;
+                }
                 o.Name.color = mine ? Color.white : u.Team == m.Player.Team ? NameAlly : NameFoe;
-                o.Name.fontSize = Mathf.Max(8, Mathf.RoundToInt(ts * (mine ? 0.27f : 0.23f)));
                 o.Name.rectTransform.sizeDelta = new Vector2(ts * 4f, ts * 0.5f);
-                o.Name.rectTransform.anchoredPosition = new Vector2(0f, size * 0.17f);
+                o.Name.rectTransform.anchoredPosition = new Vector2(o.NameX, size * 0.17f);
                 {
                     float ew = Mathf.Max(1f, ts * 0.035f);
                     o.NameEdge.effectDistance = new Vector2(ew, -ew);
@@ -174,6 +185,51 @@ namespace BAM.Game
                     o.ChanFill.rectTransform.sizeDelta = new Vector2(cw * k, 4f);
                     o.ChanFill.color = foe ? new Color(1f, 0.62f, 0.15f, 0.6f + 0.4f * Mathf.Sin(Time.unscaledTime * 30f)) : new Color(1f, 1f, 1f, 0.7f);
                 }
+            }
+            Declutter(ts, dt);
+        }
+
+        /// <summary>Name tags that would lie on each other slide sideways apart (video review 2026-11-03: three heroes in a clump
+        /// read "MTyraFenn"). Only sideways, so the stack above the bar (eye, poison bubbles, rising numbers) stays free; each tag
+        /// eases to its spot (no jitter while the clump moves) and back over its own bar once there is room again.</summary>
+        void Declutter(float ts, float dt)
+        {
+            const float Gap = 0.08f; // tiles between two neighbouring tags
+            float rowH = ts * 0.32f, maxShift = ts * 1.6f;
+            for (int i = 0; i < overheads.Length; i++) overheads[i].PushX = 0f;
+            // a few rounds of pushing each colliding pair apart by half their overlap each, left one left, right one right
+            for (int round = 0; round < 4; round++)
+            {
+                bool moved = false;
+                for (int i = 0; i < overheads.Length; i++)
+                {
+                    var a = overheads[i];
+                    if (!a.Shown) continue;
+                    for (int j = i + 1; j < overheads.Length; j++)
+                    {
+                        var b = overheads[j];
+                        if (!b.Shown) continue;
+                        Vector2 pa = a.Root.anchoredPosition, pb = b.Root.anchoredPosition;
+                        if (Mathf.Abs(pa.y - pb.y) >= rowH) continue;
+                        float ax = pa.x + a.PushX, bx = pb.x + b.PushX;
+                        float need = (a.NameW + b.NameW) / 2f + ts * Gap, d = bx - ax;
+                        float over = need - Mathf.Abs(d);
+                        if (over <= 0.5f) continue;
+                        float dir = d >= 0f ? 1f : -1f; // b goes right of a (on a tie the later hero goes right)
+                        a.PushX -= dir * over / 2f; b.PushX += dir * over / 2f;
+                        moved = true;
+                    }
+                }
+                if (!moved) break;
+            }
+            float k = Mathf.Min(1f, dt * 12f);
+            for (int i = 0; i < overheads.Length; i++)
+            {
+                var o = overheads[i];
+                if (!o.Shown) continue;
+                o.NameX += (Mathf.Clamp(o.PushX, -maxShift, maxShift) - o.NameX) * k;
+                var rt = o.Name.rectTransform;
+                rt.anchoredPosition = new Vector2(o.NameX, rt.anchoredPosition.y);
             }
         }
 

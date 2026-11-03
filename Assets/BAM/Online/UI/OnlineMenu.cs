@@ -67,6 +67,9 @@ namespace BAM.Online.UI
             if (p != "hubname") hubConfirm = null;
             hubSocialConfirm = hubReportFor = null;
             if (p != "friends" && p != "invite") { friendMenu = friendRemove = null; }
+            // a toast from before the page opened goes with it (video review 2026-11-03: "You left the party" lay over the
+            // Invite panel); toasts the new page raises itself come after this and show as usual
+            if (from != p) hubToast = null;
             EndInput();
             if (!backNav && from != null && from != p)
             {

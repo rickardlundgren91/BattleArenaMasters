@@ -20,7 +20,7 @@ namespace BAM.Game
     sealed partial class Hud
     {
         const int HudOrder = 10; // under the hint bubble (60) and the menus (100)
-        const float DeniedTime = 1.2f, ShakeTime = 0.35f;
+        const float ShakeTime = 0.4f; // the only sign a press was refused (no text since 2026-11-03), so a little longer and wider than before (0.35 s, 14)
         static readonly string[] Numbers = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20" };
         static readonly string[] TutStepNames = { "move", "auto_attack", "special_tap", "special_drag", "blink", "fight", "heal", "tower" };
         static readonly string[] IslandStepNames = { "island_walk", "island_minion", "island_grass", "island_target", "island_pad" };
@@ -34,7 +34,7 @@ namespace BAM.Game
         // window, more on a WideScreen (a foldable, a tablet), where the joystick zone and the SPECIAL reach out to the screen's
         // edges, where the thumbs are (ApplyLayout)
         float gapL, gapR;
-        Text deniedText, specialName;
+        Text specialName;
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialHalo, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
         Image specialVeil, specialFlash, specialFaceBack, specialRim, specialIconRim; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
@@ -57,7 +57,7 @@ namespace BAM.Game
         MatchCamera cam;
         bool built, leftHanded, laidOutHand, tutorial, island, joyLogged, heroTest;
         int lastTutStep;
-        float lastDenied, deniedUntil, shakeUntil, bannerUntil, gainAt, lastCharge;
+        float lastDenied, shakeUntil, bannerUntil, gainAt, lastCharge;
         // who killed the player last ("Defeated by" under the respawn countdown)
         Unit killedBy;
         const float BannerTime = 2.5f, GainTime = 0.35f; // the old bannerT and CombatFeel.PULSE_T
@@ -88,7 +88,7 @@ namespace BAM.Game
             aim = ArtKit.CreateAim();
             aimLook = new AimIndicator(aim);
             lastTutStep = -1;
-            lastDenied = m.SpecialDeniedAt; deniedUntil = shakeUntil = bannerUntil = 0f;
+            lastDenied = m.SpecialDeniedAt; shakeUntil = bannerUntil = 0f;
             gainAt = -99f; lastCharge = 0f; killedBy = null;
             readyAt = -99f; wasReady = false; wasFull = true; // no pop for a charge the hero already had when the match starts
             if (specialFlash != null) { specialFlash.enabled = false; specialRoot.localScale = Vector3.one; }
@@ -111,7 +111,6 @@ namespace BAM.Game
             if (BeginSplit(HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant())) { specialIcon.enabled = false; specialName.text = ""; } // its own tap and drag pictures (HudSplit.cs)
             BeginCenter();
             BeginTutorial();
-            deniedText.gameObject.SetActive(false);
             joyLogged = false;
             leftHanded = !BamSettings.LeftHanded; // forces the first layout
             ApplyLayout();
@@ -197,15 +196,15 @@ namespace BAM.Game
             if (m == null || !m.Player.Alive) return;
             // after the hold card has shown, letting go only hides it (Rickard 2026-10-26: reading must not cast); Space has no hold
             if (!fromKey && m.Tut == null && Time.unscaledTime - special.PressedAt >= HoldTime) return;
-            if (!m.Player.SpecialReady) { Denied("Special not ready"); return; }
-            if (m.OneTap && !m.TapHasTarget(m.Player)) { Denied("No enemy in range"); return; } // the button is grey (OneTap.cs)
+            if (!m.Player.SpecialReady) { Denied(); return; }
+            if (m.OneTap && !m.TapHasTarget(m.Player)) { Denied(); return; } // the button is grey (OneTap.cs)
             Queue(float.NaN, 0f);
         }
 
         void OnAimed(Vector2 offset)
         {
             if (m == null || !m.Player.Alive) return;
-            if (!m.Player.SpecialReady) { Denied("Special not ready"); return; }
+            if (!m.Player.SpecialReady) { Denied(); return; }
             Queue(Coords.ScreenAngle(offset), AimK(offset));
         }
 
@@ -219,10 +218,10 @@ namespace BAM.Game
             specialQueued = true; queuedAngle = angle; queuedK = k;
         }
 
-        void Denied(string text)
+        /// <summary>The special could not fire: the button shakes and a soft click plays. No text (video review 2026-11-03: "Special
+        /// not ready" showed 8 times in one match and helped nobody; no floating spell text), the shake says it.</summary>
+        void Denied()
         {
-            deniedText.text = text;
-            deniedUntil = Time.unscaledTime + DeniedTime;
             shakeUntil = Time.unscaledTime + ShakeTime;
             BamAudio.Play(SfxId.UiBack, 0.6f);
         }
@@ -231,7 +230,7 @@ namespace BAM.Game
 
         public void AfterStep()
         {
-            if (m.SpecialDeniedAt != lastDenied) { lastDenied = m.SpecialDeniedAt; Denied("No target in reach"); }
+            if (m.SpecialDeniedAt != lastDenied) { lastDenied = m.SpecialDeniedAt; Denied(); }
             if (lastState == MatchState.Countdown && m.State == MatchState.Play && !tutorial && !heroTest)
             {
                 bannerUntil = Time.unscaledTime + BannerTime;
@@ -352,7 +351,7 @@ namespace BAM.Game
                 gainRing.rectTransform.localScale = Vector3.one * (1.18f - 0.18f * g);
             }
             else if (gainRing.enabled) gainRing.enabled = false;
-            float shake = Time.unscaledTime < shakeUntil ? Mathf.Sin(Time.unscaledTime * 70f) * 14f * (shakeUntil - Time.unscaledTime) / ShakeTime : 0f;
+            float shake = Time.unscaledTime < shakeUntil ? Mathf.Sin(Time.unscaledTime * 70f) * 18f * (shakeUntil - Time.unscaledTime) / ShakeTime : 0f;
             specialFace.rectTransform.anchoredPosition = new Vector2(shake, 0f);
             if (special.Pressed && !p.Alive) special.Cancel();
             DragMarks();
@@ -598,10 +597,6 @@ namespace BAM.Game
             joy.SideGap = leftHanded ? gapR : gapL;
             float side = leftHanded ? 0f : 1f, edge = leftHanded ? -gapL : gapR;
             UiKit.Place(specialRoot, side, 0f, (leftHanded ? 70f : -70f) + edge, 150f, 270f, 270f);
-            // "Special not ready" etc.: just inside of the spell button above the SPECIAL, level with it (was 30 from the edge, 440
-            // up, which the spell button now covers; 2026-11-02)
-            UiKit.Place(deniedText, side, 0f, (leftHanded ? 300f : -300f) + edge, 475f, 520f, 70f);
-            deniedText.alignment = leftHanded ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
             Canvas.ForceUpdateCanvases();
             joy.Rest();
         }
@@ -746,9 +741,6 @@ namespace BAM.Game
             specialName.resizeTextMinSize = 20;
             specialName.resizeTextMaxSize = 44;
             UiKit.AddOutline(specialName, 3);
-
-            deniedText = UiKit.Label(safe, "", 44, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.8f));
-            UiKit.AddOutline(deniedText, 3);
 
             BuildTop();
 
