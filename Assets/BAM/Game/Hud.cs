@@ -38,7 +38,7 @@ namespace BAM.Game
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialHalo, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
         Image specialVeil, specialFlash, specialFaceBack, specialRim, specialIconRim; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
-        float readyAt = -99f; bool wasReady;
+        float readyAt = -99f; bool wasReady, wasFull;
         RectTransform cancelMark, dragRing;
         Text cancelText;
         readonly Image[] cancelCross = new Image[2];
@@ -90,7 +90,7 @@ namespace BAM.Game
             lastTutStep = -1;
             lastDenied = m.SpecialDeniedAt; deniedUntil = shakeUntil = bannerUntil = 0f;
             gainAt = -99f; lastCharge = 0f; killedBy = null;
-            readyAt = -99f; wasReady = false;
+            readyAt = -99f; wasReady = false; wasFull = true; // no pop for a charge the hero already had when the match starts
             if (specialFlash != null) { specialFlash.enabled = false; specialRoot.localScale = Vector3.one; }
             lastState = m.State;
             specialQueued = false; hintShown = false;
@@ -364,7 +364,11 @@ namespace BAM.Game
         // No stronger glow: Rickard found the glow too much on 2026-11-02.
         void ReadyLook(float frac, bool ready)
         {
-            if (ready && !wasReady) { readyAt = Time.unscaledTime; gainAt = Time.unscaledTime; }
+            // the pop only when the charge first fills up, not each time a target walks in and out of reach (Rickard 2026-11-03
+            // "det räcker att den hoppar till första gången man laddat upp den")
+            bool charged = frac >= 0.999f;
+            if (charged && !wasFull) { readyAt = Time.unscaledTime; gainAt = Time.unscaledTime; }
+            wasFull = charged;
             if (ready != wasReady) // the rim twice as thick while ready, like the Midjourney button
                 RoundRing(specialRim, SpecialButton.Radius, Mathf.Max(1.5f, SpecialButton.Radius * (ready ? 0.07f : 0.035f)));
             wasReady = ready;
