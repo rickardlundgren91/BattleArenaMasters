@@ -53,7 +53,7 @@ namespace BAM.Art
             UnlitAdd.renderQueue = 3050;
             Overlay = Instance(Unlit);
             Overlay.name = "BAM_Overlay (BAM)";
-            Overlay.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
+            DrawOverAll(Overlay); // URP's Unlit has no _ZTest: a tower or a wall hid the bars (bug review 2026-11-03)
             Overlay.SetFloat("_ZWrite", 0f);
             Overlay.renderQueue = 4000;
         }
@@ -123,6 +123,35 @@ namespace BAM.Art
             m.EnableKeyword("_ALPHATEST_ON");
             m.SetOverrideTag("RenderType", "TransparentCutout");
             m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+        }
+
+        static Shader overlayShader;
+        static bool overlayLooked;
+
+        /// <summary>BAM/Overlay Unlit (Resources/BAMArt/BamOverlay.shader): URP's Unlit with a ZTest setting. URP's own Unlit has no
+        /// _ZTest (only Shader Graph shaders have it; checked in Unity's URP source), so SetFloat("_ZTest", Always) on it did nothing.</summary>
+        static Shader OverlayShader
+        {
+            get
+            {
+                if (!overlayLooked) { overlayLooked = true; overlayShader = Resources.Load<Shader>(Folder + "BamOverlay"); }
+                return overlayShader;
+            }
+        }
+
+        /// <summary>m (a private copy) drawn with no depth test, so nothing in the world hides it, with its colours, texture,
+        /// blending, culling and queue kept. False, and m untouched, when the overlay shader is missing or the phone cannot run it.
+        /// Bug review 2026-11-03: the health bars and the hero's range ring were still hidden by the tower and the walls.</summary>
+        public static bool DrawOverAll(Material m)
+        {
+            var sh = OverlayShader;
+            if (m == null || sh == null || !sh.isSupported) return false;
+            int queue = m.renderQueue;
+            m.shader = sh;
+            m.renderQueue = queue;
+            m.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
+            m.SetFloat("_ZWrite", 0f);
+            return true;
         }
 
         /// <summary>A private copy for one view (hit flash, fade, tint). Made when the view is created, reused by its pool.</summary>

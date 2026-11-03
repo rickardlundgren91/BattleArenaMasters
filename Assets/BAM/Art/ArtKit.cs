@@ -429,6 +429,10 @@ namespace BAM.Art
             return v;
         }
 
+        /// <summary>m (a private copy) drawn over everything, nothing in the world hides it (ArtMaterials.DrawOverAll): the hero's range
+        /// ring over the tower and the walls (MatchRings). False when the overlay shader is missing; m is then unchanged.</summary>
+        public static bool DrawOverAll(Material m) { Init(); return ArtMaterials.DrawOverAll(m); }
+
         public static AimView CreateAim()
         {
             Init();

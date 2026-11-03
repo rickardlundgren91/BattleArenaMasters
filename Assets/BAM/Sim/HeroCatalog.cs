@@ -61,7 +61,7 @@ namespace BAM.Sim
                 Health = 2, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tyra, Name = "Tyra", Title = "The Longshot", Role = "Marksman", Ranged = true,
                 SpecialName = "Pinpoint Bolt", SpecialDesc = "Tap: Arrow Volley, five arrows in a cone at a random enemy in her range; each enemy in it is hit once. Drag: a heavy bolt after a short draw that flies until it hits something: the first enemy in its path, a tower or a wall.",
-                OneTapDesc = "Tap: after a short draw, a heavy bolt at a random enemy hero in her range, or through a minion when no hero is near. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall.",
+                OneTapDesc = "Tap: after a short draw, a heavy bolt at a random enemy in her range, minions too. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
                 PassiveName = "Featherstep", PassiveDesc = "When her attack hurts an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,
@@ -71,7 +71,7 @@ namespace BAM.Sim
                 Health = 2, Damage = 1, Speed = 2, Difficulty = 1 },
             new HeroInfo { Id = HeroId.Knut, Name = "Knut", Title = "The Anchor", Role = "Tank", Ranged = false,
                 SpecialName = "Anchor Throw", SpecialDesc = "Tap: slams his anchor into the ground, hurting and slowing every enemy around him. Drag: throws the anchor where you aim; it flies past minions and pulls the first enemy hero it hits to him and stuns it.",
-                OneTapDesc = "Tap: throws his anchor at a random enemy hero in reach, or through a minion when no hero is near. It flies past minions, pulls the first enemy hero it hits to him and stuns it.",
+                OneTapDesc = "Tap: throws his anchor at a random enemy in reach, minions too. It flies past minions, pulls the first enemy hero it hits to him and stuns it.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
                 PassiveName = "Anchor Drag", PassiveDesc = "His attacks slow the target.",
                 Health = 3, Damage = 2, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tikta, Name = "Tikta", Title = "The Needle Wing", Role = "Assassin", Ranged = false,

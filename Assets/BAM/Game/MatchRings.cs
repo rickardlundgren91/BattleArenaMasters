@@ -89,9 +89,9 @@ namespace BAM.Game
                 var v = ArtKit.CreateAim();
                 MeshRenderer rr = null;
                 foreach (var r in v.GetComponentsInChildren<MeshRenderer>(true)) if (r.gameObject.name == "Range") rr = r;
-                // the aim's own private range material (AimLook.rangeMat, destroyed with the aim), so only this ring changes
-                if (overTerrain && rr != null && rr.sharedMaterial != null)
-                    rr.sharedMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
+                // the aim's own private range material (AimLook.rangeMat, destroyed with the aim), so only this ring changes. URP's Unlit
+                // has no _ZTest, so setting it did nothing and the tower still hid the ring: the overlay shader instead (bug review 2026-11-03)
+                if (overTerrain && rr != null) ArtKit.DrawOverAll(rr.sharedMaterial);
                 var mf = rr != null ? rr.GetComponent<MeshFilter>() : null;
                 rings[i] = new Ring { View = v, Renderer = rr, Block = new MaterialPropertyBlock(), Filter = mf, Orig = mf != null ? mf.sharedMesh : null };
                 v.Hide();
