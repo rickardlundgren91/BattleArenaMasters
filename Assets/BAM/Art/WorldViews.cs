@@ -292,7 +292,8 @@ namespace BAM.Art
         }
 
         // the heroes' blades get the big arc; the wolf a smaller one, minions small (recipe: they must not fill the lane)
-        static float ArcScale(ProjKind k) => k == ProjKind.FennSlash || k == ProjKind.KnutHit ? 1.6f : k == ProjKind.WolfBite ? 1.0f : 0.8f;
+        // Knut's a little bigger and heavier (Rickard 2026-11-03: his blow read as a shot)
+        static float ArcScale(ProjKind k) => k == ProjKind.KnutHit ? 1.9f : k == ProjKind.FennSlash ? 1.6f : k == ProjKind.WolfBite ? 1.0f : 0.8f;
 
         // every shot can miss (a wall, a target that died, a volley arrow past everyone): its splash plays only when the game says
         // this very shot hit; one that hit earlier and flew on ends quietly (precision SHOT-01/03, VIS-04, TYRA-07)
@@ -424,6 +425,9 @@ namespace BAM.Art
                 float s = (0.7f + k * 0.5f) * (arc ? ArcScale(kind) : 1f);
                 vis.localScale = new Vector3(s, 1f, s);
                 vis.rotation = Quaternion.LookRotation(dir) * Quaternion.Euler(0f, mirror ? Mathf.Lerp(40f, -40f, k) : Mathf.Lerp(-40f, 40f, k), 0f);
+                // Knut's anchor blow lands on the spot: his arc sits where the anchor strikes and never slides from him toward the
+                // target, which read as a projectile ("knut skjuter bara en projektil", Rickard 2026-11-03); Fenn's slash sweeps as before
+                if (kind == ProjKind.KnutHit) vis.position = to + new Vector3(0f, 0.45f, 0f);
                 if (!struck && age >= Mathf.Min(flight, 0.18f))
                 {
                     // the hit sprays out behind the target in the swing's direction, with a small white core (MLBB analysis 7-8)
