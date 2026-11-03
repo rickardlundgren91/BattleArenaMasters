@@ -84,7 +84,7 @@ namespace BAM.Game
             bool on = !hidden && !(m.Tut != null && m.Tut.Island) && m.State != MatchState.Over;
             // one tile in canvas units: the camera frames MatchCamera's TilesAcross over the standing frame, which is narrower than the canvas
             // on a wide window, so the marks are sized from the camera, not from the canvas
-            float ts = cam.PixelsPerTile * (Screen.width > 1f ? canvasRect.rect.width / Screen.width : 1f);
+            float ts = OverheadTile();
             float dt = Time.unscaledDeltaTime;
             // the heroes, then the live Fenn clones (they are not in m.Heroes): an enemy decoy must wear Fenn's name too
             overUnits.Clear();
@@ -133,7 +133,8 @@ namespace BAM.Game
                 {
                     float r = ts * 0.22f, pop = 0.8f + 0.2f * o.EyeA;
                     o.Eye.rectTransform.sizeDelta = new Vector2(r * 3.2f * pop, r * 3.2f * pop);
-                    o.Eye.rectTransform.anchoredPosition = new Vector2(0f, size * 0.17f + ts * 0.5f);
+                    // its bottom on the name's top, not over the name (it was centred half a tile up, its lower half on the letters)
+                    o.Eye.rectTransform.anchoredPosition = new Vector2(0f, ts * (NameTop + 0.02f) + r * 1.6f * pop);
                     o.Eye.color = new Color(1f, 1f, 1f, o.EyeA);
                 }
 
@@ -174,6 +175,24 @@ namespace BAM.Game
                     o.ChanFill.color = foe ? new Color(1f, 0.62f, 0.15f, 0.6f + 0.4f * Mathf.Sin(Time.unscaledTime * 30f)) : new Color(1f, 1f, 1f, 0.7f);
                 }
             }
+        }
+
+        // The stack over a hero's bar, in tiles of the screen up from the bar's centre (Rickard 2026-11-03 "lite mycket överlapp"):
+        // the name from 0.18 to NameTop, then the crossed-out eye or the poison bubbles (StatusFx puts them there), then the
+        // rising numbers (HudTop.PlaceFloat), so nothing lies on anything else
+        const float NameTop = 0.5f, EyeTop = 1.24f, BubblesTop = 1.02f;
+
+        /// <summary>One tile in canvas units (the camera frames MatchCamera's TilesAcross over the standing frame).</summary>
+        float OverheadTile() => cam.PixelsPerTile * (Screen.width > 1f ? canvasRect.rect.width / Screen.width : 1f);
+
+        /// <summary>Canvas units up from a unit's bar centre that are free of its name, eye and poison bubbles.</summary>
+        float OverheadClear(Unit u, float ts)
+        {
+            if (!u.IsHero) return ts * 0.12f; // a minion's bar has nothing over it
+            float top = NameTop;
+            if (u.Has(St.Poison)) top = Mathf.Max(top, BubblesTop);
+            if (u.Team == m.Player.Team && m.HiddenFromFoes(u)) top = Mathf.Max(top, EyeTop);
+            return ts * (top + 0.04f);
         }
 
         static Image Plain(RectTransform parent, string name, Color color)

@@ -12,6 +12,11 @@ namespace BAM.Art
 
         readonly Transform parent;
         readonly float radius, height;
+        // the poison bubbles' height over the head: the bar's centre is 0.28 over it (BodyView) and the hero's name ends half a tile of
+        // the screen above that (HudOverhead.NameTop); the 55 degree camera shows a world unit up as 0.574 of a tile, and the bubbles
+        // (scale 2.4) reach 0.2 under their pivot, so with their 0.07 bob they stay just over the name (top about 1 tile of the
+        // screen over the bar: HudOverhead.BubblesTop, which the rising numbers start over)
+        const float PoisonUp = 1.46f;
         readonly Transform[] t = new Transform[Count];
         readonly MeshRenderer[] r = new MeshRenderer[Count];
         StatusFlags flags;
@@ -226,7 +231,8 @@ namespace BAM.Art
                 case Root: mesh = Shapes.RootVines(); mat = ArtMaterials.Lit; pos = Vector3.zero; s = rr; break;
                 case Burn: mesh = Shapes.Flames(); mat = ArtMaterials.UnlitAdd; pos = Vector3.zero; s = rr * 0.8f; break;
                 // bigger and over the head (tester 2026-11-03 via Discord on Tikta: "I barely realize I've been hit"; was s 1 at the shoulder)
-                case Poison: mesh = Shapes.PoisonBubbles(); mat = ArtMaterials.Unlit; pos = new Vector3(0f, height + 0.25f, 0f); s = 2.4f; break;
+                // over the name, not on the bar and the name (Rickard 2026-11-03 "lite mycket överlapp"): see PoisonUp
+                case Poison: mesh = Shapes.PoisonBubbles(); mat = ArtMaterials.Unlit; pos = new Vector3(0f, height + PoisonUp, 0f); s = 2.4f; break;
                 case Shield: mesh = HexSphere(); mat = HexMat(); pos = new Vector3(0f, height * 0.5f, 0f); s = Mathf.Max(radius * 1.6f, height * 0.62f); break;
                 case Haste: mesh = Shapes.HasteLines(); mat = ArtMaterials.UnlitAdd; pos = Vector3.zero; s = Mathf.Max(1f, radius * 2.2f); break;
                 case StunRing: mesh = Shapes.RingMesh(0.82f, Pal.Stun); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.05f; break;
@@ -323,7 +329,7 @@ namespace BAM.Art
                 t[Burn].localScale = new Vector3(s.x, s.x * f, s.x);
                 t[Burn].localRotation = Quaternion.Euler(0f, time * 90f, 0f);
             }
-            if (r[Poison] != null && r[Poison].enabled) t[Poison].localPosition = new Vector3(0f, height + 0.25f + Mathf.Sin(time * 4f) * 0.07f, 0f);
+            if (r[Poison] != null && r[Poison].enabled) t[Poison].localPosition = new Vector3(0f, height + PoisonUp + Mathf.Sin(time * 4f) * 0.07f, 0f);
             if (r[Shield] != null && r[Shield].enabled)
             {
                 float k = 1f + Mathf.Sin(time * 5f) * 0.03f + Mathf.Sin(time * 40f) * 0.06f * ripple;

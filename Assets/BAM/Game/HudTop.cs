@@ -67,7 +67,8 @@ namespace BAM.Game
         {
             public Text Label;
             public Unit Unit;
-            public Vector3 At;
+            public Vector3 At;    // the screen point it rises from: over the name above the bar, or over the feet when no bar shows
+            public float Lift;    // canvas units up from At before it starts to rise
             public float Born = -99f, Value;
             public bool ToPlayer, Big, Word;
             public float BaseA = 1f;
@@ -195,13 +196,13 @@ namespace BAM.Game
                     var f = floats[nextFloat];
                     nextFloat = (nextFloat + 1) % floats.Length;
                     f.Unit = u; f.Born = now; f.Value = t.Sum; f.ToPlayer = t.ToPlayer; f.Big = false; f.Word = true; // never merged with a hit
-                    f.At = views.DrawnAt(u);
+                    PlaceFloat(f, u);
                     f.Label.text = t.Heal ? "+" + Int(Mathf.RoundToInt(t.Sum)) : Int(Mathf.RoundToInt(t.Sum));
                     f.Label.color = t.Heal ? HealNum : t.Poison ? PoisonNum : BurnNum;
                     f.Label.fontSize = t.Creep ? 28 : 36;
                     f.BaseA = t.Creep ? 0.7f : 0.95f;
                     f.Label.gameObject.SetActive(true);
-                    if (t.Heal) BAM.Art.ArtKit.PlayFx(BAM.Art.FxKind.Heal, f.At, 1f); // Rickard's plus signs with the number (2026-10-31)
+                    if (t.Heal) BAM.Art.ArtKit.PlayFx(BAM.Art.FxKind.Heal, views.DrawnAt(u), 1f); // Rickard's plus signs with the number (2026-10-31)
                 }
                 // still burning: keep summing for the next second; done: free the slot
                 if (now - t.Last > (t.Heal ? 1.1f : 0.6f) || !u.Alive) t.Unit = null;
@@ -235,12 +236,29 @@ namespace BAM.Game
             nextFloat = (nextFloat + 1) % floats.Length;
             t.Unit = b; t.Born = now; t.Value = e.V; t.ToPlayer = toPlayer; t.Word = false;
             t.Big = !creep && e.V >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
-            t.At = views.DrawnAt(b);
+            PlaceFloat(t, b);
             t.Label.text = Int(Mathf.RoundToInt(e.V));
             t.Label.color = toPlayer ? DmgToPlayer : creep ? CreepHit : t.Big ? BigHit : Color.white;
             t.Label.fontSize = creep ? 34 : t.Big ? 66 : 50;
             t.BaseA = creep ? 0.7f : 1f;
             t.Label.gameObject.SetActive(true);
+        }
+
+        // Where a number starts: over a hero's name (and the eye or poison bubbles over it) so it never sits on the name or the bar
+        // (Rickard 2026-11-03, a green poison "3" on Bram's name: "lite mycket överlapp"). It used to start 1.6 up from the feet,
+        // which on the tall heroes is right on the name. With no bar shown (hidden, dead) it keeps the old spot over the feet.
+        void PlaceFloat(FloatText f, Unit u)
+        {
+            if (views.BarOf(u, out Vector3 bar, out _))
+            {
+                f.At = bar;
+                f.Lift = OverheadClear(u, OverheadTile()) + f.Label.fontSize * 0.45f;
+            }
+            else
+            {
+                f.At = views.DrawnAt(u) + Vector3.up * 1.6f;
+                f.Lift = 30f;
+            }
         }
 
         /// <summary>A word rising over a unit in the damage numbers' style (the old floatText): "Recall", "Cancelled"...</summary>
@@ -250,7 +268,7 @@ namespace BAM.Game
             var t = floats[nextFloat];
             nextFloat = (nextFloat + 1) % floats.Length;
             t.Unit = u; t.Born = Time.unscaledTime; t.Value = 0f; t.ToPlayer = false; t.Big = false; t.Word = true;
-            t.At = views.DrawnAt(u);
+            PlaceFloat(t, u);
             t.Label.text = word;
             t.Label.color = color;
             t.Label.fontSize = 40;
@@ -352,8 +370,8 @@ namespace BAM.Game
                 if (!f.Label.gameObject.activeSelf) continue;
                 float age = now - f.Born;
                 if (age >= FloatLife || m.State == MatchState.Over && age > 0.2f) { f.Label.gameObject.SetActive(false); f.Unit = null; continue; }
-                if (f.Unit != null && f.Unit.Alive) f.At = views.DrawnAt(f.Unit);
-                Vector3 sp = cam.Camera.WorldToScreenPoint(f.At + Vector3.up * 1.6f);
+                if (f.Unit != null && f.Unit.Alive) PlaceFloat(f, f.Unit);
+                Vector3 sp = cam.Camera.WorldToScreenPoint(f.At);
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, sp, null, out Vector2 local);
                 float t = age / FloatLife;
                 // a bounce (Brawl Stars idea 5): it springs in big, dips under its size and settles by 0.3 s, then rises and fades
@@ -364,7 +382,7 @@ namespace BAM.Game
                     float k = age / 0.3f, amp = f.Big ? 0.7f : 0.4f;
                     pop = 1f + amp * Mathf.Cos(k * Mathf.PI * 2.5f) * (1f - k);
                 }
-                f.Label.rectTransform.anchoredPosition = local + new Vector2(f.Word ? 0f : f.ToPlayer ? -26f : 26f, 30f + 90f * t);
+                f.Label.rectTransform.anchoredPosition = local + new Vector2(f.Word ? 0f : f.ToPlayer ? -26f : 26f, f.Lift + 90f * t);
                 f.Label.rectTransform.localScale = Vector3.one * pop;
                 var c = f.Label.color;
                 c.a = f.BaseA * (t < 0.66f ? 1f : 1f - (t - 0.66f) / 0.34f);
