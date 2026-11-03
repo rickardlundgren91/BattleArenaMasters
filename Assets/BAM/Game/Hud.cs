@@ -359,7 +359,7 @@ namespace BAM.Game
         }
 
         // The SPECIAL's icon tells charging from ready at a glance (Rickard 2026-11-03): charging = the icon greyed and a dark veil
-        // over the part not charged yet (it fills up from the bottom); charged but nobody in reach = the whole icon greyed;
+        // over the part not charged yet (it fills up from the bottom); charged but nobody in reach = a darker orange face with thin gold lines;
         // ready = full colour, and the moment it turns ready the button pops (a short bounce, a white flash and the gold ring).
         // No stronger glow: Rickard found the glow too much on 2026-11-02.
         void ReadyLook(float frac, bool ready)
@@ -370,16 +370,23 @@ namespace BAM.Game
             wasReady = ready;
             Sparks(ready);
             bool full = frac >= 0.999f;
+            // charged but nobody in reach: it must still read as CHARGED (Rickard 2026-11-03 "den blir lite väl anonym när man inte
+            // har target"): the orange face a shade darker, thin gold lines, but no thick rim, sparks, glow or pop; those say "tap now"
+            bool waiting = full && !ready;
             // ready = the Midjourney look Rickard sent 2026-11-03: a solid orange face with the hero's picture light cream on it, and a bright
             // orange-gold rim; the soft glow behind stays as it was
-            specialIcon.color = ready ? FaceCream : full ? IconNoTarget : IconCharging;
-            specialFaceBack.color = ready ? FaceOrange : Color.clear;
+            specialIcon.color = ready ? FaceCream : waiting ? FaceCreamWaiting : IconCharging;
+            specialFaceBack.color = ready ? FaceOrange : waiting ? FaceOrangeWaiting : Color.clear;
             // the thin lines (the frame, the line round the icon and the charge arc) stay neutral grey until it is ready; only
             // the inner fill shows the charge (Rickard 2026-11-03 "inte riktat i färg de tunna strecken inte förrän laddningen är där")
-            specialRim.color = ready ? RimReady : LineGrey;
-            specialIconRim.color = ready ? IconRimGold : LineGreyFaint;
-            if (!ready) specialFill.color = specialFillRight.color = ChargeArcGrey;
-            if (ready && Rules.OneTapSpecial) splitLevelImg[0].enabled = splitLevelImg[1].enabled = false; // the pale level would wash the orange out
+            specialRim.color = ready ? RimReady : waiting ? RimGold : LineGrey;
+            specialIconRim.color = ready || waiting ? IconRimGold : LineGreyFaint;
+            if (!ready) specialFill.color = specialFillRight.color = waiting ? GlassOrange : ChargeArcGrey;
+            if ((ready || waiting) && Rules.OneTapSpecial)
+            {
+                splitLevelImg[0].enabled = splitLevelImg[1].enabled = false; // the pale level would wash the orange out
+                splitGrey.enabled = false; // and the grey cover would make it look uncharged
+            }
             var veil = specialVeil.rectTransform;
             specialVeil.enabled = !full;
             if (!full) { veil.anchorMin = new Vector2(0f, RingHeight(frac)); veil.anchorMax = Vector2.one; veil.offsetMin = veil.offsetMax = Vector2.zero; }
@@ -399,10 +406,11 @@ namespace BAM.Game
 
         const float ReadyPopTime = 0.4f;
         static readonly Color FaceOrange = Hex(0xf2782a), FaceCream = new Color(1f, 0.9f, 0.76f, 1f), RimGold = Hex(0xd9a441), RimReady = Hex(0xffc04d);
+        static readonly Color FaceOrangeWaiting = Hex(0xb85a22), FaceCreamWaiting = new Color(1f, 0.9f, 0.76f, 0.8f);
         static readonly Color IconRimGold = new Color(1f, 214f / 255f, 130f / 255f, 0.55f), LineGrey = new Color(0.62f, 0.64f, 0.7f, 1f),
             LineGreyFaint = new Color(0.75f, 0.77f, 0.82f, 0.4f), ChargeArcGrey = new Color(0.86f, 0.88f, 0.92f, 0.9f);
         static readonly Color VeilColor = new Color(0.03f, 0.04f, 0.1f, 0.62f);
-        static readonly Color IconCharging = new Color(0.62f, 0.62f, 0.62f, 1f), IconNoTarget = new Color(0.55f, 0.55f, 0.55f, 1f);
+        static readonly Color IconCharging = new Color(0.62f, 0.62f, 0.62f, 1f);
 
         static readonly Color CancelOff = new Color(0.04f, 0.05f, 0.1f, 0.5f), CancelOn = new Color(0.9f, 0.2f, 0.2f, 0.55f), DotRed = new Color(1f, 0.35f, 0.35f, 0.85f);
 
