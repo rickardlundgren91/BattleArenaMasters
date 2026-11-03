@@ -230,6 +230,11 @@ namespace BAM.UI
             }
 
             resXp = ResText(resCard, true, ResMe, TextAnchor.MiddleCenter);
+            // one line that shrinks to fit the card: "+210 XP · Max Rating from Normal bots (first win today)" ran about 30 % past
+            // the card's edges (bug review 2026-11-02, nr 21). LayoutXp makes its box one line tall, so it is not wrapped
+            resXp.horizontalOverflow = HorizontalWrapMode.Wrap;
+            resXp.verticalOverflow = VerticalWrapMode.Truncate;
+            resXp.resizeTextForBestFit = true;
             resXpBack = Pic(resCard, "XpBack", UiKit.Rounded, ResXpBack);
             resXpFill = Pic(resCard, "XpFill", UiKit.Rounded, ResXpFill);
             resLevel = ResText(resCard, false, ResSub, TextAnchor.MiddleCenter);
@@ -436,7 +441,11 @@ namespace BAM.UI
         static void LayoutXp(float W, float H, float w, float ly)
         {
             Size(resXp, W * 0.045f); Size(resLevel, W * 0.026f);
-            Centre(resXp.rectTransform, w / 2, ly, w, H * 0.045f);
+            // best fit from today's size down to 60 %; the box is 1.5 lines of the full size tall (Lilita's line is 1.14), so a
+            // shorter line keeps its size and position and the longest one shrinks to ~72 % on one line (nr 21)
+            resXp.resizeTextMaxSize = resXp.fontSize;
+            resXp.resizeTextMinSize = Mathf.Max(1, Mathf.RoundToInt(resXp.fontSize * 0.6f));
+            Centre(resXp.rectTransform, w / 2, ly, w * 0.94f, resXp.fontSize * 1.5f);
             float bx = w * 0.12f, bw = w * 0.76f, by = ly + H * 0.03f, bh = H * 0.012f;
             TopLeft(resXpBack.rectTransform, bx, by, bw, bh);
             TopLeft(resXpFill.rectTransform, bx, by, Mathf.Max(bh, bw * resXpPart), bh);

@@ -193,7 +193,8 @@ namespace BAM.Online.UI
 
         // Rickard's hero portraits (Resources/BAM/Menu/portrait_<hero>), the same pictures as the game's own menus
         static Img HeroIcon(string hero) => Img.Get("portrait_" + (hero ?? "").ToLowerInvariant());
-        static readonly string[] HEROES = { "Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast" };
+        // Bonk added (bug review 2026-11-02, nr 36): he was missing, so a Bonk main got a letter avatar
+        static readonly string[] HEROES = { "Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk" };
         static bool IsHero(string h) => Array.IndexOf(HEROES, h) >= 0;
 
         // ---------- the page frame (Menu.DrawPage, MenuHome.HubPage) ----------

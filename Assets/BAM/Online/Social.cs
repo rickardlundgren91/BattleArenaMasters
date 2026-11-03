@@ -176,7 +176,16 @@ namespace BAM.Online
         public static Task<string> Cancel(string playerId) => Run(() => FriendsService.Instance.DeleteOutgoingFriendRequestAsync(playerId), null, "Could not cancel");
         public static Task<string> Remove(string playerId) => Run(() => FriendsService.Instance.DeleteFriendAsync(playerId), null, "Could not remove friend");
         public static Task<string> Block(string playerId) => Run(() => FriendsService.Instance.AddBlockAsync(playerId), "Blocked", "Could not block");
-        public static Task<string> Unblock(string playerId) => Run(() => FriendsService.Instance.DeleteBlockAsync(playerId), null, "Could not unblock");
+        // tells MpSocial too, so the phone's own list of blocked invites (MpPresence.Blocked) lets the player in again; before,
+        // an unblocked player's invites and online sign stayed hidden on this phone for good (bug review 2026-11-02, nr 24)
+        public static async Task<string> Unblock(string playerId)
+        {
+            string err = await Run(() => FriendsService.Instance.DeleteBlockAsync(playerId), null, "Could not unblock");
+            if (err == null) Unblocked?.Invoke(playerId);
+            return err;
+        }
+        /// <summary>A player was unblocked on the Friends server (the id).</summary>
+        public static event Action<string> Unblocked;
 
         static string PlayerIdNow { get { try { return AuthenticationService.Instance.PlayerId; } catch (Exception) { return null; } } }
 

@@ -92,6 +92,12 @@ namespace BAM.Online.Mp
             Online.RemoveAll(r => r.Owner == owner);
             if (Invite != null && Invite.Owner == owner) Invite = null;
         }
+        /// <summary>Unblocked (Social.Unblocked): the player's invites and sign show again (bug review 2026-11-02, nr 24).</summary>
+        public static void Unblock(string owner)
+        {
+            if (string.IsNullOrEmpty(owner) || !Blocked.Remove(owner)) return;
+            SaveBlocked?.Invoke();
+        }
 
         /// <summary>NO THANKS (tell: the inviter is told) or ACCEPT (tell false: the card just goes away).</summary>
         public static void Decline(PresenceRow r, bool tell = true)

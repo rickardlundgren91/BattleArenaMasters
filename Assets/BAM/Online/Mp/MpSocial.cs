@@ -42,6 +42,7 @@ namespace BAM.Online.Mp
             foreach (var id in (PlayerPrefs.GetString(BlockedKey, "") ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) MpPresence.Blocked.Add(id);
             MpPresence.IsBlocked = id => Social.RelationTo(id) == Social.Relation.Blocked;
             MpPresence.SaveBlocked = () => { PlayerPrefs.SetString(BlockedKey, string.Join(",", MpPresence.Blocked)); PlayerPrefs.Save(); };
+            Social.Unblocked += MpPresence.Unblock; // bug review 2026-11-02, nr 24
             Social.NoteIn += OnNote;
         }
 
@@ -148,6 +149,10 @@ namespace BAM.Online.Mp
                 if (!ShowMe) return "Turn on \"Show me as online\" to invite.";
             }
             if (MpRoom.Quick && MpRoom.State != MpRoom.Phase.Off) return "You are looking for a match. Cancel first to invite.";
+            // a guest in someone's party: Host() below would leave that party without a word (bug review 2026-11-02, nr 28);
+            // the same words as the invite panel shows a guest
+            if (MpRoom.State != MpRoom.Phase.Off && !MpRoom.IsHost)
+                return "Only the host can invite. Ask " + (MpRoom.Members.Count > 0 ? MpRoom.Members[0].Name : "the host") + " to invite more.";
             names[playerId] = r != null ? r.Name : friend.Value.Name;
             bool hosting = MpRoom.IsHost && !MpRoom.Quick && (MpRoom.State == MpRoom.Phase.Lobby || MpRoom.State == MpRoom.Phase.Connecting);
             if (!hosting) MpRoom.Host(mode);

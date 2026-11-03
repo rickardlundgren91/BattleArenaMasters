@@ -1,6 +1,6 @@
 # Privacy Policy – Battle Arena Masters
 
-_Last updated: 27 October 2026_
+_Last updated: 4 November 2026_
 
 Battle Arena Masters ("BAM", "the game") is a mobile game made by **BAM Games** (Rickard Lundgren, Sweden; "we", "us"), who is responsible for the data described here.
 Questions about this policy or your data: **support@battlearenamasters.com**.
@@ -8,7 +8,7 @@ Questions about this policy or your data: **support@battlearenamasters.com**.
 ## 1. The short version
 
 - You can play against computer-controlled bots without signing in. Then your settings stay on your phone and the game
-  sends nothing, except optional usage data if you allow it.
+  sends nothing, except a check for a new version (section 10) and optional usage data if you allow it.
 - **Online play is optional.** If you sign in with **Google Play Games**, you get a player account with a player name you
   choose, a level, a Rating, match stats, a place on the Top 100 and a friends list, and you can play with and against
   other players. To run this, our game server stores your account, your player name and the results of your matches
@@ -33,7 +33,7 @@ clear its data in Android settings.
 If you allow it, the game uses **Unity Analytics**, a service from Unity Technologies, to send the following:
 
 **Game events we record**
-- Match started: the hero you picked, the difficulty (Easy, Normal, Hard) and whether it was the tutorial match.
+- Match started: the hero you picked, the difficulty (Easy, Normal, Hard or Ultra) and whether it was the tutorial match.
 - Match ended: the same, plus whether you won or left early, how long the match lasted, your kills, deaths and hero level.
 - Tutorial progress: which tutorial step you reached.
 
@@ -60,9 +60,11 @@ Friends, Lobby and Relay) as our game server.
   address or your Google password. Your Google Play Games name is only shown on your phone as a suggestion for your
   player name and is not stored by us.
 - **Your player name:** the name you choose. It is unique and public.
-- **Match results:** for each finished match: win or loss, how long it lasted, kills, deaths, the hero, the difficulty
-  and when it ended. The server uses them to count your level, XP, Rating, totals and most played heroes, and to reject
-  impossible results (cheating).
+- **Match results:** for each finished match: a random match ID, win or loss, how long it lasted and when it ended,
+  kills, deaths (and how many of them came at the enemy tower or with your special ready), the hero and the difficulty.
+  For a match against other players also the match's code, your team and whether you left early; the server notes
+  which players were in that match and who won, so that both sides get the right Rating. The server uses the results to
+  count your level, XP, Rating, totals and most played heroes, and to reject impossible results (cheating).
 - **Friends:** your friends, the friend requests you send and receive, and the players you block.
 - **Reports:** if you report a player, we store your player ID, theirs, the reason you picked (rude name, cheating or
   something else) and the time. If someone reports you, the same is stored about that report.
@@ -137,6 +139,8 @@ Top 100; the game on your phone cannot write them.
 - battlearenamasters.com sets no cookies and has no login, forms or ads.
 - It is hosted by Cloudflare. Like any web host, Cloudflare handles your IP address and browser details to deliver the
   page and protect it from attacks.
+- Each time the game starts, it reads a small file on this website to see if a newer version of the game is out. Nothing
+  about you or your account is sent with it, but like any visit it reaches Cloudflare with your IP address.
 - Links to Discord and Google Play take you to those services, where their own privacy rules apply.
 
 ## 11. Children

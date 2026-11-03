@@ -17,7 +17,7 @@ namespace BAM.Build
         [MenuItem("BAM/Build AAB (internal test)", priority = 20)]
         static void BuildAabMenu()
         {
-            if (!Prepare()) return;
+            if (!Prepare() || !OnlineOk()) return;
             BamKeystoreWindow.Open();
         }
 
@@ -26,7 +26,7 @@ namespace BAM.Build
         [MenuItem("BAM/Build signed APK for online test and run on phone (USB)", priority = 23)]
         static void BuildSignedApkMenu()
         {
-            if (!Prepare()) return;
+            if (!Prepare() || !OnlineOk()) return;
             BamKeystoreWindow.Open(true);
         }
 
@@ -93,6 +93,27 @@ namespace BAM.Build
             var log = BamProjectSetup.Run(false);
             if (log.Warnings > 0) Debug.LogWarning("[BAM.Build] Setup finished with " + log.Warnings + " warnings (see above); building anyway");
             return true;
+        }
+
+        // BAM_ONLINE is set by hand in Player Settings on Rickard's PC (27 Oct), not in the checked-in ProjectSettings, so a build
+        // from a fresh copy of the project came out without online play and said nothing (bug review 2026-11-02, nr 45). The two
+        // builds that need online (the AAB for Google Play and the signed online test APK) ask first.
+        static bool OnlineOk()
+        {
+            var target = UnityEditor.Build.NamedBuildTarget.Android;
+            string defs = PlayerSettings.GetScriptingDefineSymbols(target) ?? "";
+            foreach (var d in defs.Split(';')) if (d.Trim() == "BAM_ONLINE") return true;
+            int pick = EditorUtility.DisplayDialogComplex("Onlinespel saknas",
+                "Symbolen BAM_ONLINE är inte satt för Android, så appen byggs utan onlinespel (inloggning, vänner, onlinematcher och topplista).\n\n" +
+                "Lägg till: Unity kompilerar om en stund. Välj sedan samma bygge i BAM-menyn igen.",
+                "Lägg till", "Avbryt", "Bygg utan online");
+            if (pick == 0)
+            {
+                PlayerSettings.SetScriptingDefineSymbols(target, defs.Trim().Length > 0 ? defs.Trim() + ";BAM_ONLINE" : "BAM_ONLINE");
+                Debug.Log("[BAM.Build] BAM_ONLINE added to Android's scripting define symbols. Choose the build again after the recompile.");
+                return false;
+            }
+            return pick == 2;
         }
 
         /// <summary>Signed release AAB with a raised version code. Called by the keystore window.</summary>

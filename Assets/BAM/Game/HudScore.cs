@@ -30,6 +30,9 @@ namespace BAM.Game
             // what the row shows now, so its texts and portrait are only rebuilt when they change (no per-frame garbage)
             public Unit Shown;
             public int K = -1, D = -1, A = -1, S = -1;
+            // where the row was last placed (team * 3 + slot, and the sheet size), so it is only placed again when that changes
+            public int Spot = -1;
+            public Vector2 PlacedFor;
         }
 
         RectTransform scoreRoot;
@@ -72,7 +75,7 @@ namespace BAM.Game
         {
             scoreOpen = scoreAskLeave = false;
             if (scoreRoot != null) scoreRoot.gameObject.SetActive(false);
-            foreach (var row in scoreRows) if (row != null) row.Shown = null; // a new match: every row rebuilds
+            foreach (var row in scoreRows) if (row != null) { row.Shown = null; row.Spot = -1; } // a new match: every row rebuilds
         }
 
         /// <summary>The glass tool: the score tab in a match, pause in the guided match.</summary>
@@ -107,8 +110,9 @@ namespace BAM.Game
             float W = safe.rect.width, H = safe.rect.height;
             if (new Vector2(W, H) != scoreLaidOut) { scoreLaidOut = new Vector2(W, H); LayoutScore(W, H); }
 
+            // rows are placed and switched on or off only when that changes: they were all switched off and on again every
+            // frame, which rebuilt their 24 texts and the canvas each frame while the sheet was open (bug review 2026-11-02, nr 31)
             int used0 = 0, used1 = 0;
-            for (int i = 0; i < scoreRows.Length; i++) scoreRows[i].Root.gameObject.SetActive(false);
             int n = 0;
             for (int i = 0; i < m.Heroes.Count && n < scoreRows.Length; i++)
             {
@@ -119,8 +123,9 @@ namespace BAM.Game
                 if (slot >= 3) continue;
                 if (t == 0) used0++; else used1++;
                 var row = scoreRows[n++];
-                PlaceScoreRow(row, t, slot, W, H);
-                row.Root.gameObject.SetActive(true);
+                int spot = t * 3 + slot;
+                if (row.Spot != spot || row.PlacedFor != scoreLaidOut) { row.Spot = spot; row.PlacedFor = scoreLaidOut; PlaceScoreRow(row, t, slot, W, H); }
+                if (!row.Root.gameObject.activeSelf) row.Root.gameObject.SetActive(true);
                 if (row.Shown != u)
                 {
                     row.Shown = u; row.K = row.D = row.A = row.S = -1;
@@ -140,6 +145,7 @@ namespace BAM.Game
                 if (row.Dark.enabled != dead) { row.Dark.enabled = dead; row.Secs.enabled = dead; }
                 if (dead) SetText(row.Secs, Int(Mathf.CeilToInt(Mathf.Max(0f, u.RespawnT))));
             }
+            for (int i = n; i < scoreRows.Length; i++) if (scoreRows[i].Root.gameObject.activeSelf) scoreRows[i].Root.gameObject.SetActive(false);
 
             scoreExit.gameObject.SetActive(!scoreAskLeave);
             scoreHint.gameObject.SetActive(!scoreAskLeave);

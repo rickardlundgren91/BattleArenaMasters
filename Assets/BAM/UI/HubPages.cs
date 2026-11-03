@@ -93,7 +93,7 @@ namespace BAM.UI
             return ScrollContent(area, out _);
         }
 
-        static void BackPill(RectTransform body)
+        static RectTransform BackPill(RectTransform body)
         {
             var back = UiKit.NewRect("Back", body);
             var pill = Pic(back, "Pill", UiKit.Rounded, new Color(1, 1, 1, 0.1f));
@@ -113,6 +113,7 @@ namespace BAM.UI
             b.onClick.AddListener(() => HandleBack());
             back.gameObject.AddComponent<ButtonFx>().PressScale = false;
             back.gameObject.AddComponent<HomePress>();
+            return back;
         }
 
         // H2: the title in Lilita with a dark drop, a short gold rule and a diamond under it. Returns where the page starts.

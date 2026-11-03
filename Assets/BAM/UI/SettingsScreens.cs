@@ -30,6 +30,7 @@ namespace BAM.UI
         static HubSwitch soundSwitch, musicSwitch, vibrationSwitch, leftSwitch, shareSwitch;
         static HubChoice quality, frameRate;
         static GameObject tutorialRow; // hidden in a match: starting the tutorial there would drop the match unasked
+        static GameObject settingsBack; // the Back pill: only when Settings is opened from the pause menu, where no tab bar shows
         static bool licensesLoaded;
         static RectTransform licensesContent;
 
@@ -40,6 +41,10 @@ namespace BAM.UI
         {
             var content = NewPage("Settings", out settings, out var panel, back: false); // a tab: HOME is in the bar under it
             tabPanels[2] = panel;
+            // from the pause menu there is no tab bar, so only Android's back led out: a Back pill there, with the sheet moved
+            // down under it as on the other pages (bug review 2026-11-02, nr 22; RefreshSettings switches it)
+            settingsBack = BackPill((RectTransform)panel.parent).gameObject;
+            settingsBack.SetActive(false);
             VList(content, 2 * Cw, new RectOffset(0, 0, 0, Mathf.RoundToInt(6 * Cw)));
 
             SetHead(content, "AUDIO");
@@ -166,7 +171,10 @@ namespace BAM.UI
             frameRate.Set(BamSettings.Fps <= 30 ? 0 : 1);
             leftSwitch.Set(BamSettings.LeftHanded, true);
             shareSwitch.Set(BamSettings.AnalyticsConsent == Consent.Granted, true);
-            tutorialRow.SetActive(Flow.Game == null || !Flow.Game.InMatch);
+            bool inMatch = Flow.Game != null && Flow.Game.InMatch;
+            tutorialRow.SetActive(!inMatch);
+            settingsBack.SetActive(inMatch); // nr 22
+            tabPanels[2].offsetMax = new Vector2(tabPanels[2].offsetMax.x, -(inMatch ? PageTop : 4 * Cw));
         }
 
         static void BuildLicenses()

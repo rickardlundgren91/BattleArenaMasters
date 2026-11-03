@@ -33,11 +33,11 @@ Eight heroes, each with an auto attack, a special ability and a passive:
 • Knut the Anchor – a big tank who drags enemies in with his anchor
 • Tikta the Needle Wing – a tiny, deadly assassin
 • Blast the Pyromaniac – bombs, fire and a lot of noise
-• Bonk the Caveman – a huge stone club and boulders that roll over anything
+• Bonk the Caveman – a huge stone club and a ground slam that stuns everyone around him
 
 SIMPLE TO PLAY, HARD TO MASTER
-Move with one thumb. Tap your special to fire it at the best target, or drag to aim it yourself. Hide in the grass,
-fight around the walls, lead minion waves into the enemy tower and outplay the other team.
+Move with one thumb. Tap your special and it finds a target in range. Hide in the grass, fight around the walls,
+lead minion waves into the enemy tower and outplay the other team.
 
 PLAY WITH FRIENDS, OR ALONE
 • Sign in with Google Play Games to play with and against your friends online

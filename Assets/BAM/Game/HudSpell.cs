@@ -22,7 +22,8 @@ namespace BAM.Game
         static readonly Color SpellDisc = Hex(0x1d2a55), SpellIdle = Hex(0x8fa8c8), SpellGlyphIdle = Hex(0xaab8d0), SpellCancelled = Hex(0xc8d0e8);
 
         RectTransform spellRoot, spellAimRoot, spellCancelMark, spellMaxRing, spellDot;
-        Image spellArc, spellGlyph, spellCancelFill, spellCancelEdge, spellDotImg;
+        Image spellArc, spellGlyph, spellCancelFill, spellCancelEdge, spellDotImg, spellMaxRingImg;
+        readonly Image[] spellCross = new Image[2]; // the cancel mark's two bars, kept so the aim needs no name lookups each frame
         Text spellSecs, spellCancelText;
         SpellId spellShownId = SpellId.None;
         bool spellAiming, spellMoved, spellOverCancel;
@@ -59,7 +60,7 @@ namespace BAM.Game
             spellAimRoot.sizeDelta = Vector2.zero;
             spellMaxRing = UiKit.NewRect("Reach", spellAimRoot);
             spellMaxRing.anchorMin = spellMaxRing.anchorMax = spellMaxRing.pivot = new Vector2(0.5f, 0.5f);
-            var reach = spellMaxRing.gameObject.AddComponent<Image>();
+            var reach = spellMaxRingImg = spellMaxRing.gameObject.AddComponent<Image>();
             reach.raycastTarget = false;
             reach.color = new Color(1f, 1f, 1f, 0.35f);
             spellCancelMark = UiKit.NewRect("Cancel", spellAimRoot);
@@ -75,6 +76,7 @@ namespace BAM.Game
                 img.sprite = UiKit.Rounded;
                 img.type = Image.Type.Sliced;
                 img.raycastTarget = false;
+                spellCross[i] = img;
             }
             spellDot = UiKit.NewRect("Finger", spellAimRoot);
             spellDot.anchorMin = spellDot.anchorMax = spellDot.pivot = new Vector2(0.5f, 0.5f);
@@ -236,7 +238,7 @@ namespace BAM.Game
             spellAimRoot.localPosition = b;
             float mx = r * 2.85f;
             spellMaxRing.sizeDelta = new Vector2(2f * mx, 2f * mx);
-            RoundRing(spellMaxRing.GetComponent<Image>(), mx, 2f);
+            RoundRing(spellMaxRingImg, mx, 2f); // kept from the build (nr 32)
             bool on = spellOverCancel;
             float zr = r * 1.3f * (on ? 1.12f : 1f);
             spellCancelMark.anchoredPosition = new Vector2(0f, r * 3.8f);
@@ -245,12 +247,12 @@ namespace BAM.Game
             RoundRing(spellCancelEdge, zr, 2f);
             spellCancelEdge.color = on ? new Color(1f, 0.55f, 0.55f, 0.95f) : new Color(1f, 1f, 1f, 0.5f);
             float k = zr * 0.38f, lw = Mathf.Max(3f, zr * 0.16f);
-            for (int i = 0; i < spellCancelMark.childCount; i++)
+            // the two bars from spellCross: reading each child's name and its Image every frame made ~120 bytes of garbage per
+            // frame while aiming (bug review 2026-11-02, nr 32)
+            for (int i = 0; i < spellCross.Length; i++)
             {
-                var ch = spellCancelMark.GetChild(i);
-                if (ch.name != "Cross") continue;
-                var img = ch.GetComponent<Image>();
-                ((RectTransform)ch).sizeDelta = new Vector2(2f * k * 1.414f + lw, lw);
+                var img = spellCross[i];
+                img.rectTransform.sizeDelta = new Vector2(2f * k * 1.414f + lw, lw);
                 Corners(img, lw / 2f);
                 img.color = on ? Color.white : new Color(1f, 1f, 1f, 0.75f);
             }

@@ -52,7 +52,7 @@ namespace BAM.Sim
 
         internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1, BlinkAt = -1, PressAt = -99, HookAt = -1, WaveAt = -99;
         internal int Gained, TowerHitCount;
-        internal bool Burst, PressAimed, Hooked, Helpers;
+        internal bool Burst, PressAimed, Hooked, Pulled, Helpers;
 
         // ---------- the training island (the first half, Tyra; TutorialIsland.cs). Unused in the arena half. ----------
         public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandTarget = 3, IslandPad = 4;
@@ -108,7 +108,8 @@ namespace BAM.Sim
 
         const string LineMove = "Walk up the lane with your minions!", LineAuto = "Fight the wave! Tyra attacks automatically.",
             LineSpecial = "SPECIAL READY! TAP it to fire a bolt!", LineThrow = "An enemy hero! DRAG SPECIAL to aim a bolt at Knut!",
-            LineBlink = "He pulled you in! Tap BLINK to dash away!", LineFight = "Now take Knut down!",
+            LineBlink = "He pulled you in! Tap BLINK to dash away!", LineBlinkMissed = "Tap BLINK to dash away!",
+            LineFight = "Now take Knut down!",
             LineHeal = "Step out of the fight to heal up!", LineTower = "Destroy the tower with your minions!";
 
         void StartTutorial()
@@ -190,7 +191,9 @@ namespace BAM.Sim
                 // the gold trail leads to the minions meanwhile (bug review 2026-11-02, nr 13)
                 case Tutorial.StepSpecial: return !tu.Burst && Player.SpecialReady && (!OneTap || TapHasTarget(Player)) ? LineSpecial : null;
                 case Tutorial.StepThrow: return !tu.Burst ? LineThrow : null;
-                case Tutorial.StepBlink: return tu.Hooked && Player.SpellAt <= Time ? LineBlink : null;
+                // "He pulled you in!" only when the anchor really caught Tyra; it can miss, or Knut may not throw at all
+                // (bug review 2026-11-02, nr 19)
+                case Tutorial.StepBlink: return tu.Hooked && Player.SpellAt <= Time ? (tu.Pulled ? LineBlink : LineBlinkMissed) : null;
                 case Tutorial.StepFight: return tu.Guard != null && tu.Guard.Alive ? LineFight : null;
                 case Tutorial.StepHeal: return LineHeal;
                 default: return LineTower;
@@ -291,6 +294,9 @@ namespace BAM.Sim
                             k.Charge = k.HDef.MaxCharge;
                             if (TryCastSpecial(k, SimMath.Atan2(p.Y - k.Y, p.X - k.X), 1)) tu.HookAt = Time;
                         }
+                        if (tu.HookAt >= 0 && !tu.Pulled) // did the anchor catch Tyra? (the line says "He pulled you in!" only then)
+                            for (int i = 0; i < Projs.Count; i++)
+                                if (Projs[i].Mode == ProjMode.Hook && Projs[i].Src == k && Projs[i].Caught == p) { tu.Pulled = true; break; }
                         if (tu.HookAt >= 0 && Time - tu.HookAt >= KnutS.CastTime + 0.4f) tu.Hooked = true; // pulled or missed: on with the lesson
                         if (tu.HookAt < 0 && tu.T > 3f) tu.Hooked = true; // could not throw (too far, a wall): teach the blink anyway
                     }

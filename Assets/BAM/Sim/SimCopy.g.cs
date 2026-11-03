@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "faecdd3beef2da0f";
+            Generated = true; GeneratedHash = "a7f81627f8716583";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -507,6 +507,7 @@ namespace BAM.Sim
             PointAt = __m.Map(__s.PointAt);
             PressAimed = __s.PressAimed;
             PressAt = __s.PressAt;
+            Pulled = __s.Pulled;
             RingOn = __s.RingOn;
             RingX = __s.RingX;
             RingY = __s.RingY;
