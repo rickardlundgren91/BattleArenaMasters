@@ -1,6 +1,6 @@
 Rickard's AI clips from Speltest ABC2/Resources/Sfx (copied 2026-10-26). File here <- Speltest file:
 UiTap/UiBack/UiConfirm/UiToggle <- click | Countdown <- tick | CountdownGo <- go | Victory <- victory | Defeat <- defeat
-Attack<Hero> <- atk_<hero> (Bram Fenn Tyra Knut Tikta Blast); AttackMoa = Rickard's own 2026-10-31 (ElevenLabs honey glob plop+whoosh, trimmed to 0.5 s, peak -1 dB; replaces atk_moa)
+Attack<Hero> <- atk_<hero> (Bram Fenn Tyra Tikta Blast); AttackKnut = Rickard's own clip 2026-11-03 (O-050), replaces the Speltest one (trimmed to 0.4 s, mono 44.1 kHz, light EQ); AttackMoa = Rickard's own 2026-10-31 (ElevenLabs honey glob plop+whoosh, trimmed to 0.5 s, peak -1 dB; replaces atk_moa)
 BramHammerThrow <- hammer | BramHammerBounce <- clank | FennWolfCall <- sp_fenn | TyraRelease <- sp_tyra | TyraDraw <- bow (the Arrow Volley draw, 2026-10-28)
 MoaShield <- sp_moa | KnutAnchorThrow <- sp_knut | KnutAnchorHook <- clink | TiktaNeedles <- sp_tikta
 BlastBombThrow <- sp_blast | BlastExplosion <- boom
