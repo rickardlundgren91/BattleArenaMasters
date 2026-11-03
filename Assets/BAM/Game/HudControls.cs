@@ -104,7 +104,7 @@ namespace BAM.Game
     /// once the finger has moved half a button radius from where it touched, so a sloppy tap stays a tap. Offset is the finger
     /// relative to the button's centre in canvas units.
     /// </summary>
-    sealed class SpecialButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IHudTouch
+    sealed class SpecialButton : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IHudTouch, ICanvasRaycastFilter
     {
         public const float Radius = 135f, DragStart = 0.5f * Radius, MaxDrag = 300f;
         /// <summary>The cancel mark: this far above the button's centre, this big. The old CANCEL_Y, CANCEL_R were 3.6 and 0.85 radii,
@@ -115,6 +115,15 @@ namespace BAM.Game
 
         public RectTransform Rect;
         public bool Pressed, Dragging, OverCancel;
+
+        /// <summary>Only the round button takes a finger, not its square's corners, so ATTACK and DEFEND can sit by its shoulder
+        /// (Rickard 2026-11-03). The finger's own direct touch (HudTouch) asks the same raycast.</summary>
+        public bool IsRaycastLocationValid(Vector2 screen, Camera cam)
+        {
+            if (Rect == null) return true;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screen, cam, out Vector2 at)) return false;
+            return (at - Rect.rect.center).magnitude <= Rect.rect.width * 0.5f;
+        }
         /// <summary>Rules.OneTapSpecial: a finger that moves never turns into a drag, every release is a tap.</summary>
         public bool NoDrag;
         public float PressedAt;        // when the finger landed (hold to read, HudHold.cs)

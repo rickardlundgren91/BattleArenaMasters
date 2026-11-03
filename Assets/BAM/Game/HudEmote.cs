@@ -265,13 +265,12 @@ namespace BAM.Game
             return new Vector2(right - r, bottom - W * ButtonGap - r);
         }
 
-        // the signal buttons: a short column at the screen's edge, hugging the SPECIAL on its outer side (Rickard 2026-11-03, his
-        // marked screenshot "kan vi kanske flytta attack och defend dit?"): DEFEND (k = 1) low in the pocket between the SPECIAL,
-        // the spell button and the edge, its centre as far from the SPECIAL's as the spell button's (the same arc), but never lower
-        // than where its touch square clears the SPECIAL's square by 0.01 W (the SPECIAL takes its whole 270 square); ATTACK (k = 0)
-        // right above it with the spell button's gap (about 2 mm). About 34 mm and 44 mm up on a 68 mm wide phone, both for the
-        // thumb that sits on the SPECIAL. The touch squares stay 7.6 mm and touch neither the SPECIAL's nor the spell button's.
-        // Was B2 (2026-11-02): ATTACK clearing the spell button by 3 mm (about 43 mm up), DEFEND 3 mm above it (about 54 mm).
+        // the signal buttons: a column at the screen's edge that makes a triangle with the spell button (Rickard 2026-11-03, his
+        // sketch "typ nåt sånt borde det väl va istället"): ATTACK (k = 0) up and out from the spell button, its disc 3 mm clear of
+        // the spell's (about 43 mm up, B2's place), DEFEND (k = 1) down and out by the SPECIAL's shoulder, as low as its touch square
+        // stays 0.01 W outside the SPECIAL's round touch area (SpecialButton.IsRaycastLocationValid; about 32 mm up). Never closer
+        // to each other than the spell button's gap. The touch squares stay 7.6 mm and touch neither the SPECIAL nor the spell.
+        // Before: 41a1a39 (DEFEND clear of the SPECIAL's whole square, ATTACK 2 mm above it), B2 (ATTACK 43 mm, DEFEND 54 mm).
         Vector2 SignalCentre(int k)
         {
             float W = SafeW, r = W * BigButtonR;
@@ -281,13 +280,15 @@ namespace BAM.Game
             float side = b.x + (leftHanded ? -1f : 1f) * (SpellR + W * 0.005f + r);
             float x = leftHanded ? Mathf.Max(a.xMin + r, Mathf.Min(a.xMin + W * 0.015f + r, side))
                                  : Mathf.Min(a.xMax - r, Mathf.Max(a.xMax - W * 0.015f - r, side));
-            float arc = SpecialButton.Radius + SpellGap + SpellR; // the spell button's distance from the SPECIAL's centre
-            Vector2 c = b - new Vector2(0f, arc); // the SPECIAL's centre
-            float dx = Mathf.Abs(c.x - x);
-            float onArc = c.y + Mathf.Sqrt(Mathf.Max(0f, arc * arc - dx * dx));
-            float clear = c.y + SpecialButton.Radius + W * 0.01f + r;
-            float defend = Mathf.Max(onArc, clear);
-            return new Vector2(x, k == 1 ? defend : defend + 2f * r + SpellGap);
+            Vector2 c = b - new Vector2(0f, SpecialButton.Radius + SpellGap + SpellR); // the SPECIAL's centre
+            // DEFEND: the square's corner nearest the SPECIAL stays 0.01 W outside its circle
+            float g = SpecialButton.Radius + W * 0.01f, hx = Mathf.Max(0f, Mathf.Abs(c.x - x) - r);
+            float defend = c.y + r + (hx < g ? Mathf.Sqrt(g * g - hx * hx) : 0f);
+            if (k == 1) return new Vector2(x, defend);
+            // ATTACK: its disc 3 mm clear of the spell button's
+            float dx = Mathf.Abs(b.x - x), need = SpellR + r + W * ButtonGap;
+            float attack = b.y + Mathf.Sqrt(Mathf.Max(0f, need * need - dx * dx));
+            return new Vector2(x, Mathf.Max(attack, defend + 2f * r + SpellGap));
         }
 
         // the wheel opens below the button now that the heart sits at the top (above it while the heart sat by the SPECIAL), kept
@@ -331,7 +332,7 @@ namespace BAM.Game
                 heartGroup.alpha = EmoteReady ? 1f : 0.5f;
             }
 
-            // the signal buttons: a column at the edge beside the SPECIAL, DEFEND low and ATTACK above it (SignalCentre; until
+            // the signal buttons: a column at the edge, ATTACK up and out from the spell button, DEFEND by the SPECIAL's shoulder (SignalCentre; until
             // 2026-11-02 stacked above the heart, SIGNAL_BTN: W * (0.1 + 0.09 k) up, radius W * 0.038)
             bool sigs = button && SignalsShown;
             for (int k = 0; k < 2; k++)
