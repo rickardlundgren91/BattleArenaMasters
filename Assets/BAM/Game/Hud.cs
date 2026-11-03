@@ -378,7 +378,7 @@ namespace BAM.Game
             if (ready && Rules.OneTapSpecial) splitLevelImg[0].enabled = splitLevelImg[1].enabled = false; // the pale level would wash the orange out
             var veil = specialVeil.rectTransform;
             specialVeil.enabled = !full;
-            if (!full) { veil.anchorMin = new Vector2(0f, frac); veil.anchorMax = Vector2.one; veil.offsetMin = veil.offsetMax = Vector2.zero; }
+            if (!full) { veil.anchorMin = new Vector2(0f, RingHeight(frac)); veil.anchorMax = Vector2.one; veil.offsetMin = veil.offsetMax = Vector2.zero; }
             float t = (Time.unscaledTime - readyAt) / ReadyPopTime;
             if (t >= 0f && t < 1f)
             {

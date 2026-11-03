@@ -122,6 +122,12 @@ namespace BAM.Game
             img.enabled = tex != null;
         }
 
+        // The charge ring fills by ANGLE up both sides from the bottom, so a level that rose by plain height ran ahead of the ring
+        // (at a third charged the level stood at a third of the height, the ring tips only at a quarter; Rickard 2026-11-03 "dom
+        // fylls inte jämt yttre och inre lagret"). This is the height where the ring's tips are, so the level and the veil meet
+        // them exactly; both circles share the centre, so the same fraction fits the inner disc.
+        static float RingHeight(float frac) => 0.5f - 0.5f * Mathf.Cos(Mathf.PI * Mathf.Clamp01(frac));
+
         // every frame, from Special()
         void Split(float frac, bool ready)
         {
@@ -136,7 +142,7 @@ namespace BAM.Game
                 splitLevelImg[h].enabled = on;
                 if (!on) continue;
                 splitLevelImg[h].color = ready ? LevelReady : LevelCharging;
-                splitLevel[h].anchorMax = new Vector2(h == 0 ? 0.5f : 1f, Mathf.Clamp01(frac));
+                splitLevel[h].anchorMax = new Vector2(h == 0 ? 0.5f : 1f, RingHeight(frac));
             }
         }
     }
