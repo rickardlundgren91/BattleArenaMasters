@@ -26,6 +26,9 @@ const RATING = { Easy: { win: 15, loss: 0, cap: 300 }, Normal: { win: 35, loss: 
 const SEASON = 2;
 const MIN_SECONDS = 45, MAX_SECONDS = 1800, MAX_PER_DAY = 60, MAX_AGE = 7 * 86400, MAX_BATCH = 20, KEEP_IDS = 300;
 const WAIT_SECONDS = 1800, MAX_WAIT = 20, PVP = "bam-pvp";
+// Rating from real players: at most this many wins a day against the same opponent (bug review 2026-11-02 nr 39: a second
+// account kept at 0 Rating loses nothing and could feed +150 again and again)
+const PVP_WINS_PER_OPP_DAY = 3, KEEP_SPANS = 120;
 const HEROES = ["Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk", "Hilde", "Oaken"], LEVELS = ["Easy", "Normal", "Hard", "Ultra"];
 
 const xpToNext = l => 100 + 50 * (l - 1);
@@ -58,13 +61,25 @@ module.exports = async ({ params, context, logger }) => {
     return g.data.results.length ? g.data.results[0].value : null;
   };
   // a player of the other team reported this match with the opposite result
-  const confirmed = (side, won) => !!side && Object.keys(side.p || {}).some(id => id !== playerId && side.p[id] === !won);
+  const opponents = (side, won) => side ? Object.keys(side.p || {}).filter(id => id !== playerId && side.p[id] === !won) : [];
   const rate = (kind, won) => { t.rating += ratingChange(t.rating, kind, won); };
+  // a confirmed match against players: a win counts only while no opponent in it has given this player
+  // PVP_WINS_PER_OPP_DAY wins today (nr 39); a loss always counts
+  const pvpDay = seen.pvpDay === today && seen.pvpWins ? seen.pvpWins : {};
+  seen.pvpDay = today; seen.pvpWins = pvpDay;
+  const ratePlayers = (won, opps) => {
+    if (won) {
+      if (opps.some(o => (pvpDay[o] || 0) >= PVP_WINS_PER_OPP_DAY)) return;
+      for (const o of opps) pvpDay[o] = (pvpDay[o] || 0) + 1;
+    }
+    rate("Players", won);
+  };
 
   // earlier matches against players that waited for the other side
   const still = [];
   for (const w of seen.wait) {
-    if (confirmed(await otherSide(w.vs, w.team), w.won)) { rate("Players", w.won); changed = true; }
+    const opps = opponents(await otherSide(w.vs, w.team), w.won);
+    if (opps.length) { ratePlayers(w.won, opps); changed = true; }
     else if (now - w.at > WAIT_SECONDS) { if (LEVELS.includes(w.diff)) rate(w.diff, w.won); changed = true; }
     else still.push(w);
   }
@@ -72,24 +87,33 @@ module.exports = async ({ params, context, logger }) => {
 
   const list = Array.isArray(params.matches) ? params.matches.slice(0, MAX_BATCH) : [];
   list.sort((a, b) => (a.at || 0) - (b.at || 0));
+  // a phone whose clock runs fast: the batch is moved back so its newest match ended now, keeping the gaps between them
+  // (bug review 2026-11-02 nr 17: a clock over 60 s fast had every match refused as "in the future" and deleted)
+  const newest = list.reduce((mx, m) => Number.isInteger(m.at) && m.at > mx ? m.at : mx, 0);
+  const skew = newest > now + 60 ? now - newest : 0;
+  // the matches already counted, as [start, end]: a new one is refused only if it overlaps one of them, so an older match
+  // arriving after a newer one (two phones, a clock jump) still counts (nr 37); before, only the newest end was kept
+  const spans = Array.isArray(seen.spans) ? seen.spans : [];
+  const overlaps = (a, b) => spans.some(sp => a < sp[1] - 5 && b > sp[0] + 5);
   const done = [], refused = [];
   for (const m of list) {
     const id = typeof m.id === "string" ? m.id.slice(0, 40) : "";
     if (!id) continue;
     done.push(id);
     const vs = typeof m.vs === "string" && /^v\d{1,10}$/.test(m.vs) ? m.vs : "", quit = m.quit === true;
+    const at = Number.isInteger(m.at) ? m.at + skew : m.at;
     let why = null;
     if (seen.ids.includes(id)) why = "already counted";
-    else if (!int(m.at, now - MAX_AGE, now + 60)) why = "too old or in the future";
+    else if (!int(at, now - MAX_AGE, now + 60)) why = "too old or in the future";
     else if (quit ? !vs || !int(m.seconds, 0, MAX_SECONDS) : !int(m.seconds, MIN_SECONDS, MAX_SECONDS)) why = "length";
     else if (!int(m.kills, 0, 60) || !int(m.deaths, 0, 60)) why = "numbers";
     else if (!HEROES.includes(m.hero) || !LEVELS.includes(m.difficulty)) why = "hero or bot level";
     else if (vs && !int(m.team, 0, 1)) why = "team";
-    else if (m.at - m.seconds < seen.lastAt - 5) why = "overlaps the previous match";
-    else if ((seen.days[Math.floor(m.at / 86400)] || 0) >= MAX_PER_DAY) why = "daily cap";
+    else if (overlaps(at - m.seconds, at)) why = "overlaps another match";
+    else if ((seen.days[Math.floor(at / 86400)] || 0) >= MAX_PER_DAY) why = "daily cap";
     if (why) { refused.push(id + ": " + why); continue; }
 
-    const day = Math.floor(m.at / 86400), won = m.won === true && !quit;
+    const day = Math.floor(at / 86400), won = m.won === true && !quit;
     if (!quit) {
       const firstWin = won && t.winDay !== day;
       t.xp += (won ? XP_WIN : XP_LOSS) + Math.min(XP_FIGHT_MAX, m.kills * XP_KILL) + (firstWin ? XP_FIRST_WIN : 0);
@@ -112,16 +136,19 @@ module.exports = async ({ params, context, logger }) => {
       // tell the other side what this player reported, then see if it has reported too
       const key = pvpKey(vs, m.team);
       const mine = await data.getPrivateCustomItems(projectId, PVP, [key]);
-      const side = mine.data.results.length ? mine.data.results[0].value : { at: m.at, p: {} };
+      const side = mine.data.results.length ? mine.data.results[0].value : { at: at, p: {} };
       side.p[playerId] = won;
       await data.setPrivateCustomItem(projectId, PVP, { key: key, value: side });
-      if (quit || confirmed(await otherSide(vs, m.team), won)) rate("Players", won);
+      const opps = opponents(await otherSide(vs, m.team), won);
+      if (quit) rate("Players", won);
+      else if (opps.length) ratePlayers(won, opps);
       else if (seen.wait.length < MAX_WAIT) seen.wait.push({ vs: vs, team: m.team, won: won, diff: m.difficulty, at: now });
       else rate(m.difficulty, won);
     } else rate(m.difficulty, won);
 
     seen.ids.push(id);
-    seen.lastAt = Math.max(seen.lastAt, m.at);
+    seen.lastAt = Math.max(seen.lastAt, at);
+    spans.push([at - m.seconds, at]);
     seen.days[day] = (seen.days[day] || 0) + 1;
     changed = true;
   }
@@ -134,6 +161,8 @@ module.exports = async ({ params, context, logger }) => {
 
   if (changed) {
     if (seen.ids.length > KEEP_IDS) seen.ids = seen.ids.slice(seen.ids.length - KEEP_IDS);
+    spans.sort((a, b) => a[1] - b[1]);
+    seen.spans = spans.filter(sp => sp[1] >= now - MAX_AGE - 3600).slice(-KEEP_SPANS);
     for (const d of Object.keys(seen.days)) if (Number(d) < today - 8) delete seen.days[d];
     await data.setProtectedItemBatch(projectId, playerId, { data: [{ key: "bam-progress", value: t }, { key: "bam-matches", value: seen }] });
     await lb.addLeaderboardPlayerScore(projectId, "rating", playerId, { score: t.rating, metadata: { n: name, l: t.level } });

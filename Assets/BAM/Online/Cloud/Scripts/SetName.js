@@ -7,8 +7,11 @@ const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
 
 const NAMES = "bam-names", CHANGE_EVERY = 7 * 86400;
 const RESERVED = ["admin", "administrator", "bam", "bamgames", "battlearenamasters", "moderator", "mod", "support", "unity", "google", "system", "official", "staff", "player", "deleted"];
-// a short starter list; matched against the name without digits and separators. Grow it from the reports.
-const RUDE = ["fuck", "shit", "cunt", "nigg", "fagg", "bitch", "whore", "rape", "nazi", "hitler", "kuk", "fitta", "hora", "neger", "bög", "jävla"];
+// a short starter list. Grow it from the reports. RUDE is found anywhere in the name without digits and separators; RUDE_WORD
+// only as a whole word (split at digits, separators and a small-to-capital letter), because as part of a word it refused
+// real names: Thora, Horatio (hora), Nazim (nazi), Grape (rape) (bug review 2026-11-02 nr 40)
+const RUDE = ["fuck", "shit", "cunt", "nigg", "fagg", "bitch", "whore", "hitler", "fitta", "jävla"];
+const RUDE_WORD = ["rape", "nazi", "kuk", "hora", "neger", "bög"];
 
 const keyOf = name => "n_" + Buffer.from(name.toLowerCase(), "utf8").toString("hex");
 function problem(name) {
@@ -20,6 +23,8 @@ function problem(name) {
   const plain = name.toLowerCase().replace(/[^\p{L}]/gu, "");
   if (RESERVED.includes(plain) || RESERVED.includes(name.toLowerCase())) return "That name is reserved";
   if (RUDE.some(w => plain.includes(w))) return "Choose another name";
+  const words = name.replace(/(\p{Ll})(\p{Lu})/gu, "$1 $2").toLowerCase().split(/[^\p{L}]+/u);
+  if (words.some(w => RUDE_WORD.includes(w))) return "Choose another name";
   return null;
 }
 
