@@ -31,9 +31,36 @@ const WAIT_SECONDS = 1800, MAX_WAIT = 20, PVP = "bam-pvp";
 // Rating from real players: at most this many wins a day against the same opponent (bug review 2026-11-02 nr 39: a second
 // account kept at 0 Rating loses nothing and could feed +150 again and again)
 const PVP_WINS_PER_OPP_DAY = 3, KEEP_SPANS = 120;
-// this player's entries in "bam-pvp" are taken out a day after they were written (bug review 2026-11-02 nr 50): they are only
-// needed while the other side may still confirm (WAIT_SECONDS), and they hold the player ID. DeleteMe takes them out at once.
+// "bam-pvp" entries are deleted when they are over a day old (bug review 2026-11-02 nr 50): they are only needed while the other
+// side may still confirm (WAIT_SECONDS), and they hold player IDs. The key starts with the match's day ("d020761v123t0"), so the
+// oldest come first in the key list and any player's ReportMatch sweeps a few, also those of players who stopped playing. Keys
+// from before the day prefix ("v123t0") are swept by their "at". DeleteMe takes the player out of its own entries at once.
 const PVP_KEEP = 86400, PVP_CLEAN_PER_CALL = 10;
+const pvpKey = (vs, team, day) => "d" + String(day).padStart(6, "0") + vs + "t" + team;
+
+/// Deletes up to PVP_CLEAN_PER_CALL "bam-pvp" entries over a day old: day-prefixed keys from the front of the list, then the
+/// old keys without a day. Never fails the report.
+async function sweepPvp(data, projectId, now) {
+  try {
+    const today = Math.floor(now / 86400);
+    let left = PVP_CLEAN_PER_CALL;
+    const first = await data.getPrivateCustomKeys(projectId, PVP);
+    for (const r of (first.data.results || [])) {
+      if (left <= 0 || r.key[0] !== "d") break;
+      if (Number(r.key.slice(1, 7)) >= today - 1) break;   // sorted: everything after is newer
+      await data.deletePrivateCustomItem(r.key, projectId, PVP); left--;
+    }
+    if (left <= 0) return;
+    const legacy = await data.getPrivateCustomKeys(projectId, PVP, "u");   // keys after "u": the old "v..." ones
+    const keys = (legacy.data.results || []).map(r => r.key).filter(k => k[0] === "v").slice(0, 20);
+    if (!keys.length) return;
+    const got = await data.getPrivateCustomItems(projectId, PVP, keys);
+    for (const r of got.data.results) {
+      if (left <= 0) break;
+      if (!(r.value && r.value.at > now - PVP_KEEP)) { await data.deletePrivateCustomItem(r.key, projectId, PVP); left--; }
+    }
+  } catch (e) { }
+}
 const HEROES = ["Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk", "Hilde", "Oaken"], LEVELS = ["Easy", "Normal", "Hard", "Ultra"];
 
 const xpToNext = l => 100 + 50 * (l - 1);
@@ -48,18 +75,6 @@ function ratingChange(rating, kind, won) {
   return r.cap > 0 ? Math.max(0, Math.min(r.win, r.cap - rating)) : r.win;
 }
 
-/// Takes the player out of one "bam-pvp" entry, deleting the entry when nobody is left in it (DeleteMe has a copy: Cloud Code scripts cannot share code).
-async function leavePvp(data, projectId, playerId, key) {
-  try {
-    const g = await data.getPrivateCustomItems(projectId, PVP, [key]);
-    if (!g.data.results.length) return;
-    const side = g.data.results[0].value;
-    if (side.p) delete side.p[playerId];
-    if (!side.p || Object.keys(side.p).length === 0) await data.deletePrivateCustomItem(key, projectId, PVP);
-    else await data.setPrivateCustomItem(projectId, PVP, { key: key, value: side });
-  } catch (e) { }
-}
-
 module.exports = async ({ params, context, logger }) => {
   const { projectId, playerId } = context;
   const data = new DataApi(context), lb = new LeaderboardsApi(context);
@@ -72,10 +87,13 @@ module.exports = async ({ params, context, logger }) => {
   let changed = false;
   if (old && old.rs !== SEASON) { t.rating = 0; t.rs = SEASON; t.pend = 0; seen.wait = []; changed = true; }
 
-  const pvpKey = (vs, team) => vs + "t" + team;
-  const otherSide = async (vs, team) => {
-    const g = await data.getPrivateCustomItems(projectId, PVP, [pvpKey(vs, 1 - team)]);
-    return g.data.results.length ? g.data.results[0].value : null;
+  // the other team's entry: its players may date the match a day either side of ours (midnight, clocks), so all three are read
+  const otherSide = async (vs, team, day) => {
+    const g = await data.getPrivateCustomItems(projectId, PVP, [day - 1, day, day + 1].map(d => pvpKey(vs, 1 - team, d)));
+    if (!g.data.results.length) return null;
+    const side = { p: {} };
+    for (const r of g.data.results) Object.assign(side.p, (r.value && r.value.p) || {});
+    return side;
   };
   // a player of the other team reported this match with the opposite result
   const opponents = (side, won) => side ? Object.keys(side.p || {}).filter(id => id !== playerId && side.p[id] === !won) : [];
@@ -95,21 +113,17 @@ module.exports = async ({ params, context, logger }) => {
   // earlier matches against players that waited for the other side
   const still = [];
   for (const w of seen.wait) {
-    const opps = opponents(await otherSide(w.vs, w.team), w.won);
+    const opps = opponents(await otherSide(w.vs, w.team, w.day || Math.floor(w.at / 86400)), w.won);
     if (opps.length) { ratePlayers(w.won, opps); changed = true; }
     else if (now - w.at > WAIT_SECONDS) { if (LEVELS.includes(w.diff)) rate(w.diff, w.won); changed = true; }
     else still.push(w);
   }
   seen.wait = still;
 
-  // take this player out of the "bam-pvp" entries it wrote over a day ago; an entry nobody is left in is deleted
-  const mineKeys = Array.isArray(seen.pvpKeys) ? seen.pvpKeys : [];
-  let cleaned = 0;
-  for (let i = 0; i < mineKeys.length && cleaned < PVP_CLEAN_PER_CALL; ) {
-    if (now - mineKeys[i].at <= PVP_KEEP) { i++; continue; }
-    await leavePvp(data, projectId, playerId, mineKeys[i].k);
-    mineKeys.splice(i, 1); cleaned++; changed = true;
-  }
+  await sweepPvp(data, projectId, now);
+  // the entries this player wrote, for DeleteMe; the sweep deletes them after a day, so older ones are forgotten here too
+  const mineKeys = (Array.isArray(seen.pvpKeys) ? seen.pvpKeys : []).filter(e => now - e.at <= 2 * PVP_KEEP);
+  if (mineKeys.length !== (seen.pvpKeys || []).length) changed = true;
   seen.pvpKeys = mineKeys;
 
   const list = Array.isArray(params.matches) ? params.matches.slice(0, MAX_BATCH) : [];
@@ -161,16 +175,16 @@ module.exports = async ({ params, context, logger }) => {
 
     if (vs) {
       // tell the other side what this player reported, then see if it has reported too
-      const key = pvpKey(vs, m.team);
+      const key = pvpKey(vs, m.team, day);
       const mine = await data.getPrivateCustomItems(projectId, PVP, [key]);
       const side = mine.data.results.length ? mine.data.results[0].value : { at: at, p: {} };
       side.p[playerId] = won;
       await data.setPrivateCustomItem(projectId, PVP, { key: key, value: side });
       if (!mineKeys.some(e => e.k === key)) mineKeys.push({ k: key, at: now });
-      const opps = opponents(await otherSide(vs, m.team), won);
+      const opps = opponents(await otherSide(vs, m.team, day), won);
       if (quit) rate("Players", won);
       else if (opps.length) ratePlayers(won, opps);
-      else if (seen.wait.length < MAX_WAIT) seen.wait.push({ vs: vs, team: m.team, won: won, diff: m.difficulty, at: now });
+      else if (seen.wait.length < MAX_WAIT) seen.wait.push({ vs: vs, team: m.team, won: won, diff: m.difficulty, at: now, day: day });
       else rate(m.difficulty, won);
     } else rate(m.difficulty, won);
 
