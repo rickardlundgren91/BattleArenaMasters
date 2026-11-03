@@ -90,14 +90,16 @@ namespace BAM.Sim
 
     /// <summary>Knut, Anchor Throw. Tap: Anchor Slam round him (Hero5.cs). Drag: the anchor on a chain, thrown the full
     /// HookDistance the aimed way; it flies past minions and Fenn's wolf (HookPassesMinions) and pulls the first enemy hero it touches
-    /// (a decoy too, never a tower) to him and stuns it for the pull plus 0.4 s; the tap throws it up to TapReach at a hero. Passive: his auto attacks slow (Defs).</summary>
+    /// (a decoy too, never a tower) to him and stuns it for the pull plus 0.4 s; the tap throws it at a hero inside his ring (OneTap.TapReach). Passive: his auto attacks slow (Defs).</summary>
     public static class KnutS
     {
         /// <summary>The anchor flies out at one steady OutSpeed (a harpoon, as Pudge's hook; Rickard 2026-11-02 "ja" to the hook
         /// feel list). A long hook as Franco's in MLBB (Rickard 2026-11-03, card "Lång hook, fortfarande tap"): it flies up to
-        /// HookDistance 7 tiles and the tap picks an enemy hero up to TapReach 6 tiles away (minions only inside his white ring, Defs
-        /// 2.3). Before: 2.3 tiles at 15 tiles/s with a 0.4 hook ("samma som hans range", 2026-11-02), which was only a short jab.</summary>
-        public const float HookRadius = 0.5f, HookDistance = 7, TapReach = 6, OutSpeed = 12, OutTime = HookDistance / OutSpeed, Release = 0.5f;
+        /// HookDistance 7 tiles. The tap picks its target inside his white ring (Defs 2.3, OneTap.TapReach), as every hero's: a pick
+        /// up to 6 tiles fired at heroes far up the lane (Rickard 2026-11-03 "den går att aktivera för lång range"); the hook still
+        /// flies the full 7, so a target that runs is caught far out. Before: 2.3 tiles at 15 tiles/s with a 0.4 hook ("samma som hans
+        /// range", 2026-11-02), which was only a short jab.</summary>
+        public const float HookRadius = 0.5f, HookDistance = 7, OutSpeed = 12, OutTime = HookDistance / OutSpeed, Release = 0.5f;
         /// <summary>The haul back: a catch hangs PullPause on the taut chain, then the reel drags it at PullStart tiles/s, speeding up
         /// by PullAccel to PullMax (an empty anchor comes back the same way without the pause). See Reeled / PullTime. Franco's clip
         /// (Rickard 2026-11-03, measured frame by frame): his hook flies out at a steady, readable speed (~0.5 s to a far target) and

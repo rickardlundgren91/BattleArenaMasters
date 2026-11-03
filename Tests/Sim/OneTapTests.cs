@@ -100,6 +100,13 @@ namespace BAM.Sim
                     foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p && ev.X > p.X + 0.5f && Math.Abs(ev.Y - p.Y) < 0.5f) heroPicks++;
                 }
                 Check(heroPicks == 8, $"ONETAP Knut: with a hero and a minion in reach the hero is picked ({heroPicks}/8)");
+                // an enemy hero outside his white ring (4 tiles, well inside the hook's 7): grey, no cast (Rickard 2026-11-03 "för lång range")
+                m = OneTapScene(HeroId.Knut, out p, out cx, out cy);
+                var far = m.Heroes.Find(h => h.Team != p.Team); Place(far, p.X + 4f, p.Y); m.AddStatus(far, St.Stun, 999);
+                Check(!m.TapHasTarget(p), "ONETAP Knut: an enemy hero 4 tiles off (outside his ring) leaves the button grey");
+                bool farCast = false; m.Step(TapIn());
+                foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) farCast = true;
+                Check(!farCast && p.SpecialReady, "ONETAP Knut: a tap at a hero outside his ring throws nothing and keeps the charge");
             }
 
             // Tyra: her bolt flies past a minion in front and hits the hero behind it (TyraS.BoltPassesMinions); a minion alone lights the button

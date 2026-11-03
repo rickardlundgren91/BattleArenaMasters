@@ -19,8 +19,10 @@ namespace BAM.Sim
 
         /// <summary>How far a tapped special looks for its target: the hero's auto attack range, the white ring round them (Rickard
         /// 2026-11-02, Knut "samma som hans range", then Tikta, Bram, Tyra, Moa and Blast "fel range"), except Bonk, whose one special
-        /// is the big Ground Slam's circle, and Knut, whose long hook (Franco's, 2026-11-03) looks for a hero up to KnutS.TapReach. Tyra's bolt still flies on until it hits something; Tikta's needles stop at the ring.</summary>
-        public static float TapReach(HeroId id) => id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : id == HeroId.Knut ? KnutS.TapReach : Defs.Hero(id).Range;
+        /// is the big Ground Slam's circle. Knut's long hook (Franco's, 2026-11-03) looked for a hero up to 6 tiles for a while; Rickard
+        /// 2026-11-03 "den går att aktivera för lång range": his tap is back to his ring too, the hook still flies the full
+        /// KnutS.HookDistance (7). Tyra's bolt still flies on until it hits something; Tikta's needles stop at the ring.</summary>
+        public static float TapReach(HeroId id) => id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : Defs.Hero(id).Range;
 
         /// <summary>How far Tikta's needle line flies: her ring in the one-tap game (TapReach), TiktaS.LineReach for the old drag.</summary>
         float NeedleReach => OneTap ? TapReach(HeroId.Tikta) : TiktaS.LineReach;
@@ -33,8 +35,6 @@ namespace BAM.Sim
             var l = EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
             float half = h.Hero == HeroId.Tyra ? TyraS.Hitbox : h.Hero == HeroId.Tikta ? TiktaS.LineHitbox : h.Hero == HeroId.Knut ? KnutS.HookRadius
                 : h.Hero == HeroId.Fenn ? Defs.Wolf.Radius : -1;
-            if (h.Hero == HeroId.Knut) // his long hook: heroes up to TapReach, a minion (to throw through at a hero behind) only inside his ring
-                for (int i = l.Count - 1; i >= 0; i--) if (l[i].Kind != UnitKind.Hero && SimMath.Dist(h, l[i]) > h.Range + l[i].R) l.RemoveAt(i);
             if (half < 0) return l;
             for (int i = l.Count - 1; i >= 0; i--) if (TowerInWay(h, l[i], half)) l.RemoveAt(i);
             return l;
