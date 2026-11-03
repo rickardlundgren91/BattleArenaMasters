@@ -88,9 +88,9 @@ namespace BAM.Sim
                 foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) cast = true;
                 bool caught = false; for (int k = 0; k < 60; k++) { m.Step(PlayerInput.None); foreach (var q in m.Projs) if (q.Mode == ProjMode.Hook && q.Caught == mn) caught = true; }
                 Check(cast && !caught && mn.Hp == mn.MaxHp, "ONETAP Knut: the tap throws the hook through the minion, which is never caught or hurt");
-                // a hero and a minion in reach: the hero is picked every time
+                // a hero and a minion in reach: a random one of them, never the hero every time (focus, Rickard 2026-11-03)
                 int heroPicks = 0;
-                for (int s = 0; s < 8; s++)
+                for (int s = 0; s < 16; s++)
                 {
                     m = OneTapScene(HeroId.Knut, out p, out cx, out cy);
                     mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, cx - 0.2f, cy + 1f); m.AddStatus(mn, St.Stun, 999);
@@ -99,7 +99,7 @@ namespace BAM.Sim
                     m.Step(TapIn());
                     foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p && ev.X > p.X + 0.5f && Math.Abs(ev.Y - p.Y) < 0.5f) heroPicks++;
                 }
-                Check(heroPicks == 8, $"ONETAP Knut: with a hero and a minion in reach the hero is picked ({heroPicks}/8)");
+                Check(heroPicks > 0 && heroPicks < 16, $"ONETAP Knut: with a hero and a minion in reach the tap rolls between them ({heroPicks}/16 at the hero)");
                 // an enemy hero outside his white ring (4 tiles, well inside the hook's 7): grey, no cast (Rickard 2026-11-03 "för lång range")
                 m = OneTapScene(HeroId.Knut, out p, out cx, out cy);
                 var far = m.Heroes.Find(h => h.Team != p.Team); Place(far, p.X + 4f, p.Y); m.AddStatus(far, St.Stun, 999);
@@ -112,7 +112,7 @@ namespace BAM.Sim
             // Tyra: her bolt flies past a minion in front and hits the hero behind it (TyraS.BoltPassesMinions); a minion alone lights the button
             {
                 var m = OneTapScene(HeroId.Tyra, out var p, out float cx, out float cy);
-                var mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, cx - 0.2f, cy); m.AddStatus(mn, St.Stun, 999);
+                var mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, cx + 0.7f, cy); m.AddStatus(mn, St.Stun, 999); // on the line to the hero: either roll aims this way
                 Check(m.TapHasTarget(p), "ONETAP Tyra: a minion alone in reach lights the button");
                 var e = m.Heroes.Find(h => h.Team != p.Team); Place(e, cx + 1.4f, cy); m.AddStatus(e, St.Stun, 999);
                 float mh = mn.Hp, eh = e.Hp;

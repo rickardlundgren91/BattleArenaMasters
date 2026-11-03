@@ -40,20 +40,10 @@ namespace BAM.Sim
             return l;
         }
 
-        /// <summary>Knut's hook and Tyra's bolt fly past minions (KnutS.HookPassesMinions, TyraS.BoltPassesMinions): their tap takes a random enemy hero in reach, else a random
-        /// minion, and the hook flies through it toward a hero behind (Rickard 2026-11-02 "man ska ju kunna skjuta hooken på minions
-        /// ändå ... siktar man på en hero bakom"), so the button is lit with only minions near too.</summary>
-        /// <summary>Does h's special fly past minions to the heroes behind (Knut's hook, Tyra's bolt)?</summary>
+        /// <summary>Does h's special fly past minions to the heroes behind (Knut's hook, Tyra's bolt)? Their tap still rolls among ALL
+        /// enemies in reach, minions too, as every tap (Rickard 2026-11-03: "man ska inte få för mycket hjälp sådär, att det är random
+        /// attack på dom inom range är viktigt för spelet ... focus"): the player picks the odds by how many targets stand in the ring.</summary>
         public static bool PassesMinions(HeroId id) => id == HeroId.Knut ? KnutS.HookPassesMinions : id == HeroId.Tyra && TyraS.BoltPassesMinions;
-
-        Unit HeroFirstPick(List<Unit> l)
-        {
-            int heroes = 0;
-            for (int i = 0; i < l.Count; i++) if (l[i].Kind == UnitKind.Hero) heroes++;
-            if (heroes == 0 || heroes == l.Count) return PickRandom(l);
-            for (int i = l.Count - 1; i >= 0; i--) if (l[i].Kind != UnitKind.Hero) l.RemoveAt(i);
-            return PickRandom(l);
-        }
 
         /// <summary>Would a tap of h's special fire now (target-wise; the charge is SpecialReady)? Moa always can: herself.
         /// The HUD greys the button when this is false.</summary>
@@ -90,7 +80,7 @@ namespace BAM.Sim
                 var l = TapTargets(h);
                 if (l.Count == 0) return false;
                 if (h.Hero == HeroId.Bonk) return !TeleOn ? TryCastSpecial(h, float.NaN, 0) : TeleTime(h.Hero) > 0 ? StartTelegraph(h, null, float.NaN, 0) : CastWithFlash(h, null, float.NaN, 0); // the big Ground Slam round him: no aim, no roll
-                t = PassesMinions(h.Hero) ? HeroFirstPick(l) : PickRandom(l);
+                t = PickRandom(l); // every hero, Knut and Tyra too: a random enemy in reach, never heroes first (focus, Rickard 2026-11-03)
             }
             float dx = t.X - h.X, dy = t.Y - h.Y, d = SimMath.Hypot(dx, dy);
             float ang = d > 1e-4f ? SimMath.Atan2(dy, dx) : h.Facing;
