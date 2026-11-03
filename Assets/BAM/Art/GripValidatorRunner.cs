@@ -128,7 +128,7 @@ namespace BAM.Art
 
         static void Shot(GripValidatorRunner r) { r.view.PlayAttack(0.195f); r.windupFrom = r.runT; r.windupLen = 0.195f; } // Defs.cs: Tyra's auto windup
         static void Volley(GripValidatorRunner r) { r.view.PlayCast(false); r.windupFrom = r.runT; r.windupLen = 0.25f; }  // TyraS.VolleyWindup
-        static void Bolt(GripValidatorRunner r) { r.view.PlayCast(true); r.windupFrom = r.runT; r.windupLen = 0.35f; }     // TyraS.Windup
+        static void Bolt(GripValidatorRunner r) { r.view.PlayCast(true); r.windupFrom = r.runT; r.windupLen = TyraS.Windup; }     // TyraS.Windup
 
         static Step[] Script()
         {

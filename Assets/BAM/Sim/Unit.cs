@@ -163,6 +163,9 @@ namespace BAM.Sim
         public bool InCombat(float now) => now - LastCombat < (Kind == UnitKind.Tower ? Rules.TowerOutOfCombat : Rules.HeroOutOfCombat);
         /// <summary>A hero's regen waits only for fights with heroes and towers: hitting or being hit by minions and creeps never stops it (Rickard 2026-10-30).</summary>
         public bool InFight(float now) => now - LastFight < Rules.HeroRegenDelay;
+        /// <summary>The next auto attack is the special one: Bonk's 4th swing (power hit) or Bram's 4th hit (Backlash echo). For the
+        /// view only (MatchRings turns the range ring gold); tester 2026-11-03 asked to see it.</summary>
+        public bool NextHitSpecial => !IsClone && (Hero == HeroId.Bonk && PassHits >= BonkS.PowerEvery - 1 || Hero == HeroId.Bram && PassHits >= BramS.EchoEvery - 1);
 
         /// <summary>Statuses as display flags (the art shows stars, slows, shields...). Illusion is set for clones; the game
         /// shows it only to the clone's own team.</summary>

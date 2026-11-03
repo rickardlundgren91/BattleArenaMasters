@@ -42,6 +42,8 @@ namespace BAM.Game
         // that keeps leaving it. Gold to match the guide arrow over it.
         readonly Ring[] goal = new Ring[6];
         public const float GoalR = 0.9f;
+        /// <summary>The gold target ring's outer edge round a tower: just outside its model (rig Radius 1.0), not its hit edge.</summary>
+        const float TowerRingR = 1.15f;
         bool goalOn;
         Vector3 goalAt;
         bool blinkOn;
@@ -206,8 +208,13 @@ namespace BAM.Game
             // the stone floor: stronger than the old one, 2 px white at 0.55 between two thin dark edges (as the old "you" ring is
             // edged), so it reads on light stone and dark grass alike; a swing still flashes it wider and brighter
             float hit = Mathf.Clamp01(1f - (Time.time - swingAt) / 0.25f);
-            float ew = (2f + 1.5f * hit) * px, dw = 1f * px;
-            Show(range[0], at, r + ew / 2f, new Color(1f, 1f, 1f, 0.55f + 0.4f * hit), ew);
+            // Bonk's power hit / Bram's Backlash is the next swing: the ring goes gold, thicker and breathing (tester 2026-11-03 via
+            // Discord: "a visual indicator showing when his next attack will be empowered"); no new ring on the ground
+            bool power = p.NextHitSpecial;
+            float pb = power ? 0.5f + 0.5f * Mathf.Sin(Time.time * 6f) : 0f;
+            float ew = (2f + 1.5f * hit + (power ? 1.5f + pb : 0f)) * px, dw = 1f * px;
+            Color rc = power ? new Color(Gold.r, Gold.g, Gold.b, 0.75f + 0.25f * Mathf.Max(hit, pb)) : new Color(1f, 1f, 1f, 0.55f + 0.4f * hit);
+            Show(range[0], at, r + ew / 2f, rc, ew);
             Show(range[1], at, r + ew / 2f + dw, RingEdge, dw);
             Show(range[2], at, r - ew / 2f, RingEdge, dw);
 
@@ -225,12 +232,16 @@ namespace BAM.Game
 
             // a thick gold ring on who the last auto attack picked: held, then fading over the last 0.4 s
             float age = Time.time - autoAt;
-            if (autoTarget != null && autoTarget.Alive && age >= 0f && age < 1.1f && m.IsVisibleTo(autoTarget, p.Team))
+            // a tower is held longer (Bonk swings every 2.6 s) and ringed outside its model: at its hit edge (R 0.55) the 1-tile-wide
+            // tower body hid the ring (tester 2026-11-03 via Discord: "some kind of visual indicator when you're targeting the enemy tower")
+            bool atTower = autoTarget != null && autoTarget.Kind == UnitKind.Tower;
+            float hold = atTower ? 3f : 1.1f;
+            if (autoTarget != null && autoTarget.Alive && age >= 0f && age < hold && m.IsVisibleTo(autoTarget, p.Team))
             {
-                float fa = age < 0.7f ? 1f : 1f - (age - 0.7f) / 0.4f, pop = Mathf.Max(0f, 1f - age / 0.15f);
+                float fa = age < hold - 0.4f ? 1f : 1f - (age - (hold - 0.4f)) / 0.4f, pop = Mathf.Max(0f, 1f - age / 0.15f);
                 // the gold band's OUTER edge is the target's hit edge (Unit.R), like ABC's red disc under its target (Rickard's ABC
                 // videos 2026-11-02): the range ring meeting the gold ring = in reach (it sat 0.22 tiles outside before)
-                float gw = 3.5f * px, rr = autoTarget.R + 0.12f * pop; // outer edge; Show draws the band inward from it
+                float gw = (atTower ? 5f : 3.5f) * px, rr = (atTower ? TowerRingR + 0.06f * Mathf.Sin(Time.time * 5f) : autoTarget.R) + 0.12f * pop; // outer edge; Show draws the band inward from it
                 Vector3 tp = views.DrawnAt(autoTarget); tp.y = 0f;
                 Show(target[1], tp, rr, new Color(Gold.r, Gold.g, Gold.b, fa), 2f * gw);
                 Show(target[0], tp, rr - 2f * gw, new Color(Dark.r, Dark.g, Dark.b, 0.55f * fa), 1.5f * px); // dark edge inside the gold

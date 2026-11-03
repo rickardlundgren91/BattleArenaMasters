@@ -209,7 +209,8 @@ namespace BAM.Art
             if (i == Root && RootMat() != null) { MakeOwnRing(i, rootMat, rr * RootQuad); return; }
             Material own = i == StunRing ? RingMat(0, Pal.Stun) : i == PoisonRing ? RingMat(1, Pal.Poison) : i == BurnRing ? RingMat(2, Pal.Burn)
                 : i == Slow ? RingMat(3, Pal.Slow) : null;
-            if (own != null) { MakeOwnRing(i, own, i == Slow ? rr * RingQuad : rr * 1.05f * RingQuad); return; }
+            // the poison ring is drawn a size larger than the others (tester 2026-11-03: Tikta's poison went unseen)
+            if (own != null) { MakeOwnRing(i, own, i == Slow ? rr * RingQuad : rr * (i == PoisonRing ? 1.3f : 1.05f) * RingQuad); return; }
             if (i == Stun && StunMat() != null)
             {
                 // his ring of stars over the head, facing the camera (Tick turns it to the camera and sways it)
@@ -224,11 +225,12 @@ namespace BAM.Art
                 case Slow: mesh = Shapes.SlowRing(); mat = ArtMaterials.UnlitFade; pos = new Vector3(0f, 0.03f, 0f); s = rr; break;
                 case Root: mesh = Shapes.RootVines(); mat = ArtMaterials.Lit; pos = Vector3.zero; s = rr; break;
                 case Burn: mesh = Shapes.Flames(); mat = ArtMaterials.UnlitAdd; pos = Vector3.zero; s = rr * 0.8f; break;
-                case Poison: mesh = Shapes.PoisonBubbles(); mat = ArtMaterials.Unlit; pos = new Vector3(0.18f, height + 0.05f, 0f); s = 1f; break;
+                // bigger and over the head (tester 2026-11-03 via Discord on Tikta: "I barely realize I've been hit"; was s 1 at the shoulder)
+                case Poison: mesh = Shapes.PoisonBubbles(); mat = ArtMaterials.Unlit; pos = new Vector3(0f, height + 0.25f, 0f); s = 2.4f; break;
                 case Shield: mesh = HexSphere(); mat = HexMat(); pos = new Vector3(0f, height * 0.5f, 0f); s = Mathf.Max(radius * 1.6f, height * 0.62f); break;
                 case Haste: mesh = Shapes.HasteLines(); mat = ArtMaterials.UnlitAdd; pos = Vector3.zero; s = Mathf.Max(1f, radius * 2.2f); break;
                 case StunRing: mesh = Shapes.RingMesh(0.82f, Pal.Stun); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.05f; break;
-                case PoisonRing: mesh = Shapes.RingMesh(0.82f, Pal.Poison); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.05f; break;
+                case PoisonRing: mesh = Shapes.RingMesh(0.82f, Pal.Poison); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.3f; break;
                 case BurnRing: mesh = Shapes.RingMesh(0.82f, Pal.Burn); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.035f, 0f); s = rr * 1.05f; break;
                 default: mesh = Shapes.RingMesh(0.85f, Pal.Violet); mat = ArtMaterials.UnlitAdd; pos = new Vector3(0f, 0.04f, 0f); s = rr * 1.15f; break;
             }
@@ -321,7 +323,7 @@ namespace BAM.Art
                 t[Burn].localScale = new Vector3(s.x, s.x * f, s.x);
                 t[Burn].localRotation = Quaternion.Euler(0f, time * 90f, 0f);
             }
-            if (r[Poison] != null && r[Poison].enabled) t[Poison].localPosition = new Vector3(0.18f, height + 0.05f + Mathf.Sin(time * 4f) * 0.05f, 0f);
+            if (r[Poison] != null && r[Poison].enabled) t[Poison].localPosition = new Vector3(0f, height + 0.25f + Mathf.Sin(time * 4f) * 0.07f, 0f);
             if (r[Shield] != null && r[Shield].enabled)
             {
                 float k = 1f + Mathf.Sin(time * 5f) * 0.03f + Mathf.Sin(time * 40f) * 0.06f * ripple;
@@ -358,7 +360,7 @@ namespace BAM.Art
                 Fx.Embers(p + new Vector3(0f, height * 0.25f, 0f), 1, new Color32(255, 217, 89, 255), 0.11f, 0.3f, 0.45f, 1.7f, radius * 0.6f);
                 if (burnN % 2 == 0) Fx.Smoke(p + new Vector3(0f, height * 0.6f + 0.4f, 0f), 1, new Color32(51, 43, 41, 102), 0.55f, 0.15f, 0.8f, 0.7f, radius * 0.4f);
             }
-            if (Has(flags, StatusFlags.Poisoned)) Fx.Bubbles(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.14f, 0.2f, 0.6f, 0.6f, radius * 0.5f);
+            if (Has(flags, StatusFlags.Poisoned)) Fx.Bubbles(p + new Vector3(0f, height * 0.6f, 0f), 1, Pal.Get(Pal.Poison), 0.2f, 0.2f, 0.7f, 0.6f, radius * 0.6f); // a size bigger (tester 2026-11-03)
             if (Has(flags, StatusFlags.Hasted))
             {
                 Vector3 mv = p - lastP; mv.y = 0f;

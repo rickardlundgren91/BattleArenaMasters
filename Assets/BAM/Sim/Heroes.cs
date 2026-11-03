@@ -55,7 +55,11 @@ namespace BAM.Sim
         public const float Length = 2 * (4f + 0.5f);
         /// <summary>How far the bolt flies at most: longer than the arena's diagonal, so in practice to the first hit, wall or the edge.</summary>
         public const float Flight = 40;
-        public const float Windup = 0.35f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.35f;
+        /// <summary>Windup: her draw before the bolt leaves, 0.35 -> 0.25 s (tester 2026-11-03 via Discord: "at longer distances, hitting
+        /// an enemy feels more like a matter of luck than skill"; Rickard "Börja bygg"). The tap's 0.3 s warning already locks the aim and
+        /// flashes, so the bolt now leaves 0.55 s after the tap instead of 0.65 s; it still never homes. 0.15 s made her too strong
+        /// (1600 bot matches: Hard 46.9 -> 56.8 %, Normal 52.0 -> 60.1 %); 0.25 s gives Hard 52.9 %, Normal 54.9 %.</summary>
+        public const float Windup = 0.25f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.35f;
         /// <summary>One-tap special (Rules.OneTapSpecial, 2026-11-01): how far her tap looks for the random enemy to shoot at.</summary>
         public const float TapTarget = 7;
         /// <summary>Arrow Volley (the tap since 2026-10-28, XYZ 2026-10-25): after a short draw, five arrows fanned +-HalfAngle round a
