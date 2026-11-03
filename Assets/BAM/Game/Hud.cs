@@ -37,6 +37,8 @@ namespace BAM.Game
         Text deniedText, specialName;
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialHalo, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
+        Image specialVeil, specialFlash; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
+        float readyAt = -99f; bool wasReady;
         RectTransform cancelMark, dragRing;
         Text cancelText;
         readonly Image[] cancelCross = new Image[2];
@@ -88,6 +90,8 @@ namespace BAM.Game
             lastTutStep = -1;
             lastDenied = m.SpecialDeniedAt; deniedUntil = shakeUntil = bannerUntil = 0f;
             gainAt = -99f; lastCharge = 0f; killedBy = null;
+            readyAt = -99f; wasReady = false;
+            if (specialFlash != null) { specialFlash.enabled = false; specialRoot.localScale = Vector3.one; }
             lastState = m.State;
             specialQueued = false; hintShown = false;
             BeginTop();
@@ -323,6 +327,7 @@ namespace BAM.Game
             specialFill.color = ready ? GlassOrangeHi : GlassOrange;
             specialDisc.color = ready ? DiscReady : DiscCharging;
             Split(p.Alive ? p.Charge01 : 0f, ready); // the two halves: ring, grey and gold level (HudSplit.cs)
+            ReadyLook(p.Alive ? Mathf.Clamp01(p.Charge01) : 0f, ready);
             float pulse = Mathf.Sin(Time.unscaledTime * 3.5f);
             specialGlow.enabled = ready;
             specialHalo.enabled = ready;
@@ -352,6 +357,37 @@ namespace BAM.Game
             if (special.Pressed && !p.Alive) special.Cancel();
             DragMarks();
         }
+
+        // The SPECIAL's icon tells charging from ready at a glance (Rickard 2026-11-03): charging = the icon greyed and a dark veil
+        // over the part not charged yet (it fills up from the bottom); charged but nobody in reach = the whole icon greyed;
+        // ready = full colour, and the moment it turns ready the button pops (a short bounce, a white flash and the gold ring).
+        // No stronger glow: Rickard found the glow too much on 2026-11-02.
+        void ReadyLook(float frac, bool ready)
+        {
+            if (ready && !wasReady) { readyAt = Time.unscaledTime; gainAt = Time.unscaledTime; }
+            wasReady = ready;
+            bool full = frac >= 0.999f;
+            specialIcon.color = ready ? Color.white : full ? IconNoTarget : IconCharging;
+            var veil = specialVeil.rectTransform;
+            specialVeil.enabled = !full;
+            if (!full) { veil.anchorMin = new Vector2(0f, frac); veil.anchorMax = Vector2.one; veil.offsetMin = veil.offsetMax = Vector2.zero; }
+            float t = (Time.unscaledTime - readyAt) / ReadyPopTime;
+            if (t >= 0f && t < 1f)
+            {
+                specialFlash.enabled = true;
+                specialFlash.color = new Color(1f, 0.97f, 0.85f, 0.75f * (1f - t));
+                specialRoot.localScale = Vector3.one * (1f + 0.14f * Mathf.Sin(Mathf.PI * t));
+            }
+            else if (specialFlash.enabled)
+            {
+                specialFlash.enabled = false;
+                specialRoot.localScale = Vector3.one;
+            }
+        }
+
+        const float ReadyPopTime = 0.4f;
+        static readonly Color VeilColor = new Color(0.03f, 0.04f, 0.1f, 0.62f);
+        static readonly Color IconCharging = new Color(0.62f, 0.62f, 0.62f, 1f), IconNoTarget = new Color(0.55f, 0.55f, 0.55f, 1f);
 
         static readonly Color CancelOff = new Color(0.04f, 0.05f, 0.1f, 0.5f), CancelOn = new Color(0.9f, 0.2f, 0.2f, 0.55f), DotRed = new Color(1f, 0.35f, 0.35f, 0.85f);
 
@@ -611,6 +647,20 @@ namespace BAM.Game
             specialIcon = iconRt.gameObject.AddComponent<Image>();
             specialIcon.preserveAspect = false;
             specialIcon.raycastTarget = false;
+            // while charging, a dark veil covers the part of the icon that is not charged yet, so the icon fills up from the
+            // bottom; when ready the veil is gone and a white flash pops over the icon (Rickard 2026-11-03 "den ska synas att
+            // den är redo och uppladdad")
+            var veilRt = UiKit.NewRect("Veil", specialFace.transform);
+            UiKit.Stretch(veilRt);
+            specialVeil = veilRt.gameObject.AddComponent<Image>();
+            specialVeil.color = VeilColor;
+            specialVeil.raycastTarget = false;
+            var flashRt = UiKit.NewRect("Flash", specialFace.transform);
+            UiKit.Stretch(flashRt);
+            specialFlash = flashRt.gameObject.AddComponent<Image>();
+            specialFlash.color = Color.clear;
+            specialFlash.raycastTarget = false;
+            specialFlash.enabled = false;
             BuildSplit(specialFill.rectTransform); // split down the middle: tap left, drag right (HudSplit.cs)
             // the gold frame round it all and a thin gold line round the icon, so it reads as a framed metal button
             RoundRing(Circle(specialRoot, "Rim", D, Hex(0xd9a441)).GetComponent<Image>(), D * 0.5f, Mathf.Max(1.5f, SpecialButton.Radius * 0.035f));
