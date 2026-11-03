@@ -2,8 +2,8 @@ using System;
 
 namespace BAM.Sim
 {
-    // Regen (Rickard 2026-10-30): once a hero heals out of combat, hitting minions or being hit by them does not stop it;
-    // only a fight with a hero or a tower does (Unit.LastFight).
+    // Regen (Rickard 2026-11-03, as ABC): any fight stops it, minions too (Unit.LastFight). From 2026-10-30 to 11-03 only a
+    // fight with a hero or a tower did.
     public sealed partial class Match
     {
         static void RegenFights()
@@ -14,7 +14,7 @@ namespace BAM.Sim
             m.Time += 10;
             Check(!h.InFight(m.Time), "a hero 10 s from any fight regenerates");
             m.DealDamage(h, mob, 5, DmgKind.Auto); m.DealDamage(mob, h, 5, DmgKind.Auto);
-            Check(!h.InFight(m.Time) && h.InCombat(m.Time), "hitting a minion and being hit by one keeps the regen going (the bots still see a fight)");
+            Check(h.InFight(m.Time) && h.InCombat(m.Time), "hitting a minion and being hit by one stops the regen too");
             m.DealDamage(h, foe, 5, DmgKind.Auto);
             Check(h.InFight(m.Time), "hitting an enemy hero stops the regen");
             m.Time += 10; m.DealDamage(foe, h, 5, DmgKind.Auto);

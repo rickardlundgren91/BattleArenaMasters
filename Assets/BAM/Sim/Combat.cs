@@ -108,6 +108,7 @@ namespace BAM.Sim
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
+                if (tgt.Kind == UnitKind.Tower && src != null && src.Kind == UnitKind.Wolf) amount *= Rules.WolfVsTower; // half (tester 2026-11-03 via Discord, Rickard ok)
                 if (Tut != null) TutSawHit(src, tgt, kind); // the guided match's special lessons (Tutorial.cs)
                 if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy))
                 {
@@ -117,11 +118,13 @@ namespace BAM.Sim
             }
             if (tgt.IsClone) { amount = Math.Max(amount, tgt.Hp); ShadowEscape(src, tgt, kind); } // Fenn's decoy is gone at the first damage of any kind (the old illusion took double)
             tgt.LastCombat = Time;
-            if (att == null || att.Kind == UnitKind.Hero && !att.IsClone || att.Kind == UnitKind.Tower) tgt.LastFight = Time; // an enemy hero (or its wolf), a tower, or no known source
+            // any fight stops regen, minions too (Rickard 2026-11-03: "man måste vara utanför combat helt för att regga", as in ABC;
+            // from protocol 18 to 46 only hero and tower fights did). A Fenn decoy's 0-damage hits stay no fight.
+            if (att == null || !att.IsClone) tgt.LastFight = Time;
             if (src != null && !tgt.IsClone)
             {
                 src.LastCombat = Time;
-                if (tgt.Kind == UnitKind.Hero || tgt.Kind == UnitKind.Tower) src.LastFight = Time; // hitting a minion keeps the regen going
+                src.LastFight = Time; // hitting anything stops the regen (Rickard 2026-11-03)
                 if (src.Kind == UnitKind.Hero && att.HeroIndex >= 0) tgt.LastHitBy[att.HeroIndex] = Time;
             }
             if (src != null && src.Kind == UnitKind.Hero && tgt.Kind == UnitKind.Hero && !tgt.IsClone)

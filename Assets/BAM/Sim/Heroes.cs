@@ -81,7 +81,8 @@ namespace BAM.Sim
         public const float Range = 5, ShieldPercent = 0.18f, Duration = 3, AreaRadius = 1.8f, AreaShieldPercent = 0.06f, AreaDuration = 3, FieldDuration = 2;
         /// <summary>The honey field's shield with the one-tap special (Match.OneTap): 12 %, it is no longer placed over several
         /// allies on purpose (Rickard 2026-11-01); AreaShieldPercent (6 %) is the old drag's.</summary>
-        public const float FieldShieldOneTap = 0.10f; // 12 -> 10 % (Rickard 2026-11-02 "nerfa skölden lite men inte i tid"; Hard bots Moa 61 -> 55 %)
+        public const float FieldShieldOneTap = 0.08f; // 10 -> 8 % (tester 2026-11-03: Moa the strongest; Rickard ok)
+        // was // 12 -> 10 % (Rickard 2026-11-02 "nerfa skölden lite men inte i tid"; Hard bots Moa 61 -> 55 %)
         /// <summary>How long the one-tap field's shield lasts: 5 s (Rickard 2026-11-02 "minst 5"; AreaDuration 3 s is the old drag's).</summary>
         public const float FieldShieldTimeOneTap = 5;
         public const float SpeedBonus = 0.1f, SpeedDuration = 1.5f;
