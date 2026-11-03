@@ -77,6 +77,29 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.5 (code 19, next build after 18, paste in "Release notes"; Discord: the longer text in bam-work/release/0.3.5-notes.txt)
+
+```
+<en-US>
+Battle Arena Masters 0.3.5
+From your feedback:
+• Specials warn with a red marker
+• SPECIAL fills orange, sparks when ready
+• Gold rings: tower target, Bonk/Bram power hit
+• Bonk swings faster, Tyra runs faster
+• Tikta: clearer poison, softer sound
+• Knut: long hook, new swing sound
+• Regen only out of combat
+• Fenn's wolf: half damage on towers
+• Balance pass for 7 heroes
+Also new:
+• Taps hit any enemy in reach
+• Shield 25 % for 5 s
+• Host leaving no longer freezes online
+Update to play online.
+</en-US>
+```
+
 ## Closed test release notes 0.3.4 (next build after 16, paste in "Release notes")
 
 ```
