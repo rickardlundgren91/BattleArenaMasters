@@ -68,7 +68,7 @@ namespace BAM.Game
         {
             m = match; views = matchViews;
             autoTarget = null; autoAt = swingAt = -99f; blowAt = -99f;
-            Make(range); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash);
+            Make(range, true); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash);
             blinkOn = false;
             aimOn = false;
         }
@@ -79,13 +79,19 @@ namespace BAM.Game
             m = null; views = null; autoTarget = null;
         }
 
-        static void Make(Ring[] rings)
+        /// <summary>overTerrain: the ring ignores depth and is drawn over the tower and walls too. The hero's white range ring was
+        /// cut by the Tripo tower's stone foot and the walls (Rickard 2026-11-03 "heroens range ring den vita ritas under tornet så
+        /// ska det inte va"). Health bars (Overlay, queue 4000), effects (3010+) and the HUD canvas still draw over it.</summary>
+        static void Make(Ring[] rings, bool overTerrain = false)
         {
             for (int i = 0; i < rings.Length; i++)
             {
                 var v = ArtKit.CreateAim();
                 MeshRenderer rr = null;
                 foreach (var r in v.GetComponentsInChildren<MeshRenderer>(true)) if (r.gameObject.name == "Range") rr = r;
+                // the aim's own private range material (AimLook.rangeMat, destroyed with the aim), so only this ring changes
+                if (overTerrain && rr != null && rr.sharedMaterial != null)
+                    rr.sharedMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
                 var mf = rr != null ? rr.GetComponent<MeshFilter>() : null;
                 rings[i] = new Ring { View = v, Renderer = rr, Block = new MaterialPropertyBlock(), Filter = mf, Orig = mf != null ? mf.sharedMesh : null };
                 v.Hide();
