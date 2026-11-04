@@ -100,7 +100,10 @@ namespace BAM.Sim
             var att = src != null ? (src.Owner ?? src) : null;
             if (tgt.Kind == UnitKind.Hero) tgt.LastHurt = Time;
             if (att != null && !tgt.IsClone) att.RevealT = Rules.RevealTime; // hitting Fenn's decoy reveals nobody
-            tgt.RevealT = Rules.RevealTime;
+            // being hit in grass reveals nobody: only your own hits and an enemy within 2.5 tiles do, so a stray splash or a
+            // bot's next shot cannot keep a hero who is not fighting lit for ever (tester MysOxen 2026-11-04). A hit outside the
+            // grass still trails you 2 s into it.
+            if (tgt.Kind != UnitKind.Hero || !Map.InGrass(tgt.X, tgt.Y)) tgt.RevealT = Rules.RevealTime;
             bool burning = (flags & DmgFlags.Burning) != 0;
             if (!burning)
             {

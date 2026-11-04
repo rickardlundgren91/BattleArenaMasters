@@ -475,7 +475,7 @@ namespace BAM.Sim
         float PacingMinionTowerMult() => Tut != null ? 1 : Time >= 330 ? 1.4f : Time >= 270 ? 1.2f : 1;
 
         // ---------- what a team sees ----------
-        /// <summary>Can team see u? Own units always; a recent hit shows both sides for 4 s; a tower sees its range; a unit in
+        /// <summary>Can team see u? Own units always; a recent hit shows the attacker for 2 s (and a target hit outside grass); a tower sees its range; a unit in
         /// grass is seen only by enemies within 2.5 tiles.</summary>
         public bool IsVisibleTo(Unit u, int team)
         {
