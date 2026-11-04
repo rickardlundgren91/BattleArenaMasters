@@ -308,11 +308,13 @@ namespace BAM.Art
         // the map's no-go rules). The faces look outward; the camera behind the bottom base sees the south one, the online top team's
         // turned camera the north one.
         const float CliffSkirtW = 8f, CliffSkirtH = CliffSkirtW * 872f / 1024f;
-        // the picture's top 44 rows are the cut-out grass tips (alpha under 50 % until row 44 of 872); hung with its top at the
-        // floor, that strip was see-through and showed the water far below as a thin dark teal line along the edge (Rickard's
-        // screenshot 2026-11-04 17:11), so the picture hangs this much higher: the first solid row meets the floor and the tips
-        // stand just above it
-        const float CliffSkirtLip = CliffSkirtH * 44f / 872f;
+        // the picture's top rows are the cut-out grass tips: fully see-through to row 24 of 872, ragged (alpha 50-100 %) to row 44.
+        // Hung with its top at the floor, that strip showed the water far below as a thin dark teal line (Rickard 2026-11-04 17:11);
+        // hung 44 rows higher, the ragged tips stood above the floor and, darkened by the picture's own halo and the ambient-only
+        // light, drew a thin dark line with teeth over the floor's grass (Rickard 17:35 and 20:42, left for 0.3.8). Now the
+        // see-through rows stand above the floor (cut away, nothing shows), the ragged rows hang just under it, and a backing strip
+        // of the picture's own grass (CliffSkirtBackH, see Face) sits behind them, so the gaps between the blades show grass, not water
+        const float CliffSkirtLip = CliffSkirtH * 24f / 872f, CliffSkirtBackH = 0.6f;
 
         static void CliffSkirt(GameObject root, ArenaInfo info, Texture2D pic, float rim)
         {
@@ -333,6 +335,16 @@ namespace BAM.Art
                 uv.Add(new Vector2(u0, 1f)); uv.Add(new Vector2(u1, 1f)); uv.Add(new Vector2(u1, 0f)); uv.Add(new Vector2(u0, 0f));
                 for (int k = 0; k < 4; k++) n.Add(outN);
                 tri.Add(i0); tri.Add(i0 + 1); tri.Add(i0 + 2); tri.Add(i0); tri.Add(i0 + 2); tri.Add(i0 + 3);
+                // backing strip a hair behind the picture, from the floor down, textured with one solid grass row of the same picture
+                // (so it is lit and coloured exactly like the lip): the gaps between the ragged blade tips show it instead of the water
+                Vector3 back = -outN * 0.03f, lo = Vector3.down * CliffSkirtBackH;
+                Vector3 l = new Vector3(left.x, 0f, left.z) + back, r = new Vector3(right.x, 0f, right.z) + back;
+                const float vb = 1f - 64f / 872f;
+                int i1 = v.Count;
+                v.Add(l); v.Add(r); v.Add(r + lo); v.Add(l + lo);
+                uv.Add(new Vector2(u0, vb)); uv.Add(new Vector2(u1, vb)); uv.Add(new Vector2(u1, vb - 0.002f)); uv.Add(new Vector2(u0, vb - 0.002f));
+                for (int k = 0; k < 4; k++) n.Add(outN);
+                tri.Add(i1); tri.Add(i1 + 1); tri.Add(i1 + 2); tri.Add(i1); tri.Add(i1 + 2); tri.Add(i1 + 3);
             }
             float y = CliffSkirtLip;
             Face(new Vector3(-rim, y, -rim), new Vector3(w + rim, y, -rim));         // south, seen from -z
