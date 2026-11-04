@@ -930,6 +930,8 @@ namespace BAM.Art
         /// <summary>Degrees each finger joint bends at <see cref="WeaponDef.Fist"/> 1.</summary>
         internal const float FistBend = 70f;
         Vector3[] curlAx, thumbAx; // Close hand's bend axes per weapon hand, in the hand bone's own space, fixed at the first use
+        // Close hand's finger poses before and after its bend, per weapon hand and finger bone (see the reset in CloseHand)
+        Quaternion[][] curlBase, curlSet;
 
         // the fingers curled towards the weapon's shaft, on top of the clip (each frame from the clip's own pose, so nothing adds up)
         void CloseHand(int i, float k)
@@ -947,6 +949,20 @@ namespace BAM.Art
             // towards the socket, the palm's own centre, which no pose can flip.
             Transform hb = f[3] != null ? f[3].parent : (f[0] != null ? f[0].parent : null);
             if (hb == null) return;
+            // Start every frame from the clip's finger pose. A finger the Avatar does not map (Tyra's maps only the index; the
+            // others are found by name) is never written by the Animator, so the bend was added on top of last frame's bend and
+            // the fingers spun round and round ("fingrar buggar fortfarande", Rickard 2026-11-04 after Cajsa's "fladdrar").
+            // A bone still exactly as this bend left it was not touched by the clip: it goes back to its pose before the bend.
+            if (curlBase == null || curlBase.Length != fing.Length) { curlBase = new Quaternion[fing.Length][]; curlSet = new Quaternion[fing.Length][]; }
+            if (curlBase[i] == null) { curlBase[i] = new Quaternion[15]; curlSet[i] = new Quaternion[15]; }
+            for (int q = 0; q < 15; q++)
+            {
+                if (f[q] == null) continue;
+                Quaternion now = f[q].localRotation, set = curlSet[i][q];
+                bool untouched = set.w != 0f || set.x != 0f || set.y != 0f || set.z != 0f;
+                untouched = untouched && now.x == set.x && now.y == set.y && now.z == set.z && now.w == set.w;
+                if (untouched) f[q].localRotation = curlBase[i][q]; else curlBase[i][q] = now;
+            }
             if (curlAx == null || curlAx.Length != fing.Length) { curlAx = new Vector3[fing.Length]; thumbAx = new Vector3[fing.Length]; }
             if (curlAx[i] == Vector3.zero && f[3] != null && f[4] != null && f[12] != null)
             {
@@ -980,6 +996,7 @@ namespace BAM.Art
                     bone.rotation = Quaternion.AngleAxis(FistBend * k * CurlShare[j] * (n == 0 ? 0.5f : 1f), axis) * bone.rotation;
                 }
             }
+            for (int q = 0; q < 15; q++) if (f[q] != null) curlSet[i][q] = f[q].localRotation;
         }
 
         /// <summary>Share of <see cref="FistBend"/> per finger joint (knuckle, middle, tip) for Close hand.</summary>
