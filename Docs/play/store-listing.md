@@ -77,6 +77,24 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.7 (code 21, next build after 20, paste in "Release notes"; Discord: the longer text in bam-work/release/0.3.7-notes.txt)
+
+```
+<en-US>
+Battle Arena Masters 0.3.7
+From your feedback:
+• Bonk's club hits targets anywhere in reach
+• Tyra's bolt is easier to hit
+• A red eye shows when enemies see you in grass
+• Clearer warnings, Knut's chain, Moa's shield
+Also new:
+• Tyra is the starter hero: faster shots, special more often, feather trail slows
+• New map to try: PRACTICE > NEW MAP, with jump pads
+• Cliffs and new water round the arena
+Update to play online.
+</en-US>
+```
+
 ## Closed test release notes 0.3.6 (code 20, next build after 19, paste in "Release notes"; Discord: the longer text in bam-work/release/0.3.6-notes.txt)
 
 ```
