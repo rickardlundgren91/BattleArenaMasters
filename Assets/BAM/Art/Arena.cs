@@ -150,7 +150,10 @@ namespace BAM.Art
             }
             if (kit) WallKit(root, info, pillarM, beamM);
             if (!info.Island) LeafBushes(root, info);
-            Mesh edgeM = info.Island ? null : Props.Mesh("bam_boundary_wall");
+            // no stone wall round the floor any more (Rickard 2026-11-04: "vi kanske inte behöver den där väggen"): the cliff and its
+            // low kerb mark the edge, and the rules never let anyone off the map, so the wall was only looks
+            const bool edgeWall = false;
+            Mesh edgeM = info.Island || !edgeWall ? null : Props.Mesh("bam_boundary_wall");
             if (edgeM != null) BoundaryWall(root, info, edgeM);
             if (cliffPic != null) CliffSkirt(root, info, cliffPic, edgeM != null ? edgeM.bounds.size.z * EdgeScale - 0.07f : 0f);
             if (rockPic != null && info.Rocks != null) RockPictures(root, info, rockPic);
