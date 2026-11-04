@@ -187,11 +187,13 @@ namespace BAM.Art
             // below level, and the shield rides close to his arm (Unity run 1 2026-10-29: in the run his torso turns to the front and the
             // rest hold pointed the blade straight ahead like a lance, the shield thrown far out; coordinator's go on the recommended
             // pick A of bam-work/art/rigg-anim/spring/fenn-spring-val.png for Rickard, 2026-10-29; Clay-Fenn, redo if Original-Fenn stays)
+            // Run hold since 2026-11-04 (Rickard: "fenn springer med sitt svärd neråt istället för uppåt som när han står still"): raised
+            // almost straight up at his shoulder, Rickard's pick B (Up 70, Out 100) of bam-work/fenn-run/fenn-run-up.png
             g[(int)HeroId.Fenn] = new GearDef
             {
                 // (2026-11-01, after Tyra and Knut) the sword in the palm socket: the centre of his four fingers' curl in his own Idle
                 // and Run (curled 109 degrees; the same within 0.002), Socket only, so his Tuner hold and swing stay as tuned
-                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f, HoldUp = 45f, HoldOut = 62f, Turn = new Vector3(-33f, 55f, 0f), Run = new Hold { Up = -20f, Out = 155f },
+                Weapons = new[] { new WeaponDef { Model = "fenn_sword", Len = 1.0f, Grip = 0.2f, HoldUp = 45f, HoldOut = 62f, Turn = new Vector3(-33f, 55f, 0f), Run = new Hold { Up = 70f, Out = 100f },
                     Socket = new Vector3(0.7521f, -0.0457f, 0.2897f), NoFingerThumb = new Vector3(-0.2402f, 0.2411f, 0.0900f) } },
                 Shield = new ShieldDef { Model = "fenn_shield", Dia = 0.5f, WalkOut = 0.08f },
             };
