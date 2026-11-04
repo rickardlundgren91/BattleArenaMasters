@@ -91,6 +91,7 @@ Also new:
 • Tyra is the starter hero: faster shots, special more often, feather trail slows
 • New map to try: PRACTICE > NEW MAP, with jump pads
 • Cliffs and new water round the arena
+• Hard opens after 3 wins vs Normal
 Update to play online.
 </en-US>
 ```
