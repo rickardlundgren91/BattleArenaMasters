@@ -32,7 +32,7 @@ namespace BAM.Sim
                 if (target != null && Dist(target, myTower) < tr + 3) return; // already fighting at our tower
                 if (Dist(h, myTower) < tr - 0.5f) return;
                 float x = myTower.X, y = myTower.Y + fwd * (tr - 1.5f);
-                if (!Walkable(h, x, y)) { x = myTower.X; y = myTower.Y + fwd * 1.5f; }
+                if (!Walkable(h, x, y)) { x = myTower.X; y = myTower.Y + fwd * (Rules.TowerBody + h.R + 0.45f); }
                 Mode = BotMode.Defend; focus = null; SetGoal(x, y);
             }
             else if (sigAtk != null && target == null && Dist(h, sigAtk) > 3)

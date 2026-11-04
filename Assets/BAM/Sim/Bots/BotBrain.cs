@@ -291,7 +291,7 @@ namespace BAM.Sim
                 Mode = BotMode.Danger; focus = null;
                 // fallback: just behind our tower, outside its body (it was the tower's centre + 1, inside it: bug review nr 34)
                 if (SafestSpot(out float sx, out float sy)) SetGoal(sx, sy);
-                else { float bx = myTower.X, by = myTower.Y - fwd * (myTower.R + h.R + 0.6f); if (Walkable(h, bx, by)) SetGoal(bx, by); }
+                else { float bx = myTower.X, by = myTower.Y - fwd * (Rules.TowerBody + h.R + 0.6f); if (Walkable(h, bx, by)) SetGoal(bx, by); }
             }
             else if (towerOnMe && tank < 25 && !soloTower && !chip && !finish && !leadPush && !(target != null && (target.Hp + ShieldOf(target)) / myDps < 1.5f))
             {
@@ -371,7 +371,7 @@ namespace BAM.Sim
             else if (threat || Now - h.LastCombat < 0.5f)
             {
                 float d = Dist(h, myTower); if (d == 0) d = 1;
-                float backX = myTower.X, backY = myTower.Y - fwd * (myTower.R + h.R + 0.6f);
+                float backX = myTower.X, backY = myTower.Y - fwd * (Rules.TowerBody + h.R + 0.6f);
                 bool backOk = Walkable(h, backX, backY);
                 if (d > 5.5f) SetGoal(h.X + (myTower.X - h.X) / d * 4, h.Y + (myTower.Y - h.Y) / d * 4);
                 else if (backOk && Hyp(h.X - backX, h.Y - backY) > 0.4f) SetGoal(backX, backY);
@@ -418,7 +418,7 @@ namespace BAM.Sim
             }
             else if (towerUp) SetGoal(enemyTower.X + slot, enemyTower.Y - fwd * (tr + 1.2f));
             if (shouldTower && v3 && TK3(43) > 0.5f && V3CleanSpot(enemyTower, h.Range * 0.85f + enemyTower.R, out float cx, out float cy)) SetGoal(cx, cy); // hit the tower, not the minions around it
-            if (shouldTower && Dist(h, enemyTower) < h.Range + enemyTower.R + 3 && !M.Map.LosClear(h, enemyTower)) SetGoal(enemyTower.X, enemyTower.Y, enemyTower.R + h.R + 0.3f, enemyTower);
+            if (shouldTower && Dist(h, enemyTower) < h.Range + enemyTower.R + 3 && !M.Map.LosClear(h, enemyTower)) SetGoal(enemyTower.X, enemyTower.Y, Rules.TowerBody + h.R + 0.3f, enemyTower);
             if (!shouldTower && hasGoal && safety)
             {
                 var mates = MatesWithin(h, float.MaxValue, bufMates);
@@ -461,7 +461,8 @@ namespace BAM.Sim
                 if (eh >= 1 && (eh * 2 + em * 0.5f) * TK3(2) >= 2 && Dist(h, myTower) < 30)
                 {
                     int n = eh + em; cx /= n; cy /= n; float d = Hyp(cx - myTower.X, cy - myTower.Y); if (d < 0.1f) d = 0.1f;
-                    float x = myTower.X + (cx - myTower.X) / d * Math.Min(d, 1.5f), y = myTower.Y + (cy - myTower.Y) / d * Math.Min(d, 1.5f);
+                    float hug = Rules.TowerBody + h.R + 0.45f; // just outside the tower's wall, as 1.5 was outside the old 0.55 body (tower body 2026-11-04)
+                    float x = myTower.X + (cx - myTower.X) / d * Math.Min(d, hug), y = myTower.Y + (cy - myTower.Y) / d * Math.Min(d, hug);
                     if (Walkable(h, x, y)) { Mode = BotMode.Defend; SetGoal(x, y); return; }
                 }
             }
