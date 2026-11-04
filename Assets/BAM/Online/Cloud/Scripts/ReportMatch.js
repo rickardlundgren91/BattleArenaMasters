@@ -30,7 +30,7 @@ const MIN_SECONDS = 45, MAX_SECONDS = 1800, MAX_PER_DAY = 60, MAX_AGE = 30 * 864
 const WAIT_SECONDS = 1800, MAX_WAIT = 20, PVP = "bam-pvp";
 // Rating from real players: at most this many wins a day against the same opponent (bug review 2026-11-02 nr 39: a second
 // account kept at 0 Rating loses nothing and could feed +150 again and again)
-const PVP_WINS_PER_OPP_DAY = 3, KEEP_SPANS = 120;
+const PVP_WINS_PER_OPP_DAY = 10, KEEP_SPANS = 120; // 10, not 3: few players to meet yet (Rickard 2026-11-04 "3 om dagen ... låter snålt")
 // "bam-pvp" entries are deleted when they are over a day old (bug review 2026-11-02 nr 50): they are only needed while the other
 // side may still confirm (WAIT_SECONDS), and they hold player IDs. The key starts with the match's day ("d020761v123t0"), so the
 // oldest come first in the key list and any player's ReportMatch sweeps a few, also those of players who stopped playing. Keys
