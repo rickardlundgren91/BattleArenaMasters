@@ -431,7 +431,7 @@ namespace BAM.Sim
                     if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
                     int n = ny * W + nx;
                     if (seen[n] == gen || !Walkable(nx, ny)) continue;
-                    if (n != goal && (n == TowerTile0 || n == TowerTile1)) continue; // a living tower blocks its tile
+                    if (n != goal && (TowerNear(n, TowerTile0) || TowerNear(n, TowerTile1))) continue; // a living tower blocks its tile and the four next to it (its wall reaches 1.1, Rules.TowerBody)
                     if (n != goal && PadTile(n)) continue; // paths go round a jump pad, so bots are not thrown by accident
                     if (dx != 0 && dy != 0 && (!Walkable(cx + dx, cy) || !Walkable(cx, cy + dy))) continue;
                     prev[n] = c; seen[n] = gen; queue[qn++] = n;
@@ -449,5 +449,13 @@ namespace BAM.Sim
         }
 
         internal void ResetPathCache() => failedAt.Clear();
+
+        /// <summary>Is tile n the tower tile t or one of its four side neighbours (inside the tower's wall, Rules.TowerBody)?</summary>
+        bool TowerNear(int n, int t)
+        {
+            if (t < 0) return false;
+            if (n == t || n == t - W || n == t + W) return true;
+            return (n == t - 1 || n == t + 1) && n / W == t / W;
+        }
     }
 }

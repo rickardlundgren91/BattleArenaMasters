@@ -580,7 +580,7 @@ namespace BAM.Sim
             for (int t = 0; t < Towers.Length; t++)
             {
                 var u = Towers[t];
-                if (u != null && u.Alive && SimMath.Hypot(u.X - x, u.Y - y) < u.R + r) return true;
+                if (u != null && u.Alive && SimMath.Hypot(u.X - x, u.Y - y) < Rules.TowerBody + r) return true; // the wall, as Separate
             }
             return false;
         }

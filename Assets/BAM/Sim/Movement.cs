@@ -96,7 +96,7 @@ namespace BAM.Sim
                 {
                     var u = Units[i];
                     if (!u.Alive || u.Kind == UnitKind.Tower) continue;
-                    float d = SimMath.Dist(tw, u), min = tw.R + u.R;
+                    float d = SimMath.Dist(tw, u), min = Rules.TowerBody + u.R; // the model's wall, not the hit body (tester Cajsa 2026-11-04)
                     if (d >= min) continue;
                     float nx = (u.X - tw.X) / (d != 0 ? d : 1), ny = (u.Y - tw.Y) / (d != 0 ? d : 1), side = u.X >= tw.X ? 1 : -1;
                     if (u.IsMinionLike && Math.Abs(u.X - tw.X) < 0.08f) side = u.Serial % 2 == 0 ? 1 : -1; // straight behind a tower: one fixed side (the wolf too, as the old "minion")

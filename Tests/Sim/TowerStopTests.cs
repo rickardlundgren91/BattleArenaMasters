@@ -20,14 +20,15 @@ namespace BAM.Sim
             float px = 2; e = null;
             foreach (var h in m.Heroes) if (h != p) { Place(h, px, m.Map.H - 1.5f); px += 1.2f; m.AddStatus(h, St.Stun, 999); if (e == null && h.Team != p.Team) e = h; }
             float dir = tw.Y < m.Map.H / 2f ? 1 : -1; // from the tower toward the middle of the map
-            Place(p, tw.X, tw.Y + dir * (tw.R + p.R + 0.1f));
-            Place(e, tw.X, tw.Y - dir * (tw.R + e.R + 0.15f)); m.AddStatus(e, St.Stun, 999);
+            Place(p, tw.X, tw.Y + dir * (Rules.TowerBody + p.R + 0.1f));
+            Place(e, tw.X, tw.Y - dir * (tw.R + e.R + 0.15f)); m.AddStatus(e, St.Stun, 999); // inside the wall (Rules.TowerBody) so Knut and Tikta have it in tap reach; the first step pushes it out behind
             p.Charge = p.HDef.MaxCharge;
             return m;
         }
 
         static void TowerStopChecks()
         {
+            TowerBodyChecks();
             foreach (var hero in TowerStopHeroes)
             {
                 // the one tap never picks a target hidden behind the enemy base (Bonk's tap is the slam round him, not a shot)
@@ -62,7 +63,7 @@ namespace BAM.Sim
                 m.OneTap = false;
                 var own = m.Towers[p.Team];
                 float dir = own.Y < m.Map.H / 2f ? 1 : -1;
-                Place(p, own.X, own.Y + dir * (own.R + p.R + 0.1f));
+                Place(p, own.X, own.Y + dir * (Rules.TowerBody + p.R + 0.1f));
                 Place(e, own.X, own.Y - dir * (own.R + e.R + 0.15f)); m.AddStatus(e, St.Stun, 999);
                 ang = SimMath.Atan2(e.Y - p.Y, e.X - p.X);
                 drag.AimAngle = ang;
@@ -70,6 +71,32 @@ namespace BAM.Sim
                 for (int k = 0; k < 120; k++) { m.Step(k == 0 ? drag : PlayerInput.None); foreach (var ev in m.Events) { if (ev.Type == EventType.Hit && ev.A == p && ev.B == e && ev.Dmg != DmgKind.Auto) hits++; if (ev.Type == EventType.Blocked && ev.A == p) blocked = true; } }
                 Check(hits == 0 && blocked, $"BASE {hero}: the hero's own tower stops its special too ({hits} hits, puff {blocked})");
             }
+        }
+
+        // Heroes cannot walk into the tower model's wall (tester Cajsa 2026-11-04 "jag kan gå rätt igenom dem"): a hero running straight
+        // at either tower, from below, from the side and on a slant, stops at its wall (Rules.TowerBody), not at the hit body (0.55)
+        static void TowerBodyChecks()
+        {
+            foreach (var hero in new[] { HeroId.Tyra, HeroId.Bonk })
+                for (int t = 0; t < 2; t++)
+                    for (int way = 0; way < 3; way++)
+                    {
+                        var m = TowerScene(hero, out var p, out var e, out var tw);
+                        tw = m.Towers[t];
+                        float dir = tw.Y < m.Map.H / 2f ? 1 : -1;
+                        float ox = way == 0 ? 0 : way == 1 ? 2.5f : 1.8f, oy = way == 0 ? 2.5f : way == 1 ? 0 : 1.8f;
+                        Place(p, tw.X + ox, tw.Y + dir * oy); p.Hp = p.MaxHp = 1e6f;
+                        float closest = 99;
+                        for (int k = 0; k < 180; k++)
+                        {
+                            var mv = PlayerInput.None; float dx = tw.X - p.X, dy = tw.Y - p.Y, d = SimMath.Hypot(dx, dy);
+                            if (d > 1e-4f) { mv.MoveX = dx / d; mv.MoveY = dy / d; }
+                            m.Step(mv);
+                            closest = Math.Min(closest, SimMath.Dist(p, tw));
+                        }
+                        Check(closest >= Rules.TowerBody + p.R - 0.02f,
+                            $"TOWER BODY {hero} tower {t} way {way}: the hero stops at the wall ({closest:0.00} from the middle, wall {Rules.TowerBody + p.R:0.00})");
+                    }
         }
     }
 }

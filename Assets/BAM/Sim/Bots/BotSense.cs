@@ -127,7 +127,7 @@ namespace BAM.Sim
 
         bool TowerBlocks(Unit h, float x, float y)
         {
-            for (int t = 0; t < 2; t++) { var tw = TowerOf(t); if (tw != null && tw.Alive && Hyp(tw.X - x, tw.Y - y) < tw.R + h.R + 0.1f) return true; }
+            for (int t = 0; t < 2; t++) { var tw = TowerOf(t); if (tw != null && tw.Alive && Hyp(tw.X - x, tw.Y - y) < Rules.TowerBody + h.R + 0.1f) return true; }
             return false;
         }
         bool Walkable(Unit h, float x, float y) => M.Map.Free(x, y, h.R) && !TowerBlocks(h, x, y);
@@ -141,7 +141,7 @@ namespace BAM.Sim
             for (int t = 0; t < 2; t++)
             {
                 var tw = TowerOf(t); if (tw == null || !tw.Alive) continue;
-                float dx = gX - tw.X, dy = gY - tw.Y, d = Hyp(dx, dy), r = tw.R + h.R + 0.15f;
+                float dx = gX - tw.X, dy = gY - tw.Y, d = Hyp(dx, dy), r = Rules.TowerBody + h.R + 0.15f;
                 if (d >= r) continue;
                 if (d < 0.05f) { dx = h.X - tw.X; dy = h.Y - tw.Y; d = Hyp(dx, dy); if (d < 0.05f) { dx = 0; dy = -Fwd; d = 1; } }
                 float x = tw.X + dx / d * r, y = tw.Y + dy / d * r;
