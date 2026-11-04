@@ -189,14 +189,14 @@ namespace BAM.Sim
         public const float WaveFirst = 3, WavePeriod = 16, WaveStagger = 0.2f;
         public const float SecondsPerLevel = 16;
         public const int MaxLevel = 12;
-        public const float RespawnBase = 8, RespawnPerDeath = 1, RespawnInvulnerable = 4;
+        public const float RespawnBase = 10, RespawnPerDeath = 1, RespawnInvulnerable = 4; // base 8 -> 10 (Cajsa's testers 2026-11-04: "motståndaren respawnar för fort"; Rickard card)
         // late game (Rickard 2026-10-31: no sudden jumps): from 1:30 to 6:00 on the match clock a dead hero's wait grows in one
         // straight line to +20 s and tower shots on heroes to x2 (until protocol 21 both stepped up with the levels from 2:24)
         public const float LateStart = 90, LateFull = 360;
         public const float RespawnLateMax = 20;
         // video review 2026-11-03: 21 s at 3:56 and 28 s at 5:20 (8 + 1 per death + the late ramp), so the last minute and a half
         // was watched, not played. The wait never passes RespawnMax; Min keeps it smooth (it rises, then stays flat, no jump)
-        public const float RespawnMax = 15;
+        public const float RespawnMax = 20; // 15 -> 20 (Rickard 2026-11-04 "Ta max 20s")
         public const float RegenAmount = 0.1f, RegenTick = 0.85f, HeroOutOfCombat = 3, HeroRegenDelay = 2; // HeroRegenDelay: seconds after the last hero/tower fight before regen starts (was HeroOutOfCombat, 3 s, until protocol 20)
         public const float TowerOutOfCombat = 10, TowerRegenBelow = 0.25f, TowerRegenAmount = 0.01f, TowerRegenTick = 1;
         public const float GrassSight = 2.5f, RevealTime = 2; // RevealTime: seconds a hit keeps the attacker visible in grass, and a target hit outside grass (4 s until protocol 20; a target hit inside grass is not revealed since 0.3.8)
