@@ -39,6 +39,7 @@ namespace BAM.Sim
         Quake,         // Oaken A's quake went off from where he stands to X/Y (V = its length); its hits and knocks are their own events
         OakenGuard,    // Oaken A's Stored Impact took V off B's hit and stored part of it for his next attack
         Telegraph,     // A tapped its special: the aim is locked and it goes in V s (Rules.SpecialTelegraph); B = the target, Kind = HeroId, X/Y = where it aims
+        Jump,          // A stepped on a jump pad (Grove): it flies V s to X/Y, over walls
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>

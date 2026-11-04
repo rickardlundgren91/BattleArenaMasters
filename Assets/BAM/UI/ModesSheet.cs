@@ -15,11 +15,11 @@ namespace BAM.UI
     // which opens TUTORIAL / HERO TEST under it the way CLASSIC opens its BOT DIFFICULTY; Home still plays the one picked. Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
     public static partial class Screens
     {
-        enum Mode { Classic, Training, HeroTest }
+        enum Mode { Classic, Training, HeroTest, NewMap } // NewMap: a CLASSIC match on the second map (Grove), PRACTICE only until tested (Rickard 2026-11-04)
 
         static readonly Mode[] SheetModes = { Mode.Classic, Mode.Training }; // Training's card is PRACTICE (Training or HeroTest)
         static Mode lastPractice = Mode.Training;
-        static bool IsPractice(Mode m) => m == Mode.Training || m == Mode.HeroTest;
+        static bool IsPractice(Mode m) => m == Mode.Training || m == Mode.HeroTest || m == Mode.NewMap;
         static RectTransform modePracticeExpand;
         static HubChoice modePractice;
         const float PracH = 18.5f * Cw;
@@ -38,11 +38,11 @@ namespace BAM.UI
 
         const float OptH = 17 * Cw, OptGap = 2.4f * Cw, ExpH = 20.5f * Cw, SheetX = 4 * Cw;
 
-        static string ModeTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : m == Mode.HeroTest ? "HERO TEST" : "TUTORIAL";
+        static string ModeTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : m == Mode.HeroTest ? "HERO TEST" : m == Mode.NewMap ? "NEW MAP" : "TUTORIAL";
         // the sheet's two cards: CLASSIC, and PRACTICE for both Training and HeroTest
         static string CardTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : "PRACTICE";
-        static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial, or try out any hero";
-        static string ModeSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : m == Mode.HeroTest ? "Try out any hero" : "Learn the basics";
+        static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial, any hero, or the new map";
+        static string ModeSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : m == Mode.HeroTest ? "Try out any hero" : m == Mode.NewMap ? "3v3 bots, new map" : "Learn the basics";
 
         // what Home's PLAY and the sheet's PLAY start (HubPlayNow)
         static void PlayMode()
@@ -50,6 +50,7 @@ namespace BAM.UI
             if (TestParty == null && OnlineHooks.PartyPlay != null && OnlineHooks.PartyPlay()) return; // a party: the leader's PLAY starts it (HomeParty.cs)
             if (homeMode == Mode.Training) StartTutorial();
             else if (homeMode == Mode.HeroTest) StartHeroTest((HeroId)BamSettings.LastHero);
+            else if (homeMode == Mode.NewMap) StartMatch(new MatchSetup { Hero = (HeroId)BamSettings.LastHero, Difficulty = BamSettings.LastDifficulty, Map = MapId.Grove });
             else StartBotMatch();
         }
 
@@ -145,9 +146,9 @@ namespace BAM.UI
             Stretched(pracLabel.rectTransform, 0, Cw + 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
             var prsegs = UiKit.NewRect("Pick", modePracticeExpand);
             Stretched(prsegs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
-            modePractice = new HubChoice(prsegs, new[] { "TUTORIAL", "HERO TEST" }, i =>
+            modePractice = new HubChoice(prsegs, new[] { "TUTORIAL", "HERO TEST", "NEW MAP" }, i =>
             {
-                homeMode = lastPractice = i == 0 ? Mode.Training : Mode.HeroTest;
+                homeMode = lastPractice = i == 0 ? Mode.Training : i == 1 ? Mode.HeroTest : Mode.NewMap;
                 RefreshHome();
                 RefreshModes();
             }, true);
@@ -314,7 +315,7 @@ namespace BAM.UI
                 if (open && IsPractice(c.Id))
                 {
                     modePracticeExpand.gameObject.SetActive(true);
-                    modePractice.Set(homeMode == Mode.HeroTest ? 1 : 0);
+                    modePractice.Set(homeMode == Mode.HeroTest ? 1 : homeMode == Mode.NewMap ? 2 : 0);
                     Stretched(modePracticeExpand, SheetX + 3 * Cw, y + OptH, SheetX + 3 * Cw, PracH);
                 }
                 y += oh + OptGap;

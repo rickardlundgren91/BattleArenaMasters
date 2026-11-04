@@ -84,7 +84,7 @@ namespace BAM.Sim
                 InterruptSpecial(u); // a knockback cuts a special under way
                 if (crash == null) crash = new KegCrash { By = h };
                 float time = knock / HildeS.KnockSpeed; u.KnockFreeAt = Time + Rules.KnockCooldown;
-                u.KnockVX = dx * HildeS.KnockSpeed; u.KnockVY = dy * HildeS.KnockSpeed; u.KnockT = time; u.KnockKeg = crash; u.KnockRoll = null;
+                u.KnockVX = dx * HildeS.KnockSpeed; u.KnockVY = dy * HildeS.KnockSpeed; u.KnockT = time; u.KnockPad = false; u.KnockKeg = crash; u.KnockRoll = null;
                 Emit(EventType.Knock, h, u, time, (byte)p.Kind, big, u.X + dx * knock, u.Y + dy * knock);
             }
             Emit(EventType.Explosion, h, null, p.Radius, (byte)p.Kind, big, p.X, p.Y, dk);

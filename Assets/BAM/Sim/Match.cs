@@ -35,6 +35,8 @@ namespace BAM.Sim
         /// <summary>With Seats: the seat this phone plays. Only Player (camera, HUD, marker) follows it; the rules never read it,
         /// so every phone runs the very same match.</summary>
         public int LocalSeat;
+        /// <summary>The arena (Arena.cs). Online and the guided match always play Runes.</summary>
+        public MapId Map = MapId.Runes;
     }
 
     /// <summary>One human of an online match.</summary>
@@ -125,7 +127,7 @@ namespace BAM.Sim
         Match(MatchConfig cfg)
         {
             Config = cfg;
-            Map = cfg.Tutorial && cfg.Island ? IslandMap() : new Arena();
+            Map = cfg.Tutorial && cfg.Island ? IslandMap() : new Arena(cfg.Tutorial || cfg.Seats != null ? MapId.Runes : cfg.Map);
             Rng = new Rng(cfg.Seed);
             Time = -Rules.Countdown;
             State = MatchState.Countdown;
@@ -374,6 +376,7 @@ namespace BAM.Sim
                 }
                 if (!u.Alive) continue; // a burn or poison tick killed it
                 if (u.KnockT > 0) KnockStep(u, dt);
+                else if (u.Kind == UnitKind.Hero && Map.PadCount > 0) PadCheck(u);
                 if (u.IsClone)
                 {
                     u.LifeT -= dt;

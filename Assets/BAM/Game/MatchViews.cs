@@ -164,9 +164,16 @@ namespace BAM.Game
             var rocks = new Vector3[map.RockR.Length];
             for (int i = 0; i < rocks.Length; i++)
                 rocks[i] = new Vector3((map.RockX0[i] + map.RockX1[i]) * 0.5f, map.H - (map.RockY0[i] + map.RockY1[i]) * 0.5f, map.RockR[i] + 0.15f);
+            Vector3[] pads = null, padTo = null;
+            if (map.PadCount > 0)
+            {
+                pads = new Vector3[map.PadCount]; padTo = new Vector3[map.PadCount];
+                for (int i = 0; i < map.PadCount; i++) { pads[i] = Coords.World(map.PadX[i], map.PadY[i]); padTo[i] = Coords.World(map.PadToX[i], map.PadToY[i]); }
+            }
             return new ArenaInfo
             {
-                Width = map.W, Height = map.H, Tiles = tiles, Rocks = rocks,
+                Width = map.W, Height = map.H, Tiles = tiles, Rocks = rocks, Pads = pads, PadTo = padTo,
+                Ground = map.Id == MapId.Grove ? "T_BAM_ArenaGround_Grove" : null,
                 // the island parks its towers off the map: no tower bases there
                 Towers = towers ? new[] { Coords.World(map.TowerX[0], map.TowerY[0]), Coords.World(map.TowerX[1], map.TowerY[1]) } : null,
             };
@@ -1090,6 +1097,8 @@ namespace BAM.Game
             }
         }
 
+        const float PadArcH = 1.6f; // how high a jump pad throws a hero, world units
+
         void DrawUnit(UnitRec r, float alpha, float dt)
         {
             var u = r.U;
@@ -1098,6 +1107,7 @@ namespace BAM.Game
             // a respawn or a long pull jumps; drawing the jump between ticks would slide the hero across the map
             bool jump = (u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY) > 4f;
             Vector3 pos = jump ? Coords.Of(u) : Coords.Lerp(u.PX, u.PY, u.X, u.Y, alpha);
+            pos.y += u.JumpLift * PadArcH; // a jump pad's throw flies in an arc
             if (r.FixX != 0f || r.FixY != 0f)
             {
                 if (jump) { r.FixX = r.FixY = 0f; }

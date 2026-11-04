@@ -258,7 +258,7 @@ namespace BAM.Sim
             if (KnockImmune(u)) { if (stun > 0) AddStatus(u, St.Stun, stun, 0, 0, src); return; } // knocked too lately: the stun alone
             u.KnockFreeAt = Time + Rules.KnockCooldown;
             float sp = dist / BonkS.KnockTime;
-            u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime; u.KnockKeg = null; u.KnockRoll = roll;
+            u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime; u.KnockPad = false; u.KnockKeg = null; u.KnockRoll = roll;
             if (stun > 0) AddStatus(u, St.Stun, stun, 0, 0, src);
             Emit(EventType.Knock, src, u, BonkS.KnockTime, (byte)ProjKind.BonkBoulder, true, u.X + u.KnockVX * BonkS.KnockTime, u.Y + u.KnockVY * BonkS.KnockTime);
         }
@@ -282,12 +282,31 @@ namespace BAM.Sim
             }
         }
 
+        /// <summary>Grove's jump pads: a hero (not mid-slide) on a pad is thrown to its landing spot over PadTime, over walls.
+        /// Not a knockback: no stun, no knockback cooldown, no CC shield check; the hero cannot act until it lands.</summary>
+        void PadCheck(Unit u)
+        {
+            int i = Map.PadAt(u.X, u.Y);
+            if (i < 0) return;
+            float dx = Map.PadToX[i] - u.X, dy = Map.PadToY[i] - u.Y;
+            u.KnockVX = dx / PadTime; u.KnockVY = dy / PadTime; u.KnockT = u.KnockT0 = PadTime; u.KnockPad = true; u.KnockKeg = null; u.KnockRoll = null;
+            Emit(EventType.Jump, u, u, PadTime, 0, true, Map.PadToX[i], Map.PadToY[i]);
+        }
+        /// <summary>A jump pad's throw takes this long (6 rows: 7.5 tiles a second, as the old game's pads).</summary>
+        public const float PadTime = 0.8f;
+
         /// <summary>One tick of a knockback slide: it moves while the way is free and ends at the first wall.</summary>
         void KnockStep(Unit u, float dt)
         {
             float left = u.KnockT * SimMath.Hypot(u.KnockVX, u.KnockVY); // tiles of the slide still to go (Hilde's Wall Crash)
             float t = Math.Min(dt, u.KnockT); u.KnockT -= dt;
             float nx = u.X + u.KnockVX * t, ny = u.Y + u.KnockVY * t;
+            if (u.KnockPad)
+            {   // a jump pad's throw flies over walls; where it lands, the hero is put on the nearest free spot
+                u.X = SimMath.Clamp(nx, 0.3f, Map.W - 0.3f); u.Y = SimMath.Clamp(ny, 0.3f, Map.H - 0.3f); u.MovedAt = Time;
+                if (u.KnockT <= 0) { u.KnockPad = false; Unstick(u); }
+                return;
+            }
             if (Map.Free(nx, ny, u.R)) { u.X = nx; u.Y = ny; u.MovedAt = Time; if (u.KnockRoll != null) PinBumps(u); }
             else { if (u.KnockKeg != null) KegWallHit(u, nx, ny, left); u.KnockT = 0; }
             if (u.KnockT <= 0) { u.KnockKeg = null; u.KnockRoll = null; }

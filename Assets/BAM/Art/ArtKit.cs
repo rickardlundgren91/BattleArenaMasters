@@ -35,6 +35,10 @@ namespace BAM.Art
         /// <summary>Online, top team: the camera looks from the other end of the map (MatchCamera turns half a circle), so the
         /// pictures that stand toward the camera (the middle boulders) stand on the boulder's other side.</summary>
         public bool Turned;
+        /// <summary>The painted ground picture in Resources/BAMArt/Arena (null = the BAM arena's T_BAM_ArenaGround_v1_2 when the size fits).</summary>
+        public string Ground;
+        /// <summary>Jump pads (the second map): x, z = the pad's world centre; the landing spot in PadTo.</summary>
+        public Vector3[] Pads, PadTo;
 
         public int Tile(int tx, int ty) => Tiles[ty * Width + tx];
         /// <summary>World centre of tile (tx, ty), ty counted from the top row.</summary>

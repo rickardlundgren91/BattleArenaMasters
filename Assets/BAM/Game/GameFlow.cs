@@ -193,6 +193,7 @@ namespace BAM.Game
                 PlayerSpell = BamSettings.Spell, // the battle spell picked on the hero page (off in the guided match)
                 HeroTest = setup.HeroTest && !setup.Tutorial,
                 HeroTestLevel = setup.Level > 0 ? setup.Level : 1,
+                Map = setup.Tutorial || setup.HeroTest ? MapId.Runes : setup.Map,
             };
             if (net != null) { seed = cfg.Seed; netInputs = new PlayerInput[Match.MaxSeats]; netStatus = null; }
             Coords.Turned = net != null && net.Turned;
@@ -219,12 +220,12 @@ namespace BAM.Game
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
             BamAudio.PlayMusic(MusicId.Match);
-            if ((!setup.Tutorial || island) && !setup.HeroTest)
+            if ((!setup.Tutorial || island) && !setup.HeroTest && !Practice)
             {
                 BamAnalytics.MatchStarted(setup); // HERO TEST is practice, not a match (old: no stats)
                 Flow.MatchStarted?.Invoke();      // online: "in a match" for friends
             }
-            Debug.Log("[BAM.Game] match started: " + (net != null ? "online, seat " + cfg.LocalSeat + " of " + cfg.Seats.Length + ", " : "") + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + ", seed " + seed);
+            Debug.Log("[BAM.Game] match started: " + (net != null ? "online, seat " + cfg.LocalSeat + " of " + cfg.Seats.Length + ", " : "") + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + (cfg.Map != MapId.Runes ? ", map " + cfg.Map : "") + ", seed " + seed);
         }
 
         void Teardown()
@@ -471,7 +472,7 @@ namespace BAM.Game
             resultShown = true;
             var r = Result(false);
             if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
-            if (!r.Tutorial && !setup.HeroTest && setup.Net == null) r.BotsMoved = BamSettings.AfterBotMatch(r.Difficulty, r.Won); // Easy and Normal follow the player
+            if (!r.Tutorial && !setup.HeroTest && !Practice && setup.Net == null) r.BotsMoved = BamSettings.AfterBotMatch(r.Difficulty, r.Won); // Easy and Normal follow the player
             if (!r.Tutorial && !setup.HeroTest && setup.Net == null && r.Won && r.Difficulty == Difficulty.Hard) BamSettings.AddHardWin(); // 30 open Ultra
             SendEnd(false);
             hud.CancelTouches();
@@ -480,12 +481,15 @@ namespace BAM.Game
         }
 
         // Exactly one MatchEnded per match: at the result, or as a quit when the player leaves or restarts before it.
+        // PRACTICE > NEW MAP (the second map, Grove): practice like HERO TEST, so no analytics, no bot-level move, no online XP
+        bool Practice => setup.Map != MapId.Runes && setup.Net == null;
+
         void SendEnd(bool quit)
         {
             if (match == null || endSent) return;
             endSent = true;
             if (net != null) net.MatchEnded(quit && !over);
-            if (setup.HeroTest) return;
+            if (setup.HeroTest || Practice) return;
             var r = Result(quit && !over);
             LogEnd(quit);
             Flow.MatchEnded?.Invoke(r); // online: level, XP and rating are counted on the server
@@ -497,7 +501,7 @@ namespace BAM.Game
         // them just when matches end). The values are the same as at the card: the match stops stepping once it is over.
         void LogEnd(bool quit)
         {
-            if (match == null || endLogged || setup.HeroTest) return;
+            if (match == null || endLogged || setup.HeroTest || Practice) return;
             endLogged = true;
             BamAnalytics.MatchEnded(setup, Result(quit && !over));
         }

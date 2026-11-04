@@ -47,12 +47,55 @@ namespace BAM.Sim
             "...##.....##...", // 17 the middle row
         };
 
+        // The second map, Grove (Rickard 2026-11-04: "baserad på nr 3", our own layout; bam-work/nymap/layout.txt): one straight
+        // lane, a long wall bar in front of each tower on the right with a jump pad behind it that throws you over the bar into a
+        // big grass field, and grass strips with loose stones to step behind on the left. J = jump pad (walkable ground).
+        static readonly string[] GroveTop =
+        {
+            "...............", // 0
+            "......000......", // 1
+            "...............", // 2
+            "...............", // 3
+            ".......2.......", // 4
+            ".......1.......", // 5
+            "...............", // 6
+            "...........J...", // 7  the pad throws you to row 13, over the wall bar into the grass
+            "...............", // 8
+            "..........####.", // 9  the wall bar
+            "gg...........gg", // 10
+            "gg.#........ggg", // 11
+            "gg.........#ggg", // 12
+            "gg.........gggg", // 13
+            "g..........gggg", // 14
+            "...#.......#ggg", // 15
+            "...........gggg", // 16
+            "..##.......gggg", // 17 the middle row
+        };
+        /// <summary>Grove: how many rows a jump pad throws you, toward the middle.</summary>
+        public const float PadThrow = 6f;
+
+        /// <summary>Which map this is (the island counts as Runes).</summary>
+        public readonly MapId Id;
+
+        /// <summary>Jump pads: the pad tile's centre and where it lands you (tile centres). Heroes only; the throw crosses walls.</summary>
+        public readonly float[] PadX = new float[4], PadY = new float[4], PadToX = new float[4], PadToY = new float[4];
+        public int PadCount;
+        int padTile0 = -1, padTile1 = -1, padTile2 = -1, padTile3 = -1;
+
+        /// <summary>The pad under (x, y), or -1.</summary>
+        public int PadAt(float x, float y)
+        {
+            for (int i = 0; i < PadCount; i++) if ((int)Math.Floor(x) == (int)Math.Floor(PadX[i]) && (int)Math.Floor(y) == (int)Math.Floor(PadY[i])) return i;
+            return -1;
+        }
+        bool PadTile(int n) => n == padTile0 || n == padTile1 || n == padTile2 || n == padTile3;
+
         /// <summary>Row 0 is the top. Void / Ground / Grass / Wall.</summary>
         public readonly byte[] Tiles;
 
         /// <summary>The two round middle boulders: capsules (x0, y0)-(x1, y1) with radius r. Their tiles stay walls for sight
         /// lines, paths and shots, but bodies only bump into the capsule, so units walk round the stone and not the square.</summary>
-        public readonly float[] RockX0 = { 4, 11 }, RockY0 = { 17, 17 }, RockX1 = { 4, 11 }, RockY1 = { 18, 18 }, RockR = { 1, 1 };
+        public readonly float[] RockX0 = { 4, 11 }, RockY0 = { 17, 17 }, RockX1 = { 4, 11 }, RockY1 = { 18, 18 }, RockR = { 1, 1 }; // empty on other maps
         readonly bool[] rockTile;
 
         /// <summary>Hero spawn slots (x left to right), tower and minion spawn per team, as tile centres.</summary>
@@ -65,16 +108,18 @@ namespace BAM.Sim
         /// <summary>The tiles of living towers block paths (Match keeps these up to date); -1 = none.</summary>
         internal int TowerTile0 = -1, TowerTile1 = -1;
 
-        /// <summary>The BAM arena (BAM_OriginalArena_v1_2).</summary>
-        public Arena()
+        /// <summary>The BAM arena (BAM_OriginalArena_v1_2), or the second map.</summary>
+        public Arena(MapId id = MapId.Runes)
         {
+            Id = id;
+            var top = id == MapId.Grove ? GroveTop : Top;
             W = ArenaW; H = ArenaH;
             Tiles = new byte[W * H]; rockTile = new bool[W * H];
             prev = new int[W * H]; queue = new int[W * H]; seen = new int[W * H]; back = new int[W * H];
             int n0 = 0, n1 = 0;
             for (int y = 0; y < H; y++)
             {
-                string row = y < Top.Length ? Top[y] : Top[H - 1 - y];
+                string row = y < top.Length ? top[y] : top[H - 1 - y];
                 int team = y < H / 2 ? 1 : 0;
                 for (int x = 0; x < W; x++)
                 {
@@ -84,7 +129,19 @@ namespace BAM.Sim
                     if (c == '0') { if (team == 1) { SpawnX[1][n1] = cx; SpawnY[1][n1++] = cy; } else { SpawnX[0][n0] = cx; SpawnY[0][n0++] = cy; } }
                     else if (c == '1') { TowerX[team] = cx; TowerY[team] = cy; }
                     else if (c == '2') { MinionX[team] = cx; MinionY[team] = cy; }
+                    else if (c == 'J' && PadCount < PadX.Length)
+                    {
+                        int p = PadCount++;
+                        PadX[p] = cx; PadY[p] = cy; PadToX[p] = cx; PadToY[p] = cy + (team == 1 ? PadThrow : -PadThrow);
+                        int n = y * W + x;
+                        if (p == 0) padTile0 = n; else if (p == 1) padTile1 = n; else if (p == 2) padTile2 = n; else padTile3 = n;
+                    }
                 }
+            }
+            if (id != MapId.Runes)
+            {   // no middle boulders on the other maps
+                RockX0 = RockY0 = RockX1 = RockY1 = RockR = new float[0];
+                return;
             }
             // the boulders' tiles: walls within 1.5 rows of the middle and 4.5 columns of the centre (as the old FindRocks)
             for (int y = 0; y < H; y++)
@@ -98,7 +155,7 @@ namespace BAM.Sim
         {
             W = w; H = h; Tiles = tiles; rockTile = new bool[w * h];
             prev = new int[w * h]; queue = new int[w * h]; seen = new int[w * h]; back = new int[w * h];
-            LaneX = laneX; LaneY = laneY;
+            LaneX = laneX; LaneY = laneY; Id = MapId.Runes;
             RockX0 = RockY0 = RockX1 = RockY1 = RockR = new float[0];
         }
 
@@ -375,6 +432,7 @@ namespace BAM.Sim
                     int n = ny * W + nx;
                     if (seen[n] == gen || !Walkable(nx, ny)) continue;
                     if (n != goal && (n == TowerTile0 || n == TowerTile1)) continue; // a living tower blocks its tile
+                    if (n != goal && PadTile(n)) continue; // paths go round a jump pad, so bots are not thrown by accident
                     if (dx != 0 && dy != 0 && (!Walkable(cx + dx, cy) || !Walkable(cx, cy + dy))) continue;
                     prev[n] = c; seen[n] = gen; queue[qn++] = n;
                 }

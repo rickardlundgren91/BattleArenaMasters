@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "a7f81627f8716583";
+            Generated = true; GeneratedHash = "9f7b147fd59852b9";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -60,6 +60,10 @@ namespace BAM.Sim
             SimMirror.SetRo(__t, "LaneY", SimMirror.NewArr(__s.LaneY));
             SimMirror.SetRo(__t, "MinionX", SimMirror.NewArr(__s.MinionX));
             SimMirror.SetRo(__t, "MinionY", SimMirror.NewArr(__s.MinionY));
+            SimMirror.SetRo(__t, "PadToX", SimMirror.NewArr(__s.PadToX));
+            SimMirror.SetRo(__t, "PadToY", SimMirror.NewArr(__s.PadToY));
+            SimMirror.SetRo(__t, "PadX", SimMirror.NewArr(__s.PadX));
+            SimMirror.SetRo(__t, "PadY", SimMirror.NewArr(__s.PadY));
             SimMirror.SetRo(__t, "RockR", SimMirror.NewArr(__s.RockR));
             SimMirror.SetRo(__t, "RockX0", SimMirror.NewArr(__s.RockX0));
             SimMirror.SetRo(__t, "RockX1", SimMirror.NewArr(__s.RockX1));
@@ -84,6 +88,11 @@ namespace BAM.Sim
             SimMirror.Arr(LaneY, __s.LaneY);
             SimMirror.Arr(MinionX, __s.MinionX);
             SimMirror.Arr(MinionY, __s.MinionY);
+            PadCount = __s.PadCount;
+            SimMirror.Arr(PadToX, __s.PadToX);
+            SimMirror.Arr(PadToY, __s.PadToY);
+            SimMirror.Arr(PadX, __s.PadX);
+            SimMirror.Arr(PadY, __s.PadY);
             SimMirror.Arr(RockR, __s.RockR);
             SimMirror.Arr(RockX0, __s.RockX0);
             SimMirror.Arr(RockX1, __s.RockX1);
@@ -99,6 +108,10 @@ namespace BAM.Sim
             SimMirror.Arr(back, __s.back);
             SimMirror.Dict(failedAt, __s.failedAt);
             gen = __s.gen;
+            padTile0 = __s.padTile0;
+            padTile1 = __s.padTile1;
+            padTile2 = __s.padTile2;
+            padTile3 = __s.padTile3;
             SimMirror.Arr(prev, __s.prev);
             SimMirror.Arr(queue, __s.queue);
             SimMirror.Arr(rockTile, __s.rockTile);
@@ -573,8 +586,10 @@ namespace BAM.Sim
             Kind = __s.Kind;
             KnockFreeAt = __s.KnockFreeAt;
             KnockKeg = __m.Map(__s.KnockKeg);
+            KnockPad = __s.KnockPad;
             KnockRoll = __m.Map(__s.KnockRoll);
             KnockT = __s.KnockT;
+            KnockT0 = __s.KnockT0;
             KnockVX = __s.KnockVX;
             KnockVY = __s.KnockVY;
             LastCombat = __s.LastCombat;

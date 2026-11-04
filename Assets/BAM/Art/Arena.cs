@@ -30,6 +30,29 @@ namespace BAM.Art
         static float waterY;
         static bool skirted; // Rickard's cliff picture hangs on the edge: the old code-drawn cliff faces would sit in the same plane
 
+        // A jump pad (the second map), after the old game's 3D pads (View3DJumpPads.cs): a low stone plinth, a bronze rim and a
+        // teal plate with three chevrons pointing the way it throws you, and a faint ring where you land. Code-built until Rickard
+        // makes a pad picture or model.
+        static void JumpPad(MeshBuilder solid, MeshBuilder marks, Vector3 p, Vector3 to)
+        {
+            p.y = 0f; to.y = 0f;
+            Vector3 f = to - p; f.y = 0f; f = f.sqrMagnitude > 0.001f ? f.normalized : Vector3.forward;
+            Vector3 r = new Vector3(f.z, 0f, -f.x);
+            marks.Color(Pal.ShadowSoft).Disc(new Vector3(p.x, 0.012f, p.z), 0.62f, 20);
+            solid.Color(Pal.StoneDark).Cylinder(p, 0.5f, 0.45f, 0.1f, 8, true, Pal.StoneDark);
+            solid.Color(Pal.Gold).Cylinder(p + new Vector3(0f, 0.1f, 0f), 0.42f, 0.39f, 0.07f, 24, true, Pal.Gold);
+            solid.Color(Pal.Teal).Cylinder(p + new Vector3(0f, 0.12f, 0f), 0.32f, 0.32f, 0.055f, 24, true, Pal.Teal);
+            for (int i = 0; i < 3; i++)
+            {
+                Vector3 c = p + f * (-0.14f + i * 0.13f) + new Vector3(0f, 0.18f, 0f);
+                float a = 0.07f, b = 0.17f, t = 0.06f;
+                Vector3 T = c + f * a, R = c + r * b + f * (a - b), L = c - r * b + f * (a - b), Ti = c + f * (a - t), Ri = R - f * t, Li = L - f * t;
+                solid.Color(Pal.White);
+                solid.Face(L, T, Ti, Li); solid.Face(T, R, Ri, Ti);
+            }
+            marks.Color(Pal.WhiteSoft).Ring(new Vector3(to.x, 0.014f, to.z), 0.38f, 0.45f, 24);
+        }
+
         public static GameObject Build(ArenaInfo info)
         {
             var root = new GameObject("Arena");
@@ -55,7 +78,7 @@ namespace BAM.Art
 
             // the BAM arena's own ground picture (grass, cobbled road between the towers, worn earth along it, tall grass under the
             // bushes), baked offline exactly like the old game painted it (bam-work/art/ground/bake.py); only for that map's size
-            Texture2D painted = !info.Island && w == 15 && h == 35 ? Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_ArenaGround_v1_2") : null;
+            Texture2D painted = !info.Island && w == 15 && h == 35 ? Resources.Load<Texture2D>("BAMArt/Arena/" + (info.Ground ?? "T_BAM_ArenaGround_v1_2")) : null;
             if (painted != null) PaintedGround(root, painted, w, h);
             if (painted != null) TowerRunes.Build(root);
             if (painted != null) RoadRunes.Build(root);
@@ -113,6 +136,9 @@ namespace BAM.Art
                     if (Void(info, tx - 1, ty)) Cliff(solid, kerb, new Vector3(x0, 0f, z1), new Vector3(x0, 0f, z0), tx == 0);
                     if (Void(info, tx + 1, ty)) Cliff(solid, kerb, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1), tx == w - 1);
                 }
+
+            if (info.Pads != null)
+                for (int i = 0; i < info.Pads.Length; i++) JumpPad(solid, marks, info.Pads[i], info.PadTo[i]);
 
             if (info.Rocks != null)
                 for (int i = 0; i < info.Rocks.Length; i++)

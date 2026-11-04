@@ -13,6 +13,7 @@ namespace BAM.Core
         public bool HeroTest;   // HERO TEST: Hero against dummies, never ends (Reset/Exit on its bar)
         public int Level;       // HERO TEST: the fixed level (1 if 0)
         public IMatchNet Net;   // an online match (BAM.Online); null = offline
+        public MapId Map;       // the arena (Runes unless PRACTICE > NEW MAP picked Grove)
     }
 
     /// <summary>What the result screen and analytics get when a match ends.</summary>

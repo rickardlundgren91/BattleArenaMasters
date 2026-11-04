@@ -81,6 +81,10 @@ namespace BAM.Sim
         Marked = 1 << 10,      // Tikta's Deathmark is on this hero
     }
 
+    /// <summary>Which arena a match is played on. Runes: the rune-road arena (BAM_OriginalArena_v1_2). Grove: the second map
+    /// (2026-11-04, Rickard: own design in the spirit of the old game's walled garden map; PRACTICE only until tested).</summary>
+    public enum MapId : byte { Runes = 0, Grove = 1 }
+
     public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2, Ultra = 3 } // Ultra: above Hard (Rickard 2026-10-31)
 
     /// <summary>The battle spell a hero takes into the match (old SimSpells.cs): one extra button beside the SPECIAL.</summary>
