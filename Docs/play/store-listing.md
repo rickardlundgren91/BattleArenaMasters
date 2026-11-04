@@ -77,6 +77,22 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.8 (code 22, next build after 21, paste in "Release notes"; Discord: the longer text in bam-work/release/0.3.8-notes.txt)
+
+```
+<en-US>
+Battle Arena Masters 0.3.8
+From your feedback:
+• You can no longer walk through towers
+• Being hit in grass no longer reveals you, only your own attacks or an enemy close by
+Also new:
+• Heroes stand on the tower's stone plate
+• Tyra's fingers stay still on her weapon
+• Cleaner cliff edge round the arena
+Update to play online.
+</en-US>
+```
+
 ## Closed test release notes 0.3.7 (code 21, next build after 20, paste in "Release notes"; Discord: the longer text in bam-work/release/0.3.7-notes.txt)
 
 ```
