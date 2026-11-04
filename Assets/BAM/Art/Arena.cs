@@ -69,7 +69,7 @@ namespace BAM.Art
             // Rickard's cliff (O-055): the map stands on a rock cliff, so the water lies a cliff's height down (the bottom quarter of
             // the screen under our base was flat water with repeated rings, 3 Nov videos)
             Texture2D cliffPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/tx_arena_cliff");
-            if (cliffPic != null) waterY = -CliffSkirtH;
+            if (cliffPic != null) waterY = CliffSkirtLip - CliffSkirtH; // the water meets the picture's bottom edge
             skirted = cliffPic != null;
 
             // water (or an abyss) all around and below, so the camera never sees the empty background at the map edge;
@@ -308,6 +308,11 @@ namespace BAM.Art
         // the map's no-go rules). The faces look outward; the camera behind the bottom base sees the south one, the online top team's
         // turned camera the north one.
         const float CliffSkirtW = 8f, CliffSkirtH = CliffSkirtW * 872f / 1024f;
+        // the picture's top 44 rows are the cut-out grass tips (alpha under 50 % until row 44 of 872); hung with its top at the
+        // floor, that strip was see-through and showed the water far below as a thin dark teal line along the edge (Rickard's
+        // screenshot 2026-11-04 17:11), so the picture hangs this much higher: the first solid row meets the floor and the tips
+        // stand just above it
+        const float CliffSkirtLip = CliffSkirtH * 44f / 872f;
 
         static void CliffSkirt(GameObject root, ArenaInfo info, Texture2D pic, float rim)
         {
@@ -329,7 +334,7 @@ namespace BAM.Art
                 for (int k = 0; k < 4; k++) n.Add(outN);
                 tri.Add(i0); tri.Add(i0 + 1); tri.Add(i0 + 2); tri.Add(i0); tri.Add(i0 + 2); tri.Add(i0 + 3);
             }
-            float y = 0f;
+            float y = CliffSkirtLip;
             Face(new Vector3(-rim, y, -rim), new Vector3(w + rim, y, -rim));         // south, seen from -z
             Face(new Vector3(w + rim, y, h + rim), new Vector3(-rim, y, h + rim));   // north, seen from +z
             Face(new Vector3(-rim, y, h + rim), new Vector3(-rim, y, -rim));         // west, seen from -x
