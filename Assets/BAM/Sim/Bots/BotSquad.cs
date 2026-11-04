@@ -82,10 +82,11 @@ namespace BAM.Sim
         {
             float gap = SpreadFightGap; if (MateGap(gX, gY) >= gap) return;
             float r = Hyp(gX - f.X, gY - f.Y); if (r < 0.3f) return;
+            // tries one side first, mirrored for the top team so both teams spread the same way (bug review nr 11)
             float a0 = SimMath.Atan2(gY - f.Y, gX - f.X), bestG = MateGap(gX, gY), bx = gX, by = gY;
             for (int k = 1; k <= 8; k++)
             {
-                float a = a0 + ((k & 1) == 0 ? 1 : -1) * ((k + 1) / 2) * 0.3f, x = f.X + SimMath.Cos(a) * r, y = f.Y + SimMath.Sin(a) * r;
+                float a = a0 - Fwd * ((k & 1) == 0 ? 1 : -1) * ((k + 1) / 2) * 0.3f, x = f.X + SimMath.Cos(a) * r, y = f.Y + SimMath.Sin(a) * r;
                 if (!Walkable(H, x, y) || f.Kind != UnitKind.Tower && NearEnemyTowerAt(x, y, H.Team, 0.2f) && !NearEnemyTowerAt(gX, gY, H.Team, 0.2f)) continue;
                 float g = MateGap(x, y);
                 if (g >= gap) { gX = x; gY = y; return; }

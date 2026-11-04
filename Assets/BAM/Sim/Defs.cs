@@ -145,7 +145,9 @@ namespace BAM.Sim
         // Ultra (Rickard 2026-10-31 "ett botläge som heter Ultra"): Platinum with faster reactions and sharper aim, and the
         // smartest choices with no mistakes in BotTables; every bot in the match, both teams, plays it
         // 2026-11-02 (Rickard "gör ultrabottarna mycket svårare, dom ska vinna 70-80% mot hard"): reactions 0.15/0.22/0.35 s, aim noise 0.06
-        public static readonly BotTier Ultra = T("Ultra", 0.5f, 0.6f, 0.69f, 0.8f, 3, 3, 2, true, new[] { 0.15f, 0.22f, 0.35f }, 1, 8, 1f, 0.06f);
+        // 2026-11-04 (bug review nr 11): the mirror fix took away the bottom team's handicap that Ultra had always played with
+        // (Ultra vs Platinum 79 -> 86 %), so reactions 0.25/0.36/0.55 s bring it back into 70-80 %
+        public static readonly BotTier Ultra = T("Ultra", 0.5f, 0.6f, 0.69f, 0.8f, 3, 3, 2, true, new[] { 0.25f, 0.36f, 0.55f }, 1, 8, 1f, 0.06f);
 
         // Normal is Silver since 2026-10-31: with Gold, Easy -> Normal cost a mid player 25 points and Normal -> Hard only 5
         // (real matches 30-31 Oct: 82 % wins on Easy, 27 % on Normal, 57 % on Hard); Silver splits the gap (58/42/28 %).

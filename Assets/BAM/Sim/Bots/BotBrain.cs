@@ -138,6 +138,7 @@ namespace BAM.Sim
                     float d = Dist(h, f); if (d == 0) d = 1; float keep = gStop - 0.1f;
                     gX = f.X + (h.X - f.X) / d * keep; gY = f.Y + (h.Y - f.Y) / d * keep; gFx = f.X; gFy = f.Y; gHasF = true;
                     SpreadGoal(); // not on top of a teammate (BotSquad.cs)
+                    GoalOutOfTowers(true); // the keep-distance spot never inside a tower body
                     M.Map.FindPath(h.X, h.Y, gX, gY, Now, path);
                 }
             }
@@ -288,7 +289,9 @@ namespace BAM.Sim
             else if (danger)
             {
                 Mode = BotMode.Danger; focus = null;
-                if (SafestSpot(out float sx, out float sy)) SetGoal(sx, sy); else SetGoal(myTower.X, myTower.Y - fwd);
+                // fallback: just behind our tower, outside its body (it was the tower's centre + 1, inside it: bug review nr 34)
+                if (SafestSpot(out float sx, out float sy)) SetGoal(sx, sy);
+                else { float bx = myTower.X, by = myTower.Y - fwd * (myTower.R + h.R + 0.6f); if (Walkable(h, bx, by)) SetGoal(bx, by); }
             }
             else if (towerOnMe && tank < 25 && !soloTower && !chip && !finish && !leadPush && !(target != null && (target.Hp + ShieldOf(target)) / myDps < 1.5f))
             {
@@ -319,6 +322,7 @@ namespace BAM.Sim
             if (hasGoal && hasBlocked && now < blockedT && Hyp(gX - blockedX, gY - blockedY) < 1.5f) hasGoal = false;
             if (target == null && !retreat && !danger && Mode != BotMode.BushChase && Mode != BotMode.Tower) HmOffset(); // own line per bot (BotMove.cs)
             SpreadGoal(); // not on top of a teammate (BotSquad.cs)
+            GoalOutOfTowers(); // never a spot inside a tower body (BotSense.cs)
             if (HmKeepGoal(oHas, oX, oY, oStop, oFollow)) { gX = oX; gY = oY; } // barely moved: keep the old goal and path
             else if (!hasGoal || !M.Map.FindPath(h.X, h.Y, gX, gY, now, path)) path.Clear();
             if (!h.SpecialReady) spWantT = 0;

@@ -131,6 +131,23 @@ namespace BAM.Sim
             return false;
         }
         bool Walkable(Unit h, float x, float y) => M.Map.Free(x, y, h.R) && !TowerBlocks(h, x, y);
+
+        /// <summary>A spot goal inside a tower body moves to the body's edge on its side (or the bot's side), so the bot does not
+        /// press against the tower (bug review 2026-11-02, nr 34: lane goals at the first wave sat inside the own tower).</summary>
+        void GoalOutOfTowers(bool following = false)
+        {
+            if (!hasGoal || gFollow != null && !following) return;
+            var h = H;
+            for (int t = 0; t < 2; t++)
+            {
+                var tw = TowerOf(t); if (tw == null || !tw.Alive) continue;
+                float dx = gX - tw.X, dy = gY - tw.Y, d = Hyp(dx, dy), r = tw.R + h.R + 0.15f;
+                if (d >= r) continue;
+                if (d < 0.05f) { dx = h.X - tw.X; dy = h.Y - tw.Y; d = Hyp(dx, dy); if (d < 0.05f) { dx = 0; dy = -Fwd; d = 1; } }
+                float x = tw.X + dx / d * r, y = tw.Y + dy / d * r;
+                if (M.Map.Free(x, y, h.R)) { gX = x; gY = y; } else hasGoal = false;
+            }
+        }
         bool ClearWalk(Unit h, float px, float py)
         {
             float d = Hyp(px - h.X, py - h.Y); int n = (int)Math.Ceiling(d / 0.3f);
@@ -143,9 +160,12 @@ namespace BAM.Sim
         }
 
         // ---------- the danger at a spot ----------
-        /// <summary>Old specialReach: how far e's special reaches (Fenn and Moa: their attack range).</summary>
-        static float SpecialReach(Unit e)
+        /// <summary>Old specialReach: how far e's special reaches (Fenn and Moa: their attack range). In the one-tap game a special
+        /// picks its target inside the hero's tap ring (Match.TapReach), so that ring is the reach; the old drag reaches made bots
+        /// flee into Danger far outside it (bug review 2026-11-02, nr 35).</summary>
+        float SpecialReach(Unit e)
         {
+            if (M.OneTap && e.Kind == UnitKind.Hero) return Match.TapReach(e.Hero);
             switch (e.Hero)
             {
                 case HeroId.Bram: return BramS.Reach;
@@ -315,7 +335,7 @@ namespace BAM.Sim
                 for (int a = 0; a < 12; a++)
                 {
                     float r = SafeRings[ri], px = h.X + SimMath.Cos(a * SimMath.PI / 6) * r, py = h.Y + SimMath.Sin(a * SimMath.PI / 6) * r;
-                    if (!M.Map.Free(px, py, h.R)) continue;
+                    if (!Walkable(h, px, py)) continue; // not inside a tower body (bug review nr 34)
                     float s = ThreatAt(px, py) * 3 + (own != null ? Hyp(px - own.X, py - own.Y) * 0.25f : 0);
                     if (s < bs) { bs = s; bx = px; by = py; found = true; }
                 }

@@ -341,12 +341,18 @@ namespace BAM.Sim
             path.Clear();
             int sx = (int)Math.Floor(fx), sy = (int)Math.Floor(fy), tx = (int)Math.Floor(gx), ty = (int)Math.Floor(gy);
             bool moved = false;
+            // the search's order mirrored with the way it goes, so a walk up the map takes the mirror image of the same walk down
+            // (ties went to +y first, bug review nr 11); a walk along a row mirrors by the half of the map it is in
+            int sgn = ty != sy ? (ty > sy ? 1 : -1) : (2 * sy + 1 > H ? 1 : -1);
             if (!Walkable(tx, ty))
             {
                 int bx = -1, by = -1; float bd = 1e9f;
-                for (int y = Math.Max(0, ty - 3); y <= Math.Min(H - 1, ty + 3); y++)
+                for (int yy = -3; yy <= 3; yy++)
+                {
+                    int y = ty - yy * sgn; if (y < 0 || y >= H) continue;
                     for (int x = Math.Max(0, tx - 3); x <= Math.Min(W - 1, tx + 3); x++)
                         if (Walkable(x, y)) { float d = (x - tx) * (x - tx) + (y - ty) * (y - ty); if (d < bd) { bd = d; bx = x; by = y; } }
+                }
                 if (bx < 0) return false;
                 tx = bx; ty = by; moved = true;
             }
@@ -364,7 +370,7 @@ namespace BAM.Sim
                 int cx = c % W, cy = c / W;
                 for (int k = 0; k < 8; k++)
                 {
-                    int dx = DX[k], dy = DY[k], nx = cx + dx, ny = cy + dy;
+                    int dx = DX[k], dy = DY[k] * sgn, nx = cx + dx, ny = cy + dy;
                     if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
                     int n = ny * W + nx;
                     if (seen[n] == gen || !Walkable(nx, ny)) continue;

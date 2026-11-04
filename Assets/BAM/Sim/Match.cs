@@ -130,7 +130,7 @@ namespace BAM.Sim
             Time = -Rules.Countdown;
             State = MatchState.Countdown;
             WaveT = Rules.WaveFirst;
-            for (int t = 0; t < 2; t++) Towers[t] = NewTower(t, Map.TowerX[t], Map.TowerY[t]);
+            for (int tt = 0; tt < 2; tt++) { int t = TopFirst ? 1 - tt : tt; Towers[t] = NewTower(t, Map.TowerX[t], Map.TowerY[t]); }
             Map.TowerTile0 = TileOf(Towers[0]); Map.TowerTile1 = TileOf(Towers[1]);
             if (cfg.Tutorial) { if (cfg.Island) StartIsland(); else StartTutorial(); SeatSingle(); return; }
             if (cfg.HeroTest) { StartHeroTest(); SeatSingle(); return; }
@@ -145,6 +145,7 @@ namespace BAM.Sim
             var allyTier = Defs.Tier(cfg.AllyDifficulty ?? cfg.Difficulty);
             var enemyTier = Defs.Tier(cfg.Difficulty);
             int[] mid = { 1, 0, 2 }; // the player in the middle, as in the old game
+            if (TopFirst) TeamOfEnemies(enemies, enemyTier);
             for (int i = 0; i < 3; i++)
             {
                 var id = i == 0 ? cfg.PlayerHero : allies[i - 1];
@@ -153,14 +154,24 @@ namespace BAM.Sim
                 if (i == 0) { h.IsPlayer = true; Player = h; if (cfg.PlayerIsBot) h.Bot = new BotBrain(h, allyTier, this); }
                 else h.Bot = new BotBrain(h, allyTier, this);
             }
+            if (!TopFirst) TeamOfEnemies(enemies, enemyTier);
+            AssignSpells();
+            SeatSingle();
+        }
+
+        void TeamOfEnemies(HeroId[] enemies, BotTier enemyTier)
+        {
             for (int i = 0; i < enemies.Length && i < 3; i++)
             {
                 var h = NewHero(enemies[i], Teams.Enemy, Map.SpawnX[1][i], Map.SpawnY[1][i]);
                 h.Bot = new BotBrain(h, enemyTier, this);
             }
-            AssignSpells();
-            SeatSingle();
         }
+
+        /// <summary>Which team's units come first in Units this match (heroes, then each wave). Whoever is updated last each tick
+        /// acts on the other team's fresh moves and wins ties, which gave the top team 55 % of mirror matches (bug review nr 11):
+        /// the seed picks the order, so neither side has it every match. From the seed, so it needs no state of its own.</summary>
+        bool TopFirst => !Config.Tutorial && ((uint)Config.Seed * 2654435761u >> 31) != 0;
 
         // offline the player is seat 0
         void SeatSingle()
@@ -186,9 +197,9 @@ namespace BAM.Sim
             var bySeat = new Unit[seats.Length];
             int[] mid = { 1, 0, 2 };
             int next = 0;
-            for (int team = 0; team < 2; team++)
+            for (int tt = 0; tt < 2; tt++)
             {
-                int place = 0;
+                int team = TopFirst ? 1 - tt : tt, place = 0;
                 for (int s = 0; s < seats.Length && place < 3; s++)
                 {
                     if (seats[s].Team != team) continue;
@@ -341,9 +352,11 @@ namespace BAM.Sim
             if (WaveT <= 0) { WaveT += Rules.WavePeriod * PacingWaveMult(); SpawnWave(); }
 
             unitBuf.Clear(); unitBuf.AddRange(Units);
-            for (int i = 0; i < unitBuf.Count; i++)
+            // every other tick back to front: the unit updated last acts on fresh moves and wins ties, so neither team may always
+            // be last (bug review nr 11; with TopFirst the mirror match is 50/50 for either order)
+            for (int i = 0, nb = unitBuf.Count; i < nb; i++)
             {
-                var u = unitBuf[i];
+                var u = unitBuf[(Ticks & 1) == 0 ? i : nb - 1 - i];
                 if (u.Kind == UnitKind.Hero && !u.Alive && !u.IsClone)
                 {
                     u.RespawnT -= dt;
@@ -444,9 +457,9 @@ namespace BAM.Sim
         void SpawnWave()
         {
             WaveN++;
-            for (int team = 0; team < 2; team++)
+            for (int tt = 0; tt < 2; tt++)
             {
-                int k = 0;
+                int team = TopFirst ? 1 - tt : tt, k = 0;
                 for (int e = 0; e < WaveKinds.Length; e++)
                 {
                     if ((WaveN - 1) % WaveEvery[e] != 0) continue;
