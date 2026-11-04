@@ -49,11 +49,12 @@ namespace BAM.Art.Editor
             ti.wrapMode = assetPath.Contains("T_BAM_ArenaGround") ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
             // the boulder picture is cut out by its alpha: no dark fringe from the transparent pixels' colour
             if (assetPath.Contains("T_BAM_Pillar")) { ti.alphaIsTransparency = true; ti.wrapMode = TextureWrapMode.Clamp; }
+            if (assetPath.Contains("tx_arena_cliff")) ti.alphaIsTransparency = true; // the grass tips along its top are cut out (repeats left-right)
             ti.mipmapEnabled = true;
             ti.anisoLevel = 4;
             ti.sRGBTexture = true;
             // the baked arena ground is one 480x1120 picture of the whole floor: keep its full size
-            ti.maxTextureSize = assetPath.Contains("T_BAM_ArenaGround") ? 2048 : 512;
+            ti.maxTextureSize = assetPath.Contains("T_BAM_ArenaGround") ? 2048 : assetPath.Contains("tx_arena_cliff") ? 1024 : 512; // the cliff spans a third of the screen
             ti.textureCompression = TextureImporterCompression.Compressed;
         }
 

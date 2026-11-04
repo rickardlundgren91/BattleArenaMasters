@@ -110,6 +110,26 @@ namespace BAM.Art
         // Moa's honey shield (old View3DShields.cs): a slowly turning globe of honeycomb cells, additive honey over the hero
         static Mesh hexSphere;
         static Material hexMat;
+        // Rickard's flat hex ring (O-053, 2026-11-04, white + alpha): the shield lies on the ground round the hero instead of the globe,
+        // which in the 3 Nov videos covered the heroes inside it. Its bright ring peaks at 0.77 of the picture's half width.
+        static Material shieldRingMat;
+        static bool shieldRingLoaded;
+        const float ShieldRingQuad = 2f / 0.77f;
+        bool shieldFlat;
+
+        static Material ShieldRingMat()
+        {
+            if (shieldRingLoaded) return shieldRingMat;
+            shieldRingLoaded = true;
+            var tex = RickardFx.Load("tx_fx_moa_field");
+            if (tex == null) return null;
+            shieldRingMat = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.UnlitAdd));
+            shieldRingMat.name = "BAM shield ring";
+            shieldRingMat.SetTexture(ArtMaterials.BaseMap, tex);
+            shieldRingMat.mainTexture = tex;
+            shieldRingMat.SetColor(ArtMaterials.BaseColor, new Color(1f, 0.78f, 0.25f, 1f)); // honey gold, as the globe
+            return shieldRingMat;
+        }
 
         public StatusFx(Transform parent, float radius, float height)
         {
@@ -212,6 +232,7 @@ namespace BAM.Art
             float rr = Mathf.Max(radius, 0.25f) * 1.3f;
             if (i == Slow && SlowMat() != null) { MakeOwnRing(i, slowMat, rr * SlowQuad); return; }
             if (i == Root && RootMat() != null) { MakeOwnRing(i, rootMat, rr * RootQuad); return; }
+            if (i == Shield && ShieldRingMat() != null) { MakeOwnRing(i, shieldRingMat, rr * 1.25f * ShieldRingQuad); shieldFlat = true; return; }
             Material own = i == StunRing ? RingMat(0, Pal.Stun) : i == PoisonRing ? RingMat(1, Pal.Poison) : i == BurnRing ? RingMat(2, Pal.Burn)
                 : i == Slow ? RingMat(3, Pal.Slow) : null;
             // the poison ring is drawn a size larger than the others (tester 2026-11-03: Tikta's poison went unseen)
@@ -342,9 +363,19 @@ namespace BAM.Art
                     if (u >= 1f) shieldT = -1f;
                 }
                 ripple = Mathf.MoveTowards(ripple, 0f, dt * 4f);
-                float b = Mathf.Max(radius * 1.6f, height * 0.62f) * k;
-                t[Shield].localScale = new Vector3(b, b, b);
-                t[Shield].localRotation = Quaternion.Euler(0f, time * 20f, 0f);
+                if (shieldFlat)
+                {
+                    // on the ground, just outside the status rings (rr * 1.05), turning slowly
+                    float q = Mathf.Max(radius, 0.25f) * 1.3f * 1.25f * ShieldRingQuad * k;
+                    t[Shield].localScale = new Vector3(q, 1f, q);
+                    t[Shield].localRotation = Quaternion.Euler(0f, time * 20f, 0f);
+                }
+                else
+                {
+                    float b = Mathf.Max(radius * 1.6f, height * 0.62f) * k;
+                    t[Shield].localScale = new Vector3(b, b, b);
+                    t[Shield].localRotation = Quaternion.Euler(0f, time * 20f, 0f);
+                }
             }
             float ringK = Mathf.Max(radius, 0.25f) * 1.3f * 1.05f * (1f + Mathf.Sin(time * 6f) * 0.06f) * (ringTex != null ? RingQuad : 1f);
             for (int i = StunRing; i <= BurnRing; i++)

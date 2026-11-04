@@ -18,6 +18,13 @@ namespace BAM.Art
         Transform vis, chainT;
         MeshRenderer visR, chainR;
         MeshFilter chainF;
+        // Rickard's chain picture (O-052, 2026-11-04, iron links on alpha, 4:1, seamless left-right): a camera-facing strip with the
+        // picture repeated along it, so the hook no longer reads as a grey band from afar. Without it the code links stay.
+        LineRenderer chainLine;
+        static Texture2D chainTex;
+        static Material chainMat;
+        static bool chainLoaded;
+        const float ChainWidth = 0.18f; // tiles; one picture (two links) every 4 widths
         int chainLinks = 16;
         const float ChainLink = 0.17f; // tiles per chain link, whatever the chain's length
         TrailRenderer trail;
@@ -44,6 +51,8 @@ namespace BAM.Art
         static bool towerBoltLoaded;
         static Material texTrail; // Rickard's comet trail picture (tx_fx_trail), shared by every shot that leaves one
         static bool texTrailLoaded;
+        static Material tyraTrail; // Tyra's own bolt streak (O-056, 2026-11-04): pointed head, thin fading tail
+        static bool tyraTrailLoaded;
         MeshFilter visF;
         Transform bombT;
         float bombTop = 0.27f;
@@ -196,7 +205,8 @@ namespace BAM.Art
             if (TrailColor(k, t, out trailColor))
             {
                 trail = go.AddComponent<TrailRenderer>();
-                Material tm = TexTrail();
+                Material tm = k == ProjKind.TyraBolt ? TyraTrail() ?? TexTrail() : TexTrail();
+                bool tyraPic = k == ProjKind.TyraBolt && tm != null && tm == tyraTrail;
                 trail.sharedMaterial = tm ?? ArtKit.TrailMaterial;
                 // the volley's five arrows (Skill Visibility 2.0): at 18 tiles/s a 0.22 s trail is 4 tiles, her whole range, so every
                 // trail reached back to the bow and the five ran together into one gold wedge; 0.09 s (1.6 tiles) and a thinner line
@@ -211,7 +221,7 @@ namespace BAM.Art
                     // stays and the picture's own glow is the edge
                     trail.textureMode = LineTextureMode.Stretch;
                     trail.widthMultiplier *= 2.2f;
-                    trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0.6f);
+                    trail.widthCurve = tyraPic ? AnimationCurve.Constant(0f, 1f, 1f) : AnimationCurve.Linear(0f, 1f, 1f, 0.6f); // her picture tapers itself
                 }
                 var g = new Gradient();
                 Color end = trailColor; end.a = 0f;
@@ -223,7 +233,24 @@ namespace BAM.Art
                 trail.generateLightingData = false;
             }
 
-            if (k == ProjKind.KnutAnchor)
+            if (k == ProjKind.KnutAnchor && ChainMat() != null)
+            {
+                var cg = new GameObject("Chain");
+                cg.transform.SetParent(transform, false);
+                chainLine = cg.AddComponent<LineRenderer>();
+                chainLine.sharedMaterial = chainMat;
+                chainLine.useWorldSpace = true;
+                chainLine.positionCount = 2;
+                chainLine.widthMultiplier = ChainWidth;
+                chainLine.textureMode = LineTextureMode.Tile;
+                chainLine.alignment = LineAlignment.View;
+                chainLine.numCapVertices = 0;
+                chainLine.shadowCastingMode = ShadowCastingMode.Off;
+                chainLine.receiveShadows = false;
+                chainLine.generateLightingData = false;
+                chainLine.enabled = false;
+            }
+            else if (k == ProjKind.KnutAnchor)
             {
                 var cg = new GameObject("Chain");
                 chainT = cg.transform;
@@ -235,6 +262,39 @@ namespace BAM.Art
                 chainR.shadowCastingMode = ShadowCastingMode.Off;
                 chainR.enabled = false;
             }
+        }
+
+        static Material ChainMat()
+        {
+            if (chainLoaded) return chainMat;
+            chainLoaded = true;
+            chainTex = RickardFx.Load("tx_fx_knut_chain");
+            if (chainTex == null) return null;
+            chainTex.wrapMode = TextureWrapMode.Repeat;
+            chainMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+            chainMat.name = "BAM Knut chain";
+            chainMat.SetTexture(ArtMaterials.BaseMap, chainTex);
+            chainMat.mainTexture = chainTex;
+            chainMat.SetColor(ArtMaterials.BaseColor, Color.white);
+            // Tile mode puts one u per world unit along the line: one picture every 4 chain widths keeps the links round
+            var sc = new Vector2(1f / (ChainWidth * 4f), 1f);
+            chainMat.SetTextureScale(ArtMaterials.BaseMap, sc);
+            chainMat.mainTextureScale = sc;
+            return chainMat;
+        }
+
+        static Material TyraTrail()
+        {
+            if (tyraTrailLoaded) return tyraTrail;
+            tyraTrailLoaded = true;
+            var t = RickardFx.Load("tx_fx_tyra_bolt_trail"); // head on the left like tx_fx_trail: a trail's u = 0 is its newest point
+            if (t == null) return null;
+            t.wrapMode = TextureWrapMode.Clamp;
+            tyraTrail = RickardFx.WeighByAlpha(ArtMaterials.Instance(ArtMaterials.ParticleAdd));
+            tyraTrail.name = "BAM Tyra bolt trail";
+            tyraTrail.SetTexture(ArtMaterials.BaseMap, t);
+            tyraTrail.mainTexture = t;
+            return tyraTrail;
         }
 
         static Material TexTrail()
@@ -315,6 +375,7 @@ namespace BAM.Art
         {
             tether = anchor;
             if (chainR != null) chainR.enabled = anchor != null;
+            if (chainLine != null) chainLine.enabled = anchor != null;
         }
 
         static Color WithAlpha(Color c, float a) { c.a = a; return c; }
@@ -463,6 +524,11 @@ namespace BAM.Art
                     Fx.InFlight(kind, vis.position, dir, team);
                 }
             }
+            if (chainLine != null && tether != null)
+            {
+                chainLine.SetPosition(0, tether.position + new Vector3(0f, Height, 0f));
+                chainLine.SetPosition(1, vis.position);
+            }
             if (chainT != null && tether != null)
             {
                 Vector3 a = tether.position + new Vector3(0f, Height, 0f), b = vis.position;
@@ -498,6 +564,7 @@ namespace BAM.Art
             launched = false;
             tether = null;
             if (chainR != null) chainR.enabled = false;
+            if (chainLine != null) chainLine.enabled = false;
             if (trail != null) trail.Clear();
         }
     }
@@ -528,6 +595,13 @@ namespace BAM.Art
         // line (Tyra's bolt, Knut's hook, Tikta's needles); white + alpha, tinted like the plain strip it replaces
         static Texture2D laneTex;
         static bool laneLoaded;
+        // Rickard's danger circle (O-054, 2026-11-04): a bold ring with ticks and an almost empty inside, white + alpha, on every round
+        // warning (Bonk's slam and the other big red discs, which hid who stood where). The fill that runs to the rim stays, faint.
+        static Texture2D warnRingTex;
+        static bool warnRingLoaded;
+        const float WarnRingPeak = 0.89f; // the ring's bright band sits at 0.89 of the picture's half width
+        Transform ringPic;
+        Material ringPicMat;
         Transform lanePic;
         Material laneMat;
         Vector3 center, dir;
@@ -580,6 +654,18 @@ namespace BAM.Art
                     laneMat.mainTexture = laneTex;
                     lanePic = Child("LanePic", LaneMesh(), laneMat, 0.003f);
                     shapeR.enabled = false; // the picture has its own edges
+                }
+            }
+            if (k == ZoneKind.WarnCircle)
+            {
+                if (!warnRingLoaded) { warnRingLoaded = true; warnRingTex = RickardFx.Load("tx_warn_ring"); }
+                if (warnRingTex != null)
+                {
+                    ringPicMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                    ringPicMat.renderQueue = 2995;
+                    ringPicMat.SetTexture(ArtMaterials.BaseMap, warnRingTex);
+                    ringPicMat.mainTexture = warnRingTex;
+                    ringPic = Child("RingPic", FxAtlas.FullQuad(), ringPicMat, 0.003f);
                 }
             }
             if (k == ZoneKind.HoneyField) MakeComb();
@@ -688,6 +774,7 @@ namespace BAM.Art
                 shapeF.sharedMesh = Shapes.ZoneCircle();
                 shape.localScale = new Vector3(radius, 1f, radius);
                 if (rim != null) rim.localScale = new Vector3(radius * 2.255f, 1f, radius * 2.255f); // his ring peaks at 0.887 of the picture: edge exactly on the radius
+                if (ringPic != null) ringPic.localScale = new Vector3(radius * 2f / WarnRingPeak, 1f, radius * 2f / WarnRingPeak);
                 if (comb != null) comb.localScale = new Vector3(radius, 1f, radius);
                 for (int i = 0; i < 3; i++) if (edge[i] != null) edge[i].localScale = new Vector3(radius, 1f, radius);
             }
@@ -748,7 +835,8 @@ namespace BAM.Art
                     inner.localScale = new Vector3(s, 1f, s);
                     inner.localPosition = new Vector3(0f, 0.004f, 0f);
                 }
-                Color ic = baseColor; ic.a = baseColor.a * fadeIn * 0.8f;
+                bool ringOn = ringPic != null && length <= 0f && !cut;
+                Color ic = baseColor; ic.a = baseColor.a * fadeIn * (ringOn ? 0.3f : 0.8f); // with the ring picture only a faint fill
                 innerMat.SetColor(ArtMaterials.BaseColor, ic);
             }
             else if (kind == ZoneKind.BombFuse)
@@ -766,9 +854,16 @@ namespace BAM.Art
             Color c = baseColor; c.a = baseColor.a * a;
             mat.SetColor(ArtMaterials.BaseColor, c);
             if (laneMat != null) laneMat.SetColor(ArtMaterials.BaseColor, c);
-            if (rimMat != null)
+            if (ringPic != null)
             {
                 bool on = length <= 0f && !cut;
+                if (ringPic.gameObject.activeSelf != on) ringPic.gameObject.SetActive(on);
+                shapeR.enabled = !on; // the picture is the edge; a cut (walls) fuse keeps the code shape
+                if (on) ringPicMat.SetColor(ArtMaterials.BaseColor, c);
+            }
+            if (rimMat != null)
+            {
+                bool on = length <= 0f && !cut && ringPic == null;
                 rim.gameObject.SetActive(on);
                 // additive: the colour's brightness is its strength
                 if (on) rimMat.SetColor(ArtMaterials.BaseColor, new Color(baseColor.r * a, baseColor.g * a, baseColor.b * a, 1f));

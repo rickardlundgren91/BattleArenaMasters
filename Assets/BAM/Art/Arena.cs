@@ -36,12 +36,16 @@ namespace BAM.Art
             var solid = new MeshBuilder();
             var marks = new MeshBuilder();
             Layer ground = Load("T_BAM_Ground_Cobble", 6f), road = Load("T_BAM_Ground_Road2", 4f), grass = Load("T_BAM_Ground_Grass", 6f),
-                wall = Load("T_BAM_Block", 2f), kerb = Load("T_BAM_Kerb", 1f), water = Load("T_BAM_Water", 6f), plinth = Load("T_BAM_Plinth", 3f);
+                wall = Load("T_BAM_Block", 2f), kerb = Load("T_BAM_Kerb", 1f), water = WaterLayer(), plinth = Load("T_BAM_Plinth", 3f);
             int w = info.Width, h = info.Height;
             float laneX = w * 0.5f;
             var rnd = new System.Random(1234);
             bool moat = water.T != null;
             waterY = moat ? -0.55f : -CliffDepth;
+            // Rickard's cliff (O-055): the map stands on a rock cliff, so the water lies a cliff's height down (the bottom quarter of
+            // the screen under our base was flat water with repeated rings, 3 Nov videos)
+            Texture2D cliffPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/tx_arena_cliff");
+            if (cliffPic != null) waterY = -CliffSkirtH;
 
             // water (or an abyss) all around and below, so the camera never sees the empty background at the map edge;
             // the island floats over its own cloud sea instead
@@ -148,6 +152,7 @@ namespace BAM.Art
             if (!info.Island) LeafBushes(root, info);
             Mesh edgeM = info.Island ? null : Props.Mesh("bam_boundary_wall");
             if (edgeM != null) BoundaryWall(root, info, edgeM);
+            if (cliffPic != null) CliffSkirt(root, info, cliffPic, edgeM != null ? edgeM.bounds.size.z * EdgeScale - 0.07f : 0f);
             if (rockPic != null && info.Rocks != null) RockPictures(root, info, rockPic);
             Add(root, "Marks", marks.ToMesh("Arena Marks"), MarksMaterial(), false);
             if (info.Island) Island.Build(root, info);
@@ -257,6 +262,54 @@ namespace BAM.Art
                 }
             KitPiece(root, "Wall pillars", pillars, "wallkit_pillar");
             KitPiece(root, "Wall pieces", beams, "wallkit_straight");
+        }
+
+        // the new water (O-057, 2026-11-04, painted dark teal, no rings) wins over the old one
+        static Layer WaterLayer()
+        {
+            var l = Load("T_BAM_Water_v2", 6f);
+            return l.T != null ? l : Load("T_BAM_Water", 6f);
+        }
+
+        // Rickard's cliff picture (tx_arena_cliff, O-055, 2026-11-04): grass along the top, plain rock under it, seamless left to right,
+        // 1024 x 872. Hung round the outside of the boundary wall from the floor down to the water, one picture high, CliffSkirtW
+        // wide per repeat, so the camera sees a cliff under the base instead of open water. Only looks (no fog, glow or particles:
+        // the map's no-go rules). The faces look outward; the camera behind the bottom base sees the south one, the online top team's
+        // turned camera the north one.
+        const float CliffSkirtW = 8f, CliffSkirtH = CliffSkirtW * 872f / 1024f;
+
+        static void CliffSkirt(GameObject root, ArenaInfo info, Texture2D pic, float rim)
+        {
+            float w = info.Width, h = info.Height;
+            var v = new System.Collections.Generic.List<Vector3>();
+            var uv = new System.Collections.Generic.List<Vector2>();
+            var n = new System.Collections.Generic.List<Vector3>();
+            var tri = new System.Collections.Generic.List<int>();
+            // left and right as seen from outside, looking at the face
+            void Face(Vector3 left, Vector3 right)
+            {
+                Vector3 along = right - left; along.y = 0f;
+                float len = along.magnitude;
+                Vector3 outN = Vector3.Cross(Vector3.up, along / len); // outward, for the left-to-right order seen from outside
+                int i0 = v.Count;
+                v.Add(left); v.Add(right); v.Add(right + Vector3.down * CliffSkirtH); v.Add(left + Vector3.down * CliffSkirtH);
+                float u0 = (left.x * 0.37f + left.z * 0.61f) / CliffSkirtW, u1 = u0 + len / CliffSkirtW; // each side starts elsewhere in the picture
+                uv.Add(new Vector2(u0, 1f)); uv.Add(new Vector2(u1, 1f)); uv.Add(new Vector2(u1, 0f)); uv.Add(new Vector2(u0, 0f));
+                for (int k = 0; k < 4; k++) n.Add(outN);
+                tri.Add(i0); tri.Add(i0 + 1); tri.Add(i0 + 2); tri.Add(i0); tri.Add(i0 + 2); tri.Add(i0 + 3);
+            }
+            float y = 0f;
+            Face(new Vector3(-rim, y, -rim), new Vector3(w + rim, y, -rim));         // south, seen from -z
+            Face(new Vector3(w + rim, y, h + rim), new Vector3(-rim, y, h + rim));   // north, seen from +z
+            Face(new Vector3(-rim, y, h + rim), new Vector3(-rim, y, -rim));         // west, seen from -x
+            Face(new Vector3(w + rim, y, -rim), new Vector3(w + rim, y, h + rim));   // east, seen from +x
+            var mesh = new Mesh { name = "Cliff skirt" };
+            mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetNormals(n); mesh.SetTriangles(tri, 0);
+            mesh.RecalculateBounds();
+            var mat = ArtMaterials.Instance(ArtMaterials.LitClip); // the grass tips along the top are cut out by the picture's alpha
+            mat.SetTexture(ArtMaterials.BaseMap, pic);
+            mat.mainTexture = pic;
+            Add(root, "Cliff skirt", mesh, mat, false, false);
         }
 
         // Rickard's Meshy boundary wall (bam_boundary_wall: 1.9 long, 0.3 high, 0.66 deep) laid end to end round the outside of the
