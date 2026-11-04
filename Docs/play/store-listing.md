@@ -77,6 +77,27 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 </en-US>
 ```
 
+## Closed test release notes 0.3.6 (code 20, next build after 19, paste in "Release notes"; Discord: the longer text in bam-work/release/0.3.6-notes.txt)
+
+```
+<en-US>
+Battle Arena Masters 0.3.6
+From playing with you:
+• Respawn is never longer than 15 s
+• Late towers take at most double damage
+• No more "not ready" texts, the button shakes
+• Name tags no longer overlap
+• Enemy bots play as a team: spread, push, heal
+Also new:
+• Range ring and health bars show over towers
+• Bot matches fairer for both sides
+• Smoother online for guests
+• Phones can pick High graphics
+• Many small bug fixes
+Update to play online.
+</en-US>
+```
+
 ## Closed test release notes 0.3.5 (code 19, next build after 18, paste in "Release notes"; Discord: the longer text in bam-work/release/0.3.5-notes.txt)
 
 ```
