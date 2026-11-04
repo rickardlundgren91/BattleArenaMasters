@@ -314,7 +314,9 @@ namespace BAM.Art
         // light, drew a thin dark line with teeth over the floor's grass (Rickard 17:35 and 20:42, left for 0.3.8). Now the
         // see-through rows stand above the floor (cut away, nothing shows), the ragged rows hang just under it, and a backing strip
         // of the picture's own grass (CliffSkirtBackH, see Face) sits behind them, so the gaps between the blades show grass, not water
-        const float CliffSkirtLip = CliffSkirtH * 24f / 872f, CliffSkirtBackH = 0.6f;
+        // ... and since a faint dotted line still showed right at the seam (Rickard 20:57 "nästan borta helt"), the picture now hangs
+        // with its top at the floor: the whole grass lip lies under the edge and only the backing strip meets the floor (Rickard "ok" 20:59)
+        const float CliffSkirtLip = 0f, CliffSkirtBackH = 0.6f;
 
         static void CliffSkirt(GameObject root, ArenaInfo info, Texture2D pic, float rim)
         {
