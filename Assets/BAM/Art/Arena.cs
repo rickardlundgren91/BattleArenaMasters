@@ -680,13 +680,13 @@ namespace BAM.Art
             Vector3 down = Vector3.down;
             float bottom = -waterY + 0.1f;
             // with the cliff picture (CliffSkirt) hung exactly on this plane since the boundary wall went (d5954de), these two faces
-            // z-fought with it and the edge flickered (Rickard's video 2026-11-04 16:37); the picture is the cliff now
-            if (!(skirted && outer))
-            {
-                MeshBuilder top = Pick(kerb, m, Pal.Cliff);
-                top.Face(a, b, b + down * 0.5f, a + down * 0.5f);
-                m.Color(Pal.CliffDark).Face(a + down * 0.5f, b + down * 0.5f, b + down * Mathf.Max(bottom, 0.6f), a + down * Mathf.Max(bottom, 0.6f));
-            }
+            // z-fought with it and the edge flickered (Rickard's video 2026-11-04 16:37); the picture is the cliff now. Its kerb went
+            // too: the row of dark stone boxes lay as a straight dark line between the floor's grass and the picture's grass lip
+            // (Rickard's screenshot 2026-11-04 17:03, "bara denna lilla buggen")
+            if (skirted && outer) return;
+            MeshBuilder top = Pick(kerb, m, Pal.Cliff);
+            top.Face(a, b, b + down * 0.5f, a + down * 0.5f);
+            m.Color(Pal.CliffDark).Face(a + down * 0.5f, b + down * 0.5f, b + down * Mathf.Max(bottom, 0.6f), a + down * Mathf.Max(bottom, 0.6f));
             // a low curb of stone along the edge: you see where the arena stops
             Vector3 mid = (a + b) * 0.5f, along = (b - a).normalized, outward = new Vector3(along.z, 0f, -along.x);
             MeshBuilder cb = Pick(kerb, m, Pal.StoneTop);
