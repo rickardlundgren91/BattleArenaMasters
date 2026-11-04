@@ -115,6 +115,11 @@ namespace BAM.UI
             Stretched(segs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
             modeDifficulty = new HubChoice(segs, DifficultyNames, i =>
             {
+                if (i == (int)Difficulty.Hard && !BamSettings.HardOpen) // locked like Ultra: Hard opens after 3 wins against Normal (Rickard 2026-11-04)
+                {
+                    ShowMenuHint("Hard opens after " + BamSettings.NormalWinsForHard + " wins against Normal (" + Mathf.Min(BamSettings.NormalWins, BamSettings.NormalWinsForHard) + "/" + BamSettings.NormalWinsForHard + ")");
+                    RefreshModes(); return;
+                }
                 if (i == (int)Difficulty.Ultra && !BamSettings.UltraOpen) // locked: says why only when tapped, the label stays short (Rickard 2026-10-31)
                 {
                     ShowMenuHint("Ultra opens after " + BamSettings.UltraWins + " wins against Hard (" + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins + ")");
@@ -287,6 +292,7 @@ namespace BAM.UI
             if (modeSheet == null) return;
             var party = Party();
             bool ultraOpen = BamSettings.UltraOpen;
+            modeDifficulty.Dim((int)Difficulty.Hard, !BamSettings.HardOpen); // Hard opens after 3 wins against Normal (Rickard 2026-11-04)
             modeDifficulty.Dim((int)Difficulty.Ultra, !ultraOpen);
             modeDifficulty.Set((int)(party != null ? party.Bots : BamSettings.LastDifficulty));
             // Ultra opens after 30 wins against Hard bots (Rickard 2026-10-31)

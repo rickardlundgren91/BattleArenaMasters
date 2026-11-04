@@ -90,8 +90,12 @@ namespace BAM.Online.UI
             for (int i = 0; i < n; i++)
             {
                 var k = (Difficulty)i;
-                bool locked = k == Difficulty.Ultra && !BamSettings.UltraOpen; // Ultra opens after 30 wins against Hard bots
-                if (draw) MpBtn("mpDiff" + i, locked ? DiffNames[i] + " " + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins : DiffNames[i], x + lx + i * (bw + 4), y, bw, 26, d == k ? "#2fae5b" : locked ? "#262a4a" : "#39407a", () => { if (!locked) pick(k); });
+                // Hard opens after 3 wins against Normal bots (Rickard 2026-11-04), Ultra after 30 wins against Hard bots
+                bool hardLocked = k == Difficulty.Hard && !BamSettings.HardOpen;
+                bool locked = hardLocked || (k == Difficulty.Ultra && !BamSettings.UltraOpen);
+                string count = hardLocked ? Mathf.Min(BamSettings.NormalWins, BamSettings.NormalWinsForHard) + "/" + BamSettings.NormalWinsForHard
+                    : Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins;
+                if (draw) MpBtn("mpDiff" + i, locked ? DiffNames[i] + " " + count : DiffNames[i], x + lx + i * (bw + 4), y, bw, 26, d == k ? "#2fae5b" : locked ? "#262a4a" : "#39407a", () => { if (!locked) pick(k); });
             }
         }
 

@@ -474,6 +474,7 @@ namespace BAM.Game
             if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
             if (!r.Tutorial && !setup.HeroTest && !Practice && setup.Net == null) r.BotsMoved = BamSettings.AfterBotMatch(r.Difficulty, r.Won); // Easy and Normal follow the player
             if (!r.Tutorial && !setup.HeroTest && setup.Net == null && r.Won && r.Difficulty == Difficulty.Hard) BamSettings.AddHardWin(); // 30 open Ultra
+            if (!r.Tutorial && !setup.HeroTest && setup.Net == null && r.Won && r.Difficulty == Difficulty.Normal) BamSettings.AddNormalWin(); // 3 open Hard
             SendEnd(false);
             hud.CancelTouches();
             BamAudio.StopMusic(); // the victory or defeat jingle first; Update brings the music back after it

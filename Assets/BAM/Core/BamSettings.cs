@@ -19,7 +19,7 @@ namespace BAM.Core
         static bool loaded;
         static float sfxVolume;
         static GraphicsQuality graphics;
-        static bool leftHanded, tutorialDone, tutorialCard, musicOn, vibration;
+        static bool leftHanded, tutorialDone, tutorialCard, musicOn, vibration, hardOpen;
         static int fps;
         static Consent consent;
         static int lastHero, lastDifficulty, spell;
@@ -108,14 +108,30 @@ namespace BAM.Core
 
         public static BAM.Sim.Difficulty LastDifficulty
         {
-            get { Load(); return lastDifficulty == (int)BAM.Sim.Difficulty.Ultra && !UltraOpen ? BAM.Sim.Difficulty.Hard : (BAM.Sim.Difficulty)lastDifficulty; }
-            set { Load(); if (value == BAM.Sim.Difficulty.Ultra && !UltraOpen) value = BAM.Sim.Difficulty.Hard; if (lastDifficulty == (int)value) return; lastDifficulty = (int)value; PlayerPrefs.SetInt(Key + "diff", lastDifficulty); PlayerPrefs.SetInt(Key + "diffrun", 0); Commit(); }
+            get { Load(); return OpenLevel((BAM.Sim.Difficulty)lastDifficulty); }
+            set { Load(); value = OpenLevel(value); if (lastDifficulty == (int)value) return; lastDifficulty = (int)value; PlayerPrefs.SetInt(Key + "diff", lastDifficulty); PlayerPrefs.SetInt(Key + "diffrun", 0); Commit(); }
         }
+
+        /// <summary>The level itself when it is open, else the nearest open level under it: a locked Ultra plays Hard, a locked Hard Normal.</summary>
+        public static BAM.Sim.Difficulty OpenLevel(BAM.Sim.Difficulty d)
+        {
+            if (d == BAM.Sim.Difficulty.Ultra && !UltraOpen) d = BAM.Sim.Difficulty.Hard;
+            if (d == BAM.Sim.Difficulty.Hard && !HardOpen) d = BAM.Sim.Difficulty.Normal;
+            return d;
+        }
+
+        /// <summary>Hard opens after this many won matches against Normal bots, counted on this phone like Ultra's wins (Rickard
+        /// 2026-11-04: good, hard bots, but a new player who loses too much stops playing; 2 of 4 new players went from their first
+        /// Easy win straight to Hard). A phone that had Hard or Ultra picked, or a win against Hard, when the lock came keeps Hard (Load).</summary>
+        public const int NormalWinsForHard = 3;
+        public static int NormalWins => PlayerPrefs.GetInt(Key + "normalwins", 0);
+        public static bool HardOpen { get { Load(); return hardOpen || NormalWins >= NormalWinsForHard; } }
+        public static void AddNormalWin() { PlayerPrefs.SetInt(Key + "normalwins", NormalWins + 1); Commit(); }
 
         /// <summary>Ultra opens after this many won matches against Hard bots (Rickard 2026-10-31), counted on this phone.</summary>
         public const int UltraWins = 30;
         public static int HardWins => PlayerPrefs.GetInt(Key + "hardwins", 0);
-        public static bool UltraOpen => HardWins >= UltraWins || Application.isEditor; // open in the Unity editor for testing, like the heroes
+        public static bool UltraOpen => HardOpen && (HardWins >= UltraWins || Application.isEditor); // open in the Unity editor for testing, like the heroes, once Hard is
         public static void AddHardWin() { PlayerPrefs.SetInt(Key + "hardwins", HardWins + 1); Commit(); }
 
         /// <summary>
@@ -124,8 +140,9 @@ namespace BAM.Core
         /// row on Normal move the pick down to Easy, and a run of wins on Easy moves it up to Normal: 3 the first time, 2 more
         /// after every step down (at most 7), so a new player does not bounce between Easy and Normal (real matches 30-31 Oct:
         /// Easy 82 %, Normal 27 %). Hard and Ultra change only by hand, never by themselves (Rickard 2026-11-01: a player who
-        /// picked Hard keeps Hard, its rating and its wins towards Ultra). The player can always pick another level. Returns
-        /// true when the pick moved (the result card says so).
+        /// picked Hard keeps Hard, its rating and its wins towards Ultra). The player can always pick another open level (Hard
+        /// opens after NormalWinsForHard wins against Normal, Ultra after UltraWins against Hard). Returns true when the pick moved
+        /// (the result card says so).
         /// </summary>
         public static bool AfterBotMatch(BAM.Sim.Difficulty played, bool won)
         {
@@ -156,6 +173,15 @@ namespace BAM.Core
             tutorialCard = PlayerPrefs.GetInt(Key + "tutcard", 0) == 1;
             lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", (int)BAM.Sim.HeroId.Tyra), 0, BAM.Sim.HeroCatalog.Count - 1);
             lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, (int)BAM.Sim.Difficulty.Ultra);
+            // Hard's lock came 2026-11-04: a phone that already had Hard or Ultra picked, or a win against Hard, keeps Hard open.
+            // Decided once, on the first start with the lock, and saved, so it never changes after that (a new phone: locked).
+            if (!PlayerPrefs.HasKey(Key + "hardopen"))
+            {
+                bool had = lastDifficulty >= (int)BAM.Sim.Difficulty.Hard || PlayerPrefs.GetInt(Key + "hardwins", 0) > 0;
+                PlayerPrefs.SetInt(Key + "hardopen", had ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+            hardOpen = PlayerPrefs.GetInt(Key + "hardopen", 0) == 1;
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
         }
 
