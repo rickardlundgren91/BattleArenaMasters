@@ -206,8 +206,8 @@ namespace BAM.Sim
         }
 
         /// <summary>The wait before a dead hero comes back: 8 s, +1 s per earlier death, and up to 20 s more as the match clock runs
-        /// (LateRamp).</summary>
-        public float RespawnTime(Unit u) => Rules.RespawnBase + Rules.RespawnPerDeath * (u.Deaths - 1) + Rules.RespawnLateMax * LateRamp();
+        /// (LateRamp), never more than Rules.RespawnMax (15 s).</summary>
+        public float RespawnTime(Unit u) => Math.Min(Rules.RespawnMax, Rules.RespawnBase + Rules.RespawnPerDeath * (u.Deaths - 1) + Rules.RespawnLateMax * LateRamp());
 
         /// <summary>0 until 1:30 on the match clock, then straight up to 1 at 6:00 (no steps); always 0 in the tutorial and HERO TEST.</summary>
         internal float LateRamp() => Tut != null || Config.HeroTest ? 0
@@ -246,7 +246,7 @@ namespace BAM.Sim
         }
         /// <summary>Heroes take more from tower shots as the match clock runs: x1 until 1:30, straight up to x2 at 6:00 (LateRamp).</summary>
         internal float TowerLateMult(Unit h) => 1 + (Rules.TowerLateMax - 1) * LateRamp();
-        /// <summary>From level 8 towers take more damage, growing with the match clock (at most x5).</summary>
+        /// <summary>From level 10 (2:24) towers take more damage, +50 % a minute, at most x2 (Rules.TowerTakenMax, reached at 4:24).</summary>
         internal float TowerLateTaken() => Math.Min(Rules.TowerTakenMax, 1 + Rules.TowerTakenPerMinute * Math.Max(0, Time - (Rules.TowerTakenLevel - 1) * Rules.SecondsPerLevel) / 60);
         /// <summary>Backdoor protection (Rickard 2026-10-28, closed-test feedback): a hero hitting a tower without one of its own
         /// minions in the tower's range deals half damage, the whole match (it was half of the late bonus only).</summary>

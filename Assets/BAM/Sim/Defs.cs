@@ -194,6 +194,9 @@ namespace BAM.Sim
         // straight line to +20 s and tower shots on heroes to x2 (until protocol 21 both stepped up with the levels from 2:24)
         public const float LateStart = 90, LateFull = 360;
         public const float RespawnLateMax = 20;
+        // video review 2026-11-03: 21 s at 3:56 and 28 s at 5:20 (8 + 1 per death + the late ramp), so the last minute and a half
+        // was watched, not played. The wait never passes RespawnMax; Min keeps it smooth (it rises, then stays flat, no jump)
+        public const float RespawnMax = 15;
         public const float RegenAmount = 0.1f, RegenTick = 0.85f, HeroOutOfCombat = 3, HeroRegenDelay = 2; // HeroRegenDelay: seconds after the last hero/tower fight before regen starts (was HeroOutOfCombat, 3 s, until protocol 20)
         public const float TowerOutOfCombat = 10, TowerRegenBelow = 0.25f, TowerRegenAmount = 0.01f, TowerRegenTick = 1;
         public const float GrassSight = 2.5f, RevealTime = 2; // RevealTime: seconds a hit keeps attacker and target visible in grass (4 s until protocol 20)
@@ -210,9 +213,11 @@ namespace BAM.Sim
         public const float TowerVsHero = 1.15f;
         // the other side: from level 10 towers take more damage, a hero without its own minion at the tower gets half of that.
         // Was level 8, +100 %/min, max x5: in Rickard's recording of 2026-11-01 the tower went 60 -> 0 % in four seconds at 2:52
-        // (x2 by then, three level-11 heroes and Blast's keg), a cliff nobody could react to. Now x1 at 2:24, x1.5 at 3:24, x2 at 4:24.
+        // (x2 by then, three level-11 heroes and Blast's keg), a cliff nobody could react to. Now x1 at 2:24, x1.5 at 3:24, x2 at 4:24,
+        // and no more: max x3 still let a tower sit at 58 % for 1:45 and then go 58 -> 0 in one second at 6:14 (x2.9; video
+        // review 2026-11-03), so the cap is x2 since protocol 55
         public const int TowerTakenLevel = 10;
-        public const float TowerTakenPerMinute = 0.5f, TowerTakenMax = 3;
+        public const float TowerTakenPerMinute = 0.5f, TowerTakenMax = 2;
         // minions
         public const float MinionVision = 3.4f, MinionMaxToLane = 4;
         public const float TutorialMinionHp = 209;
