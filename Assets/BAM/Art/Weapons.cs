@@ -929,6 +929,7 @@ namespace BAM.Art
         /// along the shaft as the hand turned (Simon's audit on issue #5). Measured before the lock (GripErr), then removed by a shift.</summary>
         /// <summary>Degrees each finger joint bends at <see cref="WeaponDef.Fist"/> 1.</summary>
         internal const float FistBend = 70f;
+        Vector3[] curlAx, thumbAx; // Close hand's bend axes per weapon hand, in the hand bone's own space, fixed at the first use
 
         // the fingers curled towards the weapon's shaft, on top of the clip (each frame from the clip's own pose, so nothing adds up)
         void CloseHand(int i, float k)
@@ -940,19 +941,35 @@ namespace BAM.Art
             // One shared bend axis for the four fingers: the knuckle line (index root to pinky root), turned so the index curls
             // towards the shaft. Each finger bending round its own axis made them swing sideways into each other and read as
             // one giant finger (Rickard 2026-11-01, Tyra); a shared axis keeps them side by side, like a real fist.
-            Vector3 knuckle = Vector3.zero;
-            if (f[3] != null && f[4] != null && f[12] != null)
+            // The axes are fixed in the hand's own space the first time (Cajsa and Rickard 2026-11-04: "Tyras fingrar fladdrar"):
+            // chosen anew every frame from the shaft, the side flipped whenever the shaft crossed the knuckles (a bow through the
+            // fist), and the fingers curled one way and back again frame by frame. With a calibrated palm socket the side is
+            // towards the socket, the palm's own centre, which no pose can flip.
+            Transform hb = f[3] != null ? f[3].parent : (f[0] != null ? f[0].parent : null);
+            if (hb == null) return;
+            if (curlAx == null || curlAx.Length != fing.Length) { curlAx = new Vector3[fing.Length]; thumbAx = new Vector3[fing.Length]; }
+            if (curlAx[i] == Vector3.zero && f[3] != null && f[4] != null && f[12] != null)
             {
-                Vector3 ix = BendAxis(f[3].position, f[4].position - f[3].position, g, ax);
-                knuckle = (f[12].position - f[3].position).normalized;
-                if (ix == Vector3.zero || knuckle == Vector3.zero) knuckle = Vector3.zero;
-                else if (Vector3.Dot(ix, knuckle) < 0f) knuckle = -knuckle;
+                Vector3 kn = (f[12].position - f[3].position).normalized, dir = f[4].position - f[3].position;
+                Vector3 side = hasSock[i] ? Vector3.Cross(dir, hand[i].TransformPoint(sockL[i]) - f[3].position).normalized
+                    : BendAxis(f[3].position, dir, g, ax);
+                if (side != Vector3.zero && kn != Vector3.zero)
+                    curlAx[i] = hb.InverseTransformDirection(Vector3.Dot(side, kn) < 0f ? -kn : kn);
             }
+            if (thumbAx[i] == Vector3.zero && f[0] != null && f[1] != null)
+            {
+                Vector3 dir = f[1].position - f[0].position;
+                Vector3 th = hasSock[i] ? Vector3.Cross(dir, hand[i].TransformPoint(sockL[i]) - f[0].position).normalized
+                    : BendAxis(f[0].position, dir, g, ax);
+                if (th != Vector3.zero) thumbAx[i] = hb.InverseTransformDirection(th);
+            }
+            Vector3 knuckle = curlAx[i] != Vector3.zero ? hb.TransformDirection(curlAx[i]) : Vector3.zero;
+            Vector3 thumb = thumbAx[i] != Vector3.zero ? hb.TransformDirection(thumbAx[i]) : Vector3.zero;
             for (int n = 0; n < 5; n++)
             {
                 Transform a = f[n * 3], b = f[n * 3 + 1];
                 if (a == null || b == null) continue;
-                Vector3 axis = n > 0 && knuckle != Vector3.zero ? knuckle : BendAxis(a.position, b.position - a.position, g, ax);
+                Vector3 axis = n == 0 ? thumb : knuckle;
                 if (axis == Vector3.zero) continue;
                 // every joint bends a share of FistBend on top of its parent, so the finger curls instead of pivoting stiffly at
                 // the knuckle; world rotations stack, so joint j ends up bent by its own share relative to joint j-1
