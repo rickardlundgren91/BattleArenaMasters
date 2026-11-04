@@ -116,6 +116,24 @@ namespace BAM.Art
         static bool shieldRingLoaded;
         const float ShieldRingQuad = 2f / 0.77f;
         bool shieldFlat;
+        // with the flat ring the globe stays too, but faint (Rickard 2026-11-04 "det e bara en ring på marken": a ring alone did not
+        // read as a shield), so the hero inside is still seen (the 3 Nov videos: the full globe hid the heroes)
+        Transform globeT;
+        MeshRenderer globeR;
+        static Material faintHexMat;
+        const float GlobeFaint = 0.35f; // of the old globe's strength
+
+        static Material FaintHexMat()
+        {
+            if (faintHexMat != null) return faintHexMat;
+            var full = HexMat();
+            if (full == ArtMaterials.UnlitFade) return null; // no hex picture: no globe
+            faintHexMat = ArtMaterials.Instance(full);
+            faintHexMat.name = "BAM hex shield faint";
+            Color c = full.GetColor(ArtMaterials.BaseColor);
+            faintHexMat.SetColor(ArtMaterials.BaseColor, new Color(c.r * GlobeFaint, c.g * GlobeFaint, c.b * GlobeFaint, c.a * GlobeFaint)); // additive: darker = fainter
+            return faintHexMat;
+        }
 
         static Material ShieldRingMat()
         {
@@ -224,6 +242,7 @@ namespace BAM.Art
                 Make(i);
             }
             if (r[i].enabled != on) r[i].enabled = on;
+            if (i == Shield && globeR != null && globeR.enabled != on) globeR.enabled = on;
         }
 
         void Make(int i)
@@ -232,7 +251,25 @@ namespace BAM.Art
             float rr = Mathf.Max(radius, 0.25f) * 1.3f;
             if (i == Slow && SlowMat() != null) { MakeOwnRing(i, slowMat, rr * SlowQuad); return; }
             if (i == Root && RootMat() != null) { MakeOwnRing(i, rootMat, rr * RootQuad); return; }
-            if (i == Shield && ShieldRingMat() != null) { MakeOwnRing(i, shieldRingMat, rr * 1.25f * ShieldRingQuad); shieldFlat = true; return; }
+            if (i == Shield && ShieldRingMat() != null)
+            {
+                MakeOwnRing(i, shieldRingMat, rr * 1.25f * ShieldRingQuad);
+                shieldFlat = true;
+                Material gm = FaintHexMat();
+                if (gm != null)
+                {
+                    var gg = new GameObject("ShieldGlobe");
+                    globeT = gg.transform;
+                    globeT.SetParent(parent, false);
+                    globeT.localPosition = new Vector3(0f, height * 0.5f, 0f);
+                    gg.AddComponent<MeshFilter>().sharedMesh = HexSphere();
+                    globeR = gg.AddComponent<MeshRenderer>();
+                    globeR.sharedMaterial = gm;
+                    globeR.shadowCastingMode = ShadowCastingMode.Off;
+                    globeR.receiveShadows = false;
+                }
+                return;
+            }
             Material own = i == StunRing ? RingMat(0, Pal.Stun) : i == PoisonRing ? RingMat(1, Pal.Poison) : i == BurnRing ? RingMat(2, Pal.Burn)
                 : i == Slow ? RingMat(3, Pal.Slow) : null;
             // the poison ring is drawn a size larger than the others (tester 2026-11-03: Tikta's poison went unseen)
@@ -369,6 +406,12 @@ namespace BAM.Art
                     float q = Mathf.Max(radius, 0.25f) * 1.3f * 1.25f * ShieldRingQuad * k;
                     t[Shield].localScale = new Vector3(q, 1f, q);
                     t[Shield].localRotation = Quaternion.Euler(0f, time * 20f, 0f);
+                    if (globeT != null)
+                    {
+                        float b = Mathf.Max(radius * 1.6f, height * 0.62f) * k;
+                        globeT.localScale = new Vector3(b, b, b);
+                        globeT.localRotation = Quaternion.Euler(0f, time * 20f, 0f);
+                    }
                 }
                 else
                 {
