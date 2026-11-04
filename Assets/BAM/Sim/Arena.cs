@@ -49,7 +49,7 @@ namespace BAM.Sim
 
         // The second map, Grove (Rickard 2026-11-04: "baserad på nr 3", our own layout; bam-work/nymap/layout.txt): one straight
         // lane, a long wall bar in front of each tower on the right with a jump pad behind it that throws you over the bar into a
-        // big grass field, and grass strips with loose stones to step behind on the left. J = jump pad (walkable ground).
+        // big grass field, and on the left a grass strip and a long wall with an opening in the middle (Rickard's drawing 2026-11-04). J = jump pad (walkable ground).
         static readonly string[] GroveTop =
         {
             "...............", // 0
@@ -62,14 +62,14 @@ namespace BAM.Sim
             "...........J...", // 7  the pad throws you to row 13, over the wall bar into the grass
             "...............", // 8
             "..........####.", // 9  the wall bar
-            "gg...........gg", // 10
-            "gg.#........ggg", // 11
-            "gg.........#ggg", // 12
-            "gg.........gggg", // 13
-            "g..........gggg", // 14
-            "...#.......#ggg", // 15
-            "...........gggg", // 16
-            "..##.......gggg", // 17 the middle row
+            "gg.........gggg", // 10
+            "gg.#.......gggg", // 11
+            "gg.#.......gggg", // 12
+            "gg.#.......gggg", // 13
+            "gg.#.......gggg", // 14
+            "gg.#.......gggg", // 15
+            "gg.........gggg", // 16
+            "gg.........gggg", // 17 the middle row
         };
         /// <summary>Grove: how many rows a jump pad throws you, toward the middle.</summary>
         public const float PadThrow = 6f;
