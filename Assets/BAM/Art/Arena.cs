@@ -28,6 +28,7 @@ namespace BAM.Art
         }
 
         static float waterY;
+        static bool skirted; // Rickard's cliff picture hangs on the edge: the old code-drawn cliff faces would sit in the same plane
 
         public static GameObject Build(ArenaInfo info)
         {
@@ -46,6 +47,7 @@ namespace BAM.Art
             // the screen under our base was flat water with repeated rings, 3 Nov videos)
             Texture2D cliffPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/tx_arena_cliff");
             if (cliffPic != null) waterY = -CliffSkirtH;
+            skirted = cliffPic != null;
 
             // water (or an abyss) all around and below, so the camera never sees the empty background at the map edge;
             // the island floats over its own cloud sea instead
@@ -106,10 +108,10 @@ namespace BAM.Art
                     }
 
                     // cliffs where the map ends or a void tile begins
-                    if (Void(info, tx, ty - 1)) Cliff(solid, kerb, new Vector3(x1, 0f, z1), new Vector3(x0, 0f, z1));
-                    if (Void(info, tx, ty + 1)) Cliff(solid, kerb, new Vector3(x0, 0f, z0), new Vector3(x1, 0f, z0));
-                    if (Void(info, tx - 1, ty)) Cliff(solid, kerb, new Vector3(x0, 0f, z1), new Vector3(x0, 0f, z0));
-                    if (Void(info, tx + 1, ty)) Cliff(solid, kerb, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1));
+                    if (Void(info, tx, ty - 1)) Cliff(solid, kerb, new Vector3(x1, 0f, z1), new Vector3(x0, 0f, z1), ty == 0);
+                    if (Void(info, tx, ty + 1)) Cliff(solid, kerb, new Vector3(x0, 0f, z0), new Vector3(x1, 0f, z0), ty == h - 1);
+                    if (Void(info, tx - 1, ty)) Cliff(solid, kerb, new Vector3(x0, 0f, z1), new Vector3(x0, 0f, z0), tx == 0);
+                    if (Void(info, tx + 1, ty)) Cliff(solid, kerb, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1), tx == w - 1);
                 }
 
             if (info.Rocks != null)
@@ -646,14 +648,19 @@ namespace BAM.Art
             return false;
         }
 
-        // Edge from a to b, ordered so the face looks outward (see the callers).
-        static void Cliff(MeshBuilder m, Layer kerb, Vector3 a, Vector3 b)
+        // Edge from a to b, ordered so the face looks outward (see the callers). outer: the map's own boundary (not a void tile inside).
+        static void Cliff(MeshBuilder m, Layer kerb, Vector3 a, Vector3 b, bool outer)
         {
             Vector3 down = Vector3.down;
             float bottom = -waterY + 0.1f;
-            MeshBuilder top = Pick(kerb, m, Pal.Cliff);
-            top.Face(a, b, b + down * 0.5f, a + down * 0.5f);
-            m.Color(Pal.CliffDark).Face(a + down * 0.5f, b + down * 0.5f, b + down * Mathf.Max(bottom, 0.6f), a + down * Mathf.Max(bottom, 0.6f));
+            // with the cliff picture (CliffSkirt) hung exactly on this plane since the boundary wall went (d5954de), these two faces
+            // z-fought with it and the edge flickered (Rickard's video 2026-11-04 16:37); the picture is the cliff now
+            if (!(skirted && outer))
+            {
+                MeshBuilder top = Pick(kerb, m, Pal.Cliff);
+                top.Face(a, b, b + down * 0.5f, a + down * 0.5f);
+                m.Color(Pal.CliffDark).Face(a + down * 0.5f, b + down * 0.5f, b + down * Mathf.Max(bottom, 0.6f), a + down * Mathf.Max(bottom, 0.6f));
+            }
             // a low curb of stone along the edge: you see where the arena stops
             Vector3 mid = (a + b) * 0.5f, along = (b - a).normalized, outward = new Vector3(along.z, 0f, -along.x);
             MeshBuilder cb = Pick(kerb, m, Pal.StoneTop);
