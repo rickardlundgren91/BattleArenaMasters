@@ -29,7 +29,16 @@ namespace BAM.Sim
             return "special_" + lower;
         }
 
-        public static HeroInfo Get(HeroId id) => (int)id < All.Length ? All[(int)id] : Coming[(int)id - All.Length];
+        /// <summary>A hero's menu info by id (All is in list order, not HeroId order, since Tyra went first 2026-11-04).</summary>
+        public static HeroInfo Get(HeroId id)
+        {
+            foreach (var h in All) if (h.Id == id) return h;
+            foreach (var h in Coming) if (h.Id == id) return h;
+            return All[0];
+        }
+
+        /// <summary>Where a hero stands in the list (All), or -1 for a hero not in the game yet.</summary>
+        public static int IndexOf(HeroId id) => System.Array.FindIndex(All, h => h.Id == id);
 
         /// <summary>Heroes in the rules that are not in the game yet, in HeroId order after All (a new hero waits here for its art).</summary>
         public static readonly HeroInfo[] Coming =
@@ -46,9 +55,16 @@ namespace BAM.Sim
                 Health = 3, Damage = 2, Speed = 1, Difficulty = 2 },
         };
 
+        // In list order (hero select, unlocks): Tyra first, the beginner hero you start with and play the tutorial with (Rickard
+        // 2026-11-04 after a tester's note that new players quit when they do not feel in control). HeroId keeps its numbers.
         // Texts follow the old game's shipped heroes plus Rickard's 2026-10-25 changes (Fenn's thrown wolf and decoy clone).
         public static readonly HeroInfo[] All =
         {
+            new HeroInfo { Id = HeroId.Tyra, Name = "Tyra", Title = "The Longshot", Role = "Marksman", Ranged = true,
+                SpecialName = "Pinpoint Bolt", SpecialDesc = "Tap: Arrow Volley, five arrows in a cone at a random enemy in her range; each enemy in it is hit once. Drag: a heavy bolt after a short draw that flies until it hits something: the first enemy in its path, a tower or a wall.",
+                OneTapDesc = "Tap: a quick bolt at a random enemy in her range, minions too, aimed where a running hero is heading. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall. Its path leaves wind and feathers that slow enemies 25 % for 1.5 s.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
+                PassiveName = "Featherstep", PassiveDesc = "When her attack hurts an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
+                Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
                 SpecialName = "Hammer Throw", SpecialDesc = "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
                 OneTapName = "Anvil Drop", OneTapDesc = "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
@@ -59,11 +75,6 @@ namespace BAM.Sim
                 OneTapDesc = "Tap: throws his wolf at a random enemy in his range. It hunts enemy heroes, or bites minions when no hero is near. Walls stop it.",
                 PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit; if an enemy hero's attack hits it, Fenn runs 20% faster for 1 s. Every 18 s.",
                 Health = 2, Damage = 2, Speed = 2, Difficulty = 2 },
-            new HeroInfo { Id = HeroId.Tyra, Name = "Tyra", Title = "The Longshot", Role = "Marksman", Ranged = true,
-                SpecialName = "Pinpoint Bolt", SpecialDesc = "Tap: Arrow Volley, five arrows in a cone at a random enemy in her range; each enemy in it is hit once. Drag: a heavy bolt after a short draw that flies until it hits something: the first enemy in its path, a tower or a wall.",
-                OneTapDesc = "Tap: after a short draw, a heavy bolt at a random enemy in her range, minions too. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
-                PassiveName = "Featherstep", PassiveDesc = "When her attack hurts an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
-                Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,
                 SpecialName = "Honey Rush", SpecialDesc = "Tap: shields the ally hero with the lowest health. Drag: a honey field that gives each ally hero in it a smaller shield. Shielded heroes run faster for a moment, and the shield blocks stuns and slows.",
                 OneTapDesc = "Tap: a honey field on a random ally hero near her, or on herself when no ally is close. Each ally hero in it gets a shield and runs faster for a moment; the shield blocks stuns and slows.",

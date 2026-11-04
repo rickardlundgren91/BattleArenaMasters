@@ -102,7 +102,7 @@ namespace BAM.Online.UI
             int n = HeroCatalog.Count; float gap = 4, s = (w - gap * (n - 1)) / n;
             for (int i = 0; i < n; i++)
             {
-                var id = (HeroId)i; var info = HeroCatalog.Get(id); float hx = x + i * (s + gap);
+                var info = HeroCatalog.All[i]; var id = info.Id; float hx = x + i * (s + gap); // list order, Tyra first
                 bool on = id == picked;
                 ctx.fillStyle = on ? "#2fae5b" : "#0d1020"; ctx.beginPath(); ctx.roundRect(hx, y, s, s, 8); ctx.fill();
                 var im = HeroIcon(info.Name);

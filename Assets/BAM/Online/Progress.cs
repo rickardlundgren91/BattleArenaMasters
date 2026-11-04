@@ -90,7 +90,7 @@ namespace BAM.Online
         }
 
         // ---------- hero unlocks (Speltest Progression.cs, Rickard 2026-10-27: "Hjältar låses upp med nivå") ----------
-        // The first FreeHeroes of the hero list (HeroCatalog: Bram, Fenn, Tyra) are open from the start, then one more every
+        // The first FreeHeroes of the hero list (HeroCatalog.All: Tyra, Bram, Fenn since 2026-11-04) are open from the start, then one more every
         // HeroLevelStep levels: Moa 2, Knut 4, Tikta 6, Blast 8, Bonk 10 (~35 matches), Hilde 12, Oaken 14. Only the menu is locked: HERO TEST (TRY)
         // and the bots still use every hero, so a player meets the heroes they unlock later. The level is the server's, so the
         // locks follow the account to a new phone.

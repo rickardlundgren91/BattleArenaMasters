@@ -61,6 +61,7 @@ namespace BAM.Sim
         BombFuse = 2,
         WarnLine = 3,   // a red warning line before a shot (a strip: centre, direction, length, half width)
         WarnCircle = 4, // a red warning circle
+        FeatherTrail = 5, // Tyra's bolt's wind and feathers (a strip that slows enemies, TyraS.Trail*)
     }
 
     [Flags]

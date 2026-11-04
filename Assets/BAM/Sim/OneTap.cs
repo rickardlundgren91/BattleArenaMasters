@@ -83,6 +83,11 @@ namespace BAM.Sim
                 t = PickRandom(l); // every hero, Knut and Tyra too: a random enemy in reach, never heroes first (focus, Rickard 2026-11-03)
             }
             float dx = t.X - h.X, dy = t.Y - h.Y, d = SimMath.Hypot(dx, dy);
+            if (h.Hero == HeroId.Tyra && TyraS.AimLead && t.Kind == UnitKind.Hero && !t.IsClone)
+            {   // where the running hero will be when the bolt gets there, once, at the tap (TyraS.AimLead; Bram's anvil does not lead)
+                float lead = (TeleOn ? TeleTime(h.Hero) : 0) + TyraS.Windup + d / TyraS.Speed;
+                dx += t.MoVx * lead; dy += t.MoVy * lead; d = SimMath.Hypot(dx, dy);
+            }
             float ang = d > 1e-4f ? SimMath.Atan2(dy, dx) : h.Facing;
             float reach = Math.Max(0.01f, h.HDef.DragReach);
             float k = SimMath.Clamp(d / reach, 0, 1); // placed forms (Bram, Fenn, Blast, Moa) land on the target's spot

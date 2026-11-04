@@ -59,9 +59,20 @@ namespace BAM.Sim
         /// an enemy feels more like a matter of luck than skill"; Rickard "Börja bygg"). The tap's 0.3 s warning already locks the aim and
         /// flashes, so the bolt now leaves 0.55 s after the tap instead of 0.65 s; it still never homes. 0.15 s made her too strong
         /// (1600 bot matches: Hard 46.9 -> 56.8 %, Normal 52.0 -> 60.1 %); 0.25 s gives Hard 52.9 %, Normal 54.9 %.</summary>
-        public const float Windup = 0.25f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.35f;
+        /// Beginner hero 2026-11-04 (tester: "pretty difficult to land", Rickard agreed; Knut's hook is the yardstick, 0.3 s warning and a
+        /// 0.5 hook): draw 0.25 -> 0.1 s and hit box 0.35 -> 0.6. Her bolt is weaker per cast only because her attack is (17 instead of 33).
+        public const float Windup = 0.1f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.6f;
         /// <summary>One-tap special (Rules.OneTapSpecial, 2026-11-01): how far her tap looks for the random enemy to shoot at.</summary>
         public const float TapTarget = 7;
+        /// <summary>The beginner hero (Rickard 2026-11-04: "snabba skott, special ofta", and the bolt was hard to hit): her tap aims
+        /// where a running hero will be when the bolt gets there (warning + draw + flight), worked out once at the tap; nothing homes
+        /// after it, so a hero who turns at the warning still gets out (OneTap.TryTapSpecial). Players and bots alike.</summary>
+        public const bool AimLead = true;
+        /// <summary>Feather trail (Rickard's card 2026-11-04, "Vindspår med fjädrar, saktar ner"): where the bolt flew it leaves wind
+        /// and feathers for TrailTime s, TrailHalfWidth tiles to each side; an enemy hero or minion in it runs TrailSlow slower while
+        /// inside and TrailLinger s after (one slow, refreshed, never stacked). Not damage, so it starts no fight.</summary>
+        public const float TrailTime = 1.5f, TrailHalfWidth = 0.45f, TrailSlow = 0.25f, TrailLinger = 0.25f;
+        public const bool Trail = true;
         /// <summary>Arrow Volley (the tap since 2026-10-28, XYZ 2026-10-25): after a short draw, five arrows fanned +-HalfAngle round a
         /// random enemy hero or minion within her attack range; they fly as far as her range, through enemies, and the volley hurts
         /// each enemy once (never towers).</summary>
@@ -591,7 +602,7 @@ namespace BAM.Sim
             // the wall first, then the enemies, as the volley's arrows (precision TYRA-11); the last step stops on the reach
             float ox = p.X, oy = p.Y, step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D)), ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang);
             p.X += ca * step; p.Y += sa * step; p.D += step;
-            if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); return; }
+            if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); FeatherTrail(p, p.D - step); return; }
             // the guided match's special lesson ("TAP it to fire a bolt!") has only minions to shoot at and is passed by a bolt that
             // hits: there the bolt stops at minions, as before protocol 37 (no player passed the lesson on 0.3.3, 2026-11-02)
             bool pastMinions = TyraS.BoltPassesMinions && !(Tut != null && !Tut.Island && Tut.Step == Tutorial.StepSpecial);
@@ -602,10 +613,36 @@ namespace BAM.Sim
                 if (!tower && (!Hurtable(p.Src, u) || u.Team == p.Team || (pastMinions && u.Kind != UnitKind.Hero)) || SimMath.Hypot(u.X - p.X, u.Y - p.Y) > p.Radius + u.R) continue; // past minions (BoltPassesMinions)
                 p.Done = true;
                 if (tower) Blocked(p, p.X, p.Y); else SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
+                FeatherTrail(p, p.D);
                 return;
             }
-            if (p.D >= p.Travel - 1e-5f) p.Done = true;
+            if (p.D >= p.Travel - 1e-5f) { p.Done = true; FeatherTrail(p, p.D); }
         }
+
+        /// <summary>The feather trail behind Tyra's bolt (TyraS.Trail): a strip from where the bolt left to where it stopped, len long.</summary>
+        void FeatherTrail(Proj bolt, float len)
+        {
+            if (!TyraS.Trail || len < 0.2f) return;
+            float ca = SimMath.Cos(bolt.Ang), sa = SimMath.Sin(bolt.Ang);
+            var z = NewProj(ProjMode.FeatherTrail, bolt.Src, bolt.X - ca * bolt.D, bolt.Y - sa * bolt.D);
+            z.Kind = ProjKind.TyraBolt; z.Team = bolt.Team; z.Ang = bolt.Ang; z.D = len; z.Radius = TyraS.TrailHalfWidth; z.Dur = TyraS.TrailTime;
+            FeatherTrailUpdate(z); // whoever stands in it is slowed in this same tick
+        }
+
+        void FeatherTrailUpdate(Proj p)
+        {
+            var h = p.Src;
+            if (h == null) { p.Done = true; return; }
+            float ex = p.X + SimMath.Cos(p.Ang) * p.D, ey = p.Y + SimMath.Sin(p.Ang) * p.D;
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (!u.Alive || u.Team == p.Team || !(u.Kind == UnitKind.Hero || u.IsMinionLike) || u.Has(St.Untargetable)) continue;
+                if (SimMath.PtSeg(u.X, u.Y, p.X, p.Y, ex, ey) <= p.Radius + u.R) AddSlowOnce(u, St.SlowPct, TyraS.TrailLinger, -TyraS.TrailSlow, h);
+            }
+            if (p.T >= p.Dur - 1e-4f) p.Done = true;
+        }
+
 
         /// <summary>Bonk's every 4th swing is a power hit (big = the hit is drawn bigger). Tikta's Final Sting is gone (Deathmark,
         /// Hero2.cs), and Tyra's Steady Hand too (Featherstep, Hero5.cs).</summary>

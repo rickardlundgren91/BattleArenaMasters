@@ -252,7 +252,7 @@ namespace BAM.UI
         static void RefreshHeroSelect()
         {
             ClampHero();
-            int chosen = BamSettings.LastHero;
+            int chosen = HeroCatalog.IndexOf((HeroId)BamSettings.LastHero); // LastHero is a HeroId, the cards go in list order
             foreach (var c in heroCards)
             {
                 int lv = LockLevel(c.Index);
@@ -451,7 +451,7 @@ namespace BAM.UI
             {
                 if (LockLevel(heroPeek) > 0) { BamAudio.Play(SfxId.UiBack); return; } // locked: the button says the level
                 BamAudio.Play(SfxId.UiConfirm);
-                BamSettings.LastHero = heroPeek;
+                BamSettings.LastHero = (int)HeroCatalog.All[heroPeek].Id;
                 ShowTab(0);
             });
             heroSelectRt.gameObject.AddComponent<ButtonFx>().PressScale = false;
@@ -545,7 +545,7 @@ namespace BAM.UI
         {
             var info = HeroCatalog.All[heroPeek];
             var def = Defs.Hero(info.Id);
-            bool chosen = BamSettings.LastHero == heroPeek;
+            bool chosen = BamSettings.LastHero == (int)info.Id;
 
             if (heroMax == null)
             {   // the bars against the best of the heroes in the game (HeroCatalog.All), not Hilde and Oaken who wait

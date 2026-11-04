@@ -396,6 +396,7 @@ namespace BAM.Sim
                     case ProjMode.Quake: p.Done = true; OakenQuake(p); break;
                     case ProjMode.Volley: VolleyUpdate(p, dt); break;
                     case ProjMode.Echo: EchoUpdate(p, dt); break;
+                    case ProjMode.FeatherTrail: FeatherTrailUpdate(p); break;
                 }
             }
             emitShot = 0;

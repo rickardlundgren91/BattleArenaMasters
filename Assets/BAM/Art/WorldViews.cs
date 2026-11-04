@@ -524,6 +524,12 @@ namespace BAM.Art
         static Mesh combMesh;
         static Texture2D rimTex;
         static bool rimLoaded;
+        // Rickard's warning lane (O-051, 2026-11-04): edges and chevrons pointing the way the shot flies, repeated along a warning
+        // line (Tyra's bolt, Knut's hook, Tikta's needles); white + alpha, tinted like the plain strip it replaces
+        static Texture2D laneTex;
+        static bool laneLoaded;
+        Transform lanePic;
+        Material laneMat;
         Vector3 center, dir;
         float length, radius, duration, age, emitT;
         Color baseColor;
@@ -559,11 +565,25 @@ namespace BAM.Art
             // warnings: the enemy's in strong red (that is what players dodge), our own team's in a quiet white
             baseColor = k == ZoneKind.HoneyField ? new Color(1f, 0.78f, 0.2f, 1f)
                 : k == ZoneKind.FireLane ? new Color(1f, 0.45f, 0.08f, 0.35f) // a faint heat floor: the cracks and flames carry the look
+                : k == ZoneKind.FeatherTrail ? new Color(0.78f, 1f, 0.9f, 0.3f) // Tyra's wind: a pale mint floor, the feathers carry the look
                 : warn ? (t == Teams.Player ? new Color(1f, 1f, 1f, 0.6f) : new Color(1f, 0.12f, 0.1f, 1f))
                 : (t == Teams.Player ? new Color(1f, 0.6f, 0.15f, 1f) : new Color(1f, 0.15f, 0.12f, 1f));
             if (warn) mat.renderQueue = 2995; // over honey and fire, under unit rings
+            if (k == ZoneKind.WarnLine)
+            {
+                if (!laneLoaded) { laneLoaded = true; laneTex = RickardFx.Load("tx_warn_lane"); if (laneTex != null) laneTex.wrapMode = TextureWrapMode.Repeat; }
+                if (laneTex != null)
+                {
+                    laneMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                    laneMat.renderQueue = 2995;
+                    laneMat.SetTexture(ArtMaterials.BaseMap, laneTex);
+                    laneMat.mainTexture = laneTex;
+                    lanePic = Child("LanePic", LaneMesh(), laneMat, 0.003f);
+                    shapeR.enabled = false; // the picture has its own edges
+                }
+            }
             if (k == ZoneKind.HoneyField) MakeComb();
-            if (k == ZoneKind.FireLane) { capA = Child("CapStart", Shapes.ZoneCap(), mat, 0f); capB = Child("CapEnd", Shapes.ZoneCap(), mat, 0f); }
+            if (k == ZoneKind.FireLane || k == ZoneKind.FeatherTrail) { capA = Child("CapStart", Shapes.ZoneCap(), mat, 0f); capB = Child("CapEnd", Shapes.ZoneCap(), mat, 0f); }
             if (k == ZoneKind.BombFuse || warn)
             {
                 // the inner fill grows to the rim (or the end of the line) as the time runs out
@@ -649,6 +669,14 @@ namespace BAM.Art
             {
                 shapeF.sharedMesh = Shapes.ZoneStrip();
                 shape.localScale = new Vector3(radius, 1f, length);
+                if (lanePic != null)
+                {
+                    // the picture is 4:1: as many whole repeats as fit the line at its width, so the chevrons keep their shape
+                    lanePic.localScale = new Vector3(radius, 1f, length);
+                    float reps = Mathf.Max(1f, Mathf.Round(length / (radius * 2f * 4f)));
+                    laneMat.SetTextureScale(ArtMaterials.BaseMap, new Vector2(reps, 1f));
+                    laneMat.mainTextureScale = new Vector2(reps, 1f);
+                }
                 if (capA != null)
                 {
                     capA.localRotation = Quaternion.Euler(0f, 180f, 0f); capA.localScale = new Vector3(radius, 1f, radius);
@@ -675,6 +703,17 @@ namespace BAM.Art
                 int sc = Mathf.Clamp(Mathf.RoundToInt(length / 0.9f), 1, 8);
                 for (int i = 0; i < sc; i++)
                     Fx.Pic("tx_fx_blast_scorch", center + dir * (length * (i + 0.5f) / sc), new Color(1f, 1f, 1f, 0.75f), radius * 2.5f, duration + 0.6f); // his mark reaches 0.8 of the picture: edge on the hit half width (BLAST-05)
+            }
+            else if (kind == ZoneKind.FeatherTrail && length > 0f)
+            {
+                // Tyra's feather trail (Rickard's card 2026-11-04): Rickard's feather picture strewn along the bolt's path, lying on
+                // the ground and fading with the trail (none until tx_fx_tyra_feather is in, O-058); the wind streaks below run always
+                int n = Mathf.Clamp(Mathf.RoundToInt(length / 0.7f), 1, 14);
+                for (int i = 0; i < n; i++)
+                {
+                    Vector3 side = new Vector3(dir.z, 0f, -dir.x) * (radius * (Random.value * 1.4f - 0.7f));
+                    Fx.Pic("tx_fx_tyra_feather", center + dir * (length * (i + Random.value) / n) + side, new Color(0.85f, 1f, 0.92f, 0.9f), radius * 1.4f, duration);
+                }
             }
             else if (kind == ZoneKind.HoneyField)
             {
@@ -726,6 +765,7 @@ namespace BAM.Art
             }
             Color c = baseColor; c.a = baseColor.a * a;
             mat.SetColor(ArtMaterials.BaseColor, c);
+            if (laneMat != null) laneMat.SetColor(ArtMaterials.BaseColor, c);
             if (rimMat != null)
             {
                 bool on = length <= 0f && !cut;
@@ -770,6 +810,12 @@ namespace BAM.Art
                     Fx.Flames(center + dir * (Random.value * length) + side + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.45f, 0.15f, 0.45f, 1.2f);
                 }
             }
+            else if (kind == ZoneKind.FeatherTrail)
+            {
+                // the wind: pale streaks blowing along the bolt's way, so a player sees where the slow lies
+                Fx.SparksAlong(p + Vector3.up * 0.15f, dir, 1, new Color(0.85f, 1f, 0.95f, 0.8f), 0.05f, 2.2f, 0.35f, 10f);
+                if (Random.value < 0.3f) Fx.Glow(p, 1, new Color(0.7f, 1f, 0.85f, 0.6f), 0.2f, 0.1f, 0.4f, 0.6f);
+            }
             else if (kind == ZoneKind.HoneyField)
             {
                 Fx.Glow(p, 1, Pal.Get(Pal.Honey), 0.18f, 0.1f, 0.9f, 0.5f);
@@ -777,6 +823,20 @@ namespace BAM.Art
                 if (Random.value < 0.15f) Fx.Drops(p + Vector3.up * 0.6f, 1, Pal.Get(Pal.Honey), 0.12f, 0.1f, 0.6f, -0.4f); // slow honey drips
             }
             else Fx.Sparks(center + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.08f, 1.5f, 0.2f, 1f);
+        }
+
+        // a strip x -1..1, z 0..1 whose u runs along it (the lane picture's chevrons point along +u), v across
+        static Mesh laneMesh;
+        static Mesh LaneMesh()
+        {
+            if (laneMesh != null) return laneMesh;
+            laneMesh = new Mesh { name = "Warn lane" };
+            laneMesh.vertices = new[] { new Vector3(-1f, 0f, 0f), new Vector3(-1f, 0f, 1f), new Vector3(1f, 0f, 1f), new Vector3(1f, 0f, 0f) };
+            laneMesh.uv = new[] { new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f), new Vector2(0f, 0f) };
+            laneMesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            laneMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            laneMesh.RecalculateBounds();
+            return laneMesh;
         }
 
         void MakeComb()

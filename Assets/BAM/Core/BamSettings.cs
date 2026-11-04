@@ -91,7 +91,7 @@ namespace BAM.Core
         /// <summary>The player has picked a hero or a bot difficulty before (the tutorial then leaves the picks alone).</summary>
         public static bool PickedBefore => PlayerPrefs.HasKey(Key + "hero") || PlayerPrefs.HasKey(Key + "diff");
 
-        /// <summary>The hero picked last time (index into HeroCatalog.All), so hero select opens on it.</summary>
+        /// <summary>The hero picked last time (a HeroId number), so hero select opens on it. Tyra until the player picks (the beginner hero, 2026-11-04).</summary>
         public static int LastHero
         {
             get { Load(); return lastHero; }
@@ -154,7 +154,7 @@ namespace BAM.Core
             consent = (Consent)PlayerPrefs.GetInt(Key + "consent", 0);
             tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;
             tutorialCard = PlayerPrefs.GetInt(Key + "tutcard", 0) == 1;
-            lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", 0), 0, BAM.Sim.HeroCatalog.Count - 1);
+            lastHero = Mathf.Clamp(PlayerPrefs.GetInt(Key + "hero", (int)BAM.Sim.HeroId.Tyra), 0, BAM.Sim.HeroCatalog.Count - 1);
             lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, (int)BAM.Sim.Difficulty.Ultra);
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
         }

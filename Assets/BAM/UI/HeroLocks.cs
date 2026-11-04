@@ -17,14 +17,15 @@ namespace BAM.UI
         static readonly Color LockButton = new Color(30 / 255f, 34 / 255f, 70 / 255f, 0.95f), LockKeyhole = new Color(8 / 255f, 10 / 255f, 30 / 255f, 0.8f);
 
         /// <summary>The account level that opens hero number index of HeroCatalog.All, 0 when it is open.</summary>
-        static int LockLevel(int index) => OnlineHooks.HeroLockLevel != null ? OnlineHooks.HeroLockLevel((HeroId)index) : 0;
+        static int LockLevel(int index) => OnlineHooks.HeroLockLevel != null ? OnlineHooks.HeroLockLevel(HeroCatalog.All[index].Id) : 0;
 
         /// <summary>A locked chosen hero becomes the first open one (Progression.ClampHero).</summary>
         static void ClampHero()
         {
-            if (LockLevel(BamSettings.LastHero) == 0) return;
+            int chosen = HeroCatalog.IndexOf((HeroId)BamSettings.LastHero);
+            if (chosen >= 0 && LockLevel(chosen) == 0) return;
             for (int i = 0; i < HeroCatalog.Count; i++)
-                if (LockLevel(i) == 0) { BamSettings.LastHero = i; return; }
+                if (LockLevel(i) == 0) { BamSettings.LastHero = (int)HeroCatalog.All[i].Id; return; }
         }
 
         /// <summary>The veil, padlock and LEVEL n over a hero's card, built hidden (RefreshHeroSelect shows it).</summary>

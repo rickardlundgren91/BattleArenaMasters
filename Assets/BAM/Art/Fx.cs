@@ -323,6 +323,8 @@ namespace BAM.Art
             "tx_fx_tyra_hit", "tx_fx_tower_hit", "tx_fx_heal", "tx_fx_kill", "tx_fx_fenn_summon", "tx_fx_fenn_land",
             // his hits of 2026-11-02 (O-033): Knut, Bram, Tikta
             "tx_fx_knut_hit", "tx_fx_bram_hit", "tx_fx_tikta_hit",
+            // Tyra's feather trail (O-058, 2026-11-04): a white feather on black, lying on the ground along her bolt's path
+            "tx_fx_tyra_feather",
         };
 
         // the heroes whose autoattack hit has Rickard's own picture (Tyra 2026-10-31; Knut, Bram, Tikta 2026-11-02); the rest his hit stars
@@ -363,6 +365,7 @@ namespace BAM.Art
                 else if (n == "tx_fx_fenn_land") PicSystem(n, true, 1, 0.5f, 1.15f); // the wolf's dust spreads on the ground
                 else if (n == "tx_fx_kill") PicSystem(n, false, 1, 0.5f, 1.25f); // the kill burst swells
                 else if (n == "tx_fx_heal") PicSystem(n, false, 1, 0.9f, 1f); // the plus signs keep their size (they rise instead)
+                else if (n == "tx_fx_tyra_feather") PicSystem(n, true, 0, 1f, 1f); // white on black, additive, on the ground, keeps its size
                 else PicSystem(n, false, 1);
             }
             var t = RickardFx.Load("tx_fx_ember");
