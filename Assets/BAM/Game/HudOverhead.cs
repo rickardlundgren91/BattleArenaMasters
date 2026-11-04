@@ -17,7 +17,7 @@ namespace BAM.Game
     sealed partial class Hud
     {
         static readonly Color NameAlly = Hex(0x9fd4ff), NameFoe = Hex(0xff9aa4);
-        static readonly Color EyeStroke = Hex(0xdfe9e6), EyeEdge = Hex(0x08101a);
+        static readonly Color EyeStroke = Hex(0xdfe9e6), EyeEdge = Hex(0x08101a), SeenEye = Hex(0xff5a5a);
 
         sealed class Overhead
         {
@@ -135,9 +135,13 @@ namespace BAM.Game
                     o.NameEdge.effectDistance = new Vector2(ew, -ew);
                 }
 
-                // the crossed-out eye while the enemy cannot see this hero of yours
+                // the crossed-out eye while the enemy cannot see this hero of yours; an open red eye while it stands in grass but
+                // the enemy sees it (a hit in the last 2 s, its own auto attacks on minions too, an enemy within 2.5 tiles, the
+                // enemy tower's reach), so a player knows the grass is not hiding them (tester feedback 2026-11-04)
                 bool hiddenEye = u.Team == m.Player.Team && m.HiddenFromFoes(u);
-                o.EyeA = hiddenEye ? Mathf.Min(1f, o.EyeA + dt * 7f) : Mathf.Max(0f, o.EyeA - dt * 7f);
+                bool seenEye = !hiddenEye && u.Team == m.Player.Team && u.Alive && m.Map.InGrass(u.X, u.Y);
+                if (hiddenEye || seenEye) { var want = seenEye ? SeenEyeSprite : EyeSprite; if (o.Eye.sprite != want) o.Eye.sprite = want; }
+                o.EyeA = hiddenEye || seenEye ? Mathf.Min(1f, o.EyeA + dt * 7f) : Mathf.Max(0f, o.EyeA - dt * 7f);
                 bool eyeOn = o.EyeA > 0.01f;
                 if (o.Eye.enabled != eyeOn) o.Eye.enabled = eyeOn;
                 if (eyeOn)
@@ -146,7 +150,7 @@ namespace BAM.Game
                     o.Eye.rectTransform.sizeDelta = new Vector2(r * 3.2f * pop, r * 3.2f * pop);
                     // its bottom on the name's top, not over the name (it was centred half a tile up, its lower half on the letters)
                     o.Eye.rectTransform.anchoredPosition = new Vector2(0f, ts * (NameTop + 0.02f) + r * 1.6f * pop);
-                    o.Eye.color = new Color(1f, 1f, 1f, o.EyeA);
+                    o.Eye.color = o.Eye.sprite == SeenEyeSprite ? new Color(SeenEye.r, SeenEye.g, SeenEye.b, o.EyeA) : new Color(1f, 1f, 1f, o.EyeA);
                 }
 
                 // another hero whose special is ready (drawCharged): a pulsing diamond by the right end of its bar, red on an
@@ -247,7 +251,7 @@ namespace BAM.Game
             if (!u.IsHero) return ts * 0.12f; // a minion's bar has nothing over it
             float top = NameTop;
             if (u.Has(St.Poison)) top = Mathf.Max(top, BubblesTop);
-            if (u.Team == m.Player.Team && m.HiddenFromFoes(u)) top = Mathf.Max(top, EyeTop);
+            if (u.Team == m.Player.Team && (m.HiddenFromFoes(u) || u.Alive && m.Map.InGrass(u.X, u.Y))) top = Mathf.Max(top, EyeTop);
             return ts * (top + 0.04f);
         }
 
@@ -261,12 +265,13 @@ namespace BAM.Game
         }
 
         // The old drawHiddenEye: an almond outline, the pupil ring and a slash, thin pale strokes over a faint dark edge.
-        static Sprite eyeSprite;
-        static Sprite EyeSprite
+        static Sprite eyeSprite, seenEyeSprite;
+        static Sprite EyeSprite => eyeSprite != null ? eyeSprite : (eyeSprite = MakeEye(true));
+        /// <summary>The same eye without the slash (seen in grass), tinted SeenEye by its Image.</summary>
+        static Sprite SeenEyeSprite => seenEyeSprite != null ? seenEyeSprite : (seenEyeSprite = MakeEye(false));
+        static Sprite MakeEye(bool slash)
         {
-            get
             {
-                if (eyeSprite != null) return eyeSprite;
                 const int n = 96;
                 float c = n / 2f, r = n / 3.2f, w = r * 1.25f, h = r * 0.62f;
                 var lines = new List<Vector2[]>();
@@ -275,7 +280,8 @@ namespace BAM.Game
                 var ring = new Vector2[33];
                 for (int i = 0; i < ring.Length; i++) { float a = i * Mathf.PI * 2f / 32f; ring[i] = new Vector2(c + Mathf.Cos(a) * h * 0.55f, c + Mathf.Sin(a) * h * 0.55f); }
                 lines.Add(ring);
-                lines.Add(new[] { new Vector2(c - w * 0.8f, c - h * 1.3f), new Vector2(c + w * 0.8f, c + h * 1.3f) });
+                if (slash) lines.Add(new[] { new Vector2(c - w * 0.8f, c - h * 1.3f), new Vector2(c + w * 0.8f, c + h * 1.3f) });
+                else { var dot = new Vector2[17]; for (int i = 0; i < dot.Length; i++) { float a = i * Mathf.PI * 2f / 16f; dot[i] = new Vector2(c + Mathf.Cos(a) * h * 0.2f, c + Mathf.Sin(a) * h * 0.2f); } lines.Add(dot); }
                 float dark = Mathf.Max(2.2f, r * 0.2f) * 0.5f, pale = Mathf.Max(1.1f, r * 0.09f) * 0.5f;
                 var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "BAM.Hud.Eye", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
                 var px = new Color32[n * n];
@@ -294,8 +300,7 @@ namespace BAM.Game
                     }
                 tex.SetPixels32(px);
                 tex.Apply(false, true);
-                eyeSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-                return eyeSprite;
+                return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
             }
         }
 
