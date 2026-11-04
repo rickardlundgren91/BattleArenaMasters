@@ -85,9 +85,10 @@ profile. Reports and blocks are never shown to other players.
 **Legal basis (EU/EEA and UK):** to give you the online play you asked for (GDPR Article 6(1)(b)), and our legitimate
 interest in fair play and in handling reports of abuse (Article 6(1)(f)).
 
-**How long:** as long as your account exists. When you delete your account, your player name, totals, match history,
-friends and your place on the Top 100 are deleted. Reports you sent about other players may be kept for up to 12 months
-so that repeated abuse can be handled.
+**How long:** as long as your account exists. The note of which players were in a match against other players is deleted
+about a day after the match. When you delete your account, your player name, totals, match history, friends and your
+place on the Top 100 are deleted. Reports you sent about other players may be kept for up to 12 months so that repeated
+abuse can be handled.
 
 **Delete your account:** Settings > Account > Delete account (tap twice). This deletes your data on our game server and
 your Unity player account. It does not delete your Google account. If you cannot open the game, email
