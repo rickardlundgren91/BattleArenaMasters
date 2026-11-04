@@ -1099,6 +1099,26 @@ namespace BAM.Game
 
         const float PadArcH = 1.6f; // how high a jump pad throws a hero, world units
 
+        /// <summary>How high the Tripo tower's flat stone foot lifts a body standing at world point p (Rickard 2026-11-04 "fötterna går
+        /// igenom plattformen": since the tower stops bodies at its wall, Rules.TowerBody 1.1, heroes stand on the foot, which is 0.20
+        /// high at the wall, 0.14 at its rim 1.5 tiles out; measured from bam_tower_grass at its 3.0-wide match size). Only the view
+        /// moves: the rules know no heights. Past the rim the lift eases to 0 over 0.15 tiles (a foot half on the stone).</summary>
+        float TowerFootLift(Vector3 p)
+        {
+            float best = 0f;
+            for (int t = 0; t < m.Towers.Length; t++)
+            {
+                var tw = m.Towers[t];
+                if (tw == null) continue;
+                Vector3 c = Coords.Of(tw);
+                float dx = p.x - c.x, dz = p.z - c.z, d = Mathf.Sqrt(dx * dx + dz * dz);
+                if (d >= 1.65f) continue;
+                float lift = d <= 1.1f ? 0.2f : d <= 1.5f ? Mathf.Lerp(0.2f, 0.14f, (d - 1.1f) / 0.4f) : Mathf.Lerp(0.14f, 0f, (d - 1.5f) / 0.15f);
+                if (lift > best) best = lift;
+            }
+            return best;
+        }
+
         void DrawUnit(UnitRec r, float alpha, float dt)
         {
             var u = r.U;
@@ -1108,6 +1128,7 @@ namespace BAM.Game
             bool jump = (u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY) > 4f;
             Vector3 pos = jump ? Coords.Of(u) : Coords.Lerp(u.PX, u.PY, u.X, u.Y, alpha);
             pos.y += u.JumpLift * PadArcH; // a jump pad's throw flies in an arc
+            if (u.Kind != UnitKind.Tower) pos.y += TowerFootLift(pos); // stands on the tower's stone foot, not in it
             if (r.FixX != 0f || r.FixY != 0f)
             {
                 if (jump) { r.FixX = r.FixY = 0f; }
