@@ -1176,19 +1176,7 @@ namespace BAM.Game
             {
                 var p = list[i];
                 if (p.Done || p.Mode != ProjMode.Smash || p.Src != h || p.T >= 0f) continue;
-                x = p.X + h.X - p.OX; y = p.Y + h.Y - p.OY;
-                var t = p.Tgt;
-                if (t != null && t.Alive && !t.Has(St.Untargetable))
-                {
-                    float d = SimMath.Dist(h, t);
-                    if (d <= h.Range + t.R && d > 1e-4f && m.Map.LosClear(h.X, h.Y, t.X, t.Y))
-                    {
-                        float ahead = Mathf.Min(BonkS.SmashAhead, d);
-                        float nx = h.X + (t.X - h.X) / d * ahead, ny = h.Y + (t.Y - h.Y) / d * ahead, mv = SimMath.Hypot(nx - x, ny - y);
-                        if (mv > BonkS.SmashFollow) { nx = x + (nx - x) / mv * BonkS.SmashFollow; ny = y + (ny - y) / mv * BonkS.SmashFollow; }
-                        x = nx; y = ny;
-                    }
-                }
+                m.ClubSpot(p, out x, out y); // the rules' own landing spot (Hero3.cs)
                 return true;
             }
             return false;

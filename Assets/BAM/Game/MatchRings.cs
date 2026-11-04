@@ -163,8 +163,11 @@ namespace BAM.Game
             // With nobody in reach it keeps pulsing in the attack's rhythm, one grow-out per cooldown, though no blow comes (Rickard
             // 2026-10-30: "Utan target ska den pulsera men inte slå"); the old one stood still, full. Drawn only: the rules' timer is
             // untouched, and a target stepping in still starts the swing at once.
-            float since = m.Time - blowAt;
-            return since < cd ? Mathf.Clamp01(since / cd) : (since % cd) / cd;
+            // Since 2026-11-04 it follows the rules' own timer (AtkTimer counts from the last wind-up's start): 0 on the blow, full one
+            // cooldown later, as the rules' wait for a target ends (Combat: cd + wind-up + AutoHold), then over again. The old
+            // pulse from the last blow drifted off the rules, so an enemy stepping in as the ring filled got no swing (tester
+            // 2026-11-04 via Discord on Bonk: "it seems to target about 0.5 sec before the circle is filled up").
+            return Mathf.Clamp01((p.AtkTimer - p.HDef.SpawnDelay) / cd);
         }
 
         // the player's auto attack still in the hand: how long until it is released (Bonk's club lands then; a shot leaves)
@@ -295,7 +298,8 @@ namespace BAM.Game
                     bool foe = q.Team != p.Team;
                     float sk = Mathf.Clamp01(1f + q.T / Mathf.Max(0.05f, q.Dur)); // 0 at the swing's start, 1 as it lands
                     Color sc = foe ? HitRed : Color.white;
-                    Show(smash[n++], Coords.World(q.X, q.Y), q.Radius, new Color(sc.r, sc.g, sc.b, (foe ? 0.35f : 0.22f) + 0.35f * sk), 2f * px);
+                    m.ClubSpot(q, out float qx, out float qy); // where it lands, not where the swing began (tester 2026-11-04)
+                    Show(smash[n++], Coords.World(qx, qy), q.Radius, new Color(sc.r, sc.g, sc.b, (foe ? 0.35f : 0.22f) + 0.35f * sk), 2f * px);
                 }
             }
 

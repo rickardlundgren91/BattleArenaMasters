@@ -312,8 +312,11 @@ namespace BAM.Sim
                 if (u.Kind != UnitKind.Tower) { u.Target = tgt; u.TargetT = Time; }
             }
             // a hero's ready swing waits Rules.AutoHold s for a target before it runs out (ABC feel, tester 2026-11-02: an enemy
-            // just slipping out or stepping in at the ring's edge still gets the shot); others hold it ready
-            else if (u.Kind == UnitKind.Hero) { if (u.AtkTimer >= cd + Rules.AutoHold) u.AtkTimer = 0; }
+            // just slipping out or stepping in at the ring's edge still gets the shot); others hold it ready. The hold counts from
+            // when the charge ring is full (MatchRings: full on the blow, a wind-up after the rules are ready), not from when the
+            // rules are ready: Bonk's 0.5 s wind-up made it run out 0.2 s BEFORE his ring was full (tester 2026-11-04 via Discord:
+            // "it seems to target about 0.5 sec before the circle is filled up")
+            else if (u.Kind == UnitKind.Hero) { if (u.AtkTimer >= cd + u.HDef.SpawnDelay + Rules.AutoHold) u.AtkTimer = 0; }
             else u.AtkTimer = cd;
         }
 

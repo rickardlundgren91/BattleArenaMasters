@@ -35,6 +35,9 @@ namespace BAM.Sim
         /// <summary>The slam auto attack: the wind-up (the HeroDef's SpawnDelay), the circle's centre this far in front of him
         /// toward the target, and its radius. Towers are hit only as the picked target.</summary>
         public const float SmashAhead = 1.2f, SmashRadius = 1.3f, SmashFollow = 0.5f; // the club follows its target at most this far (Rickard 2026-10-28)
+        /// <summary>The club lands on its target anywhere in his reach, or on another enemy in reach if it left (tester 2026-11-04 via
+        /// Discord: "if the target leaves in that time the attack is interrupted"); false = it follows at most SmashFollow tiles.</summary>
+        public static readonly bool ClubReach = true;
         public const int PowerEvery = 4;
         public const float PowerBonus = 0.6f;
     }
@@ -104,19 +107,19 @@ namespace BAM.Sim
             // a card 2026-10-28): a target that barely moved is hit, one that ran away can still dodge the giant's slow swing. It
             // follows the point SmashAhead in front of him on the line to the target, so a sidestep is followed and a straight
             // retreat is not (BONK-10: measured, kept as Rickard chose)
+            // ClubReach (tester 2026-11-04 via Discord, Rickard's card): the club comes down on its target anywhere in his reach, and
+            // on another enemy hero or minion in reach (a random one, as every auto attack picks) when the target left it; it is
+            // dodged only by leaving his reach
             var t = p.Tgt;
-            if (t != null && t.Alive && !t.Has(St.Untargetable))
+            if (BonkS.ClubReach && !ClubTargetOk(h, t) && t != null && t.Kind != UnitKind.Tower)
             {
-                float d = SimMath.Dist(h, t);
-                if (d <= h.Range + t.R && d > 1e-4f && Map.LosClear(h.X, h.Y, t.X, t.Y))
-                {
-                    float ahead = Math.Min(BonkS.SmashAhead, d);
-                    float nx = h.X + (t.X - h.X) / d * ahead, ny = h.Y + (t.Y - h.Y) / d * ahead, mv = SimMath.Hypot(nx - p.X, ny - p.Y);
-                    if (mv > BonkS.SmashFollow) { nx = p.X + (nx - p.X) / mv * BonkS.SmashFollow; ny = p.Y + (ny - p.Y) / mv * BonkS.SmashFollow; }
-                    p.X = nx; p.Y = ny;
-                    p.Ang = h.Facing = SimMath.Atan2(t.Y - h.Y, t.X - h.X);
-                }
+                var l = EnemiesInRange(h, h.Range, Pick.HeroOrMinion, true, spBuf);
+                if (l.Count > 0) p.Tgt = PickRandom(l);
             }
+            ClubSpot(p, out float cx, out float cy);
+            t = p.Tgt;
+            if (ClubTargetOk(h, t) && SimMath.Dist(h, t) > 1e-4f) p.Ang = h.Facing = SimMath.Atan2(t.Y - h.Y, t.X - h.X);
+            p.X = cx; p.Y = cy;
             areaBuf.Clear();
             for (int i = 0; i < Units.Count; i++)
             {
@@ -136,6 +139,28 @@ namespace BAM.Sim
             }
             Emit(EventType.Explosion, h, p.Tgt, p.Radius, (byte)ProjKind.BonkClub, p.Big, p.X, p.Y, DmgKind.Auto); // cracks and dust
             if (first != null && h.Alive) OnHeroHit(h, first, p, firstDealt);
+        }
+
+        bool ClubTargetOk(Unit h, Unit t) => t != null && t.Alive && !t.Has(St.Untargetable) && SimMath.Dist(h, t) <= h.Range + t.R
+            && Map.LosClear(h.X, h.Y, t.X, t.Y);
+
+        /// <summary>Where Bonk's club (a Smash proj still in its wind-up) comes down if it lands now: in front of him as he walks, then
+        /// onto its target in his reach (all the way with ClubReach, else at most SmashFollow tiles). Changes nothing, so the match
+        /// screen draws the circle where it will land (BONK-03; the drawn circle stayed where the swing began, tester 2026-11-04).</summary>
+        public void ClubSpot(Proj p, out float x, out float y)
+        {
+            var h = p.Src;
+            x = p.X; y = p.Y;
+            if (h == null) return;
+            x += h.X - p.OX; y += h.Y - p.OY;
+            var t = p.Tgt;
+            if (!ClubTargetOk(h, t)) return;
+            float d = SimMath.Dist(h, t);
+            if (d <= 1e-4f) return;
+            float ahead = Math.Min(BonkS.SmashAhead, d);
+            float nx = h.X + (t.X - h.X) / d * ahead, ny = h.Y + (t.Y - h.Y) / d * ahead, mv = SimMath.Hypot(nx - x, ny - y);
+            if (!BonkS.ClubReach && mv > BonkS.SmashFollow) { nx = x + (nx - x) / mv * BonkS.SmashFollow; ny = y + (ny - y) / mv * BonkS.SmashFollow; }
+            x = nx; y = ny;
         }
 
         /// <summary>The slam lands where Bonk stood (he cannot walk during the wind-up): every enemy hero and minion within its
