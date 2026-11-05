@@ -599,7 +599,7 @@ namespace BAM.Game
                 case EventType.AttackStart:
                 {
                     var a = e.A;
-                    V(a)?.PlayAttack(e.V);
+                    if ((ProjKind)e.Kind != ProjKind.KuggSpark) V(a)?.PlayAttack(e.V); // Kugg's Spark Shot fires by itself: no swing
                     // a swing by a hider the player cannot see is not heard: attacking does not reveal, only a hit does (BONK-09)
                     bool heard = m.IsVisibleTo(a, Mine);
                     // Bonk's club has no shot: it lands e.V s later as an Explosion of ProjKind.BonkClub (cracks and dust)
@@ -616,6 +616,7 @@ namespace BAM.Game
                         if (towerRun >= 2) { Sound(SfxId.TowerHot, a, 0.9f); break; }
                     }
                     // Tyra's twang plays when her arrow leaves the bow, not at the draw (ReleaseSound, TYRA-03/04)
+                    if ((ProjKind)e.Kind == ProjKind.KuggSpark || (ProjKind)e.Kind == ProjKind.KuggShell) { Sound((ProjKind)e.Kind == ProjKind.KuggSpark ? SfxId.KuggSpark : SfxId.KuggShotBig, a, 0.8f); break; } // Kugg (Hero7.cs)
                     if ((a.Kind != UnitKind.Tower || e.B == m.Player) && !(a.Kind == UnitKind.Hero && a.Hero == HeroId.Tyra)) Sound(AttackSound(a), a, a.Kind == UnitKind.Minion ? 0.55f : a.Kind == UnitKind.Tower ? 0.9f : a.Kind == UnitKind.Hero && a.Hero == HeroId.Tikta ? TiktaAutoVolume(a) : 0.8f);
                     // a tower shooting someone else within 8 tiles of the player is heard softly (VIS-02, Rickard 2026-10-29)
                     else if (a.Kind == UnitKind.Tower && m.Player != null && e.B != null && SimMath.Dist(e.B, m.Player) <= 8f) Sound(SfxId.TowerShot, a, 0.35f);
@@ -729,6 +730,17 @@ namespace BAM.Game
                         ArtKit.PlayAnvilWarn(Coords.World(e.X, e.Y), BramS.DropRadius, BramS.DropDelay);
                     }
                     if ((HeroId)e.Kind == HeroId.Hilde) LobGhost(a, Coords.World(e.X, e.Y), e.Big ? ProjKind.HildeKeg : ProjKind.HildeBurst, e.Big ? 0.4f : 0.3f);
+                    // Kugg's Anchor: his heel spikes go into the ground (dust and cracks at his feet; his own rune seal O-065 comes later)
+                    if ((HeroId)e.Kind == HeroId.Kugg) ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(a), 0.7f, Side(a.Team), (int)HeroId.Kugg);
+                    break;
+                }
+                case EventType.KuggPack:
+                {
+                    // Kugg pulls his spikes up: a puff at his feet and the clank (Hero7.cs)
+                    var a = e.A;
+                    if (a == null || !m.IsVisibleTo(a, Mine)) break;
+                    ArtKit.PlayFx(FxKind.HookDrag, Coords.Of(a), 1f, Side(a.Team), (int)HeroId.Kugg);
+                    Sound(SfxId.KuggPackUp, a, 0.9f);
                     break;
                 }
                 case EventType.Telegraph:
@@ -982,7 +994,7 @@ namespace BAM.Game
         {
             switch (a.Kind)
             {
-                case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackHilde : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Oaken borrows Bonk's until he has his own
+                case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackHilde : a.Hero == HeroId.Kugg ? SfxId.AttackKugg : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Oaken borrows Bonk's until he has his own
                 case UnitKind.Tower: return SfxId.TowerShot;
                 case UnitKind.Wolf: return SfxId.WolfBite;
                 default: return SfxId.None; // minions are silent (Rickard 2026-10-26)
@@ -1003,6 +1015,7 @@ namespace BAM.Game
                 case HeroId.Bonk: return dragged ? SfxId.BonkBoulderThrow : SfxId.BonkSlamWindup; // the slam's landing sounds on its Explosion
                 case HeroId.Hilde: return SfxId.HildeKegThrow; // both kegs (Speltest sp_hilde)
                 case HeroId.Oaken: return SfxId.BonkSlamWindup; // borrowed until he has his own
+                case HeroId.Kugg: return SfxId.KuggDeploy;
                 default: return SfxId.None;
             }
         }

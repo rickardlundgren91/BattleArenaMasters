@@ -22,7 +22,7 @@ namespace BAM.Sim
         /// is the big Ground Slam's circle. Knut's long hook (Franco's, 2026-11-03) looked for a hero up to 6 tiles for a while; Rickard
         /// 2026-11-03 "den går att aktivera för lång range": his tap is back to his ring too, the hook still flies the full
         /// KnutS.HookDistance (7). Tyra's bolt still flies on until it hits something; Tikta's needles stop at the ring.</summary>
-        public static float TapReach(HeroId id) => id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : Defs.Hero(id).Range;
+        public static float TapReach(HeroId id) => id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : id == HeroId.Kugg ? KuggS.TapReach : Defs.Hero(id).Range;
 
         /// <summary>How far Tikta's needle line flies: her ring in the one-tap game (TapReach), TiktaS.LineReach for the old drag.</summary>
         float NeedleReach => OneTap ? TapReach(HeroId.Tikta) : TiktaS.LineReach;
@@ -51,6 +51,7 @@ namespace BAM.Sim
         {
             if (h == null || !h.Alive || h.Kind != UnitKind.Hero) return false;
             if (h.Hero == HeroId.Moa) return true;
+            if (h.Hero == HeroId.Kugg && h.KuggRooted) return false;
             return TapTargets(h).Count > 0;
         }
 
@@ -79,6 +80,7 @@ namespace BAM.Sim
             {
                 var l = TapTargets(h);
                 if (l.Count == 0) return false;
+                if (h.Hero == HeroId.Kugg) return TryCastSpecial(h, float.NaN, 0); // the Anchor where he stands: no aim, no warning (it hurts nobody)
                 if (h.Hero == HeroId.Bonk) return !TeleOn ? TryCastSpecial(h, float.NaN, 0) : TeleTime(h.Hero) > 0 ? StartTelegraph(h, null, float.NaN, 0) : CastWithFlash(h, null, float.NaN, 0); // the big Ground Slam round him: no aim, no roll
                 t = PickRandom(l); // every hero, Knut and Tyra too: a random enemy in reach, never heroes first (focus, Rickard 2026-11-03)
             }

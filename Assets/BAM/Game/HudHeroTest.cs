@@ -81,10 +81,10 @@ namespace BAM.Game
             htListRoot.anchorMin = htListRoot.anchorMax = htListRoot.pivot = new Vector2(0f, 1f);
             htListBack = UiKit.Fill(htListRoot, HtListPanel, UiKit.Rounded);
             htListBack.raycastTarget = true;
-            for (int i = 0; i < HeroCatalog.All.Length; i++)
+            for (int i = 0; i < HeroCatalog.HeroTestList.Length; i++)
             {
-                HeroId id = HeroCatalog.All[i].Id;
-                var b = HtMake(HeroCatalog.All[i].Name, () => { htList = false; HtStart(id, m.Config.HeroTestLevel); }, htListRoot);
+                HeroId id = HeroCatalog.HeroTestList[i].Id;
+                var b = HtMake(HeroCatalog.HeroTestList[i].Name, () => { htList = false; HtStart(id, m.Config.HeroTestLevel); }, htListRoot);
                 htPicks.Add(b);
             }
             htRoot.gameObject.SetActive(false);
@@ -99,7 +99,7 @@ namespace BAM.Game
 
         void HtStep(int dir)
         {
-            var all = HeroCatalog.All;
+            var all = HeroCatalog.HeroTestList;
             int i = Array.FindIndex(all, h => h.Id == m.Player.Hero);
             HtStart(all[(i + dir + all.Length) % all.Length].Id, m.Config.HeroTestLevel);
         }
@@ -175,7 +175,7 @@ namespace BAM.Game
                 {
                     var b = htPicks[i];
                     HtPlace(b, 6f * s + (i % 2) * (cw + 4f * s), 6f * s + (i / 2) * (chh + 4f * s), cw, chh, fs, false);
-                    b.Back.color = HeroCatalog.All[i].Id == m.Player.Hero ? HtPicked : HtButton;
+                    b.Back.color = HeroCatalog.HeroTestList[i].Id == m.Player.Hero ? HtPicked : HtButton;
                 }
                 htListRoot.SetAsLastSibling();
             }

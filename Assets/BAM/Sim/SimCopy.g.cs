@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "9f7b147fd59852b9";
+            Generated = true; GeneratedHash = "b03e8243d36c3311";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -592,6 +592,11 @@ namespace BAM.Sim
             KnockT0 = __s.KnockT0;
             KnockVX = __s.KnockVX;
             KnockVY = __s.KnockVY;
+            KuggPackEnd = __s.KuggPackEnd;
+            KuggRooted = __s.KuggRooted;
+            KuggShots = __s.KuggShots;
+            KuggSparkAt = __s.KuggSparkAt;
+            KuggUntil = __s.KuggUntil;
             LastCombat = __s.LastCombat;
             LastFight = __s.LastFight;
             SimMirror.Arr(LastHitBy, __s.LastHitBy);

@@ -250,6 +250,7 @@ namespace BAM.Sim
                 case HeroId.Knut: return 1.3f;
                 case HeroId.Fenn: return 1.2f;
                 case HeroId.Hilde: return 1.2f;
+                case HeroId.Kugg: return 1.0f; // his Anchor is many shots over time, not one burst
                 default: return 0;
             }
         }

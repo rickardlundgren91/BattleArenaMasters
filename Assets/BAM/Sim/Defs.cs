@@ -81,6 +81,10 @@ namespace BAM.Sim
             // Oaken 3.0 (Speltest SimHeroes6.cs 2026-10-28: 330/56 hp, 34/5.5 dmg, 1.5 s, range 2.3, speed 1.85 x HERO_SPEED 1.25, 6 charges;
             // radius and the punch's timing from HeroLooks.OWN_STATS: 0.275, wind-up 0.15 s, 0.09 s to land)
             H(HeroId.Oaken, 0.275f, 2.3125f, 6, true, 340, 58, 34, 5.5f, 1.5f, -0.018f, 2.3f, 0.15f, 0, 0.09f, ProjKind.OakenFist, OakenS.SlamRadius, AimShape.Line, OakenS.QuakeRange, OakenS.QuakeHalfWidth), // hp 330/56 -> 340/58 (balance 2026-10-30)
+            // Kugg (2026-11-05, Rickard: ROI17's principle, his own concept; Hero7.cs). ROI17 in the old game: 210/28 hp (237 in BAM's old
+            // sim), 28/7 dmg, 1.5 s, range 2.25, speed 2.08 x 1.25, radius 0.3, 6 stocks; his ball flies 0.47 s. Kugg: 237/30 hp, 26/6.5
+            // dmg, 1.5 s, range 2.5, speed 2.5, charges in 6 hits; a first guess for bot matches to tune
+            H(HeroId.Kugg, 0.3f, 2.5f, 6, false, 237, 30, 26, 6.5f, 1.5f, -0.036f, 2.5f, 0.2f, 0, 0.3f, ProjKind.KuggShot, KuggS.TapReach, AimShape.None, 0, 0),
         };
 
         public static HeroDef Hero(HeroId id) => Heroes[(int)id];

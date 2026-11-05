@@ -147,7 +147,7 @@ namespace BAM.Sim
         public bool IsRealHero => Kind == UnitKind.Hero && !IsClone;
         /// <summary>Minions and Fenn's wolf (a tower shoots these first, a hero at a tower needs one of these of its own).</summary>
         public bool IsMinionLike => Kind == UnitKind.Minion || Kind == UnitKind.Wolf;
-        public float Range => HDef != null ? HDef.Range : UDef.Range;
+        public float Range => HDef != null ? HDef.Range + (KuggShots > 0 ? KuggS.RangeBonus : 0) : UDef.Range; // Kugg's Anchor (Hero7.cs)
         public float BaseSpeed => HDef != null ? HDef.Speed : UDef.Speed;
         public bool SpecialReady => HDef != null && Charge >= HDef.MaxCharge;
         public float Charge01 => HDef != null ? Math.Min(1, Charge / HDef.MaxCharge) : 0;
@@ -193,6 +193,7 @@ namespace BAM.Sim
                         case St.TiktaMark: f |= StatusFlags.Marked; break;
                     }
                 }
+                if (KuggRooted) f |= StatusFlags.Rooted; // Kugg's Anchor shows as rooted (Hero7.cs)
                 if (RevealT > 0) f |= StatusFlags.Revealed;
                 if (IsClone) f |= StatusFlags.Illusion;
                 return f;
@@ -205,7 +206,7 @@ namespace BAM.Sim
         public float StatHp() { int s = StarsFor(NoStars); return (HDef.Hp + HDef.HpGrowth * (Level - 1)) * (1 + Defs.StarHp[s]); }
         public float StatDmg() { int s = StarsFor(NoStars); return (HDef.Dmg + HDef.DmgGrowth * (Level - 1)) * (1 + Defs.StarDmg[s]) * DmgMult; }
         public float StatCd() { int s = StarsFor(NoStars); return Math.Max(0.35f, HDef.Cd + HDef.CdGrowth * (Level - 1)) * (1 + Defs.StarCdr[s]); }
-        public float AttackCd => HDef != null ? StatCd() / AtkHaste() : UDef.Cd;
+        public float AttackCd => HDef != null ? StatCd() * (KuggShots > 0 ? KuggS.CdMult : 1) / AtkHaste() : UDef.Cd; // Kugg's Anchor fires faster (Hero7.cs)
         /// <summary>1 plus every attack-speed boost on the unit (old SimHeroes6.atkHaste).</summary>
         public float AtkHaste() { float a = 1; for (int i = 0; i < StCount; i++) if (Sts[i].Type == St.AtkHaste) a += Sts[i].V; return a; }
 

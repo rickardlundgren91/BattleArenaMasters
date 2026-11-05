@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.SpecialWarn + 1; // the last SfxId: raise it with every new one
+        public const int Count = (int)SfxId.KuggSpark + 1; // the last SfxId: raise it with every new one
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)

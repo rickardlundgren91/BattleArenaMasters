@@ -185,6 +185,7 @@ namespace BAM.Sim
             u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0; u.KnockPad = false; u.KnockKeg = null; u.KnockRoll = null; u.KnockFreeAt = -99;
             u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
+            KuggReset(u); // his Anchor ends with him
             int kt = Teams.Other(u.Team);
             Kills[kt]++;
             u.Streak = 0;
@@ -330,6 +331,7 @@ namespace BAM.Sim
             if (hero)
             {
                 var d = u.HDef; spawnDelay = d.SpawnDelay; projSpeed = d.ProjSpeed; projTime = d.ProjTime; kind = d.Attack;
+                if (u.Hero == HeroId.Kugg && u.KuggAnchored) { kind = ProjKind.KuggShell; projSpeed = KuggS.ShellSpeed; projTime = 0; coeff *= KuggS.ShotCoeff; big = true; } // Anchor (Hero7.cs)
                 dmg = u.StatDmg();
                 coeff *= HeroAttackCoeff(u, tgt, ref big);
                 if (AmbushReady(u)) { coeff *= 1 + Rules.AmbushBonus; big = true; Emit(EventType.Ambush, u, tgt); }
@@ -346,6 +348,7 @@ namespace BAM.Sim
             var p = NewProj(ProjMode.Auto, u, u.X, u.Y);
             p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero;
             Emit(EventType.AttackStart, u, tgt, spawnDelay, (byte)kind, big);
+            if (hero && u.Hero == HeroId.Kugg) KuggFired(u); // an anchored shot spends one (Hero7.cs)
         }
 
         /// <summary>What a tower's or minion's shot is worth against tgt (tower ramp and late bonus, a siege minion's x2 on towers).</summary>
@@ -509,7 +512,7 @@ namespace BAM.Sim
             if (t.IsClone) return; // Fenn's decoy gives no charge and no on-hit passives (old phantomHit)
             if (dealt <= 0 && t.Has(St.Invulnerable)) return; // nor does a hit on respawn protection (precision CHAINMAP-06; a shield still charges)
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
-            h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1);
+            if (!h.KuggRooted) h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1); // Kugg gathers no charge while anchored (ROI17's stocks)
             if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddSlowOnce(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, h);
             if (h.Hero == HeroId.Bram) BramBacklash(h, t);
             if (h.Hero == HeroId.Tyra) Featherstep(h, t, dealt); // Hero5.cs

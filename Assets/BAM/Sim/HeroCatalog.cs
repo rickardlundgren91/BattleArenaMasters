@@ -14,6 +14,8 @@ namespace BAM.Sim
         public string SpecialText => Rules.OneTapSpecial && OneTapDesc != null ? OneTapDesc : SpecialDesc;
         public int Health, Damage, Speed, Difficulty; // 1..3, for the bars on the hero-select screen
         public bool Ranged;
+        /// <summary>A hero not in the game yet that PRACTICE > HERO TEST already lists, so Rickard can try its rules with a stand-in body.</summary>
+        public bool Preview;
     }
 
     public static class HeroCatalog
@@ -53,7 +55,23 @@ namespace BAM.Sim
                 SpecialName = "Earth Judgement", SpecialDesc = "Tap: after a short moment he slams the ground, hurting every enemy around him. Drag: a quake runs along a line, hurting every enemy in it and knocking enemy heroes back. Walls stop it.",
                 PassiveName = "Stored Impact", PassiveDesc = "After 4 s without losing health, the next hit from an enemy hero is cut by 30%, and part of it is added to his next attack. Every 16 s.",
                 Health = 3, Damage = 2, Speed = 1, Difficulty = 2 },
+            // Kugg (Rickard 2026-11-05: ROI17's principle from the old game, his own concept; Hero7.cs). In HERO TEST only (Preview), with
+            // Oaken's body as a stand-in until Rickard's own model is in (orders O-059..O-071, bam-work/orders/PROMPTER-2026-11-05-kugg.md)
+            new HeroInfo { Id = HeroId.Kugg, Name = "Kugg", Title = "The Rune Golem", Role = "Marksman", Ranged = true, Preview = true,
+                SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles, he fires faster and sees into grass up to 6 tiles away. After 6 shots (or 10 s) he pulls the spikes up again.",
+                PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
+                Health = 2, Damage = 3, Speed = 1, Difficulty = 3 },
         };
+
+        /// <summary>What PRACTICE > HERO TEST lists: every hero in the game, then the Preview heroes still waiting in Coming.</summary>
+        public static HeroInfo[] HeroTestList => heroTestList ??= MakeHeroTestList(); // lazy: All is declared below
+        static HeroInfo[] heroTestList;
+        static HeroInfo[] MakeHeroTestList()
+        {
+            var l = new System.Collections.Generic.List<HeroInfo>(All);
+            foreach (var h in Coming) if (h.Preview) l.Add(h);
+            return l.ToArray();
+        }
 
         // In list order (hero select, unlocks): Tyra first, the beginner hero you start with and play the tutorial with (Rickard
         // 2026-11-04 after a tester's note that new players quit when they do not feel in control). HeroId keeps its numbers.

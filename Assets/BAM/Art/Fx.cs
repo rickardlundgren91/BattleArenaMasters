@@ -1293,7 +1293,7 @@ namespace BAM.Art
         }
 
         // Each hero's two special colours (main, accent) from the MLBB clip analysis (bam-work/art/mlbb-miya/skill-fx-analys.md),
-        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk, Hilde, Oaken. Tyra keeps the cyan her bolt already has.
+        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk, Hilde, Oaken, Kugg. Tyra keeps the cyan her bolt already has.
         static Vector3 lastBounce;
         static float lastBounceT = -10f;
 
@@ -1307,6 +1307,7 @@ namespace BAM.Art
             new Color32(196, 140, 72, 255), // Bonk: club wood and dust
             new Color32(255, 150, 50, 255), // Hilde: powder flash
             new Color32(150, 140, 125, 255), // Oaken: stone
+            new Color32(60, 230, 210, 255), // Kugg: turquoise rune glow
         };
         static readonly Color32[] heroAccent =
         {
@@ -1315,6 +1316,7 @@ namespace BAM.Art
             new Color32(240, 230, 205, 255), // Bonk: bone spikes
             new Color32(200, 160, 90, 255), // Hilde: brass
             new Color32(255, 200, 70, 255), // Oaken: the gold glow in his cracks (Speltest recoloured it from cyan)
+            new Color32(205, 160, 80, 255), // Kugg: brass
         };
 
         /// <summary>The caster's own "release" when a hero fires the special, in that hero's colours, so you see who cast it even
@@ -1456,6 +1458,22 @@ namespace BAM.Art
                     Chunks(p, 3, C(Pal.Rock), 0.12f, 2.5f, 0.5f, 2f);
                     break;
                 }
+                case ProjKind.KuggShot:
+                case ProjKind.KuggShell:
+                {
+                    // Kugg's rune cannon ball: a turquoise pop, brass sparks and stone chips (bigger when anchored)
+                    Color32 m = heroMain[(int)HeroId.Kugg], a = heroAccent[(int)HeroId.Kugg];
+                    float s = k == ProjKind.KuggShell ? 1.25f : 0.9f;
+                    Flash(p + Vector3.up * 0.3f, 0.1f, 0.45f * s, new Color(0.7f, 1f, 0.95f, 0.9f), 0.08f);
+                    Pow(p, 1, m, 0.8f * s, 0.16f);
+                    Sparks(p + Vector3.up * 0.3f, 5, a, 0.1f, 3.5f, 0.25f, 1.2f);
+                    Chunks(p, 2, C(Pal.Rock), 0.1f, 2.5f, 0.5f, 2f);
+                    break;
+                }
+                case ProjKind.KuggSpark:
+                    Pow(p, 1, heroMain[(int)HeroId.Kugg], 0.5f, 0.12f);
+                    Sparks(p + Vector3.up * 0.3f, 4, heroMain[(int)HeroId.Kugg], 0.08f, 3f, 0.2f, 1f);
+                    break;
                 case ProjKind.SiegeShell:
                     Pow(p, 1, C(Pal.FireCore), 0.8f, 0.15f);
                     Dust(p, 4, C(Pal.Ground, 210), 0.6f, 1.5f, 0.5f, 0.3f, 0.2f);

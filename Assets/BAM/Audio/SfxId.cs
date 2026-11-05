@@ -50,5 +50,8 @@ namespace BAM.Audio
         // a hero taps its special and the warning starts (Rules.SpecialTelegraph, 2026-11-02): a short sharp wind-up cue so a player hears
         // that a special is coming, before it lands. Silent until Rickard's own clip SpecialWarn.mp3 is in Resources/BAM/Sfx (O-049)
         SpecialWarn,
+        // Kugg, hero 11 (2026-11-05, orders O-066..O-070): his shot, the Anchor going in, his anchored shot, pulling the spikes up and the
+        // Spark Shot. Silent until Rickard's own clips are in Resources/BAM/Sfx
+        AttackKugg, KuggDeploy, KuggShotBig, KuggPackUp, KuggSpark,
     }
 }

@@ -402,6 +402,14 @@ namespace BAM.Art
                     b.Color(Pal.Bomb).Sphere(Vector3.zero, 0.12f, 10, 6);
                     b.Color(Pal.Team(team)).Torus(Vector3.zero, 0.12f, 0.018f, 12, 4);
                     break;
+                case ProjKind.KuggShot: // a stand-in until Rickard's own picture (O-063, tx_fx_kugg_shot)
+                case ProjKind.KuggShell:
+                    b.Color(Pal.MetalDark).Sphere(Vector3.zero, kind == ProjKind.KuggShell ? 0.15f : 0.11f, 10, 6);
+                    b.Color(Pal.TeamLight(team)).Torus(Vector3.zero, kind == ProjKind.KuggShell ? 0.15f : 0.11f, 0.02f, 12, 4);
+                    break;
+                case ProjKind.KuggSpark: // a stand-in until O-064 (tx_fx_kugg_spark)
+                    b.Color(Pal.TeamLight(team)).Sphere(Vector3.zero, 0.07f, 8, 5);
+                    break;
                 case ProjKind.TowerShot:
                     b.Color(Pal.TeamLight(team)).Sphere(Vector3.zero, 0.16f, 12, 8);
                     b.Color(Pal.White).Sphere(new Vector3(0f, 0f, 0.03f), 0.09f, 8, 5);

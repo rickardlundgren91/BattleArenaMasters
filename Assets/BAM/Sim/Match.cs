@@ -389,7 +389,7 @@ namespace BAM.Sim
                 }
                 if (u.Kind == UnitKind.Hero)
                 {
-                    if (!u.IsClone) { TelegraphTick(u); UpdateSpecial(u, dt); SpellTick(u); }
+                    if (!u.IsClone) { TelegraphTick(u); UpdateSpecial(u, dt); SpellTick(u); if (u.Hero == HeroId.Kugg) KuggTick(u, dt); }
                     if (!u.InFight(Time) && !u.IsClone)
                     {
                         u.RegenT += dt;
@@ -489,7 +489,7 @@ namespace BAM.Sim
                 for (int i = 0; i < Units.Count; i++)
                 {
                     var o = Units[i];
-                    if (o.Alive && o.Team == team && SimMath.Dist(o, u) <= Rules.GrassSight) return true;
+                    if (o.Alive && o.Team == team && SimMath.Dist(o, u) <= (o.KuggShots > 0 ? KuggS.GrassSight : Rules.GrassSight)) return true; // Kugg's Anchor sees further into grass (Hero7.cs)
                 }
                 return false;
             }

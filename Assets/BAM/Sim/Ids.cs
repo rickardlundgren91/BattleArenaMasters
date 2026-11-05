@@ -5,8 +5,9 @@ namespace BAM.Sim
     // The shared vocabulary of the game. Other assemblies (Art, Audio, UI, Game) key their visuals, sounds and screens on
     // these values, so entries are only ever added at the end; changing or removing one is a contract change (Docs/CONTRACTS.md).
 
-    /// <summary>The heroes, in hero-select order (Bonk joined 2026-10-26; Hilde and Oaken, heroes 9 and 10, on 2026-10-28).</summary>
-    public enum HeroId : byte { Bram = 0, Fenn = 1, Tyra = 2, Moa = 3, Knut = 4, Tikta = 5, Blast = 6, Bonk = 7, Hilde = 8, Oaken = 9 }
+    /// <summary>The heroes, in hero-select order (Bonk joined 2026-10-26; Hilde and Oaken, heroes 9 and 10, on 2026-10-28; Kugg,
+    /// hero 11 after the old game's ROI17, on 2026-11-05).</summary>
+    public enum HeroId : byte { Bram = 0, Fenn = 1, Tyra = 2, Moa = 3, Knut = 4, Tikta = 5, Blast = 6, Bonk = 7, Hilde = 8, Oaken = 9, Kugg = 10 }
 
     /// <summary>Team 0 is the player's team at the bottom of the map (blue), team 1 the enemy at the top (red).</summary>
     public static class Teams
@@ -51,6 +52,9 @@ namespace BAM.Sim
         OakenSlam = 26,         // Oaken's slam (tap): both fists into the ground, a ring of hits round him
         OakenQuake = 27,        // Oaken's quake (drag): a crack running along a line, knocks heroes along it
         TyraVolley = 28,        // view only: Tyra's Arrow Volley arrows (the rules fly them as TyraArrow in ProjMode.Volley)
+        KuggShot = 29,          // Kugg's auto attack, a short rune cannon ball
+        KuggShell = 30,         // Kugg's shot while Anchored (Rotfäste): long range, bigger
+        KuggSpark = 31,         // Kugg's Spark Shot passive: a small shot at a random enemy, by itself
     }
 
     /// <summary>Ground areas that last a while.</summary>

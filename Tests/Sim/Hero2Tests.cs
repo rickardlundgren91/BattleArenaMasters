@@ -231,7 +231,7 @@ namespace BAM.Sim
 
         public static int RunHero2Tests()
         {
-            Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); TowerStopChecks(); TowerLockChecks(); TelegraphChecks();
+            Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Kugg(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); TowerStopChecks(); TowerLockChecks(); TelegraphChecks();
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;
         }

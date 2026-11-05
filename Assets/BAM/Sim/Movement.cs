@@ -30,7 +30,7 @@ namespace BAM.Sim
         internal void MoveUnit(Unit u, float dx, float dy, float dt)
         {
             if (dx == 0 && dy == 0) return;
-            if (u.Has(St.Root)) return;
+            if (u.Has(St.Root) || u.KuggRooted) return; // Kugg's Anchor holds him (Hero7.cs)
             float sp = SpeedOf(u), m = SimMath.Hypot(dx, dy);
             if (m > 1) { dx /= m; dy /= m; }
             float ox = u.X, oy = u.Y, sx = dx * sp * dt, sy = dy * sp * dt;
