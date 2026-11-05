@@ -32,7 +32,7 @@ namespace BAM.Game
         Hud hud;
         readonly MatchJuice juice = new MatchJuice();
         readonly MatchIntro intro = new MatchIntro();
-        bool inMatch, paused, over, resultShown, resultMusic, endSent, endLogged;
+        bool inMatch, paused, over, resultShown, resultMusic, endSent, endLogged, booked, botsMoved;
         float acc, overAt;
         // online: how far the drawing is past the last stepped tick. It counts on the local clock but is used up only by ticks
         // really stepped, so a frame without a new frame from the host holds on the newest tick instead of sliding back a tick
@@ -216,6 +216,7 @@ namespace BAM.Game
             hud.Intro = intro;
             hud.Begin(match, views, cam);
             inMatch = true; paused = false; over = false; resultShown = false; resultMusic = false; endSent = false; endLogged = false;
+            booked = false; botsMoved = false;
             acc = 0f; netDraw = 0f;
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
@@ -286,6 +287,7 @@ namespace BAM.Game
                     {
                         over = true; overAt = Time.unscaledTime; acc = 0f;
                         LogEnd(false);
+                        Bookkeep();
                         if (TutorialEnd) TutorialFinished(); // done as the tower falls: leaving its end screen by Pause or a kill still counts
                         break;
                     }
@@ -400,7 +402,7 @@ namespace BAM.Game
             if (end) Debug.Log("[BAM.Online] prediction: longest frame of copying and rerunning " + Mathf.RoundToInt(predMaxMs) + " ms");
             BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f);
             net.Flush();
-            if (end) { over = true; overAt = Time.unscaledTime; acc = 0f; LogEnd(false); }
+            if (end) { over = true; overAt = Time.unscaledTime; acc = 0f; LogEnd(false); Bookkeep(); }
             string st = net.Status;
             if (st != netStatus)
             {
@@ -430,7 +432,7 @@ namespace BAM.Game
             views.AfterStep();
             juice.AfterStep();
             hud.AfterStep();
-            if (IsOver()) { over = true; overAt = Time.unscaledTime; acc = 0f; LogEnd(false); return true; }
+            if (IsOver()) { over = true; overAt = Time.unscaledTime; acc = 0f; LogEnd(false); Bookkeep(); return true; }
             return false;
         }
 
@@ -464,6 +466,7 @@ namespace BAM.Game
                 Hero = p.Hero,
                 Difficulty = setup.Difficulty,
                 Tutorial = setup.Tutorial,
+                Practice = Practice,
             };
         }
 
@@ -471,14 +474,28 @@ namespace BAM.Game
         {
             resultShown = true;
             var r = Result(false);
-            if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
-            if (!r.Tutorial && !setup.HeroTest && !Practice && setup.Net == null) r.BotsMoved = BamSettings.AfterBotMatch(r.Difficulty, r.Won); // Easy and Normal follow the player
-            if (!r.Tutorial && !setup.HeroTest && setup.Net == null && r.Won && r.Difficulty == Difficulty.Hard) BamSettings.AddHardWin(); // 30 open Ultra
-            if (!r.Tutorial && !setup.HeroTest && setup.Net == null && r.Won && r.Difficulty == Difficulty.Normal) BamSettings.AddNormalWin(); // 3 open Hard
+            Bookkeep(); // done already as the match was decided; kept here in case a path missed it
+            r.BotsMoved = botsMoved;
             SendEnd(false);
             hud.CancelTouches();
             BamAudio.StopMusic(); // the victory or defeat jingle first; Update brings the music back after it
             Screens.ShowResult(r, match); // with the match: both teams' K/D/A, ratings and MVP (the old HudV3 result card)
+        }
+
+        // The phone's own counts, once per match as it is decided (the tower falls), not with the result card ResultDelay later:
+        // a player who paused and went Home in those 2 s lost the win for the Hard and Ultra locks and the bot level's move, while
+        // the server still gave the XP (bug review 2026-11-02 nr 18, again 2026-11-04). A match left before it is decided counts
+        // nothing, as before. PRACTICE > NEW MAP counts toward neither lock (bug review 2026-11-04 nr 52).
+        void Bookkeep()
+        {
+            if (match == null || booked) return;
+            booked = true;
+            var r = Result(false);
+            if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
+            bool counts = !r.Tutorial && !setup.HeroTest && !Practice && setup.Net == null;
+            if (counts) botsMoved = BamSettings.AfterBotMatch(r.Difficulty, r.Won); // Easy and Normal follow the player
+            if (counts && r.Won && r.Difficulty == Difficulty.Hard) BamSettings.AddHardWin(); // 30 open Ultra
+            if (counts && r.Won && r.Difficulty == Difficulty.Normal) BamSettings.AddNormalWin(); // 3 open Hard
         }
 
         // Exactly one MatchEnded per match: at the result, or as a quit when the player leaves or restarts before it.

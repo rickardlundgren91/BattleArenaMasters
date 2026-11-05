@@ -29,6 +29,7 @@ namespace BAM.Core
         public Difficulty Difficulty;
         public bool Tutorial;
         public bool BotsMoved;  // the bot level the player follows moved after this match (BamSettings.AfterBotMatch): the result says so
+        public bool Practice;   // PRACTICE > NEW MAP: no XP, Rating or bot-level move, so the result card shows no XP line (bug review 2026-11-04 nr 51)
     }
 
     /// <summary>

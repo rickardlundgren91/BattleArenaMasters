@@ -321,12 +321,13 @@ namespace BAM.UI
             int seconds = Mathf.Max(0, Mathf.FloorToInt(r.Seconds));
             string length = (seconds / 60) + ":" + (seconds % 60).ToString("00");
             resSub.text = (r.Tutorial ? "Tutorial" : DifficultyNames[Mathf.Clamp((int)r.Difficulty, 0, DifficultyNames.Length - 1)] + " bots") + " · " + length
-                + (r.BotsMoved ? " · next: " + DifficultyNames[Mathf.Clamp((int)BamSettings.LastDifficulty, 0, DifficultyNames.Length - 1)] + " bots" : "");
+                + (r.BotsMoved ? " · next: " + DifficultyNames[Mathf.Clamp((int)BamSettings.LastDifficulty, 0, DifficultyNames.Length - 1)] + " bots" : "")
+                + (r.Practice ? " · practice, no XP" : "");
 
             resTable.gameObject.SetActive(resTableMode);
             resSmall.gameObject.SetActive(!resTableMode);
             resAgain.gameObject.SetActive(!r.Tutorial || !r.Won);
-            FillXp();
+            FillXp(r.Practice);
             if (resTableMode) FillScores(m);
             else
             {
@@ -344,10 +345,12 @@ namespace BAM.UI
         }
 
         // "+160 XP · +20 Rating  (first win today)", the level bar, "LEVEL UP! Level 4 · 40 / 200 XP"; hidden offline or for a
-        // match that gives nothing (the tutorial, a match left, under 45 s)
-        static void FillXp()
+        // match that gives nothing (the tutorial, a match left, under 45 s) and after PRACTICE > NEW MAP, which never reaches
+        // Progress: its LastGain would still be the previous match's, "LEVEL UP!" and "NEW HERO UNLOCKED" included (bug review
+        // 2026-11-04 nr 51)
+        static void FillXp(bool practice)
         {
-            var g = OnlineHooks.LastGain != null ? OnlineHooks.LastGain() : default;
+            var g = OnlineHooks.LastGain != null && !practice ? OnlineHooks.LastGain() : default;
             bool on = g.Xp > 0;
             resXp.gameObject.SetActive(on); resLevel.gameObject.SetActive(on);
             resXpBack.gameObject.SetActive(on); resXpFill.gameObject.SetActive(on);
