@@ -51,6 +51,7 @@ namespace BAM.Game
             public StatusFlags Flags;
             public float Channel = -1f;    // the recall channel shown, -1 none
             public bool Sprint;
+            public int Form = -1;          // the body's form shown (UnitView.SetForm), -1 never told
             public bool Marked, Spark;     // Tikta's Deathmark and Blast's chain spark shown (Tikta 2.0 / Blast 2.0)
             public float ChainCd = -1f;    // the player's Blast: the chain cooldown arc shown, -1 none
             public float StoredFx;         // Oaken: when his Stored Impact glow was last puffed (OAKEN-02)
@@ -296,7 +297,7 @@ namespace BAM.Game
             }
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
-            r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.MaxHp = -1f; r.Energy = -2f; r.Ready = false; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff;
+            r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.MaxHp = -1f; r.Energy = -2f; r.Ready = false; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff; r.Form = -1;
             r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
             r.Bar = null;
             foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
@@ -1201,6 +1202,8 @@ namespace BAM.Game
                 if (ch != r.Channel) { r.Channel = ch; v.SetChannel(ch); }
                 bool sprint = u.Spell == SpellId.Sprint && Sprinting(u);
                 if (sprint != r.Sprint) { r.Sprint = sprint; v.SetSprint(sprint); }
+                int form = u.Hero == HeroId.Kugg && u.KuggRooted ? 1 : 0; // Kugg stands as a turret in his Anchor (Hero7.cs)
+                if (form != r.Form) { r.Form = form; v.SetForm(form); }
                 HeroMarks(r, u, v);
             }
 

@@ -13,7 +13,7 @@ namespace BAM.Art
     /// by the windup, cast, hit flash and death, a ground decal with the team ring, a health bar and status markers.
     /// Everything is allocated in <see cref="Build"/>; the per-frame path only writes numbers.
     /// </summary>
-    sealed class BodyView : UnitView
+    sealed partial class BodyView : UnitView
     {
         internal Stack<BodyView> Pool;
         internal bool InPool;
@@ -523,6 +523,7 @@ namespace BAM.Art
 
         bool MuzzleAt(bool release, out Vector3 at)
         {
+            if (FormMouth(out at)) return true; // Kugg's turret: its guns (BodyForm.cs)
             if (CannonMouth(out at)) return true;
             if (HeroIndex < 0 || anim == null || !anim.isHuman) return false;
             Transform l = anim.GetBoneTransform(HumanBodyBones.LeftHand), r = anim.GetBoneTransform(HumanBodyBones.RightHand);
@@ -610,6 +611,7 @@ namespace BAM.Art
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             Probe.Reset();
+            FormReset();
             leapK = -1f; leapY = wolfTilt = pull = 0f; room = 9f; atkCut = castCut = -1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
@@ -1099,6 +1101,7 @@ namespace BAM.Art
                 bar.Tick(dt, ArtDriver.CamRot);
                 status.Tick(dt, idleT);
             }
+            FormLook(dt); // Kugg's turret while he is anchored (BodyForm.cs)
         }
 
         void AnimateImported(float dt)

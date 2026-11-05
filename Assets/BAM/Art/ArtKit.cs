@@ -109,6 +109,8 @@ namespace BAM.Art
         /// needle in the fist Tikta throws with), Moa's casting hand, Bonk's boulder between his hands. False for the rest (minions,
         /// towers, the wolf, code figures).</summary>
         public virtual bool Muzzle(out Vector3 at) { at = Vector3.zero; return false; }
+        /// <summary>A whole-body form: 0 = its own body, 1 = Kugg's turret while the rules keep him rooted in his Anchor (BodyForm.cs).</summary>
+        public virtual void SetForm(int form) { }
     }
 
     public abstract class ProjectileView : MonoBehaviour
