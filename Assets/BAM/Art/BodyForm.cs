@@ -9,14 +9,16 @@ namespace BAM.Art
     // Kugg's Anchor form (Rickard 2026-11-05: "han blev som ett torn när han gjorde special", the old game's ROI17 swapping his body
     // for the R17 Guardian Turret): while the rules keep him rooted (Hero7.cs KuggRooted, the Anchor and its pack-up) the golem is
     // hidden and a turret stands on his spot instead, growing up out of the dust in FormGrow s and sinking back when he packs up. It
-    // turns with the view, so its guns face what he shoots, and his shots leave its guns (FormMouth). Stand-in: the old game's own
-    // turret (ABC2 fig_r17GuardianTurret) until Rickard's kugg_torn (O-072) is converted to the same file.
+    // turns with the view, so its cannon faces what he shoots, and his shots leave its mouth (FormMouth). The model is Rickard's own
+    // Kugg turret (O-072, Tripo, 2026-11-05) packed by bam-work/roi17/tools/obj2abcmesh.py, front along +Z (it replaced the old game's
+    // fig_r17GuardianTurret stand-in the same evening).
     sealed partial class BodyView
     {
         Transform formT;
         float formK, formSize;
+        Vector3 formMouth; // the cannon's mouth in mesh units: the middle of its front-most vertices
         bool formOn, bodyOff;
-        const float FormGrow = 0.3f, FormHeight = 1.15f; // the turret stands this many of his heights tall
+        const float FormGrow = 0.3f, FormHeight = 1f; // the turret stands as tall as he does (its cannon reaches out further)
 
         public override void SetForm(int form)
         {
@@ -38,6 +40,11 @@ namespace BAM.Art
             float s = transform.lossyScale.y;
             formSize = def.Height * FormHeight / Mathf.Max(0.01f, mesh.bounds.size.y * (s > 0f ? s : 1f));
             formT.localScale = Vector3.zero;
+            var vs = mesh.vertices;
+            float front = mesh.bounds.max.z - 0.04f * mesh.bounds.size.z;
+            Vector3 sum = Vector3.zero; int n = 0;
+            for (int i = 0; i < vs.Length; i++) if (vs[i].z >= front) { sum += vs[i]; n++; }
+            formMouth = n > 0 ? sum / n : new Vector3(0f, mesh.bounds.center.y, mesh.bounds.max.z);
             go.SetActive(false);
         }
 
@@ -57,12 +64,12 @@ namespace BAM.Art
         // a little overshoot as it pops up, like a spring
         static float BackOut(float k) { k -= 1f; return 1f + k * k * (2.7f * k + 1.7f); }
 
-        /// <summary>The turret's gun mouths (between its two barrels, mesh units of the old game's turret) while it stands.</summary>
+        /// <summary>The turret's cannon mouth while it stands.</summary>
         bool FormMouth(out Vector3 at)
         {
             at = Vector3.zero;
             if (formT == null || !formT.gameObject.activeSelf || formK < 0.5f) return false;
-            at = formT.TransformPoint(new Vector3(0f, 0.42f, 0.32f));
+            at = formT.TransformPoint(formMouth);
             return true;
         }
 
