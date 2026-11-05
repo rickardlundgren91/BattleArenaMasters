@@ -353,7 +353,7 @@ namespace BAM.Art
             return Arena.Build(arena);
         }
 
-        public static UnitView CreateHero(HeroId hero, int team) => Body(Models.Hero(hero, team), (int)hero, team);
+        public static UnitView CreateHero(HeroId hero, int team) => Body(Models.Hero(hero, team), HeroKey + (int)hero, team);
         public static UnitView CreateMinion(MinionKind kind, int team) => Body(Models.Minion(kind, team), 10 + (int)kind, team);
         public static UnitView CreateTower(int team) => Body(Models.Tower(team), 20, team);
         /// <summary>Fenn's spectral wolf.</summary>
@@ -362,7 +362,11 @@ namespace BAM.Art
         public static UnitView CreateTarget() => Body(Models.Target(), 40, Teams.Enemy);
         /// <summary>A hero for the menus (Home platform, hero cards): team 0 look, idle, no ground ring, bar or status
         /// markers, own pool. It is lit by the game's sun wherever it stands, and any camera can render it.</summary>
-        public static UnitView CreateHeroPreview(HeroId hero) => Body(Models.Hero(hero, Teams.Player), 50 + (int)hero, Teams.Player, true);
+        public static UnitView CreateHeroPreview(HeroId hero) => Body(Models.Hero(hero, Teams.Player), PreviewKey + (int)hero, Teams.Player, true);
+
+        // the pools' keys: minions 10+, the tower 20, the wolf 30, the dummy 40; heroes and their menu previews in their own hundreds
+        // (2026-11-05: Kugg, hero 10, had key 10 = the melee minion's, so the two shared a pool and he never knew he was a hero)
+        const int HeroKey = 100, PreviewKey = 200;
 
         static BodyView Body(RigDef def, int kindKey, int team, bool preview = false)
         {
@@ -386,8 +390,8 @@ namespace BAM.Art
                 v.Build(def, team);
             }
             v.InPool = false;
-            v.IsHero = !preview && kindKey < 10;
-            v.HeroIndex = kindKey < 10 ? kindKey : kindKey >= 50 && kindKey < 60 ? kindKey - 50 : -1;
+            v.IsHero = !preview && kindKey >= HeroKey && kindKey < PreviewKey;
+            v.HeroIndex = kindKey >= HeroKey && kindKey < PreviewKey ? kindKey - HeroKey : kindKey >= PreviewKey && kindKey < PreviewKey + 100 ? kindKey - PreviewKey : -1;
             v.gameObject.SetActive(true);
             if (v.IsHero && !BodyView.Heroes.Contains(v)) BodyView.Heroes.Add(v); // a new view was enabled before IsHero was set
             return v;
