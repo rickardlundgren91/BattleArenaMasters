@@ -51,5 +51,8 @@ namespace BAM.Art
         /// Oaken) shows the weapon meeting its target (the clip's Contact: the striking hand braked after its fastest moment) on the
         /// tick the rules land the blow and its number shows, instead of showing the fastest moment on the release.</summary>
         public static bool ContactTiming = true;
+        /// <summary>Tester idea 2026-11-06 (pilot, Fenn and Tyra): cloth and hair swing after the body on spring bones (ClothSway):
+        /// Fenn's cape and tabard, Tyra's ponytail. Off = they move stiffly with the body as before.</summary>
+        public static bool Cloth = true;
     }
 }

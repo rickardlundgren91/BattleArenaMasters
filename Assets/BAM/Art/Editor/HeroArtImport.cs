@@ -17,6 +17,9 @@ namespace BAM.Art.Editor
 
         bool Ours => assetPath.StartsWith(ModelsDir) && assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase);
         bool IsClip => assetPath.Contains("/Anim/");
+        /// <summary>The bodies whose cloth or hair swings (ClothSway): they are imported with Read/Write on so the game can find the
+        /// cloth's vertices and add its spring bones once. Fenn's Original body (cape, tabard) and Tyra (ponytail).</summary>
+        static bool ClothModel(string path) => path == ModelsDir + "FennOriginal/Fenn.fbx" || path == ModelsDir + "Tyra/Tyra.fbx";
 
         // Rickard's arena pictures repeat across the floor and walls; 512 is plenty at the match camera's distance.
         void OnPreprocessTexture()
@@ -83,7 +86,7 @@ namespace BAM.Art.Editor
             mi.importLights = false;
             mi.importVisibility = false;
             mi.importBlendShapes = false;
-            mi.isReadable = false;
+            mi.isReadable = ClothModel(assetPath);
             mi.meshCompression = ModelImporterMeshCompression.Medium;
             mi.importAnimation = IsClip;
             mi.animationCompression = ModelImporterAnimationCompression.Optimal;
@@ -261,7 +264,7 @@ namespace BAM.Art.Editor
                 foreach (string path in paths)
                 {
                     if (!(AssetImporter.GetAtPath(path) is ModelImporter mi)) continue;
-                    bool stale = mi.animationType != ModelImporterAnimationType.Human;
+                    bool stale = mi.animationType != ModelImporterAnimationType.Human || mi.isReadable != ClothModel(path);
                     string name = Path.GetFileNameWithoutExtension(path);
                     if (!stale && path.Contains("/Anim/") && (name.StartsWith("Idle") || name.StartsWith("Run") || name.StartsWith("Walk")))
                     {

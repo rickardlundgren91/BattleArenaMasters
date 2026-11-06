@@ -82,6 +82,8 @@ namespace BAM.Art
         HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
         Vector3[][] gearVerts;    // their meshes' vertices, read once by GearTop (the menu stages)
         PreviewBreath breath;     // the menu hero's living idle on top of its clip (Preview only)
+        ClothSway cloth;          // cloth and hair on spring bones (Fenn, Tyra), made at the first frame
+        bool clothTried;
         // the menu hero's feet kept on the stage (Rickard 2026-10-27: Bram and Fenn floated above the ring on Home): each idle stands
         // the model at its own height over the root, so the lowest foot bone is held where it was in the bind pose, standing on the ground
         Transform instT, footL, footR, toeL, toeR;
@@ -1057,6 +1059,13 @@ namespace BAM.Art
                     model.localScale = new Vector3(s, s, s);
                     if (spawnT >= 0.3f) spawnT = -1f;
                 }
+            }
+
+            // cloth and hair last, after everything else has posed the body this frame
+            if (imported && (IsHero || Preview) && clips != null && HeroIndex >= 0)
+            {
+                if (!clothTried) { clothTried = true; cloth = ClothSway.For(anim, rends, HeroIndex); }
+                cloth?.Tick(dt, AnimFix.Cloth);
             }
 
             // the old game's dust puffs behind running heroes (View3DWorld.SyncAmbience); none while see-through or hidden, so it never gives a hider away
