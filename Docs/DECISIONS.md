@@ -41,7 +41,7 @@ before going beyond it.
 - Portrait, camera angled from above. 60 fps target with Low/High graphics.
 - Camera zoom exactly as the old game (Rickard 2026-10-25: "rätt zoom på kamera är det viktigaste", "inte mer av
   kamer på map"): 11.5 tiles across the old game's standing frame, the focus 52% down it. 2026-11-02 a little closer
-  after a tester's wish (Rickard: "zooma liiite mer in", "man ser nästan hela banan nu"): 10.5 tiles (MatchCamera.TilesAcross). The HUD and menus lay out in
+  after a tester's wish (Rickard: "zooma liiite mer in", "man ser nästan hela banan nu"): 10.5 tiles (MatchCamera.TilesAcross). 2026-11-07 back out to 11 tiles after tester Ski's "It's quite cramped" (feedback row 37). The HUD and menus lay out in
   the same frame, so a landscape Game view in the editor looks like the phone with black edges beside it.
 
 ## Data

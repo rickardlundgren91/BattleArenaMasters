@@ -123,7 +123,7 @@ namespace BAM.UI
         public static Rect PortraitFrame() => ShapedFrame(9f / 16f, 9f / 19.5f);
 
         /// <summary>
-        /// The frame the match camera measures its TilesAcross (10.5 tiles) across: the standing frame, except that a WideScreen keeps the old
+        /// The frame the match camera measures its TilesAcross (11 tiles) across: the standing frame, except that a WideScreen keeps the old
         /// 9:19.5 shape, so a foldable or tablet sees the same length of lane and the same tile size as a usual phone (there the
         /// picture runs on over the full width instead of black edges), and a TallScreen gets 9:22, the tallest phone shape,
         /// so an older foldable's cover screen sees no further ahead than that phone (Rickard 2026-10-31: "välj du den bästa
