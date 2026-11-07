@@ -11,6 +11,9 @@ namespace BAM.Core
     {
         static float lastAt = -1f;
 
+        /// <summary>Settings > Vibrate on my hits (BamSettings.HitVibration): one soft pulse, about 17 ms, per own auto that hits.</summary>
+        public const float LightHit = 0.15f;
+
         /// <summary>Strength 0..1 (the old scale): 0.12 a button press, 0.3 a hit on the player, 0.6 its death, 0.8 a kill.</summary>
         public static void Pulse(float strength)
         {

@@ -19,7 +19,7 @@ namespace BAM.Core
         static bool loaded;
         static float sfxVolume;
         static GraphicsQuality graphics;
-        static bool leftHanded, tutorialDone, tutorialCard, musicOn, vibration, hardOpen;
+        static bool leftHanded, tutorialDone, tutorialCard, musicOn, vibration, hitVibration, hardOpen;
         static int fps;
         static Consent consent;
         static int lastHero, lastDifficulty, spell;
@@ -45,6 +45,15 @@ namespace BAM.Core
         {
             get { Load(); return vibration; }
             set { Load(); if (vibration == value) return; vibration = value; PlayerPrefs.SetInt(Key + "vib", value ? 1 : 0); Commit(); }
+        }
+
+        /// <summary>A light buzz each time the player's own auto attack hits (tester feedback, Ski 2026-11-07: "an optional rumble
+        /// for light attacks that hit"). OFF until the player turns it on: vibration is for the big moments (Rickard 2026-10-26).
+        /// Needs <see cref="Vibration"/> on too.</summary>
+        public static bool HitVibration
+        {
+            get { Load(); return hitVibration; }
+            set { Load(); if (hitVibration == value) return; hitVibration = value; PlayerPrefs.SetInt(Key + "hitvib", value ? 1 : 0); Commit(); }
         }
 
         /// <summary>The frame rate the game asks for: 30 or 60 (60 unless the player picks 30 to save battery).</summary>
@@ -167,6 +176,7 @@ namespace BAM.Core
             leftHanded = PlayerPrefs.GetInt(Key + "left", 0) == 1;
             musicOn = PlayerPrefs.GetInt(Key + "music", 1) == 1;
             vibration = PlayerPrefs.GetInt(Key + "vib", 1) == 1;
+            hitVibration = PlayerPrefs.GetInt(Key + "hitvib", 0) == 1;
             fps = PlayerPrefs.GetInt(Key + "fps", 60) <= 30 ? 30 : 60;
             consent = (Consent)PlayerPrefs.GetInt(Key + "consent", 0);
             tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;

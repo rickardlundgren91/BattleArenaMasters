@@ -58,6 +58,7 @@ namespace BAM.Game
             public int Honey = HoneyOff;   // Moa's shield rings shown: lit cells per ring (HoneyKey)
             public Quaternion Rot;
             public float FixX, FixY;       // online guest: a correction of the guess, drawn away over ~0.1 s instead of a jump
+            public float JoltX, JoltY, JoltT, JoltLen; // the player's own hit shoves the target a little away (OwnHit), map tiles; JoltT left of JoltLen s
             public bool Squared;           // the view was told it faces a target or an aim, not its path (AnimFix.LegsFollow)
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
@@ -298,6 +299,7 @@ namespace BAM.Game
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
             r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.MaxHp = -1f; r.Energy = -2f; r.Ready = false; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff; r.Form = -1;
+            r.JoltT = 0f;
             r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
             r.Bar = null;
             foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
@@ -669,7 +671,7 @@ namespace BAM.Game
                     // special and passive damage without a shot of its own (zones, splashes) still flinches the target; a burn or
                     // poison tick does not (2 to 4 a second looked like flicker, Rickard 2026-10-26)
                     if (e.Dmg != DmgKind.Auto && e.V > 0f && e.B != null && !tickNow) V(e.B)?.PlayHit(e.Dmg == DmgKind.Special);
-                    if (!tickNow) HitConfirm(e);
+                    if (!tickNow) { HitConfirm(e); OwnHit(e); }
                     break;
                 case EventType.Death:
                 {
@@ -930,6 +932,35 @@ namespace BAM.Game
             BamAudio.Play(heavy ? SfxId.HitConfirmHeavy : SfxId.HitConfirmLight, (0.55f + Mathf.Min(0.35f, f * 2f)) * (heavy ? 1f : 0.5f));
         }
 
+        // Tester feedback (Ski, Discord 2026-11-07, feedback row 37): "abc made it very clear that you are hitting something, in bam
+        // it's much harder to understand what's going on and who you are hitting". Every hit of the player's own (its autos, special,
+        // passive, Fenn's wolf) now shows on the one it lands on: a short white flash on the whole body (UnitView.PlayOwnHit, over
+        // the red blink every hit has) and a small jolt away from the player, as Speltest's stagger did (SimLoop.updateJuice: 0.12 s
+        // plus up to 0.14 s for a big hit). Others' hits keep only the red blink, so the player's own stand out. Burn and poison
+        // ticks never jolt (they did not flinch before either). Picture only: the rules and the protocol never see it.
+        void OwnHit(in SimEvent e)
+        {
+            var b = e.B; var p = m.Player;
+            if (b == null || p == null || e.A == null || e.V < 1f || b.Team == p.Team || b.MaxHp <= 0f) return;
+            if (e.A != p && e.A.Owner != p) return;
+            if (!m.IsVisibleTo(b, Mine)) return;
+            if (!unitBySerial.TryGetValue(b.Serial, out UnitRec r) || r.V == null) return;
+            float f = Mathf.Min(1f, e.V / b.MaxHp);
+            float len = 0.12f + Mathf.Min(0.14f, f * 0.6f);
+            bool hero = b.Kind == UnitKind.Hero, tower = b.Kind == UnitKind.Tower;
+            // white over the whole body: a hero strongest; a minion a little softer (Rickard 2026-10-18 found white flashes on
+            // every minion hit cluttered, here only the player's own); a tower only softly (Speltest: full white on it was too much)
+            r.V.PlayOwnHit(hero ? 0.85f : tower ? 0.35f : 0.6f, len);
+            if (tower) return; // a tower rocks on its own (BodyView.PoseTower recoil), it is never shoved
+            // the jolt: away from the one who hit (the player or its wolf). A hero moves less than a minion (Speltest: 0.025-0.09
+            // and 0.05-0.24 tiles; the hero's floor raised to 0.06 so a small hit still reads on a phone)
+            float k = hero ? Mathf.Min(0.12f, 0.06f + f * 0.4f) : Mathf.Min(0.24f, 0.08f + f * 0.8f);
+            float dx = b.X - e.A.X, dy = b.Y - e.A.Y, d = Mathf.Sqrt(dx * dx + dy * dy);
+            if (d < 1e-3f) { float a = UnityEngine.Random.value * 6.2832f; dx = Mathf.Cos(a); dy = Mathf.Sin(a); d = 1f; } // picture only: Unity's random, never the match's
+            if (r.JoltT > 0f && r.JoltT / r.JoltLen * Mathf.Sqrt(r.JoltX * r.JoltX + r.JoltY * r.JoltY) > k) return; // a bigger jolt still running wins
+            r.JoltX = dx / d * k; r.JoltY = dy / d * k; r.JoltT = r.JoltLen = len;
+        }
+
         // the old game's kill tags (ABC2 Sim.cs onDeath): a second kill within 8 s is a Double Kill, a third a Triple, the third kill
         // without dying a Killing Spree, the last enemy down an Ace; a tag for the player's team plays Speltest's streak sound
         void MultiKill(in SimEvent e)
@@ -1143,6 +1174,13 @@ namespace BAM.Game
             Vector3 pos = jump ? Coords.Of(u) : Coords.Lerp(u.PX, u.PY, u.X, u.Y, alpha);
             pos.y += u.JumpLift * PadArcH; // a jump pad's throw flies in an arc
             if (u.Kind != UnitKind.Tower) pos.y += TowerFootLift(pos); // stands on the tower's stone foot, not in it
+            if (r.JoltT > 0f)
+            {
+                // the player's own hit (OwnHit): out at once, back over the jolt's length (Speltest's stagger, View3DWorld/View3DCreeps)
+                float q = r.JoltT / r.JoltLen;
+                if (!jump && u.Alive) pos += new Vector3(r.JoltX * q, 0f, -r.JoltY * q);
+                r.JoltT = Mathf.Max(0f, r.JoltT - dt);
+            }
             if (r.FixX != 0f || r.FixY != 0f)
             {
                 if (jump) { r.FixX = r.FixY = 0f; }

@@ -12,7 +12,8 @@ namespace BAM.Game
     /// Hit-stop only for the player's own death and its killing blows (Rickard 2026-10-18: longer ones felt like a freeze).
     /// Short buzzes with it (Haptics.cs, via BamHaptics, off when Settings has Vibration off): a big hit on the player (15 % or
     /// more), its death, a kill, its special and a hook catching a hero; none for its own hits (Rickard 2026-10-26: vibration,
-    /// but not overused). One pulse per tick, the strongest, since BamHaptics drops anything within 0.08 s of the last.
+    /// but not overused). Only if the player turned on Settings > Vibrate on my hits (off by default; tester feedback, Ski
+    /// 2026-11-07): a light buzz for each own auto attack that hits an enemy it can see. One pulse per tick, the strongest, since BamHaptics drops anything within 0.08 s of the last.
     /// Picture only: the hit-stop feeds ticks slower, the rules never see a shorter tick.
     /// </summary>
     sealed class MatchJuice
@@ -70,6 +71,9 @@ namespace BAM.Game
                         if (b == null || e.V < 1f || b.MaxHp <= 0f || MatchViews.IsTick(ev, i)) break; // a burn or poison tick never shakes
                         float f = Mathf.Min(1f, e.V / b.MaxHp);
                         bool mine = e.A != null && (e.A == p || e.A.Owner == p);
+                        // the light hit buzz, weakest of all, so a kill or a big hit in the same tick still wins
+                        if (e.A == p && e.Dmg == DmgKind.Auto && b.Team != p.Team && BamSettings.HitVibration && m.IsVisibleTo(b, p.Team))
+                            buzz = Mathf.Max(buzz, BamHaptics.LightHit);
                         if (b == p) { if (f >= 0.03f) AddTrauma(Mathf.Min(0.6f, 0.15f + f * 1.8f)); if (f >= 0.15f) buzz = Mathf.Max(buzz, 0.3f); } // only a big hit buzzes (Rickard 2026-10-26: vibration, but not overused)
                         else if (mine && b.IsRealHero && b.Team != p.Team)
                         {

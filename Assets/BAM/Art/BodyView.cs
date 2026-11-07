@@ -155,6 +155,8 @@ namespace BAM.Art
         int lastQuality = -1;
         bool fading, renderersOn = true;
         Color flashColor = Color.white;
+        float ownT = -1f, ownLen = 0.15f, ownPeak; // the player's own hit: a white flash over the red blink (PlayOwnHit)
+        bool flashLit;                             // the emission is not black (a flash is showing or just ended)
         UnitMarker marker = UnitMarker.None;
 
         public void Build(RigDef d, int team)
@@ -607,7 +609,7 @@ namespace BAM.Art
         /// <summary>Fresh state for a new life out of the pool.</summary>
         public void ResetState()
         {
-            moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
+            moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; ownT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
             atkCarry = castCarry = lastAtkW = lastCastW = 0f; drAtk = drCast = drHit = drUpA = drUpC = 0f;
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
@@ -808,6 +810,12 @@ namespace BAM.Art
             flashColor = big ? new Color(1f, 0.55f, 0.35f) : new Color(1f, 0.45f, 0.4f); // a short red blink on every hit (MLBB analysis 7)
         }
 
+        public override void PlayOwnHit(float strength, float len)
+        {
+            if (ownT >= 0f && ownPeak * (1f - ownT / ownLen) > strength) return; // a brighter one still showing wins
+            ownT = 0f; ownLen = Mathf.Max(0.05f, len); ownPeak = Mathf.Clamp01(strength);
+        }
+
         public override void SetDead(bool d)
         {
             if (d == dead) return;
@@ -972,6 +980,7 @@ namespace BAM.Art
 
         void SetFlash(Color c)
         {
+            flashLit = c.r > 0f || c.g > 0f || c.b > 0f;
             for (int i = 0; i < mats.Length; i++) mats[i].SetColor(ArtMaterials.EmissionColor, c);
         }
 
@@ -997,13 +1006,12 @@ namespace BAM.Art
                 if (renderersOn && !dead) ApplyLook();
             }
 
-            if (hitT >= 0f)
-            {
-                hitT += dt;
-                float k = 1f - hitT / hitLen;
-                if (k <= 0f) { hitT = -1f; SetFlash(Color.black); }
-                else SetFlash(flashColor * (k * 0.9f));
-            }
+            if (hitT >= 0f) { hitT += dt; if (hitT >= hitLen) hitT = -1f; }
+            if (ownT >= 0f) { ownT += dt; if (ownT >= ownLen) ownT = -1f; }
+            // the player's own hit flashes white and wins over the red blink every hit has (tester feedback, Ski 2026-11-07)
+            if (ownT >= 0f) SetFlash(Color.white * (ownPeak * (1f - ownT / ownLen)));
+            else if (hitT >= 0f) SetFlash(flashColor * ((1f - hitT / hitLen) * 0.9f));
+            else if (flashLit) SetFlash(Color.black); // a tower's shot pulse (PoseTower, later this frame) lights it again
             recoil = Mathf.MoveTowards(recoil, 0f, dt * 5f);
 
             if (imported) AnimateImported(dt);
@@ -2147,8 +2155,8 @@ namespace BAM.Art
                 atkT += dt;
                 float u = Mathf.Clamp01(atkT / windup), r = Mathf.Clamp01((atkT - windup) / 0.3f);
                 pulse = atkT < windup ? Smooth(u) * 0.35f : (1f - r) * 0.35f;
-                if (hitT < 0f) SetFlash(Pal.Get(Pal.TeamLight(Team)) * (pulse * 1.6f));
-                if (r >= 1f) { atkT = -1f; if (hitT < 0f) SetFlash(Color.black); }
+                if (hitT < 0f && ownT < 0f) SetFlash(Pal.Get(Pal.TeamLight(Team)) * (pulse * 1.6f));
+                if (r >= 1f) { atkT = -1f; if (hitT < 0f && ownT < 0f) SetFlash(Color.black); }
             }
             bones[Models.TowerCrystal].localPosition = def.Pivots[Models.TowerCrystal] + new Vector3(0f, Mathf.Sin(idleT * 2f) * 0.08f, 0f);
             bones[Models.TowerCrystal].localRotation = Quaternion.Euler(0f, idleT * 45f, 0f);

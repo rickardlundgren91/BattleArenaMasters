@@ -65,6 +65,9 @@ namespace BAM.Art
         public virtual void Interrupt(bool swing) { }
         /// <summary>Took damage. big = a crit-like hit (passive bonus, special).</summary>
         public abstract void PlayHit(bool big);
+        /// <summary>The player's own hit landed here (tester feedback, Ski 2026-11-07): a white flash of <paramref name="strength"/>
+        /// (0..1) fading over <paramref name="len"/> s, over the red blink of <see cref="PlayHit"/>.</summary>
+        public virtual void PlayOwnHit(float strength, float len) { }
         /// <summary>Died (play the death and hide) or came back (respawn).</summary>
         public abstract void SetDead(bool dead);
         /// <summary>World-space bar above the unit. hp01 and shield01 are fractions of max health.</summary>

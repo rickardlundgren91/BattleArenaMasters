@@ -27,7 +27,7 @@ namespace BAM.UI
     public static partial class Screens
     {
         static GameObject settings, licenses;
-        static HubSwitch soundSwitch, musicSwitch, vibrationSwitch, leftSwitch, shareSwitch;
+        static HubSwitch soundSwitch, musicSwitch, vibrationSwitch, hitVibrationSwitch, leftSwitch, shareSwitch;
         static HubChoice quality, frameRate;
         static GameObject tutorialRow; // hidden in a match: starting the tutorial there would drop the match unasked
         static GameObject settingsBack; // the Back pill: only when Settings is opened from the pause menu, where no tab bar shows
@@ -58,6 +58,12 @@ namespace BAM.UI
             {
                 BamSettings.Vibration = on;
                 if (on) BamHaptics.Pulse(0.3f);
+            });
+            // tester feedback (Ski 2026-11-07): a light buzz on each of your own hits, off unless the player turns it on
+            hitVibrationSwitch = SwitchRow(content, "Vibrate on my hits", on =>
+            {
+                BamSettings.HitVibration = on;
+                if (on) BamHaptics.Pulse(BamHaptics.LightHit);
             });
 
             SetHead(content, "GRAPHICS");
@@ -167,6 +173,7 @@ namespace BAM.UI
             soundSwitch.Set(BamSettings.SfxVolume > 0.001f, true);
             musicSwitch.Set(BamSettings.MusicOn, true);
             vibrationSwitch.Set(BamSettings.Vibration, true);
+            hitVibrationSwitch.Set(BamSettings.HitVibration, true);
             quality.Set(BamSettings.Graphics == GraphicsQuality.High ? 0 : 1);
             frameRate.Set(BamSettings.Fps <= 30 ? 0 : 1);
             leftSwitch.Set(BamSettings.LeftHanded, true);
