@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "b03e8243d36c3311";
+            Generated = true; GeneratedHash = "93bec63bf99bd130";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -307,6 +307,7 @@ namespace BAM.Sim
         }
         internal void __Copy(global::BAM.Sim.Match __s, SimMirror __m)
         {
+            DragAim = __s.DragAim;
             if (__s.Events != null) { Events.Clear(); for (int __i = 0; __i < __s.Events.Count; __i++) { var __e = __s.Events[__i]; __e.A = __m.Map(__e.A); __e.B = __m.Map(__e.B); Events.Add(__e); } }
             HeroTestFastCd = __s.HeroTestFastCd;
             __m.ListMap(Heroes, __s.Heroes);

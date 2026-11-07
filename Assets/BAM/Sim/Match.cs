@@ -447,7 +447,9 @@ namespace BAM.Sim
             MoveUnit(u, seatMoveX[s], seatMoveY[s], dt);
             if (seatSpecBuf[s] > 0)
             {
-                bool cast = OneTap ? TryTapSpecial(u) : TryCastSpecial(u, seatBufAng[s], seatBufK[s]); // one tap: any aim sent is ignored
+                bool cast = !OneTap ? TryCastSpecial(u, seatBufAng[s], seatBufK[s])
+                    : float.IsNaN(seatBufAng[s]) || !DragAimOn ? TryTapSpecial(u) // a tap (or drag aim off): the random target in reach
+                    : TryAimSpecial(u, seatBufAng[s], seatBufK[s]); // a drag: the player's own aim (OneTap.cs)
                 if (cast) seatSpecBuf[s] = 0;
                 else if (seatSpecBuf[s] <= dt && u.SpecialReady) { if (u == Player) SpecialDeniedAt = Time; Emit(EventType.SpecialDenied, u, null); }
             }

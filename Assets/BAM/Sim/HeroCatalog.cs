@@ -11,7 +11,10 @@ namespace BAM.Sim
         public string OneTapName, OneTapDesc;
         /// <summary>What the menus and the hold card show as the special's name and text.</summary>
         public string SpecialTitle => Rules.OneTapSpecial && OneTapName != null ? OneTapName : SpecialName;
-        public string SpecialText => Rules.OneTapSpecial && OneTapDesc != null ? OneTapDesc : SpecialDesc;
+        public string SpecialText => Rules.OneTapSpecial && OneTapDesc != null
+            ? (Rules.DragAimSpecial && Match.CanDragAim(Id) ? OneTapDesc + " " + DragLine : OneTapDesc) : SpecialDesc;
+        /// <summary>The line every aimable hero's special text ends with (Rules.DragAimSpecial, tester Ski 2026-11-07).</summary>
+        public const string DragLine = "Drag to aim it yourself.";
         public int Health, Damage, Speed, Difficulty; // 1..3, for the bars on the hero-select screen
         public bool Ranged;
         /// <summary>A hero not in the game yet that PRACTICE > HERO TEST already lists, so Rickard can try its rules with a stand-in body.</summary>

@@ -87,14 +87,15 @@ namespace BAM.Sim
                 Check(side < 0.05f, $"ONETAP {hero}: aimed at the enemy ({side:0.000} tiles off its line)");
                 if (hero == HeroId.Blast || hero == HeroId.Bram)
                     Check(SimMath.Hypot(ax - e.X, ay - e.Y) < 0.05f, $"ONETAP {hero}: lands on the target's spot ({SimMath.Hypot(ax - e.X, ay - e.Y):0.000} off)");
-                // a drag sent anyway (an old HUD) is a tap too
+                // with drag aim off (Rules.DragAimSpecial false, protocol 58) a drag sent anyway is a tap too (DragAimTests.cs has the on side)
                 m = OneTapScene(hero, out p, out cx, out cy);
+                m.DragAim = false;
                 Place(m.Heroes.Find(h => h.Team != p.Team), cx - 1.5f + Math.Min(2.9f, TapReach(hero) - 0.3f), cy);
                 var drag = PlayerInput.None; drag.Special = true; drag.AimAngle = SimMath.PI; drag.AimK = 1;
                 bool toward = false;
                 m.Step(drag);
                 foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) toward = ev.X > p.X - 0.01f;
-                Check(toward, $"ONETAP {hero}: a dragged aim is ignored, the tap picks the target");
+                Check(toward, $"ONETAP {hero}: with drag aim off a dragged aim is ignored, the tap picks the target");
             }
 
             // Knut: only a minion in reach still lights the button; the hook flies through it and never catches it (KnutS.HookPassesMinions)

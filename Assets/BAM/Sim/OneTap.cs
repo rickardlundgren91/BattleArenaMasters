@@ -16,6 +16,25 @@ namespace BAM.Sim
         readonly List<Unit> tapBuf = new List<Unit>(48);
         /// <summary>This match plays the one-tap special (Rules.OneTapSpecial; a test may turn it off to check the old drag forms).</summary>
         public bool OneTap = Rules.OneTapSpecial;
+        /// <summary>This match lets a drag aim the one special by hand (Rules.DragAimSpecial; a test may turn it off).</summary>
+        public bool DragAim = Rules.DragAimSpecial;
+        /// <summary>A drag aims now: the one-tap game with drag aim on, outside the guided match (it teaches the tap only: new players
+        /// got stuck on the old drag step, 2026-11-01).</summary>
+        public bool DragAimOn => OneTap && DragAim && Tut == null;
+
+        /// <summary>Has h's special anything to aim? Bonk's Ground Slam lands round him and Kugg's turret where he stands: tap only.</summary>
+        public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg;
+
+        /// <summary>The share of the form's reach (TryCastSpecial's k) a drag with share k aims at: a placed form (Bram's anvil, Blast's bomb,
+        /// Fenn's thrown wolf, Moa's field) lands at most at the white ring (TapReach), as far as a tap can put it, so the drag gives
+        /// control but no extra reach (proposal 2026-11-07). Lines (Tyra's bolt, Knut's hook, Tikta's needles) fly as far as a tap's.</summary>
+        public static float DragShare(HeroId id, float k)
+        {
+            k = SimMath.Clamp(float.IsNaN(k) ? 0 : k, 0, 1);
+            var d = Defs.Hero(id);
+            if (d.Drag != AimShape.Circle || d.DragReach <= 0.01f) return k;
+            return k * Math.Min(1f, TapReach(id) / d.DragReach);
+        }
 
         /// <summary>How far a tapped special looks for its target: the hero's auto attack range, the white ring round them (Rickard
         /// 2026-11-02, Knut "samma som hans range", then Tikta, Bram, Tyra, Moa and Blast "fel range"), except Bonk, whose one special
@@ -94,6 +113,27 @@ namespace BAM.Sim
             float reach = Math.Max(0.01f, h.HDef.DragReach);
             float k = SimMath.Clamp(d / reach, 0, 1); // placed forms (Bram, Fenn, Blast, Moa) land on the target's spot
             if (TeleOn) return TeleTime(h.Hero) > 0 ? StartTelegraph(h, t, ang, k) : CastWithFlash(h, t, ang, k); // the warning first, aim locked now (Telegraph.cs)
+            return TryCastSpecial(h, ang, k);
+        }
+
+        /// <summary>How far the aim ring round the hero reaches while a drag aims (the HUD): with the one-tap special a placed form and
+        /// Tikta's needles stop at the white ring (DragShare, NeedleReach), the other lines fly their own length (Knut's hook 7).</summary>
+        public float DragRing(HeroId id)
+        {
+            var d = Defs.Hero(id);
+            if (!OneTap) return d.DragReach;
+            return d.Drag == AimShape.Circle || id == HeroId.Tikta ? TapReach(id) : d.DragReach;
+        }
+
+        /// <summary>The drag cast (Rules.DragAimSpecial): the hero's one special the way ang points (map space), k of its reach
+        /// (DragShare), through the same warning as a tap (aim locked, red shape, TeleTime). It needs no target in reach: the player
+        /// chooses where it goes. Bonk and Kugg have nothing to aim, so their drag is a tap. False (nothing spent) when it cannot fire now.</summary>
+        public bool TryAimSpecial(Unit h, float ang, float k)
+        {
+            if (float.IsNaN(ang) || !CanDragAim(h.Hero)) return TryTapSpecial(h);
+            if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
+            k = DragShare(h.Hero, k);
+            if (TeleOn) return TeleTime(h.Hero) > 0 ? StartTelegraph(h, null, ang, k) : CastWithFlash(h, null, ang, k);
             return TryCastSpecial(h, ang, k);
         }
     }

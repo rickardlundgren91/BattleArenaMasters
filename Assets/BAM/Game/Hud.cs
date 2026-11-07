@@ -321,6 +321,9 @@ namespace BAM.Game
             var p = m.Player;
             // one-tap special: charged but nobody in reach shows as not ready, grey (Rickard 2026-11-01)
             bool ready = p.Alive && p.SpecialReady && (!m.OneTap || m.TapHasTarget(p));
+            // one tap + drag aim (tester Ski 2026-11-07): a tap rolls the random target, a drag aims by hand; not in the guided match
+            // (it teaches the tap only) and not for Bonk's slam or Kugg's turret, which have nothing to aim (Match.CanDragAim)
+            if (m.OneTap) special.NoDrag = !(m.DragAimOn && Match.CanDragAim(p.Hero));
             // the Glass HUD's button (Hud.cs 739-749, HudGlass.drawGlassSpecialRim): a dark disc, brown when ready, an orange
             // charge ring, and when ready an orange ring breathing just outside it (sin 3.5 t)
             specialFill.color = ready ? GlassOrangeHi : GlassOrange;
@@ -454,26 +457,25 @@ namespace BAM.Game
             aimLook.Hide();
             rings.SetAim(false, default);
             if (hidden || !p.Alive || m.State != MatchState.Play || !special.Dragging) return;
-            var d = p.HDef;
             Vector3 hero = views.DrawnAt(p);
             bool ready = p.SpecialReady, cancel = special.OverCancel;
             float dt = Time.unscaledDeltaTime;
             Vector2 o = special.Offset;
             // what the rules would do if let go now (Sim Aim.cs: wall cuts, the map edge, Fenn's flight; Precision AIM-01..06, BRAM-02),
             // drawn from where the hero is drawn; the cast gets the same angle and share (OnAimed)
-            var a = m.AimFor(p, Coords.ScreenAngle(o), AimK(o));
+            var a = m.AimFor(p, Coords.ScreenAngle(o), m.OneTap ? Match.DragShare(p.Hero, AimK(o)) : AimK(o)); // one tap: a placed form stops at the white ring, as the cast (DragShare)
             Vector3 dir = Coords.Dir(a.Ang);
             // the MLBB-style indicator (AimIndicator.cs); cancelling dims it grey and drops the hit marks
             if (a.Shape == AimShape.Line)
             {
-                if (p.Hero != HeroId.Tyra) aimLook.Range(hero, d.DragReach, ready, cancel); // Tyra's bolt has no reach: it flies until it hits something
+                if (p.Hero != HeroId.Tyra) aimLook.Range(hero, m.DragRing(p.Hero), ready, cancel); // Tyra's bolt has no reach: it flies until it hits something
                 aimLook.Line(hero, dir, a.Length, a.Half, a.Tip, a.Back, ready, cancel, dt);
                 if (!cancel) rings.SetAim(true, a);
             }
             else if (a.Shape == AimShape.Circle)
             {
                 Vector3 c = hero + (Coords.World(a.CX, a.CY) - Coords.World(p.X, p.Y));
-                aimLook.Range(hero, d.DragReach, ready, cancel);
+                aimLook.Range(hero, m.DragRing(p.Hero), ready, cancel);
                 // Fenn's wolf turns onto a hero anywhere along its flight: its path, faint (AIM-05)
                 if (a.PathHalf > 0f) aimLook.Line(hero, dir, a.Length, a.PathHalf, 0f, 0f, ready, cancel, 0f, 0.4f);
                 aimLook.Circle(hero, c, a.Radius, ready, cancel, dt);
@@ -650,7 +652,7 @@ namespace BAM.Game
             special.Rect = specialRoot;
             special.Tapped = OnTap;
             special.Aimed = OnAimed;
-            special.NoDrag = Rules.OneTapSpecial; // one tap: no drag, so no aim, reach ring or cancel mark either
+            special.NoDrag = Rules.OneTapSpecial && !Rules.DragAimSpecial; // set per frame in Special(): a drag aims by hand (Rules.DragAimSpecial)
             // the old game's button pictures (ui_ingameView_specialButton_*): glow, dark disc, ring track, the charge ring
             // the Glass HUD's SPECIAL: a dark glass disc, a faint track and the orange charge (the old ring picture,
             // ui_ingameView_specialButton_fill, has the old ring's width: 0.14 of the radius)

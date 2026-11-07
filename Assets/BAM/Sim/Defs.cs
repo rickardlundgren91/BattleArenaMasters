@@ -171,6 +171,12 @@ namespace BAM.Sim
         /// OneTap.cs). false = the old tap + drag specials, HUD split, aim ring, cancel X and tutorial drag step, all kept for at
         /// least two versions so the change can be taken back. Not const, so both code paths stay compiled.</summary>
         public static readonly bool OneTapSpecial = true;
+        /// <summary>On top of the one-tap special, a drag on the SPECIAL button aims it by hand (tester Ski 2026-11-07: "More control on
+        /// specials would be fantabulous"; Rickard picked it). A tap still rolls a random target in reach (OneTap.cs); a drag casts the same
+        /// single special the way the finger points, with the same warning, damage and reach: a placed form lands at most at the white
+        /// ring, as a tap can (Match.DragShare). Bonk's slam and Kugg's turret have nothing to aim and stay tap only (Match.CanDragAim). Bots
+        /// keep tapping (BotSpecial), the guided match keeps the tap only. false = protocol 58: every release is a tap.</summary>
+        public static readonly bool DragAimSpecial = true;
         /// <summary>A tapped special warns before it goes (Rickard's tester 2026-11-02: "the reaction window is very short once an
         /// ultimate is activated ... some ultimates seem to be guaranteed hits as long as the target is within range"). The tap locks
         /// the aim at once (the line's direction, the placed form's spot), the hero stands and flashes, and a red warning of the real
