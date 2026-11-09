@@ -1048,6 +1048,7 @@ namespace BAM.Art
                     GroundFeet(dt, 1f - moveW);
                 }
             }
+            if (!Preview && imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggAim();
             // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
             if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
             if (gear != null && clips != null && gear.NeedsRest) MeasureRest();
@@ -1616,6 +1617,23 @@ namespace BAM.Art
             leanR += (roll - leanR) * K60(8f, dt);
             leanP += (pitch - leanP) * K60(6f, dt);
             model.localRotation = Quaternion.Euler(leanP, aimYaw, leanR);
+        }
+
+        // Kugg's right arm is his cannon (Rickard 2026-11-09, his picture: the arm held straight out at the target and the shot leaving its
+        // mouth). Firing A Gun holds a rifle across the chest, so while his attack plays the upper arm and then the forearm are turned
+        // until the forearm points level where he faces (his target in a fight); MuzzleAt then puts the shot at the barrel's mouth
+        void KuggAim()
+        {
+            float w = Mathf.Clamp01(gearAtk);
+            if (w <= 0.01f || anim == null || !anim.isHuman) return;
+            Transform up = anim.GetBoneTransform(HumanBodyBones.RightUpperArm), lo = anim.GetBoneTransform(HumanBodyBones.RightLowerArm),
+                hand = anim.GetBoneTransform(HumanBodyBones.RightHand);
+            if (up == null || lo == null || hand == null) return;
+            Vector3 aim = transform.forward; aim.y = 0f;
+            if (aim.sqrMagnitude < 1e-4f) return;
+            aim.Normalize();
+            up.rotation = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(hand.position - up.position, aim), w) * up.rotation;
+            lo.rotation = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(hand.position - lo.position, aim), w) * lo.rotation;
         }
 
         // Old Speltest's stride (HeroMixamoGait.MxStride, Rickard 2026-10-26: Tikta and Tyra "hukar och går snabbt"): BAM played only
