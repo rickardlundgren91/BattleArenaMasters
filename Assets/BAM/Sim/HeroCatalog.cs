@@ -95,13 +95,17 @@ namespace BAM.Sim
                 Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
         };
 
-        /// <summary>What PRACTICE > HERO TEST lists: every hero in the game, then the Preview heroes still waiting in Coming.</summary>
+        /// <summary>Whether HERO TEST also lists the Preview heroes waiting in Coming (Ragn, Nässla, Skrall, Ravna). Off for 0.3.9
+        /// (Rickard 2026-11-09: "dom nya hjältarna ska inte in nu, bara kugg"); set true to try them in the editor again.</summary>
+        public const bool PreviewsInHeroTest = false;
+
+        /// <summary>What PRACTICE > HERO TEST lists: every hero in the game, then (with PreviewsInHeroTest) the Preview heroes in Coming.</summary>
         public static HeroInfo[] HeroTestList => heroTestList ??= MakeHeroTestList(); // lazy: All is declared below
         static HeroInfo[] heroTestList;
         static HeroInfo[] MakeHeroTestList()
         {
             var l = new System.Collections.Generic.List<HeroInfo>(All);
-            foreach (var h in Coming) if (h.Preview) l.Add(h);
+            if (PreviewsInHeroTest) foreach (var h in Coming) if (h.Preview) l.Add(h);
             return l.ToArray();
         }
 

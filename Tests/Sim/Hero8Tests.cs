@@ -19,7 +19,7 @@ namespace BAM.Sim
             {
                 var info = HeroCatalog.Get(id);
                 Check(info.Id == id && info.Preview && HeroCatalog.IndexOf(id) < 0, $"{id} waits in Coming, a preview hero");
-                Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == id), $"HERO TEST lists {id}");
+                Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == id) == HeroCatalog.PreviewsInHeroTest, $"HERO TEST lists {id} only with PreviewsInHeroTest");
                 Check(Defs.Hero(id).Id == id, $"{id} has its own numbers in Defs");
             }
             Check(HeroCatalog.Get(HeroId.Nassla).Name == "Nässla" && HeroCatalog.SpecialIcon(HeroId.Nassla) == "special_nassla", "Nässla shows her name, her icon file is plain ASCII");
