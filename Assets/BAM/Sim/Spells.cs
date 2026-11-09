@@ -66,7 +66,9 @@ namespace BAM.Sim
         {
             // a special's warning (Telegraph.cs) blocks the spell too: every other hero stands Casting in it, Tikta walks in hers
             // without St.Casting since 0.3.9, and a Blink there would move her needles' start (review 0.3.9 nr 59)
-            if (!SpellReady(h) || h.IsClone || h.Has(St.Stun) || h.Has(St.Casting) || h.TeleAt >= 0) return false;
+            // Nor in a jump pad's flight (Grove: a Blink in the air left the hero beside its landing spot), nor while Tikta's dragged
+            // needles still leave her hand (a Blink moved their start off the red line; full review 2026-11-09 nr 78, 64)
+            if (!SpellReady(h) || h.IsClone || h.Has(St.Stun) || h.Has(St.Casting) || h.TeleAt >= 0 || (h.KnockPad && h.KnockT > 0) || NeedleInHand(h)) return false;
             float fx = h.X, fy = h.Y;
             switch (h.Spell)
             {

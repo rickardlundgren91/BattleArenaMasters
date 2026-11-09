@@ -99,7 +99,9 @@ namespace BAM.Sim
             if (tgt.Has(St.Invulnerable) || tgt.Has(St.Untargetable)) return 0;
             var att = src != null ? (src.Owner ?? src) : null;
             if (tgt.Kind == UnitKind.Hero) tgt.LastHurt = Time;
-            if (att != null && !tgt.IsClone) att.RevealT = Rules.RevealTime; // hitting Fenn's decoy reveals nobody
+            // a dead attacker (a shot that lands after its shooter died, a burn or poison tick of his) is not revealed: he came back
+            // from the respawn lit and "in a fight" (full review 2026-11-09 nr 76, 66). Hitting Fenn's decoy reveals nobody.
+            if (att != null && att.Alive && !tgt.IsClone) att.RevealT = Rules.RevealTime;
             // being hit in grass reveals nobody: only your own hits and an enemy within 2.5 tiles do, so a stray splash or a
             // bot's next shot cannot keep a hero who is not fighting lit for ever (tester MysOxen 2026-11-04). A hit outside the
             // grass still trails you 2 s into it. Poison and burn ticks are the exception: a hero who burns or is poisoned in the
@@ -128,8 +130,7 @@ namespace BAM.Sim
             if (att == null || !att.IsClone) tgt.LastFight = Time;
             if (src != null && !tgt.IsClone)
             {
-                src.LastCombat = Time;
-                src.LastFight = Time; // hitting anything stops the regen (Rickard 2026-11-03)
+                if (src.Alive) { src.LastCombat = Time; src.LastFight = Time; } // hitting anything stops the regen (Rickard 2026-11-03); not a dead shooter's late hit (nr 76)
                 if (src.Kind == UnitKind.Hero && att.HeroIndex >= 0) tgt.LastHitBy[att.HeroIndex] = Time;
             }
             if (src != null && src.Kind == UnitKind.Hero && tgt.Kind == UnitKind.Hero && !tgt.IsClone)
@@ -223,6 +224,9 @@ namespace BAM.Sim
         void Revive(Unit u)
         {
             u.Alive = true; u.Hp = u.MaxHp; u.X = u.PX = u.SpawnX; u.Y = u.PY = u.SpawnY;
+            // nothing from the death comes back with the hero: a status put on the corpse (statuses do not tick while dead) or a reveal
+            // from a shot of his that landed after he fell (full review 2026-11-09 nr 72, 76)
+            u.ClearStatuses(); u.RevealT = 0;
             if (!Config.HeroTest) AddStatus(u, St.Invulnerable, Rules.RespawnInvulnerable); // HERO TEST: hittable at once (old herotestTick)
             u.AtkTimer = 0; u.RespawnT = 0; u.MoInit = false; u.SpellChanEnd = -1; u.TeleAt = -1;
             if (u.Bot != null) u.Bot.Reset(true);
@@ -278,6 +282,9 @@ namespace BAM.Sim
             float cd = u.AttackCd;
             u.AtkTimer += dt;
             if (u.AtkTimer < cd) return;
+            // a hero thrown by a jump pad (Grove) swings at nobody in the air: the timer runs on, the swing comes as it lands. A knockback
+            // slide is not a flight: Bonk's pins keep swinging as before (full review 2026-11-09 nr 78)
+            if (u.KnockPad && u.KnockT > 0) return;
             var targets = EnemiesInRange(u, u.Range, Pick.Any, true, atkBuf);
             Unit tgt;
             if (u.Kind == UnitKind.Tower)
@@ -289,12 +296,7 @@ namespace BAM.Sim
                 // an enemy hero who attacks one of its heroes from inside the reach, made at the hit (DealDamage). Until protocol 58 a
                 // 2 s fight memory also turned it here, to a hero who had only been hit by a defender or had hit one from outside the
                 // reach, so a hero stepping back in took the tower off his living minion (tester Øli 2026-11-06).
-                if (u.Target == null)
-                {
-                    Unit m = null; float bd = float.MaxValue;
-                    for (int i = 0; i < targets.Count; i++) { var t = targets[i]; if (!t.IsMinionLike) continue; float d = SimMath.Dist(u, t); if (d < bd) { bd = d; m = t; } }
-                    u.Target = m ?? Nearest(targets, u.X, u.Y);
-                }
+                if (u.Target == null) u.Target = TowerPick(u, targets);
                 tgt = u.Target;
                 // a locked hero behind a wall or untargetable for a moment keeps the aggro: the tower holds its shot instead of
                 // turning to someone else (heroes in its reach are always seen, grass or not; Rickard 2026-11-02)
@@ -324,6 +326,16 @@ namespace BAM.Sim
             else u.AtkTimer = cd;
         }
 
+        /// <summary>The tower's pick among the enemies in its reach: the nearest minion or wolf, a hero only when none stands there.
+        /// A tower shot re-aimed in flight (RetargetAuto) picks the same way: until protocol 59 it took the nearest enemy, a hero before
+        /// a living minion (full review 2026-11-09 nr 77).</summary>
+        Unit TowerPick(Unit tw, List<Unit> targets)
+        {
+            Unit m = null; float bd = float.MaxValue;
+            for (int i = 0; i < targets.Count; i++) { var t = targets[i]; if (!t.IsMinionLike) continue; float d = SimMath.Dist(tw, t); if (d < bd) { bd = d; m = t; } }
+            return m ?? Nearest(targets, tw.X, tw.Y);
+        }
+
         void AutoAttack(Unit u, Unit tgt)
         {
             bool hero = u.Kind == UnitKind.Hero;
@@ -348,8 +360,7 @@ namespace BAM.Sim
             if (hero && u.Hero == HeroId.Bonk) { BonkSwing(u, tgt, dmg * coeff, big); return; } // a slow slam on the ground in front (Hero3.cs)
             var p = NewProj(ProjMode.Auto, u, u.X, u.Y);
             p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero; p.Ticks = trance;
-            Emit(EventType.AttackStart, u, tgt, spawnDelay, (byte)kind, big);
-            if (hero && u.Hero == HeroId.Kugg) KuggFired(u); // an anchored shot spends one (Hero7.cs)
+            Emit(EventType.AttackStart, u, tgt, spawnDelay, (byte)kind, big); // an anchored Kugg's shell is spent as it leaves the hand (UpdateAuto, Hero7.cs KuggFired)
         }
 
         /// <summary>What a tower's or minion's shot is worth against tgt (tower ramp and late bonus, a siege minion's x2 on towers).</summary>
@@ -424,7 +435,13 @@ namespace BAM.Sim
         void UpdateAuto(Proj p, float dt)
         {
             var tgt = p.Tgt;
-            if (!p.Launched) { p.Launched = true; p.OX = p.Src.X; p.OY = p.Src.Y; } // the shot leaves where the shooter stood at the release
+            if (!p.Launched)
+            {
+                p.Launched = true; p.OX = p.Src.X; p.OY = p.Src.Y; // the shot leaves where the shooter stood at the release
+                // Kugg's anchored shell spends its stock here, not when the wind-up starts: a stun that cuts the shell in his hand
+                // (InterruptSpecial) costs no shot (full review 2026-11-09 nr 63)
+                if (p.Kind == ProjKind.KuggShell) KuggFired(p.Src);
+            }
             float ox = p.X, oy = p.Y;
             float tx = p.Fizzle ? p.FX : tgt.X, ty = p.Fizzle ? p.FY : tgt.Y; // a fizzling shot flies to its spot and hits nothing there
             if (p.Speed > 0)
@@ -482,7 +499,7 @@ namespace BAM.Sim
             var list = EnemiesInRange(u, u.Range, Pick.Any, true, atkBuf);
             if (list.Count > 0)
             {
-                p.Tgt = u.Kind == UnitKind.Hero ? PickRandom(list) : Nearest(list, u.X, u.Y);
+                p.Tgt = u.Kind == UnitKind.Hero ? PickRandom(list) : u.Kind == UnitKind.Tower ? TowerPick(u, list) : Nearest(list, u.X, u.Y);
                 if (u.Kind != UnitKind.Hero) p.Dmg = u.DefDmg * UnitAutoCoeff(u, p.Tgt); // priced for the new target, not the dead one
                 u.Facing = SimMath.Atan2(p.Tgt.Y - u.Y, p.Tgt.X - u.X);
                 // a timed shot already flying goes on from where it is, at least RetargetTime per tile, instead of jumping onto the
@@ -516,12 +533,14 @@ namespace BAM.Sim
             if (dealt <= 0 && t.Has(St.Invulnerable)) return; // nor does a hit on respawn protection (precision CHAINMAP-06; a shield still charges)
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
             if (!h.KuggRooted) h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1); // Kugg gathers no charge while anchored (ROI17's stocks)
-            if (h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddSlowOnce(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, h);
+            // a killing blow puts nothing on the corpse: Knut's slow sat on a dead hero through the wait (statuses do not tick while
+            // dead) and came back with him (full review 2026-11-09 nr 72). The charge and the hero's own passives are still his.
+            if (t.Alive && h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddSlowOnce(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, h);
             if (h.Hero == HeroId.Bram) BramBacklash(h, t);
             if (h.Hero == HeroId.Tyra) Featherstep(h, t, dealt); // Hero5.cs
             if (h.Hero == HeroId.Oaken) OakenRelease(h, t); // Hero6.cs
             if (h.Hero == HeroId.Skrall && p.Ticks >= SkrallS.Steps) TranceJump(h, t, p.Dmg); // a full Trance jumps on (Hero8.cs)
-            if (h.Hero == HeroId.Ravna) CrowsEye(h, t, dealt); // Hero8.cs
+            if (h.Hero == HeroId.Ravna && t.Alive) CrowsEye(h, t, dealt); // Hero8.cs; no mark on a corpse (nr 72)
         }
 
         // ---------- what the bots know ----------

@@ -130,7 +130,18 @@ namespace BAM.Sim
             for (int t = 0; t < 2; t++) { var tw = TowerOf(t); if (tw != null && tw.Alive && Hyp(tw.X - x, tw.Y - y) < Rules.TowerBody + h.R + 0.1f) return true; }
             return false;
         }
-        bool Walkable(Unit h, float x, float y) => M.Map.Free(x, y, h.R) && !TowerBlocks(h, x, y);
+        /// <summary>A jump pad throws whoever steps onto its tile (Match.PadCheck), so until the bots have pad play a pad tile is a body
+        /// like a tower's for their spots and steps, with PadMargin round it: paths went round the tiles already (Arena.FindPath), but the
+        /// straight walks, dodges and kites did not: 2.4 throws a match on Grove (full review 2026-11-09 nr 87).</summary>
+        bool PadBlocks(float x, float y)
+        {
+            var map = M.Map;
+            for (int i = 0; i < map.PadCount; i++) if (Math.Abs(x - map.PadX[i]) < 0.5f + PadMargin && Math.Abs(y - map.PadY[i]) < 0.5f + PadMargin) return true;
+            return false;
+        }
+        const float PadMargin = 0.4f;
+        /// <summary>Can the bot stand at (x, y): free ground, outside every tower body and off the jump pads. Internal for Tests/Sim.</summary>
+        internal bool Walkable(Unit h, float x, float y) => M.Map.Free(x, y, h.R) && !TowerBlocks(h, x, y) && !PadBlocks(x, y);
 
         /// <summary>A spot goal inside a tower body moves to the body's edge on its side (or the bot's side), so the bot does not
         /// press against the tower (bug review 2026-11-02, nr 34: lane goals at the first wave sat inside the own tower).</summary>
@@ -141,20 +152,21 @@ namespace BAM.Sim
             for (int t = 0; t < 2; t++)
             {
                 var tw = TowerOf(t); if (tw == null || !tw.Alive) continue;
-                float dx = gX - tw.X, dy = gY - tw.Y, d = Hyp(dx, dy), r = Rules.TowerBody + h.R + 0.15f;
+                float dx = gX - tw.X, dy = gY - tw.Y, d = Hyp(dx, dy), r = Rules.TowerBody + h.R + 0.45f; // 0.15 outside the wall until nr 88: the brake into the stop pressed the bot into it
                 if (d >= r) continue;
                 if (d < 0.05f) { dx = h.X - tw.X; dy = h.Y - tw.Y; d = Hyp(dx, dy); if (d < 0.05f) { dx = 0; dy = -Fwd; d = 1; } }
                 float x = tw.X + dx / d * r, y = tw.Y + dy / d * r;
                 if (M.Map.Free(x, y, h.R)) { gX = x; gY = y; } else hasGoal = false;
             }
         }
-        bool ClearWalk(Unit h, float px, float py)
+        /// <summary>Is the straight walk from h to (px, py) clear of walls, tower bodies and jump pads (every 0.3 tiles)? Internal for Tests/Sim.</summary>
+        internal bool ClearWalk(Unit h, float px, float py)
         {
             float d = Hyp(px - h.X, py - h.Y); int n = (int)Math.Ceiling(d / 0.3f);
             for (int i = 1; i <= n; i++)
             {
                 float x = h.X + (px - h.X) * i / n, y = h.Y + (py - h.Y) * i / n;
-                if (!M.Map.Free(x, y, h.R) || TowerBlocks(h, x, y)) return false;
+                if (!M.Map.Free(x, y, h.R) || TowerBlocks(h, x, y) || PadBlocks(x, y)) return false; // pads: nr 87
             }
             return true;
         }
@@ -163,8 +175,12 @@ namespace BAM.Sim
         /// <summary>Old specialReach: how far e's special reaches (Fenn and Moa: their attack range). In the one-tap game a special
         /// picks its target inside the hero's tap ring (Match.TapReach), so that ring is the reach; the old drag reaches made bots
         /// flee into Danger far outside it (bug review 2026-11-02, nr 35).</summary>
-        float SpecialReach(Unit e)
+        internal float SpecialReach(Unit e) // internal for Tests/Sim
         {
+            // Kugg's ring is 8 tiles, but his Anchor shoots from where he stands, 0.6 s after the tap: 8 only while anchored (his Range is 8
+            // then too), else his cannon's reach and a step. With the ring a 2-stock Kugg scared every bot from 8 tiles (full review
+            // 2026-11-09 nr 89; like bug review nr 35 for the old heroes)
+            if (e.Kind == UnitKind.Hero && e.Hero == HeroId.Kugg) return e.KuggAnchored ? KuggS.TapReach : e.Range + 1;
             if (M.OneTap && e.Kind == UnitKind.Hero) return Match.TapReach(e.Hero);
             switch (e.Hero)
             {

@@ -58,7 +58,9 @@ namespace BAM.Sim
                     AimPoint(h, ang, k, FennS.ThrowReach, out float gx, out float gy);
                     float ga = SimMath.Atan2(gy - h.Y, gx - h.X), gd = WolfReach(h.X, h.Y, ga, SimMath.Hypot(gx - h.X, gy - h.Y));
                     a.Shape = AimShape.Circle; a.Ang = ga; a.Length = gd; a.CX = h.X + SimMath.Cos(ga) * gd; a.CY = h.Y + SimMath.Sin(ga) * gd;
-                    a.Radius = FennS.PounceRadius; a.PathHalf = FennS.HomeRadius; a.Los = true;
+                    // a warned throw homes on nobody (Telegraph.cs, WolfFly): no mark along the flight then, only the landing bite's
+                    // (full review 2026-11-09 nr 100)
+                    a.Radius = FennS.PounceRadius; a.PathHalf = TeleOn ? 0 : FennS.HomeRadius; a.Los = true;
                     break;
                 }
                 default: a.Shape = AimShape.None; break;
@@ -93,7 +95,7 @@ namespace BAM.Sim
                 if (a.Allies) { if (u.Team == h.Team && u.Kind == UnitKind.Hero && !u.IsClone && SimMath.Dist(u, a.CX, a.CY) <= a.Radius + u.R) buf.Add(u); continue; }
                 if (u.Team == h.Team) continue;
                 if (PassesMinions(h.Hero) && u.Kind != UnitKind.Hero) continue; // the hook and the bolt fly past minions
-                if (a.PathHalf > 0) continue; // the wolf: after this loop
+                if (h.Hero == HeroId.Fenn) continue; // the wolf: after this loop
                 if (a.Shape == AimShape.Circle)
                 {
                     if (SimMath.Dist(u, a.CX, a.CY) <= a.Radius + u.R && (!a.Los || Map.LosClear(a.CX, a.CY, u.X, u.Y))) buf.Add(u);
@@ -109,7 +111,7 @@ namespace BAM.Sim
                 if (c < firstAt) { firstAt = c; first = u; }
             }
             if (a.PathHalf > 0) first = WolfPrey(h, a);
-            if (a.PathHalf > 0 && first == null) { first = PounceTarget(h.Team, a.CX, a.CY, a.Radius); if (first != null && !IsVisibleTo(first, h.Team)) first = null; }
+            if (h.Hero == HeroId.Fenn && first == null) { first = PounceTarget(h.Team, a.CX, a.CY, a.Radius); if (first != null && !IsVisibleTo(first, h.Team)) first = null; } // the landing bite (WolfPounce)
             if (first != null) buf.Add(first);
             return buf;
         }

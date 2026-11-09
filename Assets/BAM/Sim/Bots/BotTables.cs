@@ -41,7 +41,10 @@ namespace BAM.Sim
         }
 
         /// <summary>Old HERO_ROLE for the seven heroes: Tank, Fighter, Assassin, Marksman, Mage, Support (Hilde: Support).</summary>
-        internal static bool Ranged(HeroId id) => id == HeroId.Bram || id == HeroId.Tyra || id == HeroId.Moa || id == HeroId.Blast || id == HeroId.Hilde || id == HeroId.Kugg || id == HeroId.Nassla || id == HeroId.Skrall; // Marksman, Mage, Support
+        internal static bool Ranged(HeroId id) => id == HeroId.Bram || id == HeroId.Tyra || id == HeroId.Moa || id == HeroId.Blast || id == HeroId.Hilde || id == HeroId.Nassla || id == HeroId.Skrall; // Marksman, Mage, Support; not Kugg: his cannon reaches 2.5, he fights like a melee hero (nr 69)
+        /// <summary>Stocks a Kugg bot waits for before it anchors (he may from 2, Hero7.cs KuggS.MinShots): with 2 he stood rooted ~3.4 s for
+        /// two shots, 16 times a match, and won 15 % (full review 2026-11-09 nr 69).</summary>
+        internal const int KuggAnchorStocks = 4;
         internal static bool Tank(HeroId id) => id == HeroId.Knut || id == HeroId.Oaken; // Oaken: Tank in the old HERO_ROLE
 
         // the old bot constants

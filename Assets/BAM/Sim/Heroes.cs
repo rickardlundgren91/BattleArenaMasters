@@ -269,6 +269,7 @@ namespace BAM.Sim
             if (p.Of != null)
             {   // tied to its shot or drop: it shows as long as that is on its way, even after the caster dies (the anvil still lands)
                 if (p.T >= p.Dur || p.Of.Serial != p.OfSerial || p.Of.Done) { p.Done = true; return; }
+                if (p.Of.Mode == ProjMode.Hook && !p.Of.Out) { p.Done = true; return; } // Knut's line goes as the anchor turns back or catches (nr 102)
             }
             else if (p.T >= p.Dur || s == null || !s.Alive || (p.Tied && !(s.Kind == UnitKind.Wolf && s.Wolf == WolfMode.Fly))) { p.Done = true; return; }
             if (s == null) return;
@@ -755,6 +756,9 @@ namespace BAM.Sim
             castX = h.X + SimMath.Cos(ang) * KnutS.HookDistance; castY = h.Y + SimMath.Sin(ang) * KnutS.HookDistance;
             var p = NewProj(ProjMode.Hook, h, h.X, h.Y);
             p.Kind = ProjKind.KnutAnchor; p.Ang = ang; p.Out = true; p.D = 0; p.Dmg = dmg * KnutS.DamageCoeff; p.Radius = KnutS.HookRadius;
+            // the tap's red line (Telegraph.cs) now belongs to the anchor: it goes when the anchor stops going out, a catch or the turn
+            // back, not a fixed time after (WarnUpdate; full review 2026-11-09 nr 102)
+            for (int i = 0; i < Projs.Count; i++) { var q = Projs[i]; if (q.Src == h && !q.Done && q.Mode == ProjMode.WarnLine && q.Of == null) WarnOf(q, p); }
             AddStatus(h, St.Casting, KnutS.CastTime); h.Facing = ang; Channel(h, KnutS.OutTime); // the cut window: until the anchor stops going out
             return true;
         }
@@ -767,14 +771,25 @@ namespace BAM.Sim
             var h = p.Src;
             // Knut died: the anchor is gone. A catch pulled along a wall's edge is set free as at the normal end, never left inside
             // the wall (bug review 2026-11-02, nr 12)
-            if (!h.Alive) { p.Done = true; if (p.Caught != null && p.Caught.Alive) Unstick(p.Caught); return; }
+            if (!h.Alive)
+            {
+                p.Done = true;
+                var c0 = p.Caught;
+                if (c0 != null && c0.Alive)
+                {
+                    Unstick(c0);
+                    // the stun was sized for the whole pull: with no pull left it shrinks to the 0.4 s after a landing (full review 2026-11-09 nr 101)
+                    int si = c0.FindBy(St.Stun, h); if (si >= 0) c0.Sts[si].T = Math.Min(c0.Sts[si].T, KnutS.StunAfter);
+                }
+                return;
+            }
             float ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang), back = KnutS.Release + h.R;
             if (p.Out)
             {
                 float sp = KnutS.OutSpeed;
                 float ox = h.X + ca * p.D, oy = h.Y + sa * p.D, od = p.D;
                 // never past HookDistance, so it reaches exactly as far as the aim shows (it overshot up to 0.1 on its last tick)
-                float cap = TowerReach(h.X, h.Y, p.Ang, KnutS.HookDistance, KnutS.HookRadius); // a base (either team's) stops it as a wall
+                float cap = TowerReach(h.X, h.Y, p.Ang, Map.EdgeReach(h.X, h.Y, p.Ang, KnutS.HookDistance), KnutS.HookRadius); // a base (either team's) stops it as a wall; so does the arena's edge (full review 2026-11-09 nr 107)
                 p.D = Math.Min(p.D + sp * dt, cap); p.X = h.X + ca * p.D; p.Y = h.Y + sa * p.D;
                 bool tower = cap < KnutS.HookDistance - 1e-4f && p.D >= cap - 1e-4f;
                 // a wall on this tick's path (swept as the other shots, so it never slips a corner): the anchor stops before it
@@ -809,6 +824,7 @@ namespace BAM.Sim
             else
             {
                 var c = p.Caught;
+                if (c != null && !c.Alive) { p.Done = true; h.RemoveAll(St.Casting); return; } // the catch died on the chain (Fenn's decoy goes at the hit): nothing to haul, Knut's stand ends (full review 2026-11-09 nr 103)
                 p.D = p.Travel - KnutS.Reeled(p.T - p.Dur - (c != null ? KnutS.PullPause : 0)); // a catch hangs on the taut chain first
                 if (c != null && c.Alive) { float cd = Math.Max(back, p.D); c.X = h.X + ca * cd; c.Y = h.Y + sa * cd; c.MovedAt = Time; }
                 p.X = h.X + ca * Math.Max(0, p.D); p.Y = h.Y + sa * Math.Max(0, p.D);
@@ -1044,8 +1060,11 @@ namespace BAM.Sim
             if (i < 0 || u.Sts[i].Amount <= 0 || u.Sts[i].By == null) return;
             u.Sts[i].V += dt;
             float t = u.Sts[i].T, v = u.Sts[i].V;
-            if (v < BlastS.BurnTick && t > dt) return;
-            float left = t + v - dt, part = t <= dt || left <= 0 ? u.Sts[i].Amount : u.Sts[i].Amount * Math.Min(1, v / left);
+            // eps: the ticks' float sums made a ninth tick of nothing after the eighth; a 2 s burn is exactly its 8 ticks, the last
+            // takes what is left (full review 2026-11-09 nr 67)
+            const float eps = 1e-4f;
+            if (v < BlastS.BurnTick - eps && t > dt + eps) return;
+            float left = t + v - dt, part = t <= dt + eps || left <= v + eps ? u.Sts[i].Amount : u.Sts[i].Amount * Math.Min(1, v / left);
             u.Sts[i].Amount -= part; u.Sts[i].V = 0;
             DealDamage(u.Sts[i].By, u, part, DmgKind.Passive, DmgFlags.Burning);
         }

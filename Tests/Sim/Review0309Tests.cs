@@ -54,7 +54,10 @@ namespace BAM.Sim
             m.Time = h.TeleAt + 1e-3f; m.TelegraphTick(h);
             Check(h.TeleAt < 0, "REVIEW-59: the warning is over, the needles went");
             h.ClearStatuses();
-            Check(m.CastSpell(h, 0, 1) && h.X > x0 + 0.5f, $"REVIEW-59: after the warning Blink works again ({h.X - x0:0.0})");
+            // 0.4.0 (full review 2026-11-09 nr 64): not while the four needles still leave her hand either; then it works again
+            Check(!m.CastSpell(h, 0, 1) && Near(h.X, x0), "REVIEW-59 / FIX 64: no Blink while her needles still leave her hand");
+            int n = 0; while (m.NeedleInHand(h) && n++ < 60) { m.Time += Rules.Tick; m.UpdateProjectiles(Rules.Tick); }
+            Check(m.CastSpell(h, 0, 1) && h.X > x0 + 0.5f, $"REVIEW-59: after the warning and the needles' release Blink works again ({h.X - x0:0.0}, {n} ticks)");
         }
     }
 }

@@ -113,7 +113,7 @@ namespace BAM.Sim
             if (kite != null && kite.Alive && Dist(h, kite) < kite.Range + kite.R + 0.9f)
             {
                 var k = kite; float ax = h.X - k.X, ay = h.Y - k.Y - fwd * 0.5f; HmKite(ref ax, ref ay);
-                if (M.Map.Free(h.X + ax * 0.2f, h.Y + ay * 0.2f, h.R)) { BotMove(ax, ay, dt, 18); return; }
+                if (Walkable(h, h.X + ax * 0.2f, h.Y + ay * 0.2f)) { BotMove(ax, ay, dt, 18); return; } // not onto a pad or into a tower (nr 87)
             }
             if (hasGoal && gStop > 0)
             {
@@ -192,7 +192,7 @@ namespace BAM.Sim
             }
             float hpR = HpR(h), myDps = DpsOf(h);
             if (hpR > 0.4f) panicked = false;
-            else if (hpR < 0.15f && !panicked && h.SpecialReady && h.InCombat(now)) { panicked = true; if (Srnd() < BotTables.PanicSpecial[tierI]) BotCast(true); }
+            else if (hpR < 0.15f && !panicked && h.SpecialReady && h.InCombat(now)) { panicked = true; if (h.Hero != HeroId.Kugg && Srnd() < BotTables.PanicSpecial[tierI]) BotCast(true); } // not Kugg: his Anchor roots him where he is dying (nr 69)
             ttk = TtkAt(h);
             if (h.Kills != seenKills)
             {
@@ -373,7 +373,8 @@ namespace BAM.Sim
                 float d = Dist(h, myTower); if (d == 0) d = 1;
                 float backX = myTower.X, backY = myTower.Y - fwd * (Rules.TowerBody + h.R + 0.6f);
                 bool backOk = Walkable(h, backX, backY);
-                if (d > 5.5f) SetGoal(h.X + (myTower.X - h.X) / d * 4, h.Y + (myTower.Y - h.Y) / d * 4);
+                float step = Math.Min(4, d - (Rules.TowerBody + h.R + 0.6f)); // 4 tiles towards the tower, but never into its wall: from d 5.5-5.6 the spot sat at 1.5-1.6, inside 1.1 + R (nr 88)
+                if (d > 5.5f) SetGoal(h.X + (myTower.X - h.X) / d * step, h.Y + (myTower.Y - h.Y) / d * step);
                 else if (backOk && Hyp(h.X - backX, h.Y - backY) > 0.4f) SetGoal(backX, backY);
                 if (hasGoal && !Walkable(h, gX, gY)) { if (backOk) SetGoal(backX, backY); else hasGoal = false; }
             }

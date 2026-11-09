@@ -342,6 +342,13 @@ namespace BAM.Sim
         // the last free distance along (ca, sa): 0.3 tile steps (the last one exactly at reach), then five halvings between free and blocked
         float Reach(float x, float y, float ca, float sa, float reach, bool shot)
         {
+            if (shot)
+            {   // a straight shot and its red line end at the arena's edge: the tiles outside are no wall, so the hook flew on past it
+                // (full review 2026-11-09 nr 107; the same sums as EdgeReach)
+                if (ca > 1e-6f) reach = Math.Min(reach, (W - x) / ca); else if (ca < -1e-6f) reach = Math.Min(reach, -x / ca);
+                if (sa > 1e-6f) reach = Math.Min(reach, (H - y) / sa); else if (sa < -1e-6f) reach = Math.Min(reach, -y / sa);
+                reach = Math.Max(0, reach);
+            }
             float free = 0;
             for (int i = 1; free < reach; i++)
             {
@@ -431,7 +438,7 @@ namespace BAM.Sim
                     if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
                     int n = ny * W + nx;
                     if (seen[n] == gen || !Walkable(nx, ny)) continue;
-                    if (n != goal && (TowerNear(n, TowerTile0) || TowerNear(n, TowerTile1))) continue; // a living tower blocks its tile and the four next to it (its wall reaches 1.1, Rules.TowerBody)
+                    if (n != goal && (TowerNear(n, TowerTile0) || TowerNear(n, TowerTile1))) continue; // a living tower blocks its tile and the eight round it (its wall reaches 1.1, Rules.TowerBody)
                     if (n != goal && PadTile(n)) continue; // paths go round a jump pad, so bots are not thrown by accident
                     if (dx != 0 && dy != 0 && (!Walkable(cx + dx, cy) || !Walkable(cx, cy + dy))) continue;
                     prev[n] = c; seen[n] = gen; queue[qn++] = n;
@@ -450,12 +457,14 @@ namespace BAM.Sim
 
         internal void ResetPathCache() => failedAt.Clear();
 
-        /// <summary>Is tile n the tower tile t or one of its four side neighbours (inside the tower's wall, Rules.TowerBody)?</summary>
+        /// <summary>Is tile n the tower tile t or one of its eight neighbours? A diagonal neighbour's centre is 1.41 from the tower, inside
+        /// the 1.1 + R wall (Rules.TowerBody) for every hero, so a path through it pressed bots against their own tower ~2.8 s a match
+        /// (full review 2026-11-09 nr 88; the tile and its four sides since bug review nr 34).</summary>
         bool TowerNear(int n, int t)
         {
             if (t < 0) return false;
-            if (n == t || n == t - W || n == t + W) return true;
-            return (n == t - 1 || n == t + 1) && n / W == t / W;
+            int dx = n % W - t % W, dy = n / W - t / W;
+            return dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1;
         }
     }
 }

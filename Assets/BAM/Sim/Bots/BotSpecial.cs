@@ -39,8 +39,8 @@ namespace BAM.Sim
 
         bool DragTier => tierI >= 2; // Gold and Platinum drag; Bronze and Silver always tap
 
-        /// <summary>Does the bot want its special now (old newHeroSpecialWanted with v2Wanted for Tyra)?</summary>
-        bool SpecialWanted(bool dz)
+        /// <summary>Does the bot want its special now (old newHeroSpecialWanted with v2Wanted for Tyra)? Internal for Tests/Sim.</summary>
+        internal bool SpecialWanted(bool dz)
         {
             var h = H; bool los = SpecialIsShot(h.Hero); var l = bufFoes; var us = M.Units;
             if (M.OneTap && h.Hero != HeroId.Moa)
@@ -49,8 +49,10 @@ namespace BAM.Sim
                 float r = Match.TapReach(h.Hero);
                 if (!M.TapHasTarget(h)) return false;
                 // Kugg's Anchor roots him for up to 10 s (Hero7.cs): ROI17's old AI (SimAI AI_Joker) deployed above 60 % health with an
-                // enemy hero within 7 tiles or 4 enemies in reach, never to escape
-                if (h.Hero == HeroId.Kugg) return HpR(h) >= 0.6f && (Foes(7, true, true, l) > 0 || h.Charge >= h.HDef.MaxCharge && Foes(r, false, true, l) >= 4); // a minion wave only with all 6 stocks (he can anchor from 2)
+                // enemy hero within 7 tiles or 4 enemies in reach, never to escape. The bot waits for KuggAnchorStocks (he may anchor from
+                // 2, but two shots never pay for ~3.4 s rooted: 16 anchors a match, 85 % with 2 stocks, win 15 %) and never anchors while
+                // retreating or in danger, where "never to escape" had let him (full review 2026-11-09 nr 69)
+                if (h.Hero == HeroId.Kugg) return !retreat && !danger && h.Charge >= BotTables.KuggAnchorStocks && HpR(h) >= 0.6f && (Foes(7, true, true, l) > 0 || h.Charge >= h.HDef.MaxCharge && Foes(r, false, true, l) >= 4); // a minion wave only with all 6 stocks
                 // Knut's hook and Tyra's bolt fly past minions (Match.PassesMinions): a minion pack is no reason to throw them
                 return SureShot(FoeList(r, true, true), dz) || (!Match.PassesMinions(h.Hero) && Foes(r, false, true, l) >= 3);
             }
@@ -331,7 +333,7 @@ namespace BAM.Sim
                     if (along > -0.3f && along < R && Math.Abs(perp) < p.Radius + h.R + 0.35f)
                     {
                         float side = perp >= 0 ? 1 : -1;
-                        if (!M.Map.Free(h.X - cy * side * 0.6f, h.Y + cx * side * 0.6f, h.R)) side = -side;
+                        if (!Walkable(h, h.X - cy * side * 0.6f, h.Y + cx * side * 0.6f)) side = -side; // not onto a pad or into a tower (nr 87)
                         vx += -cy * side; vy += cx * side;
                     }
                 }
@@ -358,7 +360,7 @@ namespace BAM.Sim
             float cx = SimMath.Cos(p.Ang), cy = SimMath.Sin(p.Ang), dx = h.X - p.X, dy = h.Y - p.Y, along = dx * cx + dy * cy, perp = -dx * cy + dy * cx;
             if (along < -0.3f || along > p.D + 0.3f || Math.Abs(perp) > p.Radius + pad) return;
             float side = perp >= 0 ? 1 : -1;
-            if (!M.Map.Free(h.X - cy * side * 0.6f, h.Y + cx * side * 0.6f, h.R)) side = -side;
+            if (!Walkable(h, h.X - cy * side * 0.6f, h.Y + cx * side * 0.6f)) side = -side; // not onto a pad or into a tower (nr 87)
             vx += -cy * side; vy += cx * side;
         }
     }

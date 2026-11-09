@@ -451,7 +451,9 @@ namespace BAM.Sim
                     : float.IsNaN(seatBufAng[s]) || !DragAimOn ? TryTapSpecial(u) // a tap (or drag aim off): the random target in reach
                     : TryAimSpecial(u, seatBufAng[s], seatBufK[s]); // a drag: the player's own aim (OneTap.cs)
                 if (cast) seatSpecBuf[s] = 0;
-                else if (seatSpecBuf[s] <= dt && u.SpecialReady) { if (u == Player) SpecialDeniedAt = Time; Emit(EventType.SpecialDenied, u, null); }
+                // a press buffered while the special waits in its warning (Tikta walks in hers, so she gets here) is no denial: the
+                // special is on its way (full review 2026-11-09 nr 106)
+                else if (seatSpecBuf[s] <= dt && u.SpecialReady && !Telegraphing(u)) { if (u == Player) SpecialDeniedAt = Time; Emit(EventType.SpecialDenied, u, null); }
             }
         }
 
