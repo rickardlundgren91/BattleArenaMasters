@@ -31,7 +31,7 @@ namespace BAM.Art
         Transform tether;
         Vector3 lastPos, dir = Vector3.forward, from, to;
         float age, flight = 0.3f, spin, lob, sparkT, trailFxT;
-        bool melee, launched, mirror, struck, arc, hit, honey, boulder, boltPic, towerPic;
+        bool melee, launched, mirror, struck, arc, hit, honey, boulder, boltPic, towerPic, kuggPic;
         bool spent;                  // it hurt someone earlier and flew on: ends without a splash or a fizzle
         float prog = -1f;            // the rules' share of the flight done (SetProgress), -1 = by the clock
         Vector3 launchOff;           // the hand's offset from the rules' path at the release, eased out over LaunchEase
@@ -49,6 +49,9 @@ namespace BAM.Art
         // the tower's shot: Rickard's own bolt picture (tx_fx_tower_bolt, 2026-11-02, white + alpha, head to the right) in the team's colour
         static Texture2D towerBoltTex;
         static bool towerBoltLoaded;
+        // Kugg's shots (Rickard's own O-063 cannon ball and O-064 spark, 2026-11-09, white + alpha, the ball flying right): tinted his turquoise
+        static Texture2D kuggShotTex, kuggSparkTex;
+        static bool kuggLoaded;
         static Material texTrail; // Rickard's comet trail picture (tx_fx_trail), shared by every shot that leaves one
         static bool texTrailLoaded;
         static Material tyraTrail; // Tyra's own bolt streak (O-056, 2026-11-04): pointed head, thin fading tail
@@ -114,6 +117,9 @@ namespace BAM.Art
             boltPic = k == ProjKind.TyraBolt && boltTex != null;
             if (k == ProjKind.TowerShot && (!towerBoltLoaded || towerBoltTex == null)) { towerBoltLoaded = true; towerBoltTex = RickardFx.Load("tx_fx_tower_bolt"); }
             towerPic = k == ProjKind.TowerShot && towerBoltTex != null;
+            bool kuggBall = k == ProjKind.KuggShot || k == ProjKind.KuggShell;
+            if ((kuggBall || k == ProjKind.KuggSpark) && !kuggLoaded) { kuggLoaded = true; kuggShotTex = RickardFx.Load("tx_fx_kugg_shot"); kuggSparkTex = RickardFx.Load("tx_fx_kugg_spark"); }
+            kuggPic = kuggBall ? kuggShotTex != null : k == ProjKind.KuggSpark && kuggSparkTex != null;
             // Knut's thrown anchor: the same model he holds (Props/knut_anchor), not the code-made one (Rickard 2026-10-30 "knuts
             // ankare måste göras om"): flukes first, the ring (where the chain hangs) back toward Knut, the flat side up to the camera
             Mesh anchorMesh = k == ProjKind.KnutAnchor ? Props.Mesh("knut_anchor") : null;
@@ -134,7 +140,7 @@ namespace BAM.Art
                 ar.sharedMaterial = am;
                 ar.shadowCastingMode = ShadowCastingMode.Off;
             }
-            visF.sharedMesh = boulder || boltPic || towerPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
+            visF.sharedMesh = boulder || boltPic || towerPic || kuggPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
             if (anchorMesh != null) visR.enabled = false;
@@ -175,6 +181,16 @@ namespace BAM.Art
                 visR.sharedMaterial.mainTexture = towerBoltTex;
                 Color tc = Pal.Get(Pal.TeamLight(t)); tc.a = 1f;
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, tc); // white picture tinted: the red team shoots red
+                visR.sharedMaterial.renderQueue = 3020;
+            }
+            else if (kuggPic)
+            {
+                var kt = k == ProjKind.KuggSpark ? kuggSparkTex : kuggShotTex;
+                visR.sharedMaterial = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, kt);
+                visR.sharedMaterial.mainTexture = kt;
+                Color kc = Fx.HeroMain(HeroId.Kugg); kc.a = 1f;
+                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, kc); // the white picture in his turquoise
                 visR.sharedMaterial.renderQueue = 3020;
             }
             else if (boulder)
@@ -429,6 +445,20 @@ namespace BAM.Art
                     float ang = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg;
                     vis.rotation = cam * Quaternion.Euler(0f, 0f, ang) * Quaternion.Euler(-90f, 0f, 0f);
                     vis.localScale = new Vector3(1.1f, 1.1f, 1.1f);
+                    break;
+                }
+                case ProjKind.KuggShot when kuggPic:
+                case ProjKind.KuggShell when kuggPic:
+                case ProjKind.KuggSpark when kuggPic:
+                {
+                    // like the tower's bolt: facing the camera, the ball (the picture's right) leading the way it flies on screen, its
+                    // tail behind; the anchored shell bigger, the spark small but seen
+                    Quaternion cam = ArtDriver.CamRot;
+                    Vector3 r = cam * Vector3.right, u = cam * Vector3.up;
+                    float ang = Mathf.Atan2(Vector3.Dot(dir, u), Vector3.Dot(dir, r)) * Mathf.Rad2Deg;
+                    vis.rotation = cam * Quaternion.Euler(0f, 0f, kind == ProjKind.KuggSpark ? 0f : ang) * Quaternion.Euler(-90f, 0f, 0f);
+                    float ks = kind == ProjKind.KuggShell ? 1.5f : kind == ProjKind.KuggShot ? 1.1f : 0.6f;
+                    vis.localScale = new Vector3(ks, ks, ks);
                     break;
                 }
                 case ProjKind.BonkBoulder when boulder:

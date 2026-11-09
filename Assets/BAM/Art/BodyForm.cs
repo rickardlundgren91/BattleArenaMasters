@@ -15,6 +15,9 @@ namespace BAM.Art
     sealed partial class BodyView
     {
         Transform formT;
+        Transform sealT;   // Rickard's rune seal (O-065, tx_fx_kugg_anchor) flat on the ground under the turret, in his turquoise
+        Material sealMat;
+        const float SealSize = 2.6f; // tiles across
         float formK, formSize;
         Vector3 formMouth; // the cannon's mouth in mesh units: the middle of its front-most vertices
         bool formOn, bodyOff;
@@ -40,6 +43,24 @@ namespace BAM.Art
             float s = transform.lossyScale.y;
             formSize = def.Height * FormHeight / Mathf.Max(0.01f, mesh.bounds.size.y * (s > 0f ? s : 1f));
             formT.localScale = Vector3.zero;
+            var sealTex = RickardFx.Load("tx_fx_kugg_anchor");
+            if (sealTex != null)
+            {
+                var sg = new GameObject("Kugg seal");
+                sealT = sg.transform;
+                sealT.SetParent(transform, false);
+                sealT.localPosition = new Vector3(0f, 0.03f, 0f);
+                sg.AddComponent<MeshFilter>().sharedMesh = FxAtlas.FullQuad();
+                var sr = sg.AddComponent<MeshRenderer>();
+                sealMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+                sealMat.SetTexture(ArtMaterials.BaseMap, sealTex);
+                sealMat.mainTexture = sealTex;
+                sealMat.renderQueue = 3005;
+                sr.sharedMaterial = sealMat;
+                sr.shadowCastingMode = ShadowCastingMode.Off;
+                sr.receiveShadows = false;
+                sg.SetActive(false);
+            }
             var vs = mesh.vertices;
             float front = mesh.bounds.max.z - 0.04f * mesh.bounds.size.z;
             Vector3 sum = Vector3.zero; int n = 0;
@@ -56,6 +77,18 @@ namespace BAM.Art
             bool show = formK > 0f && renderersOn && !dead;
             if (formT.gameObject.activeSelf != show) formT.gameObject.SetActive(show);
             if (show) formT.localScale = Vector3.one * (formSize * BackOut(formK));
+            if (sealT != null)
+            {
+                if (sealT.gameObject.activeSelf != show) sealT.gameObject.SetActive(show);
+                if (show)
+                {
+                    float ls = transform.lossyScale.y > 0f ? transform.lossyScale.y : 1f;
+                    sealT.localScale = Vector3.one * (SealSize * (0.6f + 0.4f * formK) / ls);
+                    sealT.localRotation = Quaternion.Euler(0f, idleT * 12f, 0f); // turns slowly so it reads as alive
+                    Color c = Fx.HeroMain(HeroId.Kugg); c.a = 0.85f * formK;
+                    sealMat.SetColor(ArtMaterials.BaseColor, c);
+                }
+            }
             bool hide = (formOn || formK > 0f) && !dead;
             if (hide) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = false; bodyOff = true; }
             else if (bodyOff) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = renderersOn; bodyOff = false; }
@@ -77,6 +110,7 @@ namespace BAM.Art
         {
             formOn = false; formK = 0f;
             if (formT != null) formT.gameObject.SetActive(false);
+            if (sealT != null) sealT.gameObject.SetActive(false);
             if (bodyOff) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = renderersOn; bodyOff = false; }
         }
     }
