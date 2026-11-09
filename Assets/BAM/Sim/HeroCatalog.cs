@@ -121,14 +121,14 @@ namespace BAM.Sim
                 SpecialName = "Pinpoint Bolt", SpecialDesc = "Tap: Arrow Volley, five arrows in a cone at a random enemy in her range; each enemy in it is hit once. Drag: a heavy bolt after a short draw that flies until it hits something: the first enemy in its path, a tower or a wall.",
                 OneTapDesc = "Tap: a quick bolt at a random enemy in her range, minions too, aimed where a running hero is heading. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall. Its path leaves wind and feathers that slow enemies 25% for 1.5 s.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
                 PassiveName = "Featherstep", PassiveDesc = "When her attack hurts an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
-                Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
+                Health = 1, Damage = 2, Speed = 1, Difficulty = 2 }, // damage bar 3 -> 2 with the 2026-11-09 damage cut (nr 75): the bars are terciles of Defs (nr 104)
             // Kugg (Rickard 2026-11-05: ROI17's principle from the old game, his own concept; Hero7.cs). In the game as hero 2 in the
             // list and open for everyone (Rickard 2026-11-09 "lägg in honom som nr 2 i spelet och upplåst för alla"); Oaken's body is his
             // stand-in until Rickard's own model is rigged (Models.cs)
             new HeroInfo { Id = HeroId.Kugg, Name = "Kugg", Title = "The Rune Golem", Role = "Marksman", Ranged = true,
                 SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles, he fires faster and sees into grass up to 6 tiles away. Each hit loads a shot, up to 6, and he can anchor once 2 are loaded: he fires them all (or 10 s pass), then pulls the spikes up again.",
                 PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
-                Health = 2, Damage = 2, Speed = 2, Difficulty = 3 },
+                Health = 2, Damage = 3, Speed = 2, Difficulty = 3 }, // damage bar 2 -> 3: third highest dps once Tyra dropped under him (nr 75, terciles of Defs)
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
                 SpecialName = "Hammer Throw", SpecialDesc = "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
                 OneTapName = "Anvil Drop", OneTapDesc = "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
