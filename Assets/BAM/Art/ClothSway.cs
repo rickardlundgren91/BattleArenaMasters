@@ -46,8 +46,7 @@ namespace BAM.Art
                     return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.055f, Clear1 = 0.11f, Drop = 0.12f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 26f, Drag = 0.05f, Flare = 0.22f } };
                 case 2: // Tyra: the ponytail
                     return new[] { new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 35f, Drag = 0.06f } };
-                case 3: // Moa: the cloth panels hanging in front and behind, between her legs (Rickard 2026-11-09: "sånt till alla som kan använda det")
-                    return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.035f, Clear1 = 0.06f, Drop = 0.15f, MaxSide = 0.07f, Hz = 2.3f, Damping = 0.42f, MaxAngle = 24f, Drag = 0.05f, Flare = 0.18f } };
+                // Moa: no cloth (Rickard 2026-11-09 after testing: "ta bort moas rörelser i kläder och hår för det buggar")
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
                     return new[]
                     {
