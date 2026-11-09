@@ -50,8 +50,9 @@ namespace BAM.Art
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
                     return new[]
                     {
-                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.06f, Clear1 = 0.10f, Drop = 0.10f, MaxSide = 0.07f, Hz = 2.0f, Damping = 0.45f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
-                        new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.08f, Hz = 2.2f, Damping = 0.38f, MaxAngle = 25f, Drag = 0.05f },
+                        // Rickard 2026-11-09 after testing: "bonk har för mycket rörelse i kläder": about half the swing, stiffer and better damped
+                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.06f, Clear1 = 0.10f, Drop = 0.10f, MaxSide = 0.07f, Hz = 2.8f, Damping = 0.62f, MaxAngle = 10f, Drag = 0.025f, Flare = 0.06f },
+                        new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.08f, Hz = 2.8f, Damping = 0.55f, MaxAngle = 13f, Drag = 0.025f },
                     };
                 // Knut, Bram, Blast, Tikta, Oaken: nothing hangs free of the body (Knut's mane is the top of his back). Hilde (not in the
                 // game yet): her long braid reaches her hips and needs a chain of bones, not one; when she comes in.
