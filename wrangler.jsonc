@@ -2,5 +2,7 @@
   // Static site for battlearenamasters.com, served by Cloudflare Workers static assets.
   "name": "battlearenamasters",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./public", "not_found_handling": "404-page" }
+  "assets": { "directory": "./public", "not_found_handling": "404-page" },
+  // Needed by `wrangler preview`, which Cloudflare runs for PR branch builds.
+  "previews": {}
 }
