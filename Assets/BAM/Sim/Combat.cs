@@ -227,12 +227,12 @@ namespace BAM.Sim
         }
 
         // ---------- towers ----------
-        /// <summary>Is enemy hero e fighting one of tower tw's heroes right now (hit one, or was hit by one, in the last 2 s)?</summary>
+        /// <summary>Has enemy hero e attacked one of tower tw's heroes in the last 2 s? Only attacking counts: being hit by a
+        /// defender is no reason for the tower to turn (TOWER RULE, Rickard 2026-11-05; tester Øli 2026-11-06). The tower itself
+        /// switches at the hit (DealDamage, attacker in its reach); the bots read this to weigh a tower's fire.</summary>
         internal bool TowerAggro(Unit tw, Unit e)
         {
-            if (e.Kind != UnitKind.Hero || e.Team == tw.Team) return false;
-            for (int i = 0; i < Heroes.Count; i++) if (Heroes[i].Team == tw.Team && Time - e.LastHitBy[i] < Rules.TowerAggroTime) return true;
-            if (e.HeroIndex < 0) return false;
+            if (e.Kind != UnitKind.Hero || e.Team == tw.Team || e.HeroIndex < 0) return false;
             for (int i = 0; i < Units.Count; i++)
             {
                 var a = Units[i];
@@ -282,13 +282,10 @@ namespace BAM.Sim
                 var k = u.Target;
                 bool locked = TowerLocked(u);
                 if (k != null && !locked && (!k.Alive || SimMath.Dist(u, k) > u.Range + k.R || !IsVisibleTo(k, u.Team) || !Map.LosClear(u, k))) u.Target = null;
-                // minions first, but an enemy hero fighting one of the tower's heroes is shot instead
-                if (!locked && !(u.Target != null && TowerAggro(u, u.Target)))
-                {
-                    Unit fighter = null; float bd = float.MaxValue;
-                    for (int i = 0; i < targets.Count; i++) { var t = targets[i]; if (!TowerAggro(u, t)) continue; float d = SimMath.Dist(u, t); if (d < bd) { bd = d; fighter = t; } }
-                    if (fighter != null) u.Target = fighter;
-                }
+                // TOWER RULE (Rickard 2026-11-05): the tower keeps its target until it dies or leaves the reach; the one switch is to
+                // an enemy hero who attacks one of its heroes from inside the reach, made at the hit (DealDamage). Until protocol 58 a
+                // 2 s fight memory also turned it here, to a hero who had only been hit by a defender or had hit one from outside the
+                // reach, so a hero stepping back in took the tower off his living minion (tester Øli 2026-11-06).
                 if (u.Target == null)
                 {
                     Unit m = null; float bd = float.MaxValue;
