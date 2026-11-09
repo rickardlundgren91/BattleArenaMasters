@@ -61,7 +61,10 @@ namespace BAM.Sim
         /// (1600 bot matches: Hard 46.9 -> 56.8 %, Normal 52.0 -> 60.1 %); 0.25 s gives Hard 52.9 %, Normal 54.9 %.</summary>
         /// Beginner hero 2026-11-04 (tester: "pretty difficult to land", Rickard agreed; Knut's hook is the yardstick, 0.3 s warning and a
         /// 0.5 hook): draw 0.25 -> 0.1 s and hit box 0.35 -> 0.6. Her bolt is weaker per cast only because her attack is (17 instead of 33).
-        public const float Windup = 0.1f, DamageCoeff = 1.15f, Speed = 18, Hitbox = 0.6f;
+        /// Tester Alex 2026-11-09: after the beginner change the bolt (17 x 1.15 = 20) hit barely harder than her auto attack (17):
+        /// DamageCoeff 1.15 -> 2.6 (44 at level 1, more than the 38 before the beginner change). Bot win rates hardly move with it
+        /// (3200 matches, speed 2.3: x1.15 Normal 49.0 / Hard 47.7 %, x2.6 49.8 / 49.7 %); her kills per match go 1.84 -> 2.89.
+        public const float Windup = 0.1f, DamageCoeff = 2.6f, Speed = 18, Hitbox = 0.6f;
         /// <summary>One-tap special (Rules.OneTapSpecial, 2026-11-01): how far her tap looks for the random enemy to shoot at.</summary>
         public const float TapTarget = 7;
         /// <summary>The beginner hero (Rickard 2026-11-04: "snabba skott, special ofta", and the bolt was hard to hit): her tap aims
