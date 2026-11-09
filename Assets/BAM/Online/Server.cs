@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unity.Services.CloudCode;
+using BAM.Core;
 using UnityEngine;
 using UnityEngine.Scripting;
 
@@ -58,6 +59,39 @@ namespace BAM.Online
                 sending = false;
             }
             if (Progress.Waiting > 0) _ = AskAgain(); else askTries = 0;
+            _ = SendTraces();
+        }
+
+        // ---------- match traces (Core/MatchTraces.cs, Sim/MatchTrace.cs): for the bots to learn from real players ----------
+        const int TracesPerSend = 3;
+        static bool tracing, traceScriptMissing;
+
+        /// <summary>Sends up to three waiting match traces, one per call (ReportTrace.js), after the match reports. A trace the
+        /// server took is deleted; on any error the rest wait for the next time. Without the script on the server it stops for this
+        /// session.</summary>
+        static async Task SendTraces()
+        {
+            if (tracing || traceScriptMissing || !MatchTraces.Share || Account.State != Account.Status.Ready) return;
+            tracing = true;
+            try
+            {
+                var names = MatchTraces.Pending();
+                for (int i = 0; i < names.Count && i < TracesPerSend; i++)
+                {
+                    var data = MatchTraces.Read(names[i]);
+                    if (data == null || data.Length > MatchTraces.MaxBytes) { MatchTraces.Remove(names[i]); continue; }
+                    var a = await Call<OkAnswer>("ReportTrace", new Dictionary<string, object>
+                        { { "name", names[i] }, { "protocol", MatchTraces.Protocol }, { "app", Application.version }, { "trace", Convert.ToBase64String(data) } }, "ok");
+                    if (!a.ok) break;
+                    MatchTraces.Remove(names[i]);
+                }
+            }
+            catch (Exception e)
+            {
+                if (e.Message.IndexOf("not BAM's", StringComparison.Ordinal) >= 0 || e.Message.IndexOf("404", StringComparison.Ordinal) >= 0 || e.Message.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0) traceScriptMissing = true;
+                Debug.LogWarning("[BAM.Online] match traces kept for later: " + e.Message);
+            }
+            finally { tracing = false; }
         }
 
         // the other side of a match against players usually reports within seconds of this phone: ask again after 20 s, 1 and
@@ -127,6 +161,42 @@ namespace BAM.Online
         }
 
         internal static Task DeleteMe() => Call<OkAnswer>("DeleteMe", null, "ok");
+
+#if UNITY_EDITOR
+        // BAM > Bots > Download match traces: the bot lab's copy of every trace on the server (ExportTraces.js), as .bmt files in
+        // Downloads/BAM-Traces (a file already there is skipped). Needs Play mode (signed in) and this editor's player ID in the
+        // Dashboard's Cloud Save custom item "bam-admins" key "ids"; refused, the Console says which ID to add.
+        [Serializable, Preserve] class TraceRow { public string key; public int p; public string a; public long at; public string t; }
+        [Serializable, Preserve] class ExportAnswer { public bool ok; public string you; public List<TraceRow> traces; public string next; }
+
+        [UnityEditor.MenuItem("BAM/Bots/Download match traces (in Play)")]
+        static async void DownloadTraces()
+        {
+            if (!Application.isPlaying || Account.State != Account.Status.Ready) { Debug.LogWarning("[BAM.Online] traces: enter Play and wait for the sign-in first"); return; }
+            string dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "BAM-Traces");
+            System.IO.Directory.CreateDirectory(dir);
+            int got = 0, had = 0; string after = "";
+            try
+            {
+                for (int page = 0; page < 1000; page++)
+                {
+                    var a = await Call<ExportAnswer>("ExportTraces", new Dictionary<string, object> { { "after", after } }, "ok");
+                    if (!a.ok) { Debug.LogWarning("[BAM.Online] traces: this editor may not read them. Add \"" + a.you + "\" to Cloud Save > Custom data > bam-admins > ids on the Unity Dashboard"); return; }
+                    foreach (var r in a.traces ?? new List<TraceRow>())
+                    {
+                        string f = System.IO.Path.Combine(dir, r.key + "-p" + r.p + ".bmt");
+                        if (System.IO.File.Exists(f)) { had++; continue; }
+                        System.IO.File.WriteAllBytes(f, Convert.FromBase64String(r.t)); got++;
+                    }
+                    if (string.IsNullOrEmpty(a.next)) break;
+                    after = a.next;
+                }
+                Debug.Log("[BAM.Online] traces: " + got + " new, " + had + " already there, in " + dir);
+                UnityEditor.EditorUtility.RevealInFinder(dir);
+            }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] traces: " + e.Message); }
+        }
+#endif
 
         // The answer is read with JsonUtility, which skips fields it does not know. Cloud Code's own reader stops at any unknown field,
         // so a script on the Dashboard that is not BAM's (the "roll" dice example Unity fills a new script with) failed with

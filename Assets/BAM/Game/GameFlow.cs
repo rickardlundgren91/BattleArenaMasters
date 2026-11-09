@@ -199,6 +199,12 @@ namespace BAM.Game
             Coords.Turned = net != null && net.Turned;
             match = Match.Create(cfg);
             confirmed = null; mirror = null;
+            // the match trace for the bots to learn from (Sim/MatchTrace.cs, Core/MatchTraces.cs): every real match, not the guided
+            // one or HERO TEST; the editor's are marked (its Immortal switch changes the match)
+            trace = null; traceSaved = false;
+            if (!cfg.Tutorial && !cfg.HeroTest && MatchTraces.Share)
+                trace = MatchTrace.Begin(cfg, net != null && cfg.Seats != null ? cfg.Seats.Length : 1, MatchTraces.Protocol, Application.version,
+                    System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(), net != null, Application.isEditor);
             if (net != null && net.Predicts)
             {
                 confirmed = Match.Create(cfg);
@@ -229,9 +235,28 @@ namespace BAM.Game
             Debug.Log("[BAM.Game] match started: " + (net != null ? "online, seat " + cfg.LocalSeat + " of " + cfg.Seats.Length + ", " : "") + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + (cfg.Map != MapId.Runes ? ", map " + cfg.Map : "") + ", seed " + seed);
         }
 
+        MatchTrace trace;
+        bool traceSaved;
+
+        // once per match, at its end or when it is left: a left match is kept too (where people quit is worth learning from)
+        void SaveTrace()
+        {
+            if (trace == null || traceSaved) return;
+            traceSaved = true;
+            try
+            {
+                var m = confirmed ?? match;
+                if (m != null && m.State == MatchState.Over) trace.End(m);
+                if (trace.Steps > 0) MatchTraces.Save(trace.ToBytes());
+            }
+            catch (System.Exception e) { Debug.LogWarning("[BAM.Game] match trace: " + e.Message); }
+            trace = null;
+        }
+
         void Teardown()
         {
             if (match == null) return;
+            SaveTrace();
             inMatch = false; paused = false;
             BAM.Art.ArtKit.SetSimClock(-1, 0f);
             hud.End();
@@ -271,7 +296,9 @@ namespace BAM.Game
                 int n = 0;
                 while (acc >= Rules.Tick && n < MaxTicksPerFrame)
                 {
-                    PlayerInput input = hud.TakeInput();
+                    // the online wire's rounding offline too (1/127 of the stick), so the match trace replays exactly
+                    PlayerInput input = MatchTrace.Quantize(hud.TakeInput());
+                    trace?.Step(match, in input);
                     EditorImmortal();
                     match.Step(in input);
                     EditorImmortal();
@@ -353,6 +380,7 @@ namespace BAM.Game
             bool moved = false;
             while (net.Next(confirmed, netInputs))
             {
+                trace?.Step(confirmed, netInputs);
                 confirmed.Step(netInputs);
                 net.AfterStep(confirmed);
                 moved = true;
@@ -424,6 +452,7 @@ namespace BAM.Game
         // one online tick; true when the match ended with it
         bool NetStep()
         {
+            trace?.Step(match, netInputs);
             match.Step(netInputs);
             BAM.Art.ArtKit.SetSimClock(match.Ticks, 0f); // a swing started by this tick's events counts from this tick
             netDraw = Mathf.Max(0f, netDraw - Rules.Tick);
@@ -490,6 +519,7 @@ namespace BAM.Game
         {
             if (match == null || booked) return;
             booked = true;
+            SaveTrace();
             var r = Result(false);
             if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
             bool counts = !r.Tutorial && !setup.HeroTest && !Practice && setup.Net == null;

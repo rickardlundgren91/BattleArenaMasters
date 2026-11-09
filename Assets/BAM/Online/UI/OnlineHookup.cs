@@ -19,6 +19,7 @@ namespace BAM.Online.UI
             Flow.MatchStarted = () => Safe("match start", BAM.Online.Online.MatchStarted);
             Flow.MatchEnded = r => Safe("match end", () => BAM.Online.Online.MatchEnded(r));
             Flow.Resumed = () => Safe("resume", BAM.Online.Online.Resumed);
+            MatchTraces.Protocol = BAM.Online.Mp.MpSocial.Protocol; // a match trace replays only with the rules of its protocol
             Social.Protocol = BAM.Online.Mp.MpSocial.Protocol; // friends see "0.2.0 (10)": the app version alone is the same in every build
             OnlineHooks.Back = OnlineUi.Back;
             OnlineHooks.HomeChip = OnlineUi.HomeChip;
