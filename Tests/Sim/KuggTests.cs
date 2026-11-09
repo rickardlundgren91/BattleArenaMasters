@@ -55,6 +55,14 @@ namespace BAM.Sim
             m.Time += KuggS.MaxTime + 0.05f; m.KuggTick(h, Rules.Tick);
             Check(!h.KuggAnchored && h.KuggRooted && m.HasEvent(EventType.KuggPack), "after 10 s with nothing to shoot he packs up");
 
+            // from 2 stocks (Rickard 2026-11-09): 1 is not enough, 2 anchors him with 2 shots, 4 with 4
+            h.KuggShots = 0; h.KuggRooted = false; h.ClearStatuses(); h.Charge = 1;
+            Check(!h.SpecialReady && !m.TryCastSpecial(h, float.NaN, 0), "1 stock cannot anchor");
+            h.Charge = 2;
+            Check(h.SpecialReady && m.TryCastSpecial(h, float.NaN, 0) && h.KuggShots == 2 && h.Charge == 0, $"2 stocks anchor him with 2 shots ({h.KuggShots})");
+            h.KuggShots = 0; h.KuggRooted = false; h.ClearStatuses(); h.Charge = 4;
+            Check(m.TryCastSpecial(h, float.NaN, 0) && h.KuggShots == 4, $"4 stocks give 4 shots ({h.KuggShots})");
+
             // death ends the Anchor
             h.Charge = h.HDef.MaxCharge; h.KuggRooted = false; h.ClearStatuses();
             Check(m.TryCastSpecial(h, float.NaN, 0), "anchored once more");

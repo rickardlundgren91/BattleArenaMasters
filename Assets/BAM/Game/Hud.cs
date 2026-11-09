@@ -336,11 +336,13 @@ namespace BAM.Game
             // Kugg anchored (Hero7.cs): the button shows his shots left, as the old game did for ROI17's stocks: the number on the upper
             // right and the ring and orange face as the share of the 6 still in the cannon (Rickard 2026-11-09 "det ska synas som abc2")
             int shots = p.Alive && p.Hero == HeroId.Kugg && p.KuggAnchored ? p.KuggShots : 0;
-            if (shots != shownShots)
+            // and before he anchors, the stocks gathered so far (he can anchor from 2, KuggS.MinShots)
+            int label = shots > 0 ? shots : p.Alive && p.Hero == HeroId.Kugg && !p.KuggRooted ? (int)p.Charge : 0;
+            if (label != shownShots)
             {
-                shownShots = shots;
-                specialShots.text = Num(shots);
-                specialShots.gameObject.SetActive(shots > 0);
+                shownShots = label;
+                specialShots.text = Num(label);
+                specialShots.gameObject.SetActive(label > 0);
             }
             float frac = shots > 0 ? (float)shots / KuggS.Shots : p.Alive ? p.Charge01 : 0f;
             Split(frac, ready); // the two halves: ring, grey and gold level (HudSplit.cs)

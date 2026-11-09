@@ -353,7 +353,7 @@ namespace BAM.Art
             Vector3 d = b - a; d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : transform.forward;
             float dist = d.magnitude;
-            lob = kind == ProjKind.BlastBomb || kind == ProjKind.SiegeShell || kind == ProjKind.HildeKeg || kind == ProjKind.HildeBurst || kind == ProjKind.HildeShell || kind == ProjKind.KuggShot || kind == ProjKind.KuggShell ? Mathf.Clamp(dist * 0.3f, 0.6f, 2.2f)
+            lob = kind == ProjKind.BlastBomb || kind == ProjKind.SiegeShell || kind == ProjKind.HildeKeg || kind == ProjKind.HildeBurst || kind == ProjKind.HildeShell || kind == ProjKind.KuggShell ? Mathf.Clamp(dist * 0.3f, 0.6f, 2.2f)
                 : kind == ProjKind.BlastFire && bombT != null ? Mathf.Clamp(dist * 0.15f, 0.25f, 0.9f) : 0f; // a thrown bomb arcs a little
             lastPos = transform.position;
             vis.localScale = Vector3.one;

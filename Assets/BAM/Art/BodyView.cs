@@ -536,6 +536,15 @@ namespace BAM.Art
             // the rules' release as the screen sees it: the game asks this the frame the swing's shot is first drawn
             if (release && atkT >= 0f && atkCut < 0f && castT < 0f) Probe.OnRelease(windup, atkT, Time.deltaTime * ArtKit.Slow);
             if (h == HeroId.Bonk) { at = (l.position + r.position) * 0.5f; return true; }
+            // Kugg's right forearm is his cannon: the shot leaves its mouth, beyond the wrist by 0.46 of the forearm (the barrel reaches
+            // 0.2 m past the wrist on a 0.44 m forearm), never from the other hand (Rickard 2026-11-09: "kugg slänger sin attack
+            // istället för att skjuta från kanonen i armen")
+            if (h == HeroId.Kugg)
+            {
+                Transform f = anim.GetBoneTransform(HumanBodyBones.RightLowerArm);
+                at = f != null ? r.position + (r.position - f.position) * 0.46f : r.position;
+                return true;
+            }
             bool right = ThrowsRight(castT >= 0f && (atkT < 0f || castT < atkT) ? CCast : CAttack);
             if (h != HeroId.Moa && gear != null && gear.ShotFrom(bowHero, right, out at)) return true;
             at = right ? r.position : l.position;

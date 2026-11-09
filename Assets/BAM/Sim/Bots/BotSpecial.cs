@@ -50,7 +50,7 @@ namespace BAM.Sim
                 if (!M.TapHasTarget(h)) return false;
                 // Kugg's Anchor roots him for up to 10 s (Hero7.cs): ROI17's old AI (SimAI AI_Joker) deployed above 60 % health with an
                 // enemy hero within 7 tiles or 4 enemies in reach, never to escape
-                if (h.Hero == HeroId.Kugg) return HpR(h) >= 0.6f && (Foes(7, true, true, l) > 0 || Foes(r, false, true, l) >= 4);
+                if (h.Hero == HeroId.Kugg) return HpR(h) >= 0.6f && (Foes(7, true, true, l) > 0 || h.Charge >= h.HDef.MaxCharge && Foes(r, false, true, l) >= 4); // a minion wave only with all 6 stocks (he can anchor from 2)
                 // Knut's hook and Tyra's bolt fly past minions (Match.PassesMinions): a minion pack is no reason to throw them
                 return SureShot(FoeList(r, true, true), dz) || (!Match.PassesMinions(h.Hero) && Foes(r, false, true, l) >= 3);
             }

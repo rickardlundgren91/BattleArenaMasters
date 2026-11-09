@@ -149,7 +149,7 @@ namespace BAM.Sim
         public bool IsMinionLike => Kind == UnitKind.Minion || Kind == UnitKind.Wolf;
         public float Range => HDef != null ? HDef.Range + (KuggShots > 0 ? KuggS.RangeBonus : 0) : UDef.Range; // Kugg's Anchor (Hero7.cs)
         public float BaseSpeed => HDef != null ? HDef.Speed : UDef.Speed;
-        public bool SpecialReady => HDef != null && Charge >= HDef.MaxCharge;
+        public bool SpecialReady => HDef != null && Charge >= (Hero == HeroId.Kugg ? KuggS.MinShots : HDef.MaxCharge); // Kugg anchors from 2 stocks (Hero7.cs)
         public float Charge01 => HDef != null ? Math.Min(1, Charge / HDef.MaxCharge) : 0;
         public float DefDmg => float.IsNaN(DmgOverride) ? UDef.Dmg : DmgOverride;
 

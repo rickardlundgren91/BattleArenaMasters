@@ -16,6 +16,9 @@ namespace BAM.Sim
         /// <summary>Anchor: ROI's AttackRangeBuff 5.75 on a 2.25 range gave 8 tiles; Kugg's own range is 2.5, so +5.5.</summary>
         public const float RangeBonus = 5.5f, CdMult = 0.7f, ShotCoeff = 0.9f, GrassSight = 6, DeployTime = 0.6f, PackTime = 1.1f, MaxTime = 10;
         public const int Shots = 6;
+        /// <summary>The Anchor can go from this many stocks (Rickard 2026-11-09: "kuggs ult ska man kunna använda så fort man har 2 skott");
+        /// it fires as many shots as he has stocks, up to <see cref="Shots"/> (ROI17's stocks).</summary>
+        public const int MinShots = 2;
         /// <summary>His anchored shot flies homing at this speed (tiles/s): 8 tiles in about 0.6 s, a readable lob.</summary>
         public const float ShellSpeed = 13;
         /// <summary>Spark Shot (ROI's JokerCastProjectileRandomlyScript: RandomDelay 7.5-15 s, Range 8, DamageCoeff 0.35).</summary>
@@ -41,7 +44,7 @@ namespace BAM.Sim
         bool CastKugg(Unit h)
         {
             if (h.KuggRooted) return false;
-            h.KuggShots = KuggS.Shots; h.KuggUntil = Time + KuggS.MaxTime; h.KuggRooted = true; h.KuggPackEnd = -1;
+            h.KuggShots = Math.Max(KuggS.MinShots, Math.Min(KuggS.Shots, (int)h.Charge)); h.KuggUntil = Time + KuggS.MaxTime; h.KuggRooted = true; h.KuggPackEnd = -1;
             AddStatus(h, St.Casting, KuggS.DeployTime); AddStatus(h, St.Disarm, KuggS.DeployTime);
             h.AtkTimer = h.AttackCd; // the first anchored shot goes as soon as the spikes are in
             return true;
