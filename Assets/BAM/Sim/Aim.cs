@@ -49,6 +49,9 @@ namespace BAM.Sim
                     break;
                 case HeroId.Hilde: Circle(ref a, h, ang, k, HildeS.Reach, 1.5f, HildeS.KegRadius); a.Los = true; a.PushLength = HildeS.KegKnock; break;
                 case HeroId.Moa: Circle(ref a, h, ang, k, MoaS.Range, 0f, MoaS.AreaRadius); a.Allies = true; break;
+                case HeroId.Nassla: LandPoint(h, ang, k, NasslaS.Reach, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = NasslaS.Radius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
+                case HeroId.Ragn: RagnLandPoint(h, ang, k, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = RagnS.LandRadius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
+                case HeroId.Ravna: Line(ref a, FlockReach(h, ang), RavnaS.HitRadius, false); break; // the flock tears through everyone on its way
                 case HeroId.Fenn:
                 {
                     // as CastFenn: the aimed point, then cut where a wall stops the flying wolf (it leaves from Fenn's spot)

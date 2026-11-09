@@ -1293,7 +1293,7 @@ namespace BAM.Art
         }
 
         // Each hero's two special colours (main, accent) from the MLBB clip analysis (bam-work/art/mlbb-miya/skill-fx-analys.md),
-        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk, Hilde, Oaken, Kugg. Tyra keeps the cyan her bolt already has.
+        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk, Hilde, Oaken, Kugg, Ragn, Nassla, Skrall, Ravna. Tyra keeps the cyan her bolt already has.
         static Vector3 lastBounce;
         static float lastBounceT = -10f;
 
@@ -1308,6 +1308,10 @@ namespace BAM.Art
             new Color32(255, 150, 50, 255), // Hilde: powder flash
             new Color32(150, 140, 125, 255), // Oaken: stone
             new Color32(60, 230, 210, 255), // Kugg: turquoise rune glow
+            new Color32(150, 210, 255, 255), // Ragn: ice blue (the moon in his eyes)
+            new Color32(150, 230, 60, 255), // Nässla: lime green
+            new Color32(175, 110, 255, 255), // Skrall: violet lightning
+            new Color32(255, 180, 70, 255), // Ravna: amber eyes
         };
         static readonly Color32[] heroAccent =
         {
@@ -1317,6 +1321,10 @@ namespace BAM.Art
             new Color32(200, 160, 90, 255), // Hilde: brass
             new Color32(255, 200, 70, 255), // Oaken: the gold glow in his cracks (Speltest recoloured it from cyan)
             new Color32(205, 160, 80, 255), // Kugg: brass
+            new Color32(200, 205, 215, 255), // Ragn: grey fur and iron
+            new Color32(120, 90, 50, 255), // Nässla: roots and mud
+            new Color32(240, 235, 255, 255), // Skrall: white flash
+            new Color32(60, 50, 70, 255), // Ravna: black feathers
         };
 
         /// <summary>The caster's own "release" when a hero fires the special, in that hero's colours, so you see who cast it even
@@ -1478,6 +1486,20 @@ namespace BAM.Art
                     Pow(p, 1, C(Pal.FireCore), 0.8f, 0.15f);
                     Dust(p, 4, C(Pal.Ground, 210), 0.6f, 1.5f, 0.5f, 0.3f, 0.2f);
                     Chunks(p, 3, C(Pal.Rock), 0.12f, 2.5f, 0.5f, 2f);
+                    break;
+                case ProjKind.RagnLeap:
+                case ProjKind.RavnaFlock:
+                case ProjKind.SkrallStrike:
+                    SpecialHit((int)(k == ProjKind.RagnLeap ? HeroId.Ragn : k == ProjKind.RavnaFlock ? HeroId.Ravna : HeroId.Skrall), p, 1f); // stand-ins until their own pictures
+                    break;
+                case ProjKind.SkrallBolt:
+                    Pow(p, 1, heroMain[(int)HeroId.Skrall], 0.6f, 0.1f);
+                    Sparks(p + Vector3.up * 0.3f, 5, heroAccent[(int)HeroId.Skrall], 0.08f, 3.5f, 0.2f, 1f);
+                    break;
+                case ProjKind.NasslaThorn:
+                case ProjKind.NasslaBramble:
+                    Pow(p, 1, heroMain[(int)HeroId.Nassla], 0.5f, 0.12f);
+                    Sparks(p + Vector3.up * 0.3f, 3, heroAccent[(int)HeroId.Nassla], 0.07f, 2.5f, 0.2f, 0.8f);
                     break;
                 case ProjKind.TowerShot:
                     Pow(p, 1, teamL, 0.7f, 0.14f);

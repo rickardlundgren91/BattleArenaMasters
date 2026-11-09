@@ -186,6 +186,7 @@ namespace BAM.Sim
             u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
             KuggReset(u); // his Anchor ends with him
+            Hero8Reset(u); // Ragn's leap, Ravna's flock, Skrall's Trance (Hero8.cs)
             int kt = Teams.Other(u.Team);
             Kills[kt]++;
             u.Streak = 0;
@@ -324,13 +325,14 @@ namespace BAM.Sim
         void AutoAttack(Unit u, Unit tgt)
         {
             bool hero = u.Kind == UnitKind.Hero;
-            float spawnDelay, projSpeed, projTime, dmg, coeff = 1; ProjKind kind; bool big = false;
+            float spawnDelay, projSpeed, projTime, dmg, coeff = 1; ProjKind kind; bool big = false; int trance = 0;
             if (hero)
             {
                 var d = u.HDef; spawnDelay = d.SpawnDelay; projSpeed = d.ProjSpeed; projTime = d.ProjTime; kind = d.Attack;
                 if (u.Hero == HeroId.Kugg && u.KuggAnchored) { kind = ProjKind.KuggShell; projSpeed = KuggS.ShellSpeed; projTime = 0; coeff *= KuggS.ShotCoeff; big = true; } // Anchor (Hero7.cs)
                 dmg = u.StatDmg();
                 coeff *= HeroAttackCoeff(u, tgt, ref big);
+                if (u.Hero == HeroId.Skrall && !u.IsClone) { coeff *= TranceSpend(u, out trance); if (trance > 0) big = true; } // Trance (Hero8.cs)
                 if (AmbushReady(u)) { coeff *= 1 + Rules.AmbushBonus; big = true; Emit(EventType.Ambush, u, tgt); }
             }
             else
@@ -343,7 +345,7 @@ namespace BAM.Sim
             if (hero && u.Hero == HeroId.Tyra) travel = SimMath.Clamp(SimMath.Dist(u, tgt) / 15f, 0.08f, projTime); // about 15 tiles/s, between 0.08 and 0.25 s of flight (measured 10-16 tiles/s with the tick rounding, precision TYRA-11)
             if (hero && u.Hero == HeroId.Bonk) { BonkSwing(u, tgt, dmg * coeff, big); return; } // a slow slam on the ground in front (Hero3.cs)
             var p = NewProj(ProjMode.Auto, u, u.X, u.Y);
-            p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero;
+            p.Kind = kind; p.Tgt = tgt; p.Dmg = dmg * coeff; p.T = -spawnDelay; p.Speed = projSpeed; p.Travel = travel; p.Big = big; p.OnHit = hero; p.Ticks = trance;
             Emit(EventType.AttackStart, u, tgt, spawnDelay, (byte)kind, big);
             if (hero && u.Hero == HeroId.Kugg) KuggFired(u); // an anchored shot spends one (Hero7.cs)
         }
@@ -403,6 +405,8 @@ namespace BAM.Sim
                     case ProjMode.Volley: VolleyUpdate(p, dt); break;
                     case ProjMode.Echo: EchoUpdate(p, dt); break;
                     case ProjMode.FeatherTrail: FeatherTrailUpdate(p); break;
+                    case ProjMode.Bramble: BrambleUpdate(p); break;
+                    case ProjMode.Strike: p.Done = true; SkrallStrike(p); break;
                 }
             }
             emitShot = 0;
@@ -514,6 +518,8 @@ namespace BAM.Sim
             if (h.Hero == HeroId.Bram) BramBacklash(h, t);
             if (h.Hero == HeroId.Tyra) Featherstep(h, t, dealt); // Hero5.cs
             if (h.Hero == HeroId.Oaken) OakenRelease(h, t); // Hero6.cs
+            if (h.Hero == HeroId.Skrall && p.Ticks >= SkrallS.Steps) TranceJump(h, t, p.Dmg); // a full Trance jumps on (Hero8.cs)
+            if (h.Hero == HeroId.Ravna) CrowsEye(h, t, dealt); // Hero8.cs
         }
 
         // ---------- what the bots know ----------

@@ -53,5 +53,11 @@ namespace BAM.Audio
         // Kugg, hero 11 (2026-11-05, orders O-066..O-070): his shot, the Anchor going in, his anchored shot, pulling the spikes up and the
         // Spark Shot. Silent until Rickard's own clips are in Resources/BAM/Sfx
         AttackKugg, KuggDeploy, KuggShotBig, KuggPackUp, KuggSpark,
+        // Øli's four (2026-11-09, Hero8.cs): each hero's attack, special and the sound of its passive or landing. Silent until Rickard's
+        // own clips are in Resources/BAM/Sfx (named as these)
+        AttackRagn, RagnLeap, RagnLand,
+        AttackNassla, NasslaThrow, NasslaBramble,
+        AttackSkrall, SkrallTrance, SkrallStrike,
+        AttackRavna, RavnaFlock, RavnaCaw,
     }
 }

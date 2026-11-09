@@ -12,7 +12,7 @@ namespace BAM.Sim
             h.Bot = null; // the checks drive him by hand
             var info = HeroCatalog.Get(HeroId.Kugg);
             Check(info.Name == "Kugg" && info.Preview && HeroCatalog.IndexOf(HeroId.Kugg) < 0, "Kugg waits in Coming, a preview hero");
-            Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == HeroId.Kugg) && HeroCatalog.HeroTestList.Length == HeroCatalog.Count + 1, "HERO TEST lists Kugg after the heroes in the game");
+            Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == HeroId.Kugg) && HeroCatalog.HeroTestList.Length == HeroCatalog.Count + 5 && HeroCatalog.HeroTestList[HeroCatalog.Count].Id == HeroId.Kugg, "HERO TEST lists Kugg (and the four after him) after the heroes in the game");
             float x = 7.5f, y = 20;
             Place(h, x, y); Place(a, x + 6, y); Place(c, x - 9, y + 9); Place(far, x - 9, y - 9);
             float range0 = h.Range, cd0 = h.AttackCd;

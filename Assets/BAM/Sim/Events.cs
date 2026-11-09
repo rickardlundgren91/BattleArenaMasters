@@ -41,6 +41,9 @@ namespace BAM.Sim
         Telegraph,     // A tapped its special: the aim is locked and it goes in V s (Rules.SpecialTelegraph); B = the target, Kind = HeroId, X/Y = where it aims
         Jump,          // A stepped on a jump pad (Grove): it flies V s to X/Y, over walls
         KuggPack,      // Kugg A's Anchor ran out of shots (or time): he pulls his spikes up and can walk again in V s
+        RagnLand,      // Ragn A came down from his Moon Leap at X/Y (B = the enemy the landing hit, can be null); V = the shield he got
+        TranceStep,    // Skrall A's Trance gathered one more step: V = the steps he has now (1-3); Big = the full three
+        FlockEnd,      // Ravna A is herself again at X/Y after her Crow Flock
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>

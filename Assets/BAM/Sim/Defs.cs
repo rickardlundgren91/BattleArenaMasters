@@ -85,6 +85,13 @@ namespace BAM.Sim
             // sim), 28/7 dmg, 1.5 s, range 2.25, speed 2.08 x 1.25, radius 0.3, 6 stocks; his ball flies 0.47 s. Kugg: 237/30 hp, 26/6.5
             // dmg, 1.5 s, range 2.5, speed 2.5, charges in 6 hits; a first guess for bot matches to tune
             H(HeroId.Kugg, 0.3f, 2.5f, 6, false, 237, 30, 26, 6.5f, 1.5f, -0.036f, 2.5f, 0.2f, 0, 0.3f, ProjKind.KuggShot, KuggS.TapReach, AimShape.None, 0, 0),
+            // Øli's four (2026-11-09, Hero8.cs; doc "Nya egna hjältar – förslag", Rickard's card "Ja, bygg alla fyra"): first guesses beside
+            // Bonk and Blast, to tune with bot matches. Ragn: melee bruiser like Bonk; Nässla: a frail ranged caster; Skrall: slow, heavy
+            // bolts; Ravna: quick double cuts (one hit in the rules), frail
+            H(HeroId.Ragn, 0.4f, 2.5f, 7, false, 270, 45, 25, 6, 1.5f, -0.03f, 2.4f, 0.15f, 0, 0.075f, ProjKind.RagnClaw, RagnS.LeapReach, AimShape.Circle, RagnS.LeapReach, RagnS.LandRadius),
+            H(HeroId.Nassla, 0.25f, 2.4f, 8, false, 190, 30, 19, 4, 1.4f, -0.036f, 3.6f, 0.2f, 0, 0.25f, ProjKind.NasslaThorn, NasslaS.Reach, AimShape.Circle, NasslaS.Reach, NasslaS.Radius),
+            H(HeroId.Skrall, 0.3f, 2.3f, 9, false, 185, 29, 24, 5.5f, 1.7f, -0.036f, 3.8f, 0.25f, 0, 0.08f, ProjKind.SkrallBolt, 3.8f, AimShape.None, 0, 0),
+            H(HeroId.Ravna, 0.25f, 2.6f, 10, false, 205, 32, 15, 3.5f, 0.9f, -0.018f, 2.3f, 0.12f, 0, 0.08f, ProjKind.RavnaSlash, RavnaS.FlockReach, AimShape.Line, RavnaS.FlockReach, RavnaS.HitRadius),
         };
 
         public static HeroDef Hero(HeroId id) => Heroes[(int)id];

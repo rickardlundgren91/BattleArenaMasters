@@ -27,7 +27,7 @@ namespace BAM.Sim
         /// Bram's falling anvil, Blast's fuse, Bonk's wind-up (0 = none: Knut's hook, Tikta's needles and Fenn's homing wolf hit at
         /// once, Moa's shield is at once).</summary>
         public static float OwnWarning(HeroId id) => id == HeroId.Tyra ? TyraS.Windup : id == HeroId.Bram ? BramS.DropDelay
-            : id == HeroId.Blast ? BlastS.Delay : id == HeroId.Bonk ? BonkS.SlamWindup : 0;
+            : id == HeroId.Blast ? BlastS.Delay : id == HeroId.Bonk ? BonkS.SlamWindup : id == HeroId.Skrall ? SkrallS.Warn : 0;
 
         /// <summary>A special that warns by itself (OwnWarning) is cast at once, as before, with the same flash on the hero (Telegraph
         /// event, V = its own warning) so every special reads alike.</summary>
@@ -42,7 +42,7 @@ namespace BAM.Sim
         public static bool Telegraphing(Unit h) => h != null && h.TeleAt >= 0;
 
         /// <summary>The forms that land on a spot (the spot is locked); the rest fly along a line (the direction is locked).</summary>
-        static bool PlacedForm(HeroId id) => id == HeroId.Bram || id == HeroId.Blast || id == HeroId.Fenn || id == HeroId.Moa;
+        static bool PlacedForm(HeroId id) => id == HeroId.Bram || id == HeroId.Blast || id == HeroId.Fenn || id == HeroId.Moa || id == HeroId.Ragn || id == HeroId.Nassla;
 
         /// <summary>The tap's start: the aim (ang, k as TryCastSpecial takes them; ang NaN for Bonk's slam round him) is locked, the
         /// warning shows, the cast follows in TeleTime. tgt is the picked target (only for the event).</summary>
@@ -97,6 +97,27 @@ namespace BAM.Sim
                 case HeroId.Bonk:
                     WarnCircle(h, h.X, h.Y, BonkS.SlamRadiusOneTap, tt);
                     break;
+                case HeroId.Ragn:
+                {   // where he comes down (walls and bases stop the leap) and the ring the landing hits in
+                    RagnLandPoint(h, ang, k, out h.TeleX, out h.TeleY);
+                    float ga = SimMath.Atan2(h.TeleY - h.Y, h.TeleX - h.X), gd = SimMath.Hypot(h.TeleX - h.X, h.TeleY - h.Y);
+                    if (gd > 0.05f) WarnLine(h, ga, gd, h.R, tt);
+                    WarnCircle(h, h.TeleX, h.TeleY, RagnS.LandRadius, tt);
+                    ex = h.TeleX; ey = h.TeleY;
+                    break;
+                }
+                case HeroId.Nassla:
+                    LandPoint(h, ang, k, NasslaS.Reach, out h.TeleX, out h.TeleY);
+                    WarnCircle(h, h.TeleX, h.TeleY, NasslaS.Radius, tt);
+                    ex = h.TeleX; ey = h.TeleY;
+                    break;
+                case HeroId.Ravna:
+                {
+                    float len = FlockReach(h, ang);
+                    WarnLine(h, ang, len, RavnaS.HitRadius, tt);
+                    ex = h.X + SimMath.Cos(ang) * len; ey = h.Y + SimMath.Sin(ang) * len;
+                    break;
+                }
                 case HeroId.Moa: // her honey field on the friend's spot: no red warning (it hurts nobody, enemy bots must not run from it)
                     AimPoint(h, ang, k, MoaS.Range, out h.TeleX, out h.TeleY, 0f);
                     ex = h.TeleX; ey = h.TeleY;
@@ -124,7 +145,8 @@ namespace BAM.Sim
             if (PlacedForm(h.Hero))
             {   // the locked spot, from wherever a push left the hero (it stands still in the warning)
                 float dx = h.TeleX - h.X, dy = h.TeleY - h.Y, d = SimMath.Hypot(dx, dy);
-                float reach = h.Hero == HeroId.Bram ? BramS.Reach : h.Hero == HeroId.Blast ? BlastS.Reach : h.Hero == HeroId.Moa ? MoaS.Range : FennS.ThrowReach;
+                float reach = h.Hero == HeroId.Bram ? BramS.Reach : h.Hero == HeroId.Blast ? BlastS.Reach : h.Hero == HeroId.Moa ? MoaS.Range
+                    : h.Hero == HeroId.Ragn ? RagnS.LeapReach : h.Hero == HeroId.Nassla ? NasslaS.Reach : FennS.ThrowReach;
                 if (d > 1e-4f) ang = SimMath.Atan2(dy, dx);
                 k = SimMath.Clamp(d / reach, 0, 1);
             }

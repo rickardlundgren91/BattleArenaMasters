@@ -30,7 +30,7 @@ namespace BAM.Sim
         /// <summary>The special's icon in Resources/BAM/Menu (each hero's one picture shows the form the one-tap special keeps).</summary>
         public static string SpecialIcon(HeroId id)
         {
-            string lower = Get(id).Name.ToLowerInvariant();
+            string lower = id.ToString().ToLowerInvariant(); // the code name: plain ASCII file names (Nässla's is "nassla")
             return "special_" + lower;
         }
 
@@ -64,6 +64,24 @@ namespace BAM.Sim
                 SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles, he fires faster and sees into grass up to 6 tiles away. After 6 shots (or 10 s) he pulls the spikes up again.",
                 PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
                 Health = 2, Damage = 3, Speed = 1, Difficulty = 3 },
+            // Tester Øli's four ideas as BAM's own heroes (Rickard 2026-11-09 "vi bygger alla fyra", kit approved on a card; Hero8.cs). In
+            // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs)
+            new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false, Preview = true,
+                SpecialName = "Moon Leap", SpecialDesc = "Leaps up to 5 tiles onto a random enemy in reach. Landing, the enemy nearest him is hit hard, stunned for 0.8 s and shoved 2 tiles back, and Ragn gets a shield of 15% of his health for 3 s.",
+                PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 15% faster, until he hits or is hit.",
+                Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
+            new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true, Preview = true,
+                SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod at a random enemy in her range. A thicket grows there for 3 s: enemies in it are slowed 35% and poisoned.",
+                PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back every second.",
+                Health = 1, Damage = 2, Speed = 2, Difficulty = 2 },
+            new HeroInfo { Id = HeroId.Skrall, Name = "Skrall", Title = "The Storm Monk", Role = "Mage", Ranged = true, Preview = true,
+                SpecialName = "Thunder Judgement", SpecialDesc = "Three lightning strikes fall on random enemies in his range, each after a short red warning. Every enemy under one is hurt; heroes are stunned for 0.3 s.",
+                PassiveName = "Trance", PassiveDesc = "Every second he stands still with no enemy in reach he gathers a step, up to 3. His next attack deals 40% more per step; with all 3 it also jumps to another enemy close by.",
+                Health = 1, Damage = 3, Speed = 1, Difficulty = 3 },
+            new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false, Preview = true,
+                SpecialName = "Crow Flock", SpecialDesc = "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
+                PassiveName = "Crow's Eye", PassiveDesc = "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
+                Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
         };
 
         /// <summary>What PRACTICE > HERO TEST lists: every hero in the game, then the Preview heroes still waiting in Coming.</summary>

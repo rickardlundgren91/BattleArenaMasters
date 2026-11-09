@@ -410,6 +410,14 @@ namespace BAM.Art
                 case ProjKind.KuggSpark: // a stand-in until O-064 (tx_fx_kugg_spark)
                     b.Color(Pal.TeamLight(team)).Sphere(Vector3.zero, 0.07f, 8, 5);
                     break;
+                case ProjKind.NasslaThorn: // a stand-in until Rickard's own picture: a green thorn
+                    b.Color(Pal.TeamLight(team)).Sphere(Vector3.zero, 0.06f, 8, 5);
+                    b.Color(Pal.TeamLight(team)).Beam(new Vector3(0f, 0f, -0.12f), new Vector3(0f, 0f, 0.12f), 0.03f, 0.005f);
+                    break;
+                case ProjKind.SkrallBolt: // a stand-in until Rickard's own picture: a small bright spark (the flight is near-instant)
+                    b.Color(Pal.White).Sphere(Vector3.zero, 0.08f, 8, 5);
+                    b.Color(Pal.TeamLight(team)).Torus(Vector3.zero, 0.09f, 0.015f, 10, 4);
+                    break;
                 case ProjKind.TowerShot:
                     b.Color(Pal.TeamLight(team)).Sphere(Vector3.zero, 0.16f, 12, 8);
                     b.Color(Pal.White).Sphere(new Vector3(0f, 0f, 0.03f), 0.09f, 8, 5);

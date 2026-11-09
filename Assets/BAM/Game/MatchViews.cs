@@ -733,8 +733,36 @@ namespace BAM.Game
                         ArtKit.PlayAnvilWarn(Coords.World(e.X, e.Y), BramS.DropRadius, BramS.DropDelay);
                     }
                     if ((HeroId)e.Kind == HeroId.Hilde) LobGhost(a, Coords.World(e.X, e.Y), e.Big ? ProjKind.HildeKeg : ProjKind.HildeBurst, e.Big ? 0.4f : 0.3f);
+                    if ((HeroId)e.Kind == HeroId.Nassla) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.NasslaThorn, 0.3f); // her seed pod flies onto the thicket's spot
                     // Kugg's Anchor: his heel spikes go into the ground (dust and cracks at his feet; his own rune seal O-065 comes later)
                     if ((HeroId)e.Kind == HeroId.Kugg) ArtKit.PlayFx(FxKind.GroundSmash, Coords.Of(a), 0.7f, Side(a.Team), (int)HeroId.Kugg);
+                    break;
+                }
+                case EventType.RagnLand:
+                {
+                    // Ragn comes down from his Moon Leap: a crack and dust round him in his colours, and the thud (Hero8.cs)
+                    var a = e.A;
+                    if (a == null || !m.IsVisibleTo(a, Mine)) break;
+                    ArtKit.PlayFx(FxKind.GroundSmash, Coords.World(e.X, e.Y), RagnS.LandRadius, Side(a.Team), (int)HeroId.Ragn);
+                    Sound(SfxId.RagnLand, a, 1f);
+                    break;
+                }
+                case EventType.TranceStep:
+                {
+                    // Skrall's Trance gathers a step: a small violet flash on him (the full three show as the gold ring, Unit.NextHitSpecial)
+                    var a = e.A;
+                    if (a == null || !m.IsVisibleTo(a, Mine)) break;
+                    ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), e.Big ? 0.8f : 0.5f, Side(a.Team), (int)HeroId.Skrall);
+                    if (a == m.Player) Sound(SfxId.SkrallTrance, a, e.Big ? 0.8f : 0.5f);
+                    break;
+                }
+                case EventType.FlockEnd:
+                {
+                    // Ravna is herself again: a puff of feathers where the flock lands, and a caw (Hero8.cs)
+                    var a = e.A;
+                    if (a == null || !m.IsVisibleTo(a, Mine)) break;
+                    ArtKit.PlayFx(FxKind.HookDrag, Coords.World(e.X, e.Y), 1f, Side(a.Team), (int)HeroId.Ravna);
+                    Sound(SfxId.RavnaCaw, a, 0.8f);
                     break;
                 }
                 case EventType.KuggPack:
@@ -805,7 +833,8 @@ namespace BAM.Game
                     bool own = pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst || pk == ProjKind.OakenSlam;
                     // Bram's Anvil Drop and Knut's Anchor Slam (Simon's reworks) get their own heroes' blows, not Blast's fireball
                     FxKind ek = pk == ProjKind.BramHammerSpecial ? FxKind.AnvilDrop : pk == ProjKind.BramHammer ? FxKind.AnvilStrike : pk == ProjKind.KnutSlam ? FxKind.AnchorHit
-                        : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : pk == ProjKind.OakenSlam ? FxKind.OakenSlam : own ? FxKind.KegBlast : FxKind.Explosion;
+                        : pk == ProjKind.BlastChain ? FxKind.ChainBoom : bonk ? FxKind.GroundSmash : pk == ProjKind.OakenSlam ? FxKind.OakenSlam : own ? FxKind.KegBlast
+                        : pk == ProjKind.SkrallStrike ? FxKind.Cast : FxKind.Explosion; // Skrall's strike: a pillar of his violet from the sky, not a fireball
                     // Bonk: his auto slam and Ground Slam, both the club into the ground, drawn at the true hit radius (a power swing
                     // is no wider in the rules, so it is told by its sound and shake, not a bigger ring: BONK-06)
                     float esize = pk == ProjKind.BlastChain || bonk ? Mathf.Max(0.1f, e.V) : size;
@@ -819,7 +848,7 @@ namespace BAM.Game
                     SfxId boom = pk == ProjKind.BlastBomb ? SfxId.BlastExplosion : pk == ProjKind.HildeKeg || pk == ProjKind.HildeBurst ? SfxId.HildeKegBlast : pk == ProjKind.OakenSlam ? SfxId.BonkSlam : pk == ProjKind.BlastChain ? SfxId.BlastChainBoom
                         : pk == ProjKind.BonkSlam || (pk == ProjKind.BonkClub && e.Big) ? SfxId.BonkSlam : pk == ProjKind.BonkClub ? SfxId.AttackBonk
                         : pk == ProjKind.BramHammer || pk == ProjKind.BramHammerSpecial ? SfxId.BramAnvil // Bram's Anvil Drop: Speltest's anvil (bramsmash), BRAM-04
-                        : pk == ProjKind.KnutSlam ? SfxId.KnutSlam : SfxId.None; // Knut's Anchor Slam: Rickard's own clip (KNUT-03)
+                        : pk == ProjKind.KnutSlam ? SfxId.KnutSlam : pk == ProjKind.SkrallStrike ? SfxId.SkrallStrike : SfxId.None; // Knut's Anchor Slam: Rickard's own clip (KNUT-03)
                     if (boom != SfxId.None) BamAudio.PlayAt(boom, at);
                     break;
                 }
@@ -1026,7 +1055,8 @@ namespace BAM.Game
         {
             switch (a.Kind)
             {
-                case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackHilde : a.Hero == HeroId.Kugg ? SfxId.AttackKugg : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Oaken borrows Bonk's until he has his own
+                case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackHilde : a.Hero == HeroId.Kugg ? SfxId.AttackKugg
+                    : a.Hero == HeroId.Ragn ? SfxId.AttackRagn : a.Hero == HeroId.Nassla ? SfxId.AttackNassla : a.Hero == HeroId.Skrall ? SfxId.AttackSkrall : a.Hero == HeroId.Ravna ? SfxId.AttackRavna : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Oaken borrows Bonk's until he has his own
                 case UnitKind.Tower: return SfxId.TowerShot;
                 case UnitKind.Wolf: return SfxId.WolfBite;
                 default: return SfxId.None; // minions are silent (Rickard 2026-10-26)
@@ -1048,6 +1078,10 @@ namespace BAM.Game
                 case HeroId.Hilde: return SfxId.HildeKegThrow; // both kegs (Speltest sp_hilde)
                 case HeroId.Oaken: return SfxId.BonkSlamWindup; // borrowed until he has his own
                 case HeroId.Kugg: return SfxId.KuggDeploy;
+                case HeroId.Ragn: return SfxId.RagnLeap;
+                case HeroId.Nassla: return SfxId.NasslaThrow;
+                case HeroId.Skrall: return SfxId.SkrallStrike;
+                case HeroId.Ravna: return SfxId.RavnaFlock;
                 default: return SfxId.None;
             }
         }

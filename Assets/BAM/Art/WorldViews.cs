@@ -67,7 +67,7 @@ namespace BAM.Art
         {
             kind = k;
             team = t;
-            melee = k == ProjKind.FennSlash || k == ProjKind.KnutHit || k == ProjKind.WolfBite || k == ProjKind.MeleeMinionHit || k == ProjKind.OakenFist;
+            melee = k == ProjKind.FennSlash || k == ProjKind.KnutHit || k == ProjKind.WolfBite || k == ProjKind.MeleeMinionHit || k == ProjKind.OakenFist || k == ProjKind.RagnClaw || k == ProjKind.RavnaSlash;
             var go = new GameObject("Look");
             vis = go.transform;
             vis.SetParent(transform, false);
@@ -150,7 +150,8 @@ namespace BAM.Art
                 }
                 // the heroes' own swing colours (MLBB analysis 8): Fenn silver-cyan, Knut steel blue; the wolf ghost blue, minions the team's
                 Color c = k == ProjKind.WolfBite ? (Color)Fx.HeroMain(HeroId.Fenn) : k == ProjKind.KnutHit ? (Color)Fx.HeroMain(HeroId.Knut)
-                    : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : k == ProjKind.OakenFist ? (Color)Fx.HeroAccent(HeroId.Oaken) : (Color)Pal.Get(Pal.TeamLight(t)) * 0.6f; // minions' arcs dimmer
+                    : k == ProjKind.FennSlash ? (Color)Fx.HeroMain(HeroId.Fenn) : k == ProjKind.OakenFist ? (Color)Fx.HeroAccent(HeroId.Oaken)
+                    : k == ProjKind.RagnClaw ? (Color)Fx.HeroMain(HeroId.Ragn) : k == ProjKind.RavnaSlash ? (Color)Fx.HeroMain(HeroId.Ravna) : (Color)Pal.Get(Pal.TeamLight(t)) * 0.6f; // minions' arcs dimmer
                 visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, c);
                 arcColor = c;
             }
@@ -638,6 +639,7 @@ namespace BAM.Art
             warn = k == ZoneKind.WarnLine || k == ZoneKind.WarnCircle;
             // warnings: the enemy's in strong red (that is what players dodge), our own team's in a quiet white
             baseColor = k == ZoneKind.HoneyField ? new Color(1f, 0.78f, 0.2f, 1f)
+                : k == ZoneKind.Bramble ? new Color(0.55f, 0.85f, 0.2f, 0.45f) // Nässla's thicket: a lime-green floor (her own picture comes later)
                 : k == ZoneKind.FireLane ? new Color(1f, 0.45f, 0.08f, 0.35f) // a faint heat floor: the cracks and flames carry the look
                 : k == ZoneKind.FeatherTrail ? new Color(0.78f, 1f, 0.9f, 0.3f) // Tyra's wind: a pale mint floor, the feathers carry the look
                 : warn ? (t == Teams.Player ? new Color(1f, 1f, 1f, 0.6f) : new Color(1f, 0.12f, 0.1f, 1f))

@@ -6,8 +6,9 @@ namespace BAM.Sim
     // these values, so entries are only ever added at the end; changing or removing one is a contract change (Docs/CONTRACTS.md).
 
     /// <summary>The heroes, in hero-select order (Bonk joined 2026-10-26; Hilde and Oaken, heroes 9 and 10, on 2026-10-28; Kugg,
-    /// hero 11 after the old game's ROI17, on 2026-11-05).</summary>
-    public enum HeroId : byte { Bram = 0, Fenn = 1, Tyra = 2, Moa = 3, Knut = 4, Tikta = 5, Blast = 6, Bonk = 7, Hilde = 8, Oaken = 9, Kugg = 10 }
+    /// hero 11 after the old game's ROI17, on 2026-11-05; Ragn, Nassla, Skrall and Ravna, heroes 12 to 15 after tester Øli's four ideas,
+    /// on 2026-11-09, Rickard: "vi bygger alla fyra"). Nassla is shown as "Nässla"; the code name stays plain ASCII.</summary>
+    public enum HeroId : byte { Bram = 0, Fenn = 1, Tyra = 2, Moa = 3, Knut = 4, Tikta = 5, Blast = 6, Bonk = 7, Hilde = 8, Oaken = 9, Kugg = 10, Ragn = 11, Nassla = 12, Skrall = 13, Ravna = 14 }
 
     /// <summary>Team 0 is the player's team at the bottom of the map (blue), team 1 the enemy at the top (red).</summary>
     public static class Teams
@@ -55,6 +56,14 @@ namespace BAM.Sim
         KuggShot = 29,          // Kugg's auto attack, a short rune cannon ball
         KuggShell = 30,         // Kugg's shot while Anchored (Rotfäste): long range, bigger
         KuggSpark = 31,         // Kugg's Spark Shot passive: a small shot at a random enemy, by itself
+        RagnClaw = 32,          // Ragn's auto attack, a claw swipe, near-instant (melee)
+        RagnLeap = 33,          // Ragn's Moon Leap: the landing hit, its ring and the shove
+        NasslaThorn = 34,       // Nässla's auto attack, a thrown poison thorn
+        NasslaBramble = 35,     // Nässla's Thorn Thicket: the seed pod and the bramble's poison ticks
+        SkrallBolt = 36,        // Skrall's auto attack, a small bolt of lightning, near-instant (Trance's jump too)
+        SkrallStrike = 37,      // Skrall's Thunder Judgement: one of three lightning strikes from the sky
+        RavnaSlash = 38,        // Ravna's auto attack, two quick talon cuts, near-instant (melee)
+        RavnaFlock = 39,        // Ravna's Crow Flock: the crows tearing at an enemy they fly through
     }
 
     /// <summary>Ground areas that last a while.</summary>
@@ -66,6 +75,7 @@ namespace BAM.Sim
         WarnLine = 3,   // a red warning line before a shot (a strip: centre, direction, length, half width)
         WarnCircle = 4, // a red warning circle
         FeatherTrail = 5, // Tyra's bolt's wind and feathers (a strip that slows enemies, TyraS.Trail*)
+        Bramble = 6,      // Nässla's Thorn Thicket: a circle that slows and poisons enemies and heals allies (NasslaS)
     }
 
     [Flags]

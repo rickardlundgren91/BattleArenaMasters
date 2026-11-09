@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "93bec63bf99bd130";
+            Generated = true; GeneratedHash = "962635569dea859d";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -542,6 +542,7 @@ namespace BAM.Sim
         {
             var __t = (global::BAM.Sim.Unit)__s.MemberwiseClone();
             SimMirror.SetRo(__t, "CastSeen", SimMirror.NewArr(__s.CastSeen));
+            SimMirror.SetRo(__t, "FlockHit", SimMirror.NewList(__s.FlockHit));
             SimMirror.SetRo(__t, "HidAt", SimMirror.NewArr(__s.HidAt));
             SimMirror.SetRo(__t, "LastHitBy", SimMirror.NewArr(__s.LastHitBy));
             SimMirror.SetRo(__t, "LastSeenT", SimMirror.NewArr(__s.LastSeenT));
@@ -576,6 +577,7 @@ namespace BAM.Sim
             Dummy = __s.Dummy;
             Facing = __s.Facing;
             FeatherReadyAt = __s.FeatherReadyAt;
+            __m.ListMap(FlockHit, __s.FlockHit);
             HDef = __s.HDef;
             Hero = __s.Hero;
             HeroIndex = __s.HeroIndex;
@@ -647,6 +649,14 @@ namespace BAM.Sim
             Pips = __s.Pips;
             QueenReadyAt = __s.QueenReadyAt;
             R = __s.R;
+            RagnFromX = __s.RagnFromX;
+            RagnFromY = __s.RagnFromY;
+            RagnLeapEnd = __s.RagnLeapEnd;
+            RagnLeapStart = __s.RagnLeapStart;
+            RagnToX = __s.RagnToX;
+            RagnToY = __s.RagnToY;
+            RavnaAng = __s.RavnaAng;
+            RavnaFlockEnd = __s.RavnaFlockEnd;
             ReadyDeaths = __s.ReadyDeaths;
             RegenT = __s.RegenT;
             RespawnT = __s.RespawnT;
@@ -681,6 +691,8 @@ namespace BAM.Sim
             TowerFocus = __m.Map(__s.TowerFocus);
             TowerShotT = __s.TowerShotT;
             TowerStreak = __s.TowerStreak;
+            TranceSteps = __s.TranceSteps;
+            TranceStill = __s.TranceStill;
             TutStatic = __s.TutStatic;
             TutUnkillable = __s.TutUnkillable;
             UDef = __s.UDef;

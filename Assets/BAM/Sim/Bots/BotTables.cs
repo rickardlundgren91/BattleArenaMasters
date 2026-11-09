@@ -41,7 +41,7 @@ namespace BAM.Sim
         }
 
         /// <summary>Old HERO_ROLE for the seven heroes: Tank, Fighter, Assassin, Marksman, Mage, Support (Hilde: Support).</summary>
-        internal static bool Ranged(HeroId id) => id == HeroId.Bram || id == HeroId.Tyra || id == HeroId.Moa || id == HeroId.Blast || id == HeroId.Hilde || id == HeroId.Kugg; // Marksman, Mage, Support
+        internal static bool Ranged(HeroId id) => id == HeroId.Bram || id == HeroId.Tyra || id == HeroId.Moa || id == HeroId.Blast || id == HeroId.Hilde || id == HeroId.Kugg || id == HeroId.Nassla || id == HeroId.Skrall; // Marksman, Mage, Support
         internal static bool Tank(HeroId id) => id == HeroId.Knut || id == HeroId.Oaken; // Oaken: Tank in the old HERO_ROLE
 
         // the old bot constants

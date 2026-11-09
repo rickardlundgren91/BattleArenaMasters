@@ -1837,7 +1837,7 @@ namespace BAM.Art
             switch ((HeroId)hero)
             {
                 case HeroId.Bonk: return true;
-                case HeroId.Fenn: case HeroId.Knut: case HeroId.Oaken:
+                case HeroId.Fenn: case HeroId.Knut: case HeroId.Oaken: case HeroId.Ragn: case HeroId.Ravna:
                     var d = BAM.Sim.Defs.Hero((HeroId)hero);
                     travel = d.ProjTime > 0f ? d.ProjTime : 0.1f;
                     return true;

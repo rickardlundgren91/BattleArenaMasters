@@ -74,6 +74,14 @@ namespace BAM.Art
 
         static int Key(int kind, int sub, int team) => (kind * 64 + sub) * 4 + team;
 
+        /// <summary>The body a new hero borrows until Rickard's own model is in (Hero8.cs): Ragn Bonk's, Nässla Moa's, Skrall Blast's,
+        /// Ravna Tikta's (the closest build and weapon each). PRACTICE > HERO TEST only.</summary>
+        static bool StandIn(HeroId hero, out HeroId body)
+        {
+            body = hero == HeroId.Ragn ? HeroId.Bonk : hero == HeroId.Nassla ? HeroId.Moa : hero == HeroId.Skrall ? HeroId.Blast : hero == HeroId.Ravna ? HeroId.Tikta : hero;
+            return body != hero;
+        }
+
         public static RigDef Hero(HeroId hero, int team)
         {
             int k = Key(0, (int)hero, team);
@@ -91,6 +99,9 @@ namespace BAM.Art
                 // and a swing that fit his size, never Blast's small bomb thrower
                 case HeroId.Bonk: d = Knut(team); break;
                 case HeroId.Hilde: case HeroId.Oaken: case HeroId.Kugg: d = Knut(team); break; // the same for Hilde, Oaken and Kugg (models only)
+                case HeroId.Ragn: d = Knut(team); break; // Øli's four (Hero8.cs): their stand-in heroes' rigs until their own models
+                case HeroId.Nassla: d = Moa(team); break;
+                case HeroId.Ravna: d = Tikta(team); break;
                 default: d = Blast(team); break;
             }
             d.Mesh = b.ToSkinnedMesh("Hero " + hero + " t" + team, d.Pivots);
@@ -98,12 +109,14 @@ namespace BAM.Art
             d.BarThick = 0.13f;
             d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + hero);
             if (d.Art == null && hero == HeroId.Kugg) d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + HeroId.Oaken); // stand-in body until Rickard's own (O-060)
+            var gearOf = hero;
+            if (d.Art == null && StandIn(hero, out HeroId si)) { d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + si); gearOf = si; } // Øli's four: a stand-in body and its weapon until Rickard's own models
             if (d.Art == null && hero >= HeroId.Bonk) Debug.LogError("[BAM.Art] " + hero + " has no HeroArt (run BAM > Art > Build Hero Art): showing a stand-in figure");
             if (d.Art != null)
             {
                 d.Height = d.Art.Height;
                 d.ThrowsProp = false;
-                d.Gear = Weapons.For(hero);
+                d.Gear = Weapons.For(gearOf);
             }
             cache[k] = d;
             return d;

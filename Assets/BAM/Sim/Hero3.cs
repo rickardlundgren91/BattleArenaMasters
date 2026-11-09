@@ -253,14 +253,14 @@ namespace BAM.Sim
 
         /// <summary>u slides dist tiles the way ang points over KnockTime, stunned stun s from its start; walls stop the slide.
         /// roll: the Boulder Toss behind it, so the sliding pin knocks on the enemies it meets.</summary>
-        void Knock(Unit src, Unit u, float ang, float dist, float stun, BonkRoll roll)
+        void Knock(Unit src, Unit u, float ang, float dist, float stun, BonkRoll roll, ProjKind kind = ProjKind.BonkBoulder)
         {
             if (KnockImmune(u)) { if (stun > 0) AddStatus(u, St.Stun, stun, 0, 0, src); return; } // knocked too lately: the stun alone
             u.KnockFreeAt = Time + Rules.KnockCooldown;
             float sp = dist / BonkS.KnockTime;
             u.KnockVX = SimMath.Cos(ang) * sp; u.KnockVY = SimMath.Sin(ang) * sp; u.KnockT = BonkS.KnockTime; u.KnockPad = false; u.KnockKeg = null; u.KnockRoll = roll;
             if (stun > 0) AddStatus(u, St.Stun, stun, 0, 0, src);
-            Emit(EventType.Knock, src, u, BonkS.KnockTime, (byte)ProjKind.BonkBoulder, true, u.X + u.KnockVX * BonkS.KnockTime, u.Y + u.KnockVY * BonkS.KnockTime);
+            Emit(EventType.Knock, src, u, BonkS.KnockTime, (byte)kind, true, u.X + u.KnockVX * BonkS.KnockTime, u.Y + u.KnockVY * BonkS.KnockTime);
         }
 
         /// <summary>A pin sliding from Boulder Toss bumps into the enemies (its own team) it touches with a clear line: each not yet
