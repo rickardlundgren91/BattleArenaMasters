@@ -26,6 +26,8 @@ namespace BAM.Art
             public int Sectors = 6;          // Skirt: spring bones round the hips
             public float Clear0, Clear1;     // Skirt: distance from the leg bones where the sway starts and is full
             public float Drop = 0.12f;       // Skirt: how far below the hips the sway reaches full
+            public float MaxSide;            // Skirt: only cloth this close to the body's middle line, to the sides (0 = all round);
+                                             // for loincloth panels front and back on a hero whose thighs are thick
             public float Back0, Back1;       // Tail: distance behind the head bone where the sway starts and is full
             public float PivotUp;            // Tail: the tie point, this far above the head bone (on the Back0 plane)
             public float Hz = 2.4f;          // spring frequency
@@ -44,6 +46,16 @@ namespace BAM.Art
                     return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.055f, Clear1 = 0.11f, Drop = 0.12f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 26f, Drag = 0.05f, Flare = 0.22f } };
                 case 2: // Tyra: the ponytail
                     return new[] { new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 35f, Drag = 0.06f } };
+                case 3: // Moa: the cloth panels hanging in front and behind, between her legs (Rickard 2026-11-09: "sånt till alla som kan använda det")
+                    return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.035f, Clear1 = 0.06f, Drop = 0.15f, MaxSide = 0.07f, Hz = 2.3f, Damping = 0.42f, MaxAngle = 24f, Drag = 0.05f, Flare = 0.18f } };
+                case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
+                    return new[]
+                    {
+                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.06f, Clear1 = 0.10f, Drop = 0.10f, MaxSide = 0.07f, Hz = 2.0f, Damping = 0.45f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
+                        new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.08f, Hz = 2.2f, Damping = 0.38f, MaxAngle = 25f, Drag = 0.05f },
+                    };
+                // Knut, Bram, Blast, Tikta, Oaken: nothing hangs free of the body (Knut's mane is the top of his back). Hilde (not in the
+                // game yet): her long braid reaches her hips and needs a chain of bones, not one; when she comes in.
                 default: return null;
             }
         }
@@ -206,6 +218,7 @@ namespace BAM.Art
                     if (spine >= 0) set.Add(spine);
                     int[] setA = set.ToArray();
                     int N = Mathf.Max(3, sp.Sectors);
+                    float side = sp.MaxSide > 0f ? sp.MaxSide * H : float.MaxValue;
                     var sw = new float[n];
                     var sa = new float[n]; // the vertex's angle round the hips, in sectors
                     var sum = new Vector3[N];
@@ -214,6 +227,7 @@ namespace BAM.Art
                     {
                         float below = -Vector3.Dot(v[i] - hp, up);
                         if (below <= 0f || Share(i, setA) < 0.8f) continue; // above the hips, or an arm hanging past them
+                        if (Mathf.Abs(Vector3.Dot(v[i] - hp, right)) > side) continue;
                         float d = Mathf.Min(Mathf.Min(SegDist(v[i], aL, bL), SegDist(v[i], bL, cL)), Mathf.Min(SegDist(v[i], aR, bR), SegDist(v[i], bR, cR))) / H;
                         float s = Smooth((d - sp.Clear0) / Mathf.Max(1e-4f, sp.Clear1 - sp.Clear0)) * Smooth(below / (sp.Drop * H));
                         if (s <= 0.005f) continue;
