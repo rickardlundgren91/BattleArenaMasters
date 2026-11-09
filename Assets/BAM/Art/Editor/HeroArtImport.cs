@@ -27,9 +27,11 @@ namespace BAM.Art.Editor
         void OnPreprocessTexture()
         {
             var ti = (TextureImporter)assetImporter;
-            if (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Props/") || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Wolf/"))
+            if (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Props/") || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Wolf/")
+                || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Forms/"))
             {
-                // the heroes' and props' colour pictures: 1024 is plenty on a phone, compressed
+                // the heroes', props' and forms' colour pictures: 1024 is plenty on a phone, compressed (Kugg's turret picture came
+                // in at 2048, four times a hero body's cap; full review 2026-11-09 nr 84)
                 ti.textureType = TextureImporterType.Default;
                 ti.sRGBTexture = true;
                 ti.mipmapEnabled = true;
@@ -211,7 +213,10 @@ namespace BAM.Art.Editor
             // her cast the keg throw. Oaken walks and runs with the heavy Mutant clips; his attack is a hook punch (the fist is furthest
             // out at 0.49 of the clip) and his cast a two-arm overhead smash (fists on the ground at 0.44). Heights: Speltest HeroScale
             // visible ratios (Hilde 1.01, Oaken 1.10) x 1.62 as the others.
-            new Spec { Hero = "Hilde", Model = "Hilde/Hilde", Idle = "Hilde/Anim/Idle", Run = "Hilde/Anim/Run", Attack = "Hilde/Anim/Attack1", Cast = "Hilde/Anim/Cast", Hit = "Hilde/Anim/Hit", Death = "Hilde/Anim/Dying", Walk = "Hilde/Anim/Walk", Height = 1.64f, Release = 0.3f },
+            // Hilde's spec is out while she waits in HeroCatalog.Coming (full review 2026-11-09 nr 85): everything under Resources ships,
+            // and her HeroArt pulled her body, clips and picture (3 MB) into every build. Put the line back when she returns:
+            // new Spec { Hero = "Hilde", Model = "Hilde/Hilde", Idle = "Hilde/Anim/Idle", Run = "Hilde/Anim/Run", Attack = "Hilde/Anim/Attack1", Cast = "Hilde/Anim/Cast", Hit = "Hilde/Anim/Hit", Death = "Hilde/Anim/Dying", Walk = "Hilde/Anim/Walk", Height = 1.64f, Release = 0.3f },
+            // Oaken stays: Kugg borrows his Hit, Dying and Walk clips below.
             new Spec { Hero = "Oaken", Model = "Oaken/Oaken", Idle = "Oaken/Anim/Idle", Run = "Oaken/Anim/Run", Attack = "Oaken/Anim/Attack1", Cast = "Oaken/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.49f },
             // Kugg (hero 10, 2026-11-09): Rickard's Tripo rune golem rigged in Mixamo (the cannon is his right arm), his own clips:
             // Mutant Breathing Idle, Male Weighted Run, Firing A Gun (the kick at 0.30-0.33 s of 1.17, so the shot leaves at 27 %)
@@ -321,6 +326,16 @@ namespace BAM.Art.Editor
                 else EditorUtility.SetDirty(art);
                 ok++;
             }
+            // a hero taken out of specs (Hilde, full review 2026-11-09 nr 85) leaves its HeroArt behind on every PC that once built it,
+            // and everything under Resources ships: drop the assets no spec names, so the body and clips stay out of the build
+            if (AssetDatabase.IsValidFolder(OutDir))
+                foreach (string guid in AssetDatabase.FindAssets("t:HeroArt", new[] { OutDir }))
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    bool named = false;
+                    foreach (Spec s in specs) if (OutOf(s) + "/" + s.Hero + ".asset" == path) { named = true; break; }
+                    if (!named && AssetDatabase.DeleteAsset(path)) Debug.Log("[BAM.Art] Dropped " + path + ": no hero in the list uses it");
+                }
             AssetDatabase.SaveAssets();
             Debug.Log("[BAM.Art] Hero models ready: " + ok + " of " + specs.Length);
         }

@@ -144,7 +144,7 @@ namespace BAM.Art
             int k = Key(2, 0, team);
             if (cache.TryGetValue(k, out RigDef d)) return d;
             b.Clear();
-            Mesh prop = Props.Mesh("bam_tower_grass"); // Rickard's Tripo tower 2026-11-02 (O-038); blackbruk_tower goes in the pre-release prune
+            Mesh prop = Props.Mesh("bam_tower_grass"); // Rickard's Tripo tower 2026-11-02 (O-038); the old blackbruk_tower files left Resources 2026-11-09 (full review nr 85)
             d = prop != null ? BuildTowerProp(team, prop) : BuildTower(team);
             d.Mesh = b.ToSkinnedMesh("Tower t" + team, d.Pivots);
             d.BarWidth = 1.6f;

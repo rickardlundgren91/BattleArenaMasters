@@ -1,6 +1,6 @@
 # Privacy Policy – Battle Arena Masters
 
-_Last updated: 4 November 2026_
+_Last updated: 9 November 2026_
 
 Battle Arena Masters ("BAM", "the game") is a mobile game made by **BAM Games** (Rickard Lundgren, Sweden; "we", "us"), who is responsible for the data described here.
 Questions about this policy or your data: **support@battlearenamasters.com**.
@@ -16,17 +16,20 @@ Questions about this policy or your data: **support@battlearenamasters.com**.
 - Your player name, level, Rating, match stats and most played heroes are **public** to other players of BAM. While you
   are online, other signed-in players can see that you are online and what you are doing (for example "In a match").
 - There is **no chat**, no ads and no in-app purchases.
-- You can **delete your account and its data** in the game at any time: **Settings > Account > Delete account**. How to do
+- You can **delete your account and its data** in the game at any time: **Settings > Account > Delete account and data**. How to do
   it without the game: https://battlearenamasters.com/delete-account
 - **Optional usage data** is sent only if you tap **"Yes, share"** when the game asks, or turn on
   **Settings > Share usage data**. You can turn it off at any time.
 
 ## 2. Data stored only on your device
 
-The game saves your settings on your phone: sound volume, graphics quality, left-handed controls, your answer to the
-usage data question, whether you finished the tutorial, and the hero and difficulty you picked last. It also keeps
-results of finished matches that have not reached our server yet. This data is removed when you uninstall the game or
-clear its data in Android settings.
+The game saves your settings on your phone: sound volume and music on or off, graphics quality and frame rate, vibration
+(and the optional vibration on your own hits), left-handed controls, your answer to the usage data question, whether you
+finished the tutorial, the hero, battle spell and difficulty you picked last, how many matches you have won against the
+Normal and Hard bots (they unlock the harder bot levels), whether online play is turned on and, once you have signed in,
+the player ID of your account. It also keeps results of finished matches, and small recordings of your matches (section 4), that have not
+reached our server yet. This data
+is removed when you uninstall the game or clear its data in Android settings.
 
 ## 3. Optional usage data (only with your consent)
 
@@ -65,6 +68,10 @@ Friends, Lobby and Relay) as our game server.
   For a match against other players also the match's code, your team and whether you left early; the server notes
   which players were in that match and who won, so that both sides get the right Rating. The server uses the results to
   count your level, XP, Rating, totals and most played heroes, and to reject impossible results (cheating).
+- **Match recordings:** the game keeps a small recording of each match you play: the match's setup and every player's
+  controls (where they moved and aimed, and when they used their skills), a few kB, with no names. Once you are signed in,
+  the recordings are sent to our server, where they are stored without your player ID or name, so they cannot be tied to
+  you. We use them to teach the bots to play more like real players. Recordings are deleted after 90 days.
 - **Friends:** your friends, the friend requests you send and receive, and the players you block.
 - **Reports:** if you report a player, we store your player ID, theirs, the reason you picked (rude name, cheating or
   something else) and the time. If someone reports you, the same is stored about that report.
@@ -78,19 +85,19 @@ Friends, Lobby and Relay) as our game server.
   players in the match through Unity Relay. The other players' phones never get your IP address. These match messages are
   not stored after the match.
 
-**What is public:** your player name, level, Rating, rank, match totals (matches, wins, losses, kills, deaths, time played,
-best streak) and your three most played heroes. Anyone who plays BAM online can see them on the Top 100 or on your
-profile. Reports and blocks are never shown to other players.
+**What is public:** your player name, level and XP, Rating, rank, match totals (matches, wins, losses, kills, deaths, time
+played, best streak) and your three most played heroes with your matches and wins on each. Anyone who plays BAM online
+can see them on the Top 100 or on your profile. Reports and blocks are never shown to other players.
 
 **Legal basis (EU/EEA and UK):** to give you the online play you asked for (GDPR Article 6(1)(b)), and our legitimate
 interest in fair play and in handling reports of abuse (Article 6(1)(f)).
 
 **How long:** as long as your account exists. The note of which players were in a match against other players is deleted
-about a day after the match. When you delete your account, your player name, totals, match history, friends and your
+about a day after the match. Match recordings are deleted after 90 days. When you delete your account, your player name, totals, match history, friends and your
 place on the Top 100 are deleted. Reports you sent about other players may be kept for up to 12 months so that repeated
 abuse can be handled.
 
-**Delete your account:** Settings > Account > Delete account (tap twice). This deletes your data on our game server and
+**Delete your account:** Settings > Account > Delete account and data (tap twice). This deletes your data on our game server and
 your Unity player account. It does not delete your Google account. If you cannot open the game, email
 support@battlearenamasters.com with your player name and we will delete it within 30 days. More:
 https://battlearenamasters.com/delete-account
@@ -109,7 +116,7 @@ We do not use it for advertising, we do not build profiles of you, and we do not
   to delete the usage data linked to your installation ID.
 - **Ask us:** email support@battlearenamasters.com to ask about, get a copy of, correct or delete your data. For online
   data, tell us your player name.
-- **Delete your account:** Settings > Account > Delete account (section 4).
+- **Delete your account:** Settings > Account > Delete account and data (section 4).
 - **Uninstalling** the game removes everything stored on your phone and stops all sharing. It does not delete your
   online account, so delete that first if you want it gone.
 - If you are in the EU/EEA you can complain to your data protection authority. In Sweden this is

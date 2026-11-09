@@ -14,8 +14,8 @@ namespace BAM.Game
     /// steers, or the way the hero faces.
     /// Blink can also be dragged to aim (direction and distance, the landing ring on the ground) and fires on release; letting
     /// go on the cancel mark above the button casts nothing, as with the SPECIAL. The ring round the glyph fills while it
-    /// recharges with the seconds in the middle, and shows the recall's channel. "Recall", "Haste", "Sprint" and "Cancelled"
-    /// rise over the hero as in the old floatText. Hidden in the guided match (Match.SpellsOn).
+    /// recharges with the seconds in the middle, and shows the recall's channel. Only "Cancelled" (a broken Recall) rises over the
+    /// hero as in the old floatText; casting shows no word (Rickard 2026-10-26, OnSpellEvent). Hidden in the guided match (Match.SpellsOn).
     /// </summary>
     sealed partial class Hud
     {

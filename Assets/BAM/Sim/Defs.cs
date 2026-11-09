@@ -211,7 +211,7 @@ namespace BAM.Sim
         // straight line to +20 s and tower shots on heroes to x2 (until protocol 21 both stepped up with the levels from 2:24)
         public const float LateStart = 90, LateFull = 360;
         public const float RespawnLateMax = 20;
-        // video review 2026-11-03: 21 s at 3:56 and 28 s at 5:20 (8 + 1 per death + the late ramp), so the last minute and a half
+        // video review 2026-11-03: 21 s at 3:56 and 28 s at 5:20 (then 8 s + 1 per death + the late ramp; base 10 s, max 20 s since 2026-11-04), so the last minute and a half
         // was watched, not played. The wait never passes RespawnMax; Min keeps it smooth (it rises, then stays flat, no jump)
         public const float RespawnMax = 20; // 15 -> 20 (Rickard 2026-11-04 "Ta max 20s")
         public const float RegenAmount = 0.1f, RegenTick = 0.85f, HeroOutOfCombat = 3, HeroRegenDelay = 2; // HeroRegenDelay: seconds after the last hero/tower fight before regen starts (was HeroOutOfCombat, 3 s, until protocol 20)

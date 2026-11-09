@@ -34,6 +34,19 @@ keystore*.txt
 *.apk
 *.aab
 *.symbols.zip
+# the Play Games plugin and the External Dependency Manager live only on the build PC (the plugin's settings carry the
+# Web client ID); never let a git add -A from a PC checkout pull them in (full review 2026-11-09 nr 96)
+GvhProjectSettings.xml
+GvhProjectSettings.xml.meta
+/ProjectSettings/AndroidResolverDependencies.xml
+google-services.json
+google-services.json.meta
+*service-account*.json
+*service-account*.json.meta
+/[Aa]ssets/GooglePlayGames/
+/[Aa]ssets/GooglePlayGames.meta
+/[Aa]ssets/ExternalDependencyManager/
+/[Aa]ssets/ExternalDependencyManager.meta
 # Python caches and the sound preview export (BAM > Export Sounds as WAV)
 __pycache__/
 *.pyc

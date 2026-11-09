@@ -7,8 +7,9 @@ namespace BAM.Sim
     /// The tap picks its target as before (OneTap.cs) but does not cast yet: the aim is locked at once (a line's direction, a placed
     /// form's spot), the hero stands still with the interrupt bar over the head and flashes (EventType.Telegraph), and a red warning
     /// of the special's real shape lies on the ground for TeleTime. Then the hero's own cast runs at the locked aim, wind-up and all.
-    /// Nothing homes after the tap: Fenn's thrown wolf lands on the locked spot (WolfFly). A stun, root or knockback in the warning
-    /// cuts it like any wind-up (InterruptSpecial): no cast, the charge stays. The bots read the red warning as every other
+    /// Nothing homes after the tap: Fenn's thrown wolf lands on the locked spot (WolfFly). A stun or root in the warning cuts it
+    /// like any wind-up (InterruptSpecial): no cast, the charge stays; a knockback cuts it only through the stun it carries, a
+    /// 0-stun pin knock leaves it running. The bots read the red warning as every other
     /// (BotSpecial.DodgeVector), the same brain on both teams. Moa's shield on a friend waits as long, with the flash but no red warning.</summary>
     public sealed partial class Match
     {

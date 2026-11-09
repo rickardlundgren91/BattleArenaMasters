@@ -1,11 +1,11 @@
 # Google Play material for BAM
 
-> Not legal advice. Everything here describes the build as of 2026-10-25 and must be checked again whenever the game
-> starts collecting something new, adds an SDK, or goes online.
+> Not legal advice. Everything here describes the build as of 2026-11-09 and must be checked again whenever the game
+> starts collecting something new, adds an SDK, or changes what online play stores.
 
 | Thing | Value / file |
 |---|---|
-| Privacy policy URL | **https://battlearenamasters.com/privacy** (Cloudflare Pages, site files in `/mnt/project-files/bam-site/`) |
+| Privacy policy URL | **https://battlearenamasters.com/privacy** (Cloudflare Pages from the public site repo, `public/privacy.html`; `policy_to_html.py` writes it from `privacy-policy.md`) |
 | Contact email | support@battlearenamasters.com (forwards to Rickard) |
 | Website | https://battlearenamasters.com |
 | Developer name | BAM Games |
@@ -24,4 +24,7 @@
 What is collected (keep these four in sync: `BamAnalytics.cs`, `privacy-policy.md`, `data-safety.md`, Play Console):
 only with consent, Unity Analytics with three custom events (`matchStart`, `matchEnd`, `tutorialStep`) plus Unity's
 automatic events (session start/stop, first start, device info), the Unity installation ID, and approximate location
-derived from the IP address. No ads, no advertising ID, no accounts, no personal info.
+derived from the IP address. With the optional Google Play Games sign-in (since 0.2) our game server (Unity Gaming
+Services) also keeps the account data of `privacy-policy.md` section 4: the player ID, the player name, match results and
+the totals, friends and reports counted from them; public to other players are the name, level and XP, Rating and rank,
+match totals and the three most played heroes. No ads, no advertising ID, no chat, no in-app purchases.

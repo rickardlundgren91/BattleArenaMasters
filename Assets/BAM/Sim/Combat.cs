@@ -213,8 +213,8 @@ namespace BAM.Sim
             Emit(EventType.Death, killer, u, streak);
         }
 
-        /// <summary>The wait before a dead hero comes back: 8 s, +1 s per earlier death, and up to 20 s more as the match clock runs
-        /// (LateRamp), never more than Rules.RespawnMax (15 s).</summary>
+        /// <summary>The wait before a dead hero comes back: 10 s (Rules.RespawnBase), +1 s per earlier death, and up to 20 s more as the
+        /// match clock runs (LateRamp), never more than Rules.RespawnMax (20 s).</summary>
         public float RespawnTime(Unit u) => Math.Min(Rules.RespawnMax, Rules.RespawnBase + Rules.RespawnPerDeath * (u.Deaths - 1) + Rules.RespawnLateMax * LateRamp());
 
         /// <summary>0 until 1:30 on the match clock, then straight up to 1 at 6:00 (no steps); always 0 in the tutorial and HERO TEST.</summary>

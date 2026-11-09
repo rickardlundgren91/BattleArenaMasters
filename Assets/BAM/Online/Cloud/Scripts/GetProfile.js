@@ -1,5 +1,6 @@
 // Cloud Code "GetProfile": another player's public profile, built by the server from its own protected data, so what others
-// see is what the server counted (Speltest showed what the other phone said about itself).
+// see is what the server counted (Speltest showed what the other phone said about itself). It answers with the public part of
+// bam-progress only: level and XP, Rating, the totals and the three most played heroes (privacy policy section 4).
 const { DataApi } = require("@unity-services/cloud-save-1.4");
 const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
 const SEASON = 2;   // keep equal to ReportMatch.js
@@ -12,7 +13,14 @@ module.exports = async ({ params, context }) => {
   const got = await data.getProtectedItems(projectId, id, ["bam-name", "bam-progress"]);
   const item = k => (got.data.results.find(r => r.key === k) || {}).value;
   const t = item("bam-progress") || null;
-  if (t) { delete t.winDay; delete t.pend; if (t.rs !== SEASON) t.rating = 0; }   // an old season's Rating shows as 0
+  if (t) {
+    delete t.winDay; delete t.pend;
+    if (t.rs !== SEASON) t.rating = 0;   // an old season's Rating shows as 0
+    // only what the profile page shows and the privacy policy calls public (full review 2026-11-09 nr 95): no current streak, no
+    // season number, no bot-level mistakes (mk), and of the per-hero lines only the three most played (the phone sorts them again)
+    delete t.streak; delete t.rs; delete t.mk;
+    t.heroes = (t.heroes || []).sort((a, b) => b.m - a.m).slice(0, 3);
+  }
   let rank = 0;
   try {
     const lb = new LeaderboardsApi(context);

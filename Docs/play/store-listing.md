@@ -25,7 +25,7 @@ Battle Arena Masters is a fast, bite-sized arena brawler for your phone. Two tea
 minions, and one tower each side. Destroy the enemy tower before they destroy yours.
 
 PICK YOUR HERO
-Eight heroes, each with an auto attack, a special ability and a passive:
+Nine heroes, each with an auto attack, a special ability and a passive:
 • Bram the Anvil – throws his huge hammer from range
 • Fenn the Pack Runner – a swift fighter with a spectral wolf at his side
 • Tyra the Longshot – an archer who hits from very far away
@@ -34,6 +34,7 @@ Eight heroes, each with an auto attack, a special ability and a passive:
 • Tikta the Needle Wing – a tiny, deadly assassin
 • Blast the Pyromaniac – bombs, fire and a lot of noise
 • Bonk the Caveman – a huge stone club and a ground slam that stuns everyone around him
+• Kugg the Rune Golem – drives his spikes into the ground and becomes a cannon that fires faster and farther
 
 SIMPLE TO PLAY, HARD TO MASTER
 Move with one thumb. Tap your special and it finds a target in range. Hide in the grass, fight around the walls,

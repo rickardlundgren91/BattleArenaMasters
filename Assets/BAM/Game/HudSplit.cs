@@ -6,15 +6,12 @@ using UnityEngine.UI;
 namespace BAM.Game
 {
     /// <summary>
-    /// The SPECIAL button split down the middle (the old Hud.cs 743-796, the WoW wheel; Rickard 2026-10-26 "ikonen är delad på
-    /// mitten och fylls nerifrån och upp för att visa att man kan klicka eller dra"): the left half is the tap, the right half the
-    /// drag. The charge ring runs up both sides from the bottom and meets at the top, a gold level rises in each half over the
-    /// icon, both halves are grey until the special is ready, a faint line parts them and TAP / DRAG sit under each half.
-    /// With its own pictures (Resources/BAM/Menu/special_&lt;hero&gt;_tap and _drag) the tap picture fills the left half and the drag
-    /// picture the right; without them the hero's one special icon covers the disc as before.
-    /// The pictures are flat white silhouettes like the old ABC2 icons (Rickard 2026-10-27: "dina egengjorda ... är ju rätt
-    /// stilrena", bam-work/art/special-icons/clean-white/tapdrag-icons.js), at the old wheel's size, each in its own half and over
-    /// the grey and the gold level so they always read (Rickard 2026-10-27 "svårt att se skill ikonen vad det är").
+    /// The SPECIAL button's two-sided charge (the old Hud.cs 743-796, the WoW wheel; Rickard 2026-10-26 "ikonen är delad på
+    /// mitten och fylls nerifrån och upp för att visa att man kan klicka eller dra"): the charge ring runs up both sides from the
+    /// bottom and meets at the top, a gold level rises in each half over the icon, and both halves are grey until the special is
+    /// ready. The tap and drag pictures that once filled the two halves (Resources/BAM/Menu/special_&lt;hero&gt;_tap and _drag,
+    /// bam-work/art/special-icons) went out with the one-tap special (Rules.OneTapSpecial): the hero's one special icon covers
+    /// the disc (Hud.Begin), and the 18 pictures left Resources (full review 2026-11-09 nr 85).
     /// </summary>
     sealed partial class Hud
     {
@@ -22,7 +19,7 @@ namespace BAM.Game
             LevelCharging = new Color(1f, 180f / 255f, 50f / 255f, 0.3f), LevelReady = new Color(1f, 196f / 255f, 64f / 255f, 0.38f);
 
         const int TapDragHideAfter = 10;
-        Image specialFillRight, splitGrey, tapIcon, dragIcon;
+        Image specialFillRight, splitGrey;
         RectTransform[] splitLevel = new RectTransform[2];
         Image[] splitLevelImg = new Image[2];
 
@@ -55,12 +52,6 @@ namespace BAM.Game
                 splitLevel[h] = rt;
             }
 
-            // the two pictures on top, each filling its half of the disc and clipped round
-            var iconMask = Circle(specialRoot, "Pictures", 2f * 0.87f * R, Color.white);
-            iconMask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-            tapIcon = HalfIcon(iconMask, "Tap", -1f);
-            dragIcon = HalfIcon(iconMask, "Drag", 1f);
-
             if (Rules.OneTapSpecial) return; // one special: no middle line, no TAP / DRAG labels
             // the line between the halves
             var line = UiKit.NewRect("Line", specialRoot);
@@ -82,46 +73,6 @@ namespace BAM.Game
             }
         }
 
-        static Image HalfIcon(Transform parent, string name, float side)
-        {
-            const float R = SpecialButton.Radius;
-            // the half: a straight cut at the middle line
-            var half = UiKit.NewRect(name + "Half", parent);
-            half.anchorMin = new Vector2(side < 0f ? 0f : 0.5f, 0f);
-            half.anchorMax = new Vector2(side < 0f ? 0.5f : 1f, 1f);
-            half.offsetMin = half.offsetMax = Vector2.zero;
-            half.gameObject.AddComponent<RectMask2D>();
-            // the picture centred in its half (old wheel: 0.7 R across, 0.44 R off the middle, 0.12 R up; a bit larger here so it reads)
-            var rt = UiKit.NewRect(name + "Icon", half);
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = Vector2.one * 0.82f * R;
-            rt.anchoredPosition = new Vector2(side * R * 0.005f, R * 0.12f);
-            var img = rt.gameObject.AddComponent<Image>();
-            img.preserveAspect = true;
-            img.raycastTarget = false;
-            img.enabled = false;
-            return img;
-        }
-
-        // at the start of a match: the hero's own tap and drag pictures, if both are there
-        bool BeginSplit(string hero)
-        {
-            if (Rules.OneTapSpecial) { SetIcon(tapIcon, null); SetIcon(dragIcon, null); return false; } // one special: its one picture
-            var tap = Resources.Load<Texture2D>("BAM/Menu/special_" + hero + "_tap");
-            var drag = Resources.Load<Texture2D>("BAM/Menu/special_" + hero + "_drag");
-            bool both = tap != null && drag != null && tap != drag;
-            SetIcon(tapIcon, both ? tap : null);
-            SetIcon(dragIcon, both ? drag : null);
-            return both;
-        }
-
-        static void SetIcon(Image img, Texture2D tex)
-        {
-            if (img.sprite != null) Object.Destroy(img.sprite); // the last match's sprite (the texture stays)
-            img.sprite = tex != null ? Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f) : null;
-            img.enabled = tex != null;
-        }
-
         // The charge ring fills by ANGLE up both sides from the bottom, so a level that rose by plain height ran ahead of the ring
         // (at a third charged the level stood at a third of the height, the ring tips only at a quarter; Rickard 2026-11-03 "dom
         // fylls inte jämt yttre och inre lagret"). This is the height where the ring's tips are, so the level and the veil meet
@@ -134,8 +85,6 @@ namespace BAM.Game
             specialFill.fillAmount = specialFillRight.fillAmount = 0.5f * frac;
             specialFillRight.color = specialFill.color;
             splitGrey.enabled = !ready;
-            // charging: the pictures a little dimmed, never hidden; ready: full colour
-            tapIcon.color = dragIcon.color = ready ? Color.white : new Color(0.8f, 0.8f, 0.8f, 0.85f);
             for (int h = 0; h < 2; h++)
             {
                 bool on = frac > 0.001f;

@@ -9,7 +9,8 @@ namespace BAM.Build
     /// The version name and the Android version code. Google Play refuses an upload whose version code is not higher
     /// than every earlier one, so the code only ever goes up. It is kept in three places and the highest wins:
     /// VersionCode.txt next to this script (versioned), EditorPrefs (this PC only, survives a sync that brings an older
-    /// file) and PlayerSettings.
+    /// file) and PlayerSettings. VersionCode.txt is committed with the code of every released build (23 = 0.3.9), so a fresh
+    /// PC or a wiped EditorPrefs never builds a code Play has already seen (full review 2026-11-09 nr 93).
     /// </summary>
     public static class BamVersion
     {

@@ -15,7 +15,7 @@ namespace BAM.Build
     /// </summary>
     public static class BamProjectSetup
     {
-        public const string Company = "Battle Arena Masters";
+        public const string Company = "BAM Games"; // the developer name every public document uses (full review 2026-11-09 nr 97)
         public const string MainScene = "Assets/BAM/Scenes/Main.unity";
         const string BrandingFolder = "Assets/BAM/Branding";
         const string IconForeground = BrandingFolder + "/icon_foreground.png";

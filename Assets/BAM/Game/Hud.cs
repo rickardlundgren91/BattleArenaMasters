@@ -118,7 +118,6 @@ namespace BAM.Game
             // a preview hero without his icon yet (Kugg until O-061) shows a plain empty disc, not the special's name (Rickard 2026-11-09:
             // "det står anchor"); only Rickard's own pictures go on the button
             specialName.text = icon != null || HeroCatalog.Get(m.Player.Hero).Preview ? "" : HeroCatalog.Get(m.Player.Hero).SpecialTitle;
-            if (BeginSplit(HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant())) { specialIcon.enabled = false; specialName.text = ""; } // its own tap and drag pictures (HudSplit.cs)
             BeginCenter();
             BeginTutorial();
             joyLogged = false;

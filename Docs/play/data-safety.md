@@ -25,7 +25,7 @@ Play Console: **Policy and programs > App content > Data safety > Manage / Edit*
 | Location | **Approximate location** | Unity Analytics estimates country/region from the IP address. |
 | Personal info | **Name** | The player name the player chooses (public nickname). |
 | Personal info | **User IDs** | Unity player ID and the linked Google Play Games player ID. |
-| App activity | **App interactions** | Analytics events and match results sent to the game server. |
+| App activity | **App interactions** | Analytics events, match results and anonymous match recordings (the controls of a match, no IDs or names) sent to the game server. |
 | App activity | **Other actions** | Friends, friend requests, blocks, invites, reports. |
 | App info and performance | **Diagnostics** and **Other app performance data** | Device model, OS version, session length (Unity Analytics). |
 | Device or other IDs | **Device or other IDs** | Unity's random installation ID. |
