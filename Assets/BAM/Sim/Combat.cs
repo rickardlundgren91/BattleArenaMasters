@@ -322,6 +322,9 @@ namespace BAM.Sim
             // when the charge ring is full (MatchRings: full on the blow, a wind-up after the rules are ready), not from when the
             // rules are ready: Bonk's 0.5 s wind-up made it run out 0.2 s BEFORE his ring was full (tester 2026-11-04 via Discord:
             // "it seems to target about 0.5 sec before the circle is filled up")
+            // an anchored Kugg with nobody to shoot at fires his shell anyway, at his normal pace and without the hold, so his stocks run
+            // out and he is never stuck in place (Rickard 2026-11-09: "Den måste göra av med ammo även om ingen finns att skjuta på"; Hero7.cs)
+            else if (u.Kind == UnitKind.Hero && u.Hero == HeroId.Kugg && u.KuggAnchored) { KuggBlank(u); u.AtkTimer = 0; }
             else if (u.Kind == UnitKind.Hero) { if (u.AtkTimer >= cd + u.HDef.SpawnDelay + Rules.AutoHold) u.AtkTimer = 0; }
             else u.AtkTimer = cd;
         }
@@ -467,7 +470,7 @@ namespace BAM.Sim
                 if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); }
                 else if (p.T >= p.Travel) { p.Done = true; if (!p.Fizzle) HitWith(p); }
             }
-            if (!tgt.Alive && !p.Done && !p.Fizzle) p.Done = true;
+            if (tgt != null && !tgt.Alive && !p.Done && !p.Fizzle) p.Done = true; // a blank (Kugg) has no target
         }
 
         /// <summary>Rickard 2026-10-29 ("skottet ska inte hoppa, man kan blinka sig ur skottläget"): a hero that blinks or recalls

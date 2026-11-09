@@ -55,6 +55,26 @@ namespace BAM.Sim
             m.Time += KuggS.MaxTime + 0.05f; m.KuggTick(h, Rules.Tick);
             Check(!h.KuggAnchored && h.KuggRooted && m.HasEvent(EventType.KuggPack), "after 10 s with nothing to shoot he packs up");
 
+            // nobody in reach: his ready shells go out anyway, straight ahead, hurt nobody and spend his stocks, so he packs up long
+            // before 10 s and is never stuck (Rickard 2026-11-09: "Den måste göra av med ammo även om ingen finns att skjuta på")
+            m.Time += KuggS.PackTime + 0.05f; m.KuggTick(h, Rules.Tick);
+            h.ClearStatuses(); h.Charge = h.HDef.MaxCharge; m.Events.Clear();
+            float aHp = a.Hp, cHp = c.Hp, farHp = far.Hp, t0 = m.Time;
+            Check(m.TryCastSpecial(h, float.NaN, 0) && h.KuggShots == KuggS.Shots, "anchored again with 6 shots, nobody within 8 tiles");
+            h.ClearStatuses();
+            for (int i = 0; i < 2000 && h.KuggAnchored; i++)
+            {
+                m.UpdateAttack(h, Rules.Tick);
+                m.UpdateProjectiles(Rules.Tick);
+                m.KuggTick(h, Rules.Tick);
+                m.Time += Rules.Tick;
+            }
+            int blanks = 0;
+            foreach (var e in m.Events) if (e.Type == EventType.AttackStart && e.A == h && (ProjKind)e.Kind == ProjKind.KuggShell) blanks++;
+            Check(blanks == KuggS.Shots && !h.KuggAnchored && m.Time - t0 < KuggS.MaxTime - 1, $"six shells into the empty lane, then the pack-up ({blanks} shells, {m.Time - t0:0.0} s)");
+            for (int i = 0; i < 60; i++) { m.UpdateProjectiles(Rules.Tick); m.Time += Rules.Tick; }
+            Check(a.Hp == aHp && c.Hp == cHp && far.Hp == farHp, "the empty shells hurt nobody");
+
             // from 2 stocks (Rickard 2026-11-09): 1 is not enough, 2 anchors him with 2 shots, 4 with 4
             h.KuggShots = 0; h.KuggRooted = false; h.ClearStatuses(); h.Charge = 1;
             Check(!h.SpecialReady && !m.TryCastSpecial(h, float.NaN, 0), "1 stock cannot anchor");

@@ -75,6 +75,19 @@ namespace BAM.Sim
             if (h.KuggShots <= 0) KuggPack(h);
         }
 
+        /// <summary>An anchored Kugg whose ready shot found nobody in reach: the shell goes out anyway, straight ahead the full anchored
+        /// reach, lands on the ground and hurts nobody; it spends its stock as it leaves the hand like any shell (UpdateAuto), so the
+        /// Anchor always ends after his shots and he is never held in place by an empty lane (Rickard 2026-11-09).</summary>
+        void KuggBlank(Unit h)
+        {
+            float reach = h.Range, a = h.Facing, delay = h.HDef.SpawnDelay;
+            var p = NewProj(ProjMode.Auto, h, h.X, h.Y);
+            p.Kind = ProjKind.KuggShell; p.Tgt = null; p.Fizzle = true; p.FX = h.X + SimMath.Cos(a) * reach; p.FY = h.Y + SimMath.Sin(a) * reach;
+            p.Ang = a; p.D = reach; p.Dmg = 0; p.T = -delay; p.Speed = KuggS.ShellSpeed; p.Travel = 0.1f; p.Big = true; p.OnHit = false;
+            h.AimT = Time + delay + 0.1f;
+            Emit(EventType.AttackStart, h, null, delay, (byte)ProjKind.KuggShell, true);
+        }
+
         void KuggPack(Unit h)
         {
             h.KuggShots = 0; h.KuggPackEnd = Time + KuggS.PackTime;
