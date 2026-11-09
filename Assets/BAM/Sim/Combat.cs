@@ -102,8 +102,10 @@ namespace BAM.Sim
             if (att != null && !tgt.IsClone) att.RevealT = Rules.RevealTime; // hitting Fenn's decoy reveals nobody
             // being hit in grass reveals nobody: only your own hits and an enemy within 2.5 tiles do, so a stray splash or a
             // bot's next shot cannot keep a hero who is not fighting lit for ever (tester MysOxen 2026-11-04). A hit outside the
-            // grass still trails you 2 s into it.
-            if (tgt.Kind != UnitKind.Hero || !Map.InGrass(tgt.X, tgt.Y)) tgt.RevealT = Rules.RevealTime;
+            // grass still trails you 2 s into it. Poison and burn ticks are the exception: a hero who burns or is poisoned in the
+            // grass is seen while it ticks and 2 s after (Rickard 2026-11-09 "dots ska man synas av i gräs"; review 0.3.9 nr 57)
+            bool dot = (flags & (DmgFlags.Burning | DmgFlags.DotTick)) != 0;
+            if (tgt.Kind != UnitKind.Hero || dot || !Map.InGrass(tgt.X, tgt.Y)) tgt.RevealT = Rules.RevealTime;
             bool burning = (flags & DmgFlags.Burning) != 0;
             if (!burning)
             {

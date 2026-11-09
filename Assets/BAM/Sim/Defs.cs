@@ -216,7 +216,7 @@ namespace BAM.Sim
         public const float RespawnMax = 20; // 15 -> 20 (Rickard 2026-11-04 "Ta max 20s")
         public const float RegenAmount = 0.1f, RegenTick = 0.85f, HeroOutOfCombat = 3, HeroRegenDelay = 2; // HeroRegenDelay: seconds after the last hero/tower fight before regen starts (was HeroOutOfCombat, 3 s, until protocol 20)
         public const float TowerOutOfCombat = 10, TowerRegenBelow = 0.25f, TowerRegenAmount = 0.01f, TowerRegenTick = 1;
-        public const float GrassSight = 2.5f, RevealTime = 2; // RevealTime: seconds a hit keeps the attacker visible in grass, and a target hit outside grass (4 s until protocol 20; a target hit inside grass is not revealed since 0.3.8)
+        public const float GrassSight = 2.5f, RevealTime = 2; // RevealTime: seconds a hit keeps the attacker visible in grass, and a target hit outside grass (4 s until protocol 20; a target hit inside grass is not revealed since 0.3.8, except by poison and burn ticks since 0.3.9)
         public const float AmbushBonus = 0.3f;
         public const float KnockCooldown = 2; // a hero (or minion) knocked back cannot be knocked again for 2 s from that knock's start (Rickard 2026-10-30)
         public const float AssistWindow = 5;

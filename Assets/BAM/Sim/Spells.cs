@@ -64,7 +64,9 @@ namespace BAM.Sim
         /// False when nothing happened (cooldown, stunned, busy casting, nowhere to go).</summary>
         public bool CastSpell(Unit h, float ang = float.NaN, float k = 1)
         {
-            if (!SpellReady(h) || h.IsClone || h.Has(St.Stun) || h.Has(St.Casting)) return false;
+            // a special's warning (Telegraph.cs) blocks the spell too: every other hero stands Casting in it, Tikta walks in hers
+            // without St.Casting since 0.3.9, and a Blink there would move her needles' start (review 0.3.9 nr 59)
+            if (!SpellReady(h) || h.IsClone || h.Has(St.Stun) || h.Has(St.Casting) || h.TeleAt >= 0) return false;
             float fx = h.X, fy = h.Y;
             switch (h.Spell)
             {
