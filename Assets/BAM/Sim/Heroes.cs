@@ -138,9 +138,11 @@ namespace BAM.Sim
     /// health.</summary>
     public static class TiktaS
     {
-        public const float Reach = 2.9f, Interval = 0.2f, DamageCoeff = 1.5f, Speed = 16, LineReach = 5, LineHitbox = 0.2f; // needles 1.2 -> 1.5 (Rickard 2026-11-02 "buffa henne lite": one-tap Tikta 43 % on Hard bots)
+        public const float Reach = 2.9f, Interval = 0.2f, DamageCoeff = 1.4f, Speed = 16, LineReach = 5, LineHitbox = 0.2f; // needles 1.2 -> 1.5 (Rickard 2026-11-02 "buffa henne lite": one-tap Tikta 43 % on Hard bots); 1.5 -> 1.4 when she walks in her warning (testers Alex/Øli 2026-11-05, Rickard 2026-11-09: bots 1600 matches Normal 50.7, Hard 48.8 %)
         public const int Count = 4;
         public const float PoisonPerSecond = 0.1f, PoisonDuration = 2;
+        /// <summary>She keeps walking in her tapped special's 0.3 s warning instead of standing (Telegraph.cs).</summary>
+        public const bool WalksInWarning = true;
     }
 
     /// <summary>Blast, Supernova. Tap: a strip of fire for 2 s at a random enemy in reach that hurts enemies in it every 0.5 s.

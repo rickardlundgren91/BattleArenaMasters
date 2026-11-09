@@ -106,7 +106,10 @@ namespace BAM.Sim
             }
             h.TeleAt = Time + tt;
             if (!float.IsNaN(ang)) { h.Facing = ang; h.AimT = Time + tt + 0.2f; }
-            AddStatus(h, St.Casting, tt); AddStatus(h, St.Disarm, tt); Channel(h, tt); // stands, no swing, a stun cuts it
+            // stands, no swing, a stun cuts it. Tikta walks on in hers (tester Alex 2026-11-05: "stops before her ult, easy to dodge";
+            // Rickard 2026-11-09 "fixa allt som vi bör"): her needles and their red line leave from where she is when they go (WarnUpdate)
+            if (!(h.Hero == HeroId.Tikta && TiktaS.WalksInWarning)) AddStatus(h, St.Casting, tt);
+            AddStatus(h, St.Disarm, tt); Channel(h, tt);
             Emit(EventType.Telegraph, h, tgt, tt, (byte)h.Hero, false, ex, ey);
             return true;
         }

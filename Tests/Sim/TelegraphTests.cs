@@ -80,7 +80,9 @@ namespace BAM.Sim
                     continue;
                 }
                 Check(tg && !cast && warn && Telegraphing(p) && p.SpecialReady, $"TELE {hero}: the tap shows a red warning and the flash first, no cast yet (warning {warn}, flash {tg}, cast {cast})");
-                Check(p.Has(St.Casting) && p.Has(St.Channel), $"TELE {hero}: the hero stands in the warning, with the interrupt bar");
+                if (hero == HeroId.Tikta && TiktaS.WalksInWarning) // she walks on in hers (tester Alex 2026-11-05), no swing, a stun still cuts it
+                    Check(!p.Has(St.Casting) && p.Has(St.Disarm) && p.Has(St.Channel), "TELE Tikta: she walks in the warning, no swing, with the interrupt bar");
+                else Check(p.Has(St.Casting) && p.Has(St.Channel), $"TELE {hero}: the hero stands in the warning, with the interrupt bar");
                 // the enemy steps across the line in the warning: the aim stays where it was locked at the tap
                 Place(e, e.X, e.Y + 1.2f); m.AddStatus(e, St.Stun, 999);
                 int castAt = -1; float ax = 0, ay = 0;
@@ -124,6 +126,30 @@ namespace BAM.Sim
                 bool bit = false; float lx = 0, ly = 0;
                 for (int k = 0; k < 60; k++) { m.Step(PlayerInput.None); foreach (var ev in m.Events) { if (ev.Type == EventType.WolfPounce) { lx = ev.X; ly = ev.Y; } if (ev.Type == EventType.Hit && ev.B == e && ev.Dmg == DmgKind.Special) bit = true; } }
                 Check(!bit && Math.Abs(lx - p.TeleX) < 0.05f && Math.Abs(ly - p.TeleY) < 0.05f, $"TELE Fenn: the wolf lands on the locked spot and homes on nobody (bit {bit}, landed {Math.Abs(lx - p.TeleX):0.00}/{Math.Abs(ly - p.TeleY):0.00} off)");
+            }
+            // Tikta walks in her warning: she moves, the red line moves with her, and the needles leave from where she is at the cast,
+            // along the direction locked at the tap
+            if (TiktaS.WalksInWarning)
+            {
+                var m = OneTapScene(HeroId.Tikta, out var p, out _, out float cy);
+                m.Telegraph = true;
+                Unit e = null; foreach (var h in m.Heroes) if (h.Team != p.Team) { e = h; break; }
+                Place(e, p.X + 2.5f, p.Y); m.AddStatus(e, St.Stun, 999);
+                float y0 = p.Y;
+                m.Step(TapIn());
+                var walk = PlayerInput.None; walk.MoveY = 1;
+                int ticks = (int)Math.Round(TeleTime(HeroId.Tikta) / Rules.Tick);
+                bool lineWithHer = true, cast = false; float ny = float.NaN, na = float.NaN;
+                for (int k = 0; k < ticks + 3 && !cast; k++)
+                {
+                    m.Step(walk);
+                    foreach (var q in m.Projs) if (q.Mode == ProjMode.WarnLine && q.Src == p && !q.Done && Math.Abs(q.Y - p.Y) > 0.01f) lineWithHer = false;
+                    foreach (var ev in m.Events) if (ev.Type == EventType.Cast && ev.A == p) cast = true;
+                }
+                foreach (var q in m.Projs) if (q.Mode == ProjMode.NeedleLine && q.Src == p) { ny = q.Y; na = q.Ang; break; }
+                Check(cast && p.Y - y0 > 0.2f, $"TELE Tikta: she walks in her warning ({p.Y - y0:0.00} tiles, cast {cast})");
+                Check(lineWithHer, "TELE Tikta: the red line follows her while she walks");
+                Check(Math.Abs(ny - p.Y) < 0.3f && Math.Abs(na) < 0.05f, $"TELE Tikta: the needles leave from where she is, along the locked line (y {ny:0.00} vs {p.Y:0.00}, angle {na:0.000})");
             }
             // Bonk's slam goes off after its warning even if everyone ran
             {
