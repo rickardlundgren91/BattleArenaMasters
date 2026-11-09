@@ -23,9 +23,26 @@ namespace BAM.Sim
 
     public static class HeroCatalog
     {
-        /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in; Hilde and Oaken
-        /// (heroes 9 and 10) wait in Coming for theirs.</summary>
-        public const int Count = 8;
+        /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in, Kugg 2026-11-09; Hilde and
+        /// Oaken (HeroId 8 and 9) wait in Coming for theirs.</summary>
+        public const int Count = 9;
+
+        /// <summary>Is this HeroId one of the heroes in the game (All)? HeroIds are not contiguous since Kugg (10) went in before Hilde (8)
+        /// and Oaken (9), so a number below Count is not enough.</summary>
+        public static bool InGame(int id) => id >= 0 && id < 256 && IndexOf((HeroId)id) >= 0;
+
+        /// <summary>A hero number from settings or the network made safe: itself when it is in the game, else Tyra.</summary>
+        public static HeroId Clean(int id) => InGame(id) ? (HeroId)id : HeroId.Tyra;
+
+        /// <summary>The heroes in the game in HeroId order (bot line-ups draw from these, in the order they always had).</summary>
+        public static HeroId[] GameIds => gameIds ??= MakeGameIds();
+        static HeroId[] gameIds;
+        static HeroId[] MakeGameIds()
+        {
+            var l = new System.Collections.Generic.List<HeroId>();
+            for (int i = 0; i < 256; i++) if (IndexOf((HeroId)i) >= 0) l.Add((HeroId)i);
+            return l.ToArray();
+        }
 
         /// <summary>The special's icon in Resources/BAM/Menu (each hero's one picture shows the form the one-tap special keeps).</summary>
         public static string SpecialIcon(HeroId id)
@@ -58,12 +75,6 @@ namespace BAM.Sim
                 SpecialName = "Earth Judgement", SpecialDesc = "Tap: after a short moment he slams the ground, hurting every enemy around him. Drag: a quake runs along a line, hurting every enemy in it and knocking enemy heroes back. Walls stop it.",
                 PassiveName = "Stored Impact", PassiveDesc = "After 4 s without losing health, the next hit from an enemy hero is cut by 30%, and part of it is added to his next attack. Every 16 s.",
                 Health = 3, Damage = 2, Speed = 1, Difficulty = 2 },
-            // Kugg (Rickard 2026-11-05: ROI17's principle from the old game, his own concept; Hero7.cs). In HERO TEST only (Preview), with
-            // Oaken's body as a stand-in until Rickard's own model is in (orders O-059..O-071, bam-work/orders/PROMPTER-2026-11-05-kugg.md)
-            new HeroInfo { Id = HeroId.Kugg, Name = "Kugg", Title = "The Rune Golem", Role = "Marksman", Ranged = true, Preview = true,
-                SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles, he fires faster and sees into grass up to 6 tiles away. After 6 shots (or 10 s) he pulls the spikes up again.",
-                PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
-                Health = 2, Damage = 3, Speed = 1, Difficulty = 3 },
             // Tester Øli's four ideas as BAM's own heroes (Rickard 2026-11-09 "vi bygger alla fyra", kit approved on a card; Hero8.cs). In
             // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs)
             new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false, Preview = true,
@@ -104,6 +115,13 @@ namespace BAM.Sim
                 OneTapDesc = "Tap: a quick bolt at a random enemy in her range, minions too, aimed where a running hero is heading. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall. Its path leaves wind and feathers that slow enemies 25 % for 1.5 s.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
                 PassiveName = "Featherstep", PassiveDesc = "When her attack hurts an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 2 },
+            // Kugg (Rickard 2026-11-05: ROI17's principle from the old game, his own concept; Hero7.cs). In the game as hero 2 in the
+            // list and open for everyone (Rickard 2026-11-09 "lägg in honom som nr 2 i spelet och upplåst för alla"); Oaken's body is his
+            // stand-in until Rickard's own model is rigged (Models.cs)
+            new HeroInfo { Id = HeroId.Kugg, Name = "Kugg", Title = "The Rune Golem", Role = "Marksman", Ranged = true,
+                SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles, he fires faster and sees into grass up to 6 tiles away. After 6 shots (or 10 s) he pulls the spikes up again.",
+                PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
+                Health = 2, Damage = 3, Speed = 1, Difficulty = 3 },
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
                 SpecialName = "Hammer Throw", SpecialDesc = "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
                 OneTapName = "Anvil Drop", OneTapDesc = "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",

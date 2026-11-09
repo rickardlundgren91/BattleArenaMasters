@@ -11,8 +11,8 @@ namespace BAM.Sim
             var h = m.Player; var a = m.Foe(HeroId.Bram); var c = m.Foe(HeroId.Knut); var far = m.Foe(HeroId.Tikta);
             h.Bot = null; // the checks drive him by hand
             var info = HeroCatalog.Get(HeroId.Kugg);
-            Check(info.Name == "Kugg" && info.Preview && HeroCatalog.IndexOf(HeroId.Kugg) < 0, "Kugg waits in Coming, a preview hero");
-            Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == HeroId.Kugg) && HeroCatalog.HeroTestList.Length == HeroCatalog.Count + 5 && HeroCatalog.HeroTestList[HeroCatalog.Count].Id == HeroId.Kugg, "HERO TEST lists Kugg (and the four after him) after the heroes in the game");
+            Check(info.Name == "Kugg" && !info.Preview && HeroCatalog.IndexOf(HeroId.Kugg) == 1 && HeroCatalog.InGame((int)HeroId.Kugg), "Kugg is in the game, second in the list (Rickard 2026-11-09)");
+            Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == HeroId.Kugg) && HeroCatalog.HeroTestList.Length == HeroCatalog.Count + 4 && Array.IndexOf(HeroCatalog.GameIds, HeroId.Kugg) >= 0 && !HeroCatalog.InGame((int)HeroId.Hilde) && HeroCatalog.Clean((int)HeroId.Hilde) == HeroId.Tyra, "HERO TEST and the bot pool have him; Hilde, not in the game, cleans to Tyra");
             float x = 7.5f, y = 20;
             Place(h, x, y); Place(a, x + 6, y); Place(c, x - 9, y + 9); Place(far, x - 9, y - 9);
             float range0 = h.Range, cd0 = h.AttackCd;

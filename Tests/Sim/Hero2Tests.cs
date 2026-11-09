@@ -189,7 +189,7 @@ namespace BAM.Sim
             Check(offWall, $"BLAST-04: an aimed bomb never lands inside a wall ({at})");
 
             // the tap is the fire strip, aimed at an enemy in reach with a clear line
-            Place(e1, 8.5f, 7.5f); b.Charge = b.HDef.MaxCharge; m.Projs.Clear();
+            Place(e1, 8.5f, 7.5f); Place(e3, 12, 32); b.Charge = b.HDef.MaxCharge; m.Projs.Clear(); // e1 the only enemy in reach (the tap's pick is random)
             Check(m.TryCastSpecial(b, float.NaN, 0), "a tapping Blast lays the strip");
             Proj lane = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.FireLane && p.Src == b) lane = p;
             Check(lane != null && Math.Abs(lane.Ang) < 0.05f, $"the tap strip points at the enemy in reach ({lane?.Ang:0.00})");

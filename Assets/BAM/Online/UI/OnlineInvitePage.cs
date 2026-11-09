@@ -125,7 +125,7 @@ namespace BAM.Online.UI
             string pc = r.Free ? HUB_ACCENT : "#ffb43a";
             ctx.fillStyle = "#151a42"; ctx.beginPath(); ctx.arc(acx + ar * 0.72f, acy + ar * 0.72f, cw(1.6f), 0, 7); ctx.fill();
             ctx.fillStyle = pc; ctx.beginPath(); ctx.arc(acx + ar * 0.72f, acy + ar * 0.72f, cw(1.1f), 0, 7); ctx.fill();
-            string hero = r.Hero >= 0 && r.Hero < BAM.Sim.HeroCatalog.Count ? BAM.Sim.HeroCatalog.Get((BAM.Sim.HeroId)r.Hero).Name + " · " : "";
+            string hero = BAM.Sim.HeroCatalog.InGame(r.Hero) ? BAM.Sim.HeroCatalog.Get((BAM.Sim.HeroId)r.Hero).Name + " · " : "";
             float pw = HubFriendPillW, bx = x + w - pw - cw(1);
             InvName(r.Name, hero + PresenceState.Text(r.State), HUB_TEXT, pc, acx + ar + cw(2.5f), bx - cw(1), y, h);
             float ph = cw(8), py = y + (h - ph) / 2;

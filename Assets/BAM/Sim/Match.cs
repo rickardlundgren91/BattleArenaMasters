@@ -140,7 +140,7 @@ namespace BAM.Sim
 
             // the line-up: the player's hero and five others, drawn with the seed (bots never copy the player's hero)
             var pool = new List<HeroId>(7);
-            for (int i = 0; i < HeroCatalog.Count; i++) if ((HeroId)i != cfg.PlayerHero) pool.Add((HeroId)i);
+            foreach (var id in HeroCatalog.GameIds) if (id != cfg.PlayerHero) pool.Add(id);
             for (int i = pool.Count - 1; i > 0; i--) { int j = Rng.Int(i + 1); var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
             var allies = cfg.Allies ?? new[] { pool[0], pool[1] };
             var enemies = cfg.Enemies ?? new[] { pool[2], pool[3], pool[4] };
@@ -188,11 +188,11 @@ namespace BAM.Sim
         {
             var seats = Config.Seats;
             var pool = new List<HeroId>(8);
-            for (int i = 0; i < HeroCatalog.Count; i++)
+            foreach (var id in HeroCatalog.GameIds)
             {
                 bool taken = false;
-                for (int s = 0; s < seats.Length; s++) if (seats[s].Hero == (HeroId)i) taken = true;
-                if (!taken) pool.Add((HeroId)i);
+                for (int s = 0; s < seats.Length; s++) if (seats[s].Hero == id) taken = true;
+                if (!taken) pool.Add(id);
             }
             for (int i = pool.Count - 1; i > 0; i--) { int j = Rng.Int(i + 1); var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
             var tier = Defs.Tier(Config.Difficulty);

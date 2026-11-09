@@ -113,7 +113,7 @@ namespace BAM.Online.UI
             // the hero (and battle spell) picked on Home's hero page is this player's hero in the room
             var me = MpRoom.Me;
             if (st == MpRoom.Phase.Lobby && me != null && (me.Hero != (HeroId)BamSettings.LastHero || me.Spell != BamSettings.Spell))
-                MpRoom.Pick((HeroId)Mathf.Clamp(BamSettings.LastHero, 0, HeroCatalog.Count - 1));
+                MpRoom.Pick(HeroCatalog.Clean(BamSettings.LastHero));
 
             // the leader pressed PLAY while someone was still in the last match
             if (startWhenBack && MpRoom.CanStart)

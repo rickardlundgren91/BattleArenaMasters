@@ -99,7 +99,7 @@ namespace BAM.Online.Mp
         public static int TeamOf(int index, int mode) => mode == Together ? Teams.Player : index % 2;
         public static bool CanStart => IsHost && State == Phase.Lobby && Members.Count >= 2 && Members.Count <= RoomCap;
         public static string MyName => !string.IsNullOrEmpty(Account.Name) ? Account.Name : "Player";
-        static HeroId MyHero => (HeroId)Mathf.Clamp(BamSettings.LastHero, 0, HeroCatalog.Count - 1);
+        static HeroId MyHero => HeroCatalog.Clean(BamSettings.LastHero);
 
         // ---------------------------------------------------------------- the buttons
 
@@ -526,14 +526,14 @@ namespace BAM.Online.Mp
                     }
                     if (no != null) { w.Begin(MpMsg.Busy); w.Str(no); relay.SendTo(conn, w); relay.Kick(conn); return; }
                     if (m == null) { m = new Member { Id = nextId++, Conn = conn, Party = party, Side = side }; Members.Add(m); }
-                    m.PlayerId = pid; m.Name = MpPresence.CleanName(name); m.Hero = (HeroId)Mathf.Clamp(hero, 0, HeroCatalog.Count - 1); m.Spell = (SpellId)spell;
+                    m.PlayerId = pid; m.Name = MpPresence.CleanName(name); m.Hero = HeroCatalog.Clean(hero); m.Spell = (SpellId)spell;
                     w.Begin(MpMsg.Welcome); w.U8(m.Id); relay.SendTo(conn, w);
                     SendRoom();
                     return;
                 }
                 case MpMsg.Pick:
                     if (m == null) return;
-                    m.Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1); m.Spell = (SpellId)r.U8();
+                    m.Hero = HeroCatalog.Clean(r.U8()); m.Spell = (SpellId)r.U8();
                     SendRoom();
                     return;
                 case MpMsg.Bye:
@@ -562,7 +562,7 @@ namespace BAM.Online.Mp
                     Mode = Math.Min(r.U8(), Versus); int n = Math.Min(r.U8(), MpRelay.MaxPlayers);
                     Members.Clear();
                     for (int i = 0; i < n; i++)
-                        Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
+                        Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = HeroCatalog.Clean(r.U8()), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
                     bool q = r.U8() == 1; int ps = r.U8(); Diff = (Difficulty)Math.Min(r.U8(), (int)Difficulty.Ultra);
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
                     Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
@@ -574,7 +574,7 @@ namespace BAM.Online.Mp
                     int seed = r.I32(); var diff = (Difficulty)r.U8(); Mode = Math.Min(r.U8(), Versus); int n = r.U8();
                     if (n > MpRelay.MaxPlayers) return;
                     var seats = new SeatConfig[n];
-                    for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = (HeroId)Mathf.Clamp(r.U8(), 0, HeroCatalog.Count - 1), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }
+                    for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = HeroCatalog.Clean(r.U8()), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }
                     int mine = r.U8();
                     if (mine <= 0 || mine >= n) return;
                     // still playing on with bots after the host left a match (its app in the background, EXIT GAME): the host came

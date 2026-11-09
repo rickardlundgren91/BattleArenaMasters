@@ -335,7 +335,7 @@ namespace BAM.Online.UI
                     ctx.fillStyle = free ? "#5fe39a" : "#ffb43a"; ctx.beginPath(); ctx.arc(x + 12, yy + 15, 4, 0, (float)Math.PI * 2); ctx.fill();
                     string nm = r.Name; ctx.font = Treb(13, true); while (nm.Length > 3 && ctx.measureText(nm) > 92) nm = nm.Substring(0, nm.Length - 2) + "…";
                     Text(nm, x + 22, yy + 15, Treb(13, true), friend ? HUB_ACCENT : "#f4f1ff");
-                    string hero = r.Hero >= 0 && r.Hero < HeroCatalog.Count ? HeroCatalog.Get((HeroId)r.Hero).Name + " · " : "";
+                    string hero = HeroCatalog.InGame(r.Hero) ? HeroCatalog.Get((HeroId)r.Hero).Name + " · " : "";
                     Text(hero + PresenceState.Text(r.State), x + 22 + 100, yy + 15, Treb(11), "#a9a7c7");
                     if (!free) continue;
                     var row = r;
@@ -375,7 +375,7 @@ namespace BAM.Online.UI
             float ty = py + th + lh * 1.2f; int m = Math.Max(0, Math.Min(MpRoom.ModeNames.Length - 1, r.InvMode));
             Text(r.Name + " invites you", cx, ty, Treb(lh * 0.82f, true), "#f4f1ff", "center");
             Text(MpRoom.ModeNames[m] + ": " + ModeLine(m, 2), cx, ty + lh, Treb(lh * 0.6f), "#a9b8d8", "center");
-            Text("You play " + HeroCatalog.Get((HeroId)Mathf.Clamp(BamSettings.LastHero, 0, HeroCatalog.Count - 1)).Name, cx, ty + lh * 2, Treb(lh * 0.7f), "#a9b8d8", "center");
+            Text("You play " + HeroCatalog.Get(HeroCatalog.Clean(BamSettings.LastHero)).Name, cx, ty + lh * 2, Treb(lh * 0.7f), "#a9b8d8", "center");
             Text(MpPresence.InviteLeft(r) + " s", cx, ty + lh * 3, Treb(lh * 0.7f, true), "#ffd98a", "center"); // the invite runs out (MpPresence.InviteTtl)
             float bw = pw * 0.6f, bx = cx - bw / 2, by = py + th + lh * 5.2f;
             float oy = Down("invOk") ? 1.5f : 0; ctx.fillStyle = "#1fb46a"; ctx.fillRect(bx, by + oy, bw, bh);

@@ -67,7 +67,7 @@ namespace BAM.Online.UI
             if (draw)
             {
                 var me = MpRoom.Me;
-                var hero = me != null ? me.Hero : (HeroId)Mathf.Clamp(BamSettings.LastHero, 0, HeroCatalog.Count - 1);
+                var hero = me != null ? me.Hero : HeroCatalog.Clean(BamSettings.LastHero);
                 if (!found)
                     for (int i = 0; i < 3; i++)
                     {
@@ -143,7 +143,7 @@ namespace BAM.Online.UI
             float left = x + gap / 2, right = x + w / 2 + vsW / 2 + gap / 2;
             // me first, then my group, then the others
             var me = MpRoom.Me;
-            var myHero = me != null ? me.Hero : (HeroId)Mathf.Clamp(BamSettings.LastHero, 0, HeroCatalog.Count - 1);
+            var myHero = me != null ? me.Hero : HeroCatalog.Clean(BamSettings.LastHero);
             Place(left, y, s, myHero, "You", HUB_ACCENT, false); a++;
             if (preview == 4) for (; b < 2; b++) Place(right + b * (s + gap), y, s, PreviewThem[b], b == 0 ? "Simon" : "Ella", "#ff8a6b", false);
             foreach (var m in MpRoom.Members)

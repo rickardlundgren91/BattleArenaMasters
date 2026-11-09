@@ -73,7 +73,7 @@ namespace BAM.Online.Mp
             if (!started) Start();
             var me = MpPresence.Me;
             me.Name = MpRoom.MyName;
-            me.Hero = Mathf.Clamp(BamSettings.LastHero, 0, HeroCatalog.Count - 1);
+            me.Hero = (int)HeroCatalog.Clean(BamSettings.LastHero);
             bool playing = Flow.Game != null && Flow.Game.InMatch;
             me.State = playing ? PresenceState.Match
                 : MpRoom.Quick && MpRoom.State != MpRoom.Phase.Off ? PresenceState.Queue

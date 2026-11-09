@@ -70,7 +70,7 @@ namespace BAM.Build
             while (Flow.Game == null) yield return null;
             yield return new WaitForSecondsRealtime(1f);
 
-            var setup = new MatchSetup { Hero = (HeroId)Mathf.Clamp(BamSettings.LastHero, 0, HeroCatalog.Count - 1), Difficulty = Difficulty.Hard };
+            var setup = new MatchSetup { Hero = HeroCatalog.Clean(BamSettings.LastHero), Difficulty = Difficulty.Hard };
             Flow.Game.StartMatch(setup);
             var field = Flow.Game.GetType().GetField("match", BindingFlags.Instance | BindingFlags.NonPublic);
             var match = field?.GetValue(Flow.Game) as Match;

@@ -261,7 +261,7 @@ namespace BAM.UI
             var p = new PartyView { Leader = true, Mode = 0, Bots = BamSettings.LastDifficulty, Count = n };
             int me = BamSettings.LastHero;
             for (int i = 0; i < n; i++)
-                p.Mates[i] = new PartyMate { Name = i == 0 ? "Testvän" : "Testvän 2", Hero = (HeroId)((me + 1 + i) % HeroCatalog.Count), Ready = i == 0 };
+                p.Mates[i] = new PartyMate { Name = i == 0 ? "Testvän" : "Testvän 2", Hero = HeroCatalog.All[(Mathf.Max(0, HeroCatalog.IndexOf((HeroId)me)) + 1 + i) % HeroCatalog.Count].Id, Ready = i == 0 };
             TestParty = p;
         }
 

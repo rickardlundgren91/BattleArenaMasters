@@ -99,9 +99,20 @@ namespace BAM.Online
         /// <summary>The account level that opens this hero (1 = open from the start).</summary>
         public static int HeroLevel(HeroId id)
         {
-            int i = Array.FindIndex(HeroCatalog.All, h => h.Id == id);
+            if (AlwaysOpen(id)) return 1;
+            // the place in the list without the always-open heroes, so Kugg going in second moved nobody's level
+            int i = 0;
+            foreach (var h in HeroCatalog.All)
+            {
+                if (h.Id == id) break;
+                if (!AlwaysOpen(h.Id)) i++;
+            }
             return i < FreeHeroes ? 1 : HeroLevelStep * (i - FreeHeroes + 1);
         }
+
+        /// <summary>Heroes open for every player from the start, whatever their place in the list: Kugg (Rickard 2026-11-09 "lägg in
+        /// honom som nr 2 i spelet och upplåst för alla").</summary>
+        static bool AlwaysOpen(HeroId id) => id == HeroId.Kugg;
 
         // in the Unity Editor every hero is always open (Rickard 2026-10-29: "när jag kör på datorn måste jag alltid få ha alla heroes
         // upplåsta"); on a phone the level decides
