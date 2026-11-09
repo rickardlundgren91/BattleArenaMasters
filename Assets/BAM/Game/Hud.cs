@@ -35,6 +35,8 @@ namespace BAM.Game
         // edges, where the thumbs are (ApplyLayout)
         float gapL, gapR;
         Text specialName;
+        Text specialShots; // Kugg's shots left in his Anchor, the old game's stock number on the button's upper right (Hud.cs 797)
+        int shownShots = -1;
         RectTransform specialRoot, joyArea;
         Image specialFill, specialFace, specialGlow, specialHalo, specialIcon, specialDisc, gainRing, cancelBack, dragDot;
         Image specialVeil, specialFlash, specialFaceBack, specialRim, specialIconRim; // the dark veil over the uncharged part of the icon and the white flash when it turns ready
@@ -89,6 +91,7 @@ namespace BAM.Game
             aimLook = new AimIndicator(aim);
             lastTutStep = -1;
             lastDenied = m.SpecialDeniedAt; shakeUntil = bannerUntil = 0f;
+            shownShots = -1;
             gainAt = -99f; lastCharge = 0f; killedBy = null;
             readyAt = -99f; wasReady = false; wasFull = true; // no pop for a charge the hero already had when the match starts
             if (specialFlash != null) { specialFlash.enabled = false; specialRoot.localScale = Vector3.one; }
@@ -107,7 +110,9 @@ namespace BAM.Game
             if (specialIcon.sprite != null) Object.Destroy(specialIcon.sprite); // the last match's sprite (the texture stays)
             specialIcon.sprite = icon != null ? Sprite.Create(icon, new Rect(0, 0, icon.width, icon.height), new Vector2(0.5f, 0.5f), 100f) : null;
             specialIcon.enabled = icon != null;
-            specialName.text = icon != null ? "" : HeroCatalog.Get(m.Player.Hero).SpecialTitle;
+            // a preview hero without his icon yet (Kugg until O-061) shows a plain empty disc, not the special's name (Rickard 2026-11-09:
+            // "det står anchor"); only Rickard's own pictures go on the button
+            specialName.text = icon != null || HeroCatalog.Get(m.Player.Hero).Preview ? "" : HeroCatalog.Get(m.Player.Hero).SpecialTitle;
             if (BeginSplit(HeroCatalog.Get(m.Player.Hero).Name.ToLowerInvariant())) { specialIcon.enabled = false; specialName.text = ""; } // its own tap and drag pictures (HudSplit.cs)
             BeginCenter();
             BeginTutorial();
@@ -328,8 +333,18 @@ namespace BAM.Game
             // charge ring, and when ready an orange ring breathing just outside it (sin 3.5 t)
             specialFill.color = ready ? GlassOrangeHi : GlassOrange;
             specialDisc.color = ready ? DiscReady : DiscCharging;
-            Split(p.Alive ? p.Charge01 : 0f, ready); // the two halves: ring, grey and gold level (HudSplit.cs)
-            ReadyLook(p.Alive ? Mathf.Clamp01(p.Charge01) : 0f, ready);
+            // Kugg anchored (Hero7.cs): the button shows his shots left, as the old game did for ROI17's stocks: the number on the upper
+            // right and the ring and orange face as the share of the 6 still in the cannon (Rickard 2026-11-09 "det ska synas som abc2")
+            int shots = p.Alive && p.Hero == HeroId.Kugg && p.KuggAnchored ? p.KuggShots : 0;
+            if (shots != shownShots)
+            {
+                shownShots = shots;
+                specialShots.text = Num(shots);
+                specialShots.gameObject.SetActive(shots > 0);
+            }
+            float frac = shots > 0 ? (float)shots / KuggS.Shots : p.Alive ? p.Charge01 : 0f;
+            Split(frac, ready); // the two halves: ring, grey and gold level (HudSplit.cs)
+            ReadyLook(Mathf.Clamp01(frac), ready);
             float pulse = Mathf.Sin(Time.unscaledTime * 3.5f);
             specialGlow.enabled = ready;
             specialHalo.enabled = ready;
@@ -743,6 +758,11 @@ namespace BAM.Game
             specialName.resizeTextMinSize = 20;
             specialName.resizeTextMaxSize = 44;
             UiKit.AddOutline(specialName, 3);
+            specialShots = UiKit.Label(specialRoot, "", 72, TextAnchor.MiddleCenter, Color.white);
+            UiKit.Place(specialShots, 0.5f, 0.5f, SpecialButton.Radius * 0.74f, SpecialButton.Radius * 0.66f, 140f, 100f);
+            UiKit.AddOutline(specialShots, 4);
+            specialShots.raycastTarget = false;
+            specialShots.gameObject.SetActive(false);
 
             BuildTop();
 
