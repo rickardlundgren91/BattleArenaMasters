@@ -159,7 +159,11 @@ namespace BAM.Game
         void SpellPress()
         {
             Vector2 v = joy != null ? joy.Value : Vector2.zero;
-            QueueSpell(v.sqrMagnitude > 0f ? Coords.ScreenAngle(v) : float.NaN, 1f);
+            // the hero's run line, exactly as TakeInput turns the stick into MoveX = v.x, MoveY = -v.y: not Coords.ScreenAngle, whose
+            // depth correction is for a finger pointing at the map and sent a diagonal blink up to 5.7 degrees off the way the hero
+            // was running (full review 2026-11-09 nr 79)
+            v = Coords.Screen(v);
+            QueueSpell(v.sqrMagnitude > 0f ? Mathf.Atan2(-v.y, v.x) : float.NaN, 1f);
         }
 
         void QueueSpell(float angle, float k)

@@ -30,6 +30,8 @@ namespace BAM.Core
         public bool Tutorial;
         public bool BotsMoved;  // the bot level the player follows moved after this match (BamSettings.AfterBotMatch): the result says so
         public bool Practice;   // PRACTICE > NEW MAP: no XP, Rating or bot-level move, so the result card shows no XP line (bug review 2026-11-04 nr 51)
+        public bool Online;     // an online match (MatchSetup.Net): the card says so instead of the bots' level and hides PLAY AGAIN (full review 2026-11-09 nr 61)
+        public bool Versus;     // online with a person on the other team ("vs players"); false when everyone played together against bots
     }
 
     /// <summary>

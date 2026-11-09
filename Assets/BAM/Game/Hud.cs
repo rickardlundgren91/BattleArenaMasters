@@ -58,6 +58,11 @@ namespace BAM.Game
         MatchViews views;
         MatchCamera cam;
         bool built, leftHanded, laidOutHand, tutorial, island, joyLogged, heroTest;
+        // the screen the controls were laid out for (full review 2026-11-09 nr 90): its safe area, size and nav bar inset; the side gaps
+        // and the camera frame are measured again only when one changed, and for LayoutSettle seconds after (SafeAreaFitter applies
+        // a change a frame later)
+        UnityEngine.Rect layoutSafe; int layoutW, layoutH; float layoutNav, layoutCheckUntil, cssPx = 1f;
+        const float LayoutSettle = 3f;
         int lastTutStep;
         float lastDenied, shakeUntil, bannerUntil, gainAt, lastCharge;
         // who killed the player last ("Defeated by" under the respawn countdown)
@@ -118,6 +123,7 @@ namespace BAM.Game
             BeginTutorial();
             joyLogged = false;
             leftHanded = !BamSettings.LeftHanded; // forces the first layout
+            layoutCheckUntil = Time.unscaledTime + LayoutSettle; // and the screen is measured every frame for a while, as it always was
             ApplyLayout();
             BamSettings.Changed += ApplyLayout;
             CancelTouches();
@@ -217,6 +223,10 @@ namespace BAM.Game
         /// aim starts at the hero (Moa can put her field on herself, Rickard 2026-10-26).</summary>
         static float AimK(Vector2 offset) =>
             Mathf.Clamp01((offset.magnitude - 0.35f * SpecialButton.Radius) / (1.45f * SpecialButton.Radius));
+        /// <summary>Where AimK reaches 1 (0.35 + 1.45 button radii, 243 px): the reach ring is drawn there, not at SpecialButton.MaxDrag
+        /// (300 px), where the finger may still go but the aim no longer grows (full review 2026-11-09 nr 80). The feel of the first
+        /// 243 px is kept: a drag to the ring is the full reach, as before.</summary>
+        const float AimFullRadii = 1.8f;
 
         void Queue(float angle, float k)
         {
@@ -265,8 +275,7 @@ namespace BAM.Game
             // the old rings' widths are in the old game's CSS pixels: 400 across the portrait frame, not the phone's own pixels
             // (on a 1080 wide phone one device pixel made them 2.7 times too thin, Rickard 2026-10-26 "jättesvag"); the camera's
             // frame, so on a wide screen they keep the same width next to the tiles as on a phone
-            float cssPx = Mathf.Max(1f, UiKit.CameraFrame().width) / 400f;
-            rings.Frame(hidden || (Intro != null && Intro.Active), cssPx / cam.PixelsPerTile);
+            rings.Frame(hidden || (Intro != null && Intro.Active), cssPx / cam.PixelsPerTile); // cssPx: ApplyLayout keeps it with the screen
             OverheadFrame(hidden || (Intro != null && Intro.Active));
             VignetteFrame(hidden || (Intro != null && Intro.Active));
             if (IntroFrame(hidden)) return; // the match intro: its own bars and name tags, no controls
@@ -344,7 +353,9 @@ namespace BAM.Game
                 specialShots.text = Num(label);
                 specialShots.gameObject.SetActive(label > 0);
             }
-            float frac = shots > 0 ? (float)shots / KuggS.Shots : p.Alive ? p.Charge01 : 0f;
+            // Kugg's ring before he anchors is full at MinShots stocks, when his special is ready (Unit.SpecialReady); the stocks beyond
+            // show as the number. Anchored it is the shots left of Shots (full review 2026-11-09 nr 65)
+            float frac = shots > 0 ? (float)shots / KuggS.Shots : !p.Alive ? 0f : p.Hero == HeroId.Kugg ? Mathf.Min(1f, p.Charge / KuggS.MinShots) : p.Charge01;
             Split(frac, ready); // the two halves: ring, grey and gold level (HudSplit.cs)
             ReadyLook(Mathf.Clamp01(frac), ready);
             float pulse = Mathf.Sin(Time.unscaledTime * 3.5f);
@@ -480,7 +491,11 @@ namespace BAM.Game
             Vector2 o = special.Offset;
             // what the rules would do if let go now (Sim Aim.cs: wall cuts, the map edge, Fenn's flight; Precision AIM-01..06, BRAM-02),
             // drawn from where the hero is drawn; the cast gets the same angle and share (OnAimed)
-            var a = m.AimFor(p, Coords.ScreenAngle(o), m.OneTap ? Match.DragShare(p.Hero, AimK(o)) : AimK(o)); // one tap: a placed form stops at the white ring, as the cast (DragShare)
+            // the cast's angle and share are rounded to the wire's 9 bytes before the rules see them, online (MpInput) and offline alike
+            // (MatchTrace.Quantize in GameFlow.Update, since the match trace): the preview takes the same rounding, so it shows where the
+            // rounded cast lands (full review 2026-11-09 nr 105)
+            var q = MatchTrace.Quantize(new PlayerInput { Special = true, AimAngle = Coords.ScreenAngle(o), AimK = AimK(o) });
+            var a = m.AimFor(p, q.AimAngle, m.OneTap ? Match.DragShare(p.Hero, q.AimK) : q.AimK); // one tap: a placed form stops at the white ring, as the cast (DragShare)
             Vector3 dir = Coords.Dir(a.Ang);
             // the MLBB-style indicator (AimIndicator.cs); cancelling dims it grey and drops the hit marks
             if (a.Shape == AimShape.Line)
@@ -595,10 +610,21 @@ namespace BAM.Game
         // ---------------------------------------------------------------- layout
 
         // Every frame and on a settings change; lays the controls out again only when the hand or the screen's side gaps changed
-        // (a foldable opened or closed during a match).
+        // (a foldable opened or closed during a match). The screen is read once (Screen.safeArea is a native call); the gaps (four
+        // more) and the camera frame are measured only when it changed, and for a few seconds after, while SafeAreaFitter applies the
+        // change (full review 2026-11-09 nr 90)
         void ApplyLayout()
         {
             if (!built) return;
+            UnityEngine.Rect sa = Screen.safeArea; int sw = Screen.width, sh = Screen.height; float nav = UiKit.NavBarInset;
+            if (sa != layoutSafe || sw != layoutW || sh != layoutH || nav != layoutNav)
+            {
+                layoutSafe = sa; layoutW = sw; layoutH = sh; layoutNav = nav;
+                layoutCheckUntil = Time.unscaledTime + LayoutSettle;
+            }
+            bool settled = laidOutHand && Time.unscaledTime >= layoutCheckUntil;
+            if (!settled) cssPx = Mathf.Max(1f, UiKit.CameraFrame().width) / 400f; // the old rings' CSS pixel: 400 across the frame
+            if (settled && leftHanded == BamSettings.LeftHanded) return;
             SideGaps(out float gl, out float gr);
             if (laidOutHand && leftHanded == BamSettings.LeftHanded && Mathf.Abs(gl - gapL) < 0.5f && Mathf.Abs(gr - gapR) < 0.5f) return;
             gapL = gl;
@@ -725,7 +751,7 @@ namespace BAM.Game
             gainRing.sprite = UiKit.CircleRing;
             gainRing.enabled = false;
             BuildSparks(); // small lightning on the rim while ready (HudSparks.cs)
-            dragRing = Circle(specialRoot, "Reach", 2f * SpecialButton.MaxDrag, new Color(1f, 1f, 1f, 0.35f));
+            dragRing = Circle(specialRoot, "Reach", 2f * AimFullRadii * SpecialButton.Radius, new Color(1f, 1f, 1f, 0.35f)); // where the drag's share is full (nr 80)
             dragRing.GetComponent<Image>().sprite = UiKit.CircleRing;
             dragRing.gameObject.SetActive(false);
             dragDot = Circle(specialRoot, "Finger", 0.64f * SpecialButton.Radius, Color.white).GetComponent<Image>();

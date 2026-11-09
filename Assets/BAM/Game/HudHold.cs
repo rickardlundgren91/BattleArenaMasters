@@ -100,7 +100,11 @@ namespace BAM.Game
             float pad = W * 0.025f, cw = W * 0.6f, tw = cw - pad * 2f;
             int nf = Mathf.RoundToInt(W * 0.038f), df = Mathf.RoundToInt(W * 0.029f), tf = Mathf.RoundToInt(W * 0.024f);
             float lh = df * 1.25f;
-            string foot = "Charges with " + (p.HDef != null ? p.HDef.MaxCharge : 0) + " hits" + (ready ? " · READY" : "");
+            // Kugg's special is a stock of shots, not one charge: ready from MinShots hits, every hit one more shot, up to Shots (KuggS,
+            // Unit.SpecialReady; full review 2026-11-09 nr 65)
+            string foot = p.Hero == HeroId.Kugg
+                ? "Ready from " + KuggS.MinShots + " hits · each hit adds a shot, up to " + KuggS.Shots + (ready ? " · READY" : "")
+                : "Charges with " + (p.HDef != null ? p.HDef.MaxCharge : 0) + " hits" + (ready ? " · READY" : "");
 
             float y = pad;
             y = Put(holdTag, "SPECIAL", tf, pad, y, tw) + tf * 0.4f;

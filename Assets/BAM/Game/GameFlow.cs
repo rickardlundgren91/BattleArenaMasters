@@ -173,6 +173,9 @@ namespace BAM.Game
 
         public void QuitToMenu()
         {
+            // leaving the guided match (Pause > Home) counts as a skip, as the Skip button does: Boot started it again at every
+            // launch until it was played to the end (full review 2026-11-09 nr 60)
+            if (match != null && setup.Tutorial) TutorialFinished();
             SendEnd(true);
             Teardown();
             Screens.ShowMainMenu();
@@ -482,6 +485,9 @@ namespace BAM.Game
         {
             var p = match.Player;
             bool won = match.State == MatchState.Over ? match.Winner == p.Team : match.Tut != null && match.Tut.Done;
+            // online: a seat on the other team is a person (bots fill the rest); the result card says so (full review 2026-11-09 nr 61)
+            bool versus = false;
+            if (net != null && match.Config.Seats != null) foreach (var s in match.Config.Seats) if (s.Team != p.Team) versus = true;
             return new MatchResult
             {
                 Won = !quit && won,
@@ -496,6 +502,8 @@ namespace BAM.Game
                 Difficulty = setup.Difficulty,
                 Tutorial = setup.Tutorial,
                 Practice = Practice,
+                Online = net != null,
+                Versus = versus,
             };
         }
 

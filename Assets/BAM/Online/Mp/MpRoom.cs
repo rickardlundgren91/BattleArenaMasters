@@ -34,7 +34,7 @@ namespace BAM.Online.Mp
         // phone without network, and a guest's own short dead spot (lift, cell handover) must not split the match (review 2026-11-02).
         // This phone without any network: it waits (the host makes it a bot after 8 s anyway) up to HostQuietOffline, then plays on.
         const float HostQuiet = 6f, HostQuietOffline = 15f, HostQuietLoading = 25f; // before the first frame the host may still be loading (LoadWait 15 s)
-        static float hostHeardT;
+        static float hostHeardT, framesHeardT; // guest, in a match: the last byte and the last Frames message from the host
 
         public sealed class Member
         {
@@ -45,6 +45,7 @@ namespace BAM.Online.Mp
             public bool InMatch, Loaded;
             public float Ping = -1;
             public long Behind = -1; // host, in a match: first frame this guest has not been sent (its link was full), -1 = up to date
+            public bool DropPending; // host: its seat went to a bot but Dropped could not go out yet (its link was full); Tick tries again
         }
 
         public static Phase State { get; private set; }
@@ -328,7 +329,7 @@ namespace BAM.Online.Mp
             for (int i = 0; i < Members.Count; i++)
             {
                 var m = Members[i];
-                m.Seat = i; m.InMatch = true; m.Loaded = m.Conn < 0; m.Behind = -1;
+                m.Seat = i; m.InMatch = true; m.Loaded = m.Conn < 0; m.Behind = -1; m.DropPending = false;
                 seats[i] = new SeatConfig { Hero = m.Hero, Team = Quick ? TeamOf(m.Side, Versus) : TeamOf(i, Mode), Spell = m.Spell, Name = m.Name };
             }
             for (int i = 1; i < Members.Count; i++)
@@ -349,7 +350,7 @@ namespace BAM.Online.Mp
             net = new MpMatchNet(IsHost, cfg, Mode == Versus && seats[mySeat].Team != Teams.Player);
             if (IsHost) net.Lockstep.Send = SendFrames;
             else net.Lockstep.Send = m => relay?.Send(m);
-            State = Phase.Match; Status = ""; WantPage = false; QuickJoining = false; hostHeardT = Time.realtimeSinceStartup;
+            State = Phase.Match; Status = ""; WantPage = false; QuickJoining = false; hostHeardT = framesHeardT = Time.realtimeSinceStartup;
             Debug.Log("[BAM.Online] online match: " + seats.Length + " players, " + ModeNames[Mode] + ", seat " + mySeat + ", seed " + seed);
             Changed?.Invoke();
             Flow.Game?.StartMatch(new MatchSetup { Hero = seats[mySeat].Hero, Difficulty = diff, Seed = seed, Net = net });
@@ -371,7 +372,7 @@ namespace BAM.Online.Mp
                 if (IsHost) Broadcast(w, true); else relay.Send(w);
             }
             net = null;
-            foreach (var m in Members) { m.InMatch = false; m.Loaded = false; }
+            foreach (var m in Members) { m.InMatch = false; m.Loaded = false; m.DropPending = false; }
             if (Quick) { Leave(); return; } // a stranger: done, back to the menu (as the old QUICK MATCH)
             if (relay != null) { State = Phase.Lobby; WantPage = true; }
             else { State = Phase.Off; WantPage = true; Status = "The room has closed."; }
@@ -394,6 +395,15 @@ namespace BAM.Online.Mp
                 OnDisconnect(0);
                 return;
             }
+            // the host still pings but sends no frames: it gave this seat to a bot (too far behind) and its Dropped has not reached us
+            // (its link to us was full then). After the first frame, this long without one and this phone plays on with bots too; the
+            // host's pings alone must not keep a dead match waiting (full review 2026-11-09 nr 71)
+            if (!IsHost && State == Phase.Match && net != null && !net.Lockstep.Solo && net.Lockstep.Stepped > 0
+                && Time.realtimeSinceStartup - framesHeardT > HostQuiet)
+            {
+                Debug.Log("[BAM.Online] no frames from the host for " + Mathf.RoundToInt(Time.realtimeSinceStartup - framesHeardT) + " s while its pings came: our seat is a bot there");
+                net.Lockstep.GoSolo("You fell behind, bots play on");
+            }
             pingT += dt;
             if (pingT >= PingEvery)
             {
@@ -401,6 +411,7 @@ namespace BAM.Online.Mp
                 w.Begin(MpMsg.Ping); w.F32(Time.realtimeSinceStartup);
                 if (IsHost) Broadcast(w, false); else relay.Send(w);
             }
+            if (IsHost) foreach (var m in Members) if (m.DropPending && (m.Conn < 0 || SendDropped(m))) m.DropPending = false; // Drop's message, once its link has room
             if (Quick && IsHost && State == Phase.Lobby && relay.Quick)
             {
                 if (otherParty != null)
@@ -418,7 +429,7 @@ namespace BAM.Online.Mp
                 bool all = true;
                 foreach (var m in Members) if (m.InMatch && !m.Loaded) all = false;
                 if (!all && loadT >= LoadWait)
-                    foreach (var m in Members) if (m.InMatch && !m.Loaded) { m.InMatch = false; net.Lockstep.SeatLeft(m.Seat); all = true; }
+                    foreach (var m in Members) if (m.InMatch && !m.Loaded) { Drop(m, "did not load in time"); all = true; }
                 if (all) net.Lockstep.Start();
             }
         }
@@ -433,7 +444,7 @@ namespace BAM.Online.Mp
                 foreach (var m in Members) if (m.InMatch) { m.InMatch = false; m.Behind = -1; net.Lockstep.SeatLeft(m.Seat); }
                 Debug.Log("[BAM.Online] the host's app went to the background: the others play on with bots");
             }
-            if (!p) hostHeardT = Time.realtimeSinceStartup; // this phone slept itself: the host's silence was ours
+            if (!p) hostHeardT = framesHeardT = Time.realtimeSinceStartup; // this phone slept itself: the host's silence was ours
             relay?.Pause(p);
         }
 
@@ -583,9 +594,10 @@ namespace BAM.Online.Mp
                     Begin(seed, diff, seats, mine);
                     return;
                 }
-                case MpMsg.Frames: net?.Lockstep.OnFrames(ref r); return;
+                case MpMsg.Frames: framesHeardT = Time.realtimeSinceStartup; net?.Lockstep.OnFrames(ref r); return;
                 case MpMsg.Desync: Debug.Log("[BAM.Online] lockstep: OUT OF SYNC (host found it at frame " + (uint)r.I32() + ")"); net?.Lockstep.GoSolo("The match got out of step, bots play on"); return;
                 case MpMsg.MatchOver: net?.Lockstep.GoSolo("The host left the match, bots play on"); return;
+                case MpMsg.Dropped: net?.Lockstep.GoSolo("You fell behind, bots play on"); return; // the host gave our seat to a bot (nr 71); null net: that match is over here already
                 case MpMsg.Pong: { var me = Me; if (me != null) me.Ping = (Time.realtimeSinceStartup - r.F32()) * 1000f; return; }
                 case MpMsg.Bye: OnDisconnect(0); return;
                 case MpMsg.Move:
@@ -616,6 +628,20 @@ namespace BAM.Online.Mp
         static readonly MpWriter refill = new MpWriter();
         const int MaxBehind = 8 * 60; // frames (8 s, as the disconnect timeout): a guest further behind becomes a bot
 
+        // host, in a match: a guest's seat goes to a bot (too far behind, or too slow to load) and the guest is told, so it plays on
+        // with bots at once instead of waiting for frames that never come (its pings still flowed, so no watchdog fired; full review
+        // 2026-11-09 nr 71). The link that made it fall behind is full, so the message may not go out now: Tick tries again until it
+        // does (the guest's own frames-quiet check in Tick covers the wait). Not a quit: nothing is booked for the guest here or there
+        static readonly MpWriter drop = new MpWriter();
+        static void Drop(Member m, string why)
+        {
+            m.InMatch = false; m.Behind = -1;
+            net?.Lockstep.SeatLeft(m.Seat);
+            m.DropPending = m.Conn >= 0 && !SendDropped(m);
+            Debug.Log("[BAM.Online] " + m.Name + " " + why + ", a bot plays on" + (m.DropPending ? " (telling it when its link has room)" : ""));
+        }
+        static bool SendDropped(Member m) { drop.Begin(MpMsg.Dropped); return relay != null && relay.SendTo(m.Conn, drop); }
+
         static void SendFrames(MpWriter msg)
         {
             if (relay == null || net == null) return;
@@ -631,7 +657,7 @@ namespace BAM.Online.Mp
                 while (m.Behind >= 0)
                 {
                     long to = ls.Refill(refill, m.Behind);
-                    if (to < 0 || ls.Built - m.Behind > MaxBehind) { m.Behind = -1; m.InMatch = false; ls.SeatLeft(m.Seat); Debug.Log("[BAM.Online] " + m.Name + " fell too far behind, a bot plays on"); break; }
+                    if (to < 0 || ls.Built - m.Behind > MaxBehind) { Drop(m, "fell too far behind"); break; }
                     if (!relay.SendTo(m.Conn, refill)) break;
                     m.Behind = to >= ls.Built ? -1 : to;
                 }

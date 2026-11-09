@@ -630,11 +630,15 @@ namespace BAM.Game
                     var b = e.B;
                     var kind = (ProjKind)e.Kind;
                     Vector3 at = Coords.World(e.X, e.Y);
-                    V(b)?.PlayHit(e.Big);
+                    // a victim hidden in grass from this phone's team shows nothing of the hit: no flinch, no stun or shield sound, no
+                    // team-coloured burst at its spot (they gave a hidden hero away); only a shot's own landing gets an uncoloured spark
+                    // where it ended, since every attack stays visible, rule 5 (full review 2026-11-09 nr 73)
+                    bool seen = b == null || b.Team == Mine || m.IsVisibleTo(b, Mine);
+                    if (seen) V(b)?.PlayHit(e.Big);
                     if (e.Shot != 0 && !shotHitAt.ContainsKey(e.Shot)) { shotHitAt[e.Shot] = at; shotHits.Add(e); } // its own hit comes first
-                    if (kind == ProjKind.BonkSlam && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f); // the slam stuns
+                    if (seen && kind == ProjKind.BonkSlam && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f); // the slam stuns
                     // so does Bram's anvil (no shot; the tap's flying hammer has one): the same stun sound, one at a time (SfxRecipes)
-                    if (kind == ProjKind.BramHammerSpecial && e.Shot == 0 && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f);
+                    if (seen && kind == ProjKind.BramHammerSpecial && e.Shot == 0 && b != null && b.IsRealHero) BamAudio.PlayAt(SfxId.BonkStun, Coords.Of(b), 0.8f);
                     // Bram's bounces get their own gold line; Tyra's bolt and Tikta's needles carry the special's look in their own
                     // impact, so they add only the small hit (fx review 2026-10-26, P1-2/P1-3)
                     FxKind fx = kind == ProjKind.KnutAnchor ? FxKind.AnchorHit : kind == ProjKind.TowerShot ? FxKind.TowerShotFlash
@@ -645,10 +649,14 @@ namespace BAM.Game
                         : kind == ProjKind.TyraArrow && e.Dmg == DmgKind.Special ? FxKind.VolleyHit
                         : e.Big ? FxKind.HitBig : FxKind.Hit;
                     float hs = (b != null && b.Kind == UnitKind.Tower ? 1.4f : 1f) * (e.A != null && e.A.Kind == UnitKind.Minion ? 0.6f : 1f); // VIS-03
-                    ArtKit.PlayFx(fx, at, hs, b != null ? Side(b.Team) : 0, HeroOf(e.A));
-                    if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? Side(b.Team) : 0);
+                    if (seen)
+                    {
+                        ArtKit.PlayFx(fx, at, hs, b != null ? Side(b.Team) : 0, HeroOf(e.A));
+                        if (fx == FxKind.TowerShotFlash) ArtKit.PlayFx(FxKind.Hit, at, 1f, b != null ? Side(b.Team) : 0);
+                    }
+                    else if (e.Shot != 0) ArtKit.PlayFx(fx, at, hs, 0, HeroOf(e.A)); // the shot was seen flying: its end too, in no team's colour
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
-                        : b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
+                        : seen && b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
                         // as in Speltest's sound mix v2: the plain hit thumps only when a hero's (or the wolf's) blow lands on you
                         : b == m.Player && e.A != null && (e.A.Kind == UnitKind.Hero || e.A.Kind == UnitKind.Wolf) ? (e.Big ? SfxId.HitHeavy : SfxId.HitLight)
                         // a tower's shot landing on you gets its own heavy impact (Rickard 2026-10-30), silent until his clip exists
@@ -785,8 +793,9 @@ namespace BAM.Game
                     break;
                 }
                 case EventType.Interrupt:
-                    // the cut swing or cast stops in the picture too (BONK-01/CHAINMAP-03); only a stun cuts the auto attack
-                    if (e.A != null) { BamAudio.PlayAt(SfxId.Stunned, Coords.Of(e.A)); V(e.A)?.Interrupt(e.A.Has(St.Stun)); }
+                    // the cut swing or cast stops in the picture too (BONK-01/CHAINMAP-03); only a stun cuts the auto attack. The sound
+                    // only for a hero this phone can see: it gave a hidden one in grass away (nr 73)
+                    if (e.A != null) { if (m.IsVisibleTo(e.A, Mine)) BamAudio.PlayAt(SfxId.Stunned, Coords.Of(e.A)); V(e.A)?.Interrupt(e.A.Has(St.Stun)); }
                     break;
                 case EventType.LevelUp:
                     if (m.Player != null && m.Player.Alive) ArtKit.PlayFx(FxKind.LevelUp, Coords.Of(m.Player), 1f, 0);
@@ -817,7 +826,8 @@ namespace BAM.Game
                     else if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.WolfLand, Coords.World(e.X, e.Y), 1f, Side(e.A.Team));
                     break;
                 case EventType.Shield:
-                    if (e.Big && e.B != null) BamAudio.PlayAt(SfxId.MoaShield, Coords.Of(e.B));
+                    // Moa's tap shield, on an ally this phone can see (it gave a hidden one in grass away; nr 73)
+                    if (e.Big && e.B != null) { if (m.IsVisibleTo(e.B, Mine)) BamAudio.PlayAt(SfxId.MoaShield, Coords.Of(e.B)); }
                     // her special's shield taking hold on an ally (Speltest "moashield": honey)
                     else if (e.B != null && m.IsVisibleTo(e.B, Mine)) BamAudio.PlayAt(SfxId.MoaHoney, Coords.Of(e.B), 0.75f);
                     break;

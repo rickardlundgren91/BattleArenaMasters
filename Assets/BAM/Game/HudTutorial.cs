@@ -26,7 +26,7 @@ namespace BAM.Game
         static readonly Color TowerOff = new Color(0.25f, 0.12f, 0.2f, 1f), TutPillFill = new Color(14f / 255f, 20f / 255f, 58f / 255f, 0.86f);
 
         RectTransform tutSkip, tutPill, tutBar, tutEnd, joyArrow, specialArrow, blinkArrow;
-        CanvasGroup tutPillGroup, tutOpenGroup;
+        CanvasGroup tutPillGroup, tutOpenGroup, joyArrowGroup, specialArrowGroup, blinkArrowGroup; // the arrows' groups kept, not looked up every frame (full review 2026-11-09 nr 90)
         Image tutPillEdge, tutPillPlate, specialPulse, chargeRing, tutEndDim;
         Text tutPillText, tutOpen1, tutOpen2, tutEnd1, tutEnd2, tutEnd3, tutEndTap, tutSkipText;
         readonly Text[] chargeTexts = new Text[8];
@@ -141,12 +141,12 @@ namespace BAM.Game
 
             // the arrows over the joystick (moment 1) and over SPECIAL when it is ready (moment 3), and SPECIAL's gold pulse
             bool joyOn = play && !opening && tu.Step == Tutorial.StepMove;
-            Arrow(joyArrow, joyOn, joyOn ? Local(RectTransformUtility.WorldToScreenPoint(null, joy.Base.position)) : Vector2.zero, JoystickZone.Radius * 1.25f);
+            Arrow(joyArrow, joyArrowGroup, joyOn, joyOn ? Local(RectTransformUtility.WorldToScreenPoint(null, joy.Base.position)) : Vector2.zero, JoystickZone.Radius * 1.25f);
             bool spOn = play && (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow) && !tu.BurstDone && p.Alive && p.SpecialReady
                 && (tu.Step != Tutorial.StepSpecial || tu.Line != null); // with its line: not over a grey button (bug review 2026-11-02, nr 13)
-            Arrow(specialArrow, spOn, spOn ? Local(RectTransformUtility.WorldToScreenPoint(null, specialRoot.position)) : Vector2.zero, SpecialButton.Radius);
+            Arrow(specialArrow, specialArrowGroup, spOn, spOn ? Local(RectTransformUtility.WorldToScreenPoint(null, specialRoot.position)) : Vector2.zero, SpecialButton.Radius);
             bool blinkOn = play && tu.Step == Tutorial.StepBlink && p.Alive && m.SpellReady(p) && spellRoot.gameObject.activeSelf;
-            Arrow(blinkArrow, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR);
+            Arrow(blinkArrow, blinkArrowGroup, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR);
             if (specialPulse.enabled != spOn) specialPulse.enabled = spOn;
             if (spOn)
             {
@@ -403,14 +403,14 @@ namespace BAM.Game
         }
 
         // a large, softly blinking gold arrow pointing down at a control (the old tutPointAt), r = the control's radius
-        void Arrow(RectTransform a, bool show, Vector2 at, float r)
+        void Arrow(RectTransform a, CanvasGroup g, bool show, Vector2 at, float r)
         {
             if (a.gameObject.activeSelf != show) a.gameObject.SetActive(show);
             if (!show) return;
             float now = Time.unscaledTime;
             a.anchoredPosition = at + new Vector2(0f, r * 1.1f + Mathf.Sin(now * 5f) * r * 0.15f);
             a.localScale = Vector3.one * (r / 110f);
-            a.GetComponent<CanvasGroup>().alpha = 0.6f + 0.4f * Mathf.Abs(Mathf.Sin(now * 1000f / 320f));
+            g.alpha = 0.6f + 0.4f * Mathf.Abs(Mathf.Sin(now * 1000f / 320f));
         }
 
         static Image Sliced(RectTransform parent, Color color)
@@ -513,11 +513,11 @@ namespace BAM.Game
             tutPill.gameObject.SetActive(false);
 
             joyArrow = MakeChevron(safe);
-            joyArrow.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            joyArrowGroup = joyArrow.gameObject.AddComponent<CanvasGroup>(); joyArrowGroup.blocksRaycasts = false;
             specialArrow = MakeChevron(safe);
-            specialArrow.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            specialArrowGroup = specialArrow.gameObject.AddComponent<CanvasGroup>(); specialArrowGroup.blocksRaycasts = false;
             blinkArrow = MakeChevron(safe);
-            blinkArrow.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            blinkArrowGroup = blinkArrow.gameObject.AddComponent<CanvasGroup>(); blinkArrowGroup.blocksRaycasts = false;
 
             for (int i = 0; i < chargeTexts.Length; i++)
             {

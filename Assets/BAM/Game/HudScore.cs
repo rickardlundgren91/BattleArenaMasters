@@ -133,7 +133,11 @@ namespace BAM.Game
                     row.Pic.texture = Resources.Load<Texture2D>("BAM/Menu/portrait_" + info.Name.ToLowerInvariant());
                     row.Back.color = u == m.Player ? RowMine : RowOther;
                     row.Stripe.color = t == 0 ? ScoreBlue : ScoreRed;
-                    SetText(row.Name, info.Name);
+                    // online a person's row carries the seat's name, a bot's the hero's, as the names over the heroes (HudOverhead;
+                    // full review 2026-11-09 nr 81)
+                    var seats = m.Config.Seats;
+                    string person = seats != null && u.Seat >= 0 && u.Seat < seats.Length ? seats[u.Seat].Name : null;
+                    SetText(row.Name, !string.IsNullOrEmpty(person) ? person : info.Name);
                     SetText(row.Role, u == m.Player ? "You · " + info.Role : info.Role);
                 }
                 if (u.Kills != row.K || u.Deaths != row.D || u.Assists != row.A)

@@ -7,6 +7,13 @@ calls mean, when they happen and what the caller expects. All calls happen on Un
 ## Shared facts
 
 - **Teams:** 0 = the player's team (blue, bottom of the screen), 1 = the enemy (red, top). `BAM.Sim.Teams`.
+- **Online seats (BAM.Online.Mp lockstep, 2026-11-09):** `MatchConfig.Seats` names every human seat and `LocalSeat` this phone's;
+  only `Match.Player` (camera, HUD, marker) follows LocalSeat, the rules never read it (Sim/Match.cs). Invariant: a seated hero
+  never has a `Bot` while frames still flow between the phones. A seat turns into a bot only through `MpLockstep.SeatLeft` (the
+  frame's seat mask, so on every phone at the same frame) or on a phone that has left the lockstep for good (`GoSolo`), both
+  via `Match.SeatToBot`. So `BotSquad`'s `u.IsPlayer && !PlayerIsBot` clause is dead for seated humans (`u.Bot == null` is tested
+  first), and no Sim rule may branch on `IsPlayer` or `Player` for a unit that could have a Bot on one phone and not on another
+  (full review 2026-11-09 nr 91).
 - **World space:** 1 tile = 1 Unity unit, y up, map in the xz plane, 15 x 35 tiles. The player's tower is near small z,
   the enemy's near large z. Tile (tx, ty) with ty counted from the top row has its centre at
   `(tx + 0.5, 0, Height - ty - 0.5)` (`ArenaInfo.TileCenter`).

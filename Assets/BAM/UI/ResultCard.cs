@@ -320,13 +320,17 @@ namespace BAM.UI
             resCardEdge.color = edge;
             int seconds = Mathf.Max(0, Mathf.FloorToInt(r.Seconds));
             string length = (seconds / 60) + ":" + (seconds % 60).ToString("00");
-            resSub.text = (r.Tutorial ? "Tutorial" : DifficultyNames[Mathf.Clamp((int)r.Difficulty, 0, DifficultyNames.Length - 1)] + " bots") + " · " + length
+            // online the enemy may be people, and the bots' level is the room's (full review 2026-11-09 nr 61)
+            string bots = DifficultyNames[Mathf.Clamp((int)r.Difficulty, 0, DifficultyNames.Length - 1)] + " bots";
+            resSub.text = (r.Tutorial ? "Tutorial" : r.Online ? "Online · " + (r.Versus ? "vs players" : bots) : bots) + " · " + length
                 + (r.BotsMoved ? " · next: " + DifficultyNames[Mathf.Clamp((int)BamSettings.LastDifficulty, 0, DifficultyNames.Length - 1)] + " bots" : "")
                 + (r.Practice ? " · practice, no XP" : "");
 
             resTable.gameObject.SetActive(resTableMode);
             resSmall.gameObject.SetActive(!resTableMode);
-            resAgain.gameObject.SetActive(!r.Tutorial || !r.Won);
+            // online PLAY AGAIN only went Home (GameFlow.RestartMatch: an online match cannot restart alone); HOME does that, and the
+            // room page opens by itself when the menus are back (MpRoom.WantPage), so the host can start again (nr 61)
+            resAgain.gameObject.SetActive((!r.Tutorial || !r.Won) && !r.Online);
             FillXp(r.Practice);
             if (resTableMode) FillScores(m);
             else

@@ -88,6 +88,13 @@ namespace BAM.Audio
                 case SfxId.LowHealth: return new SfxInfo(0.85f, 1, 1.5f, 4, 0f);
                 case SfxId.BlastChainBoom: return new SfxInfo(0.95f, 2, 0.12f, 3, 0.04f); // wins a voice like Supernova's boom
                 case SfxId.AttackBonk: return new SfxInfo(0.7f, 3, 0.07f, 2, 0.05f);
+                // Kugg (Hero7.cs, O-066..O-070; full review 2026-11-09 nr 83): his shot as the other attacks, the anchored shell a little
+                // heavier, the Spark Shot (his passive, by itself) softer; the Anchor going in and the spikes coming up as the specials
+                case SfxId.AttackKugg: return new SfxInfo(0.7f, 3, 0.07f, 2, 0.05f);
+                case SfxId.KuggShotBig: return new SfxInfo(0.75f, 3, 0.08f, 2, 0.05f);
+                case SfxId.KuggSpark: return new SfxInfo(0.65f, 3, 0.07f, 2, 0.06f);
+                case SfxId.KuggDeploy: return new SfxInfo(0.8f, 2, 0.2f, 3, 0.03f);
+                case SfxId.KuggPackUp: return new SfxInfo(0.7f, 2, 0.2f, 3, 0.02f);
                 case SfxId.BonkSlamWindup: return new SfxInfo(0.8f, 2, 0.2f, 3, 0.03f);
                 case SfxId.BonkSlam: return new SfxInfo(1f, 2, 0.12f, 3, 0.04f);
                 case SfxId.BonkBoulderThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);

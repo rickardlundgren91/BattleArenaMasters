@@ -346,7 +346,7 @@ namespace BAM.Game
             {
                 // the ring mesh runs from inner to 1 and is scaled by the radius: a fixed width needs its own inner edge
                 float inner = Mathf.Clamp(1f - width / radius, 0f, 0.999f);
-                inner = Mathf.Round(inner * 2000f) / 2000f; // rebuilt only when it really changes
+                inner = Mathf.Round(inner * 2000f) / 2000f; // the vertices move only when it really changes
                 if (ring.Own == null || inner != ring.OwnInner)
                 {
                     ring.OwnInner = inner;
@@ -372,6 +372,10 @@ namespace BAM.Game
         const int RingSeg = 96;
         static readonly Vector2 PaletteWhite = new Vector2(0.5f / 16f, 0.5f / 16f); // Art Pal.UV(Pal.White)
 
+        // The band's topology (normals, palette UV, colours, triangles) never changes, only its inner edge moves, and that every
+        // frame for the pulsing range ring, the target pop and the goal ripples: a mesh built once gets new vertex positions only,
+        // not Clear plus every array and the bounds each time (full review 2026-11-09 nr 90). The outer edge is always at 1, so the
+        // bounds hold; the picture is the same to the vertex.
         static void BuildRing(Mesh mesh, float inner)
         {
             for (int i = 0; i <= RingSeg; i++)
@@ -379,6 +383,10 @@ namespace BAM.Game
                 float a = i * Mathf.PI * 2f / RingSeg, c = Mathf.Cos(a), s = Mathf.Sin(a);
                 ringV[2 * i] = new Vector3(c * inner, 0f, s * inner);
                 ringV[2 * i + 1] = new Vector3(c, 0f, s);
+            }
+            if (mesh.vertexCount == ringV.Length) { mesh.vertices = ringV; return; }
+            for (int i = 0; i <= RingSeg; i++)
+            {
                 ringN[2 * i] = ringN[2 * i + 1] = Vector3.up;
                 ringC[2 * i] = ringC[2 * i + 1] = Color.white;
                 // the ring material colours through Art's 16x16 palette texture by UV: every vertex on cell 0 (white), so the band
