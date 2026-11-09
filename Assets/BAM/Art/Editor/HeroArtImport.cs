@@ -217,7 +217,10 @@ namespace BAM.Art.Editor
             // Mutant Breathing Idle, Male Weighted Run, Firing A Gun (the kick at 0.30-0.33 s of 1.17, so the shot leaves at 27 %)
             // and Standing To Kneeling Down as he anchors (the turret takes over 0.3 s later, BodyForm.cs). Hit, death and walk are
             // Oaken's heavy golem clips. Height as Oaken's, whose body he wore until now (the turret form is sized from it).
-            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/Idle", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
+            // Rickard 2026-11-09 after the menu: "han får inte ha fingrar eller vara för animerad i menyn, bara en lugn idle": he
+            // stands in Bram's calm idle (arms down, barely moving) instead of the flexing Mutant Breathing Idle, and his left hand's
+            // finger weights are on the hand too, so no clip curls them (the right one is the cannon)
+            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Bram/Anim/Idle", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
         };
 
         // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original
