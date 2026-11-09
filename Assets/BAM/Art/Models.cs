@@ -108,7 +108,6 @@ namespace BAM.Art
             d.BarWidth = 1.1f; // MLBB-wide (was 0.95 before the 2026-10-30 MLBB bars)
             d.BarThick = 0.13f;
             d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + hero);
-            if (d.Art == null && hero == HeroId.Kugg) d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + HeroId.Oaken); // stand-in body until Rickard's own (O-060)
             var gearOf = hero;
             if (d.Art == null && StandIn(hero, out HeroId si)) { d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + si); gearOf = si; } // Øli's four: a stand-in body and its weapon until Rickard's own models
             if (d.Art == null && hero >= HeroId.Bonk) Debug.LogError("[BAM.Art] " + hero + " has no HeroArt (run BAM > Art > Build Hero Art): showing a stand-in figure");

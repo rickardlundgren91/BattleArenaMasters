@@ -213,6 +213,11 @@ namespace BAM.Art.Editor
             // visible ratios (Hilde 1.01, Oaken 1.10) x 1.62 as the others.
             new Spec { Hero = "Hilde", Model = "Hilde/Hilde", Idle = "Hilde/Anim/Idle", Run = "Hilde/Anim/Run", Attack = "Hilde/Anim/Attack1", Cast = "Hilde/Anim/Cast", Hit = "Hilde/Anim/Hit", Death = "Hilde/Anim/Dying", Walk = "Hilde/Anim/Walk", Height = 1.64f, Release = 0.3f },
             new Spec { Hero = "Oaken", Model = "Oaken/Oaken", Idle = "Oaken/Anim/Idle", Run = "Oaken/Anim/Run", Attack = "Oaken/Anim/Attack1", Cast = "Oaken/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.49f },
+            // Kugg (hero 10, 2026-11-09): Rickard's Tripo rune golem rigged in Mixamo (the cannon is his right arm), his own clips:
+            // Mutant Breathing Idle, Male Weighted Run, Firing A Gun (the kick at 0.30-0.33 s of 1.17, so the shot leaves at 27 %)
+            // and Standing To Kneeling Down as he anchors (the turret takes over 0.3 s later, BodyForm.cs). Hit, death and walk are
+            // Oaken's heavy golem clips. Height as Oaken's, whose body he wore until now (the turret form is sized from it).
+            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/Idle", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
         };
 
         // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original
