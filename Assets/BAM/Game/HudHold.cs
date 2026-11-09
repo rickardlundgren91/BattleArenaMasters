@@ -100,10 +100,10 @@ namespace BAM.Game
             float pad = W * 0.025f, cw = W * 0.6f, tw = cw - pad * 2f;
             int nf = Mathf.RoundToInt(W * 0.038f), df = Mathf.RoundToInt(W * 0.029f), tf = Mathf.RoundToInt(W * 0.024f);
             float lh = df * 1.25f;
-            // Kugg's special is a stock of shots, not one charge: ready from MinShots hits, every hit one more shot, up to Shots (KuggS,
+            // Kugg's special is a stock of shots, not one charge: every hit loads a shot, he anchors with MinShots or more (Rickard 2026-11-09: "ready from 2 hits låter konstigt"), up to Shots (KuggS,
             // Unit.SpecialReady; full review 2026-11-09 nr 65)
             string foot = p.Hero == HeroId.Kugg
-                ? "Ready from " + KuggS.MinShots + " hits · each hit adds a shot, up to " + KuggS.Shots + (ready ? " · READY" : "")
+                ? "Each hit loads a shot, up to " + KuggS.Shots + " · anchors with " + KuggS.MinShots + " or more" + (ready ? " · READY" : "")
                 : "Charges with " + (p.HDef != null ? p.HDef.MaxCharge : 0) + " hits" + (ready ? " · READY" : "");
 
             float y = pad;

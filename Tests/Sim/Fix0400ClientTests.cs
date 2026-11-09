@@ -12,9 +12,9 @@ namespace BAM.Sim
             foreach (var h in HeroCatalog.All) CatalogPercent(h);
             foreach (var h in HeroCatalog.Coming) CatalogPercent(h);
 
-            // nr 65: Kugg's text says what the rules do: ready from MinShots hits, every hit one more shot, up to Shots (KuggS, Unit.SpecialReady)
+            // nr 65: Kugg's text says what the rules do: every hit loads a shot, up to Shots, he anchors once MinShots are loaded (KuggS, Unit.SpecialReady)
             var kugg = HeroCatalog.Get(HeroId.Kugg);
-            Check(kugg.SpecialText.Contains("from " + KuggS.MinShots + " hits") && kugg.SpecialText.Contains("up to " + KuggS.Shots),
+            Check(kugg.SpecialText.Contains("once " + KuggS.MinShots + " are loaded") && kugg.SpecialText.Contains("up to " + KuggS.Shots),
                 "Kugg's special text follows the 2..6 rule: " + kugg.SpecialText);
 
             // nr 104: the bars follow Defs in terciles of the heroes in the game: level 1 hp, auto attack damage per second, walking speed
