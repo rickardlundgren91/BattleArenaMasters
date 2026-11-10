@@ -268,7 +268,8 @@ namespace BAM.Art.Editor
                 {
                     var art = AssetDatabase.LoadAssetAtPath<HeroArt>(OutOf(s) + "/" + s.Hero + ".asset");
                     if (art == null || art.Model == null || art.Model != AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + ModelOf(s) + ".fbx") || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
-                        || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null) { BuildAll(); return; }
+                        || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null
+                        || (s.RunFour != null && art.RunFour == null)) { BuildAll(); return; } // Ragn's all-fours run came 2026-11-10: a HeroArt built before it lacks it
                 }
             };
         }
@@ -279,7 +280,7 @@ namespace BAM.Art.Editor
         {
             var paths = new System.Collections.Generic.HashSet<string>();
             foreach (Spec s in specs)
-                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
+                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
                     if (p != null) paths.Add(ModelsDir + p + ".fbx");
             foreach (string p in pool) paths.Add(ModelsDir + p + ".fbx");
             bool any = false;
@@ -310,14 +311,14 @@ namespace BAM.Art.Editor
         static void Rebuild()
         {
             foreach (Spec s in specs)
-                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk })
+                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
                     if (p != null) AssetDatabase.ImportAsset(ModelsDir + p + ".fbx", ImportAssetOptions.ForceUpdate);
             BuildAll();
         }
 
         internal static void BuildAll()
         {
-            if (EditorApplication.isPlaying) return;
+            if (EditorApplication.isPlaying) { Debug.LogWarning("[BAM.Art] Hero models not rebuilt in Play mode: leave Play and run BAM > Art > Rebuild Hero Models"); return; }
             int ok = 0;
             foreach (Spec s in specs)
             {
@@ -333,6 +334,7 @@ namespace BAM.Art.Editor
                 art.Idle = Clip(s.Idle, 0); art.Run = Clip(s.Run, 1); art.Attack = Clip(s.Attack, 2);
                 art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
                 art.RunFour = s.RunFour != null ? Load(s.RunFour) : null;
+                if (s.RunFour != null && art.RunFour == null) Debug.LogWarning("[BAM.Art] " + s.Hero + ": no clip in " + s.RunFour + ".fbx");
                 art.Height = s.Height;
                 art.AttackRelease = s.Release;
                 art.AttackStart = s.Start;
