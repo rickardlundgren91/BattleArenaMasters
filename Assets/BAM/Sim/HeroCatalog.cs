@@ -107,6 +107,26 @@ namespace BAM.Sim
         public const bool PreviewsInHeroTest = false;
 #endif
 
+        /// <summary>The preview heroes the HEROES page also shows, after the heroes in the game, now that they have Rickard's own bodies
+        /// (Rickard 2026-11-10: "lägg in dom två med modeller i menyn nu istället så man ser dom som dom ska vara sen"). Only in the
+        /// Unity editor, like PreviewsInHeroTest: there they can be looked at and tried (TRY), not picked for a match.</summary>
+#if UNITY_EDITOR
+        static readonly HeroId[] menuPreviews = { HeroId.Ragn, HeroId.Nassla };
+#else
+        static readonly HeroId[] menuPreviews = { };
+#endif
+
+        /// <summary>What the HEROES page lists: All, then (in the editor) the preview heroes with their own bodies. Index i below
+        /// Count is All[i]; from Count on it is a preview hero, which can be tried in HERO TEST but not chosen.</summary>
+        public static HeroInfo[] MenuList => menuList ??= MakeMenuList(); // lazy: All is declared below
+        static HeroInfo[] menuList;
+        static HeroInfo[] MakeMenuList()
+        {
+            var l = new System.Collections.Generic.List<HeroInfo>(All);
+            foreach (HeroId id in menuPreviews) foreach (var h in Coming) if (h.Id == id) l.Add(h);
+            return l.ToArray();
+        }
+
         /// <summary>What PRACTICE > HERO TEST lists: every hero in the game, then (with PreviewsInHeroTest) the Preview heroes in Coming.</summary>
         public static HeroInfo[] HeroTestList => heroTestList ??= MakeHeroTestList(); // lazy: All is declared below
         static HeroInfo[] heroTestList;

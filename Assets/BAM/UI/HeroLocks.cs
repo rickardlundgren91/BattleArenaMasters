@@ -17,7 +17,7 @@ namespace BAM.UI
         static readonly Color LockButton = new Color(30 / 255f, 34 / 255f, 70 / 255f, 0.95f), LockKeyhole = new Color(8 / 255f, 10 / 255f, 30 / 255f, 0.8f);
 
         /// <summary>The account level that opens hero number index of HeroCatalog.All, 0 when it is open.</summary>
-        static int LockLevel(int index) => OnlineHooks.HeroLockLevel != null ? OnlineHooks.HeroLockLevel(HeroCatalog.All[index].Id) : 0;
+        static int LockLevel(int index) => index < HeroCatalog.Count && OnlineHooks.HeroLockLevel != null ? OnlineHooks.HeroLockLevel(HeroCatalog.All[index].Id) : 0; // a preview hero on the HEROES page (editor) has no lock
 
         /// <summary>A locked chosen hero becomes the first open one (Progression.ClampHero).</summary>
         static void ClampHero()

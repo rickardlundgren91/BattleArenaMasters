@@ -152,7 +152,7 @@ namespace BAM.UI
             VList(content, 0, new RectOffset(0, 0, 0, Mathf.RoundToInt(4 * Cw)));
 
             var gridAll = HeroGrid(content, "All");
-            for (int i = 0; i < HeroCatalog.Count; i++) BuildHeroCard(gridAll, i);
+            for (int i = 0; i < HeroCatalog.MenuList.Length; i++) BuildHeroCard(gridAll, i); // in the editor also Ragn and Nässla (HeroCatalog.MenuList)
             // under the grid (2026-10-31): nothing showed that a card opens the hero's own page
             var hint = Treb(content, "Tap a hero to see what they do", 2.9f, UiKit.TextDim);
             hint.fontStyle = FontStyle.Normal;
@@ -177,7 +177,7 @@ namespace BAM.UI
         // One card (PageHeroes3 Card): the portrait on a dark rounded box, the name, the role with its sign, a mint check if chosen
         static void BuildHeroCard(RectTransform grid, int index)
         {
-            var info = HeroCatalog.All[index];
+            var info = HeroCatalog.MenuList[index];
             var card = UiKit.NewRect(info.Name, grid);
             var c = new HeroCard { Index = index };
             c.Fill = card.gameObject.AddComponent<Image>();
@@ -325,8 +325,8 @@ namespace BAM.UI
             heroStage.Sway = 20f;
             heroStage.Tapped = () => heroStage.Swing();
 
-            Arrow(heroStageRt, -1, () => OpenHero((heroPeek + HeroCatalog.Count - 1) % HeroCatalog.Count));
-            Arrow(heroStageRt, 1, () => OpenHero((heroPeek + 1) % HeroCatalog.Count));
+            Arrow(heroStageRt, -1, () => OpenHero((heroPeek + HeroCatalog.MenuList.Length - 1) % HeroCatalog.MenuList.Length));
+            Arrow(heroStageRt, 1, () => OpenHero((heroPeek + 1) % HeroCatalog.MenuList.Length));
 
             var tag = Pic(heroStageRt, "Selected", UiKit.Rounded, new Color(10 / 255f, 40 / 255f, 34 / 255f, 0.85f));
             Radius(tag, 3.2f * Cw);
@@ -449,7 +449,7 @@ namespace BAM.UI
             sb.navigation = new Navigation { mode = Navigation.Mode.None };
             sb.onClick.AddListener(() =>
             {
-                if (LockLevel(heroPeek) > 0) { BamAudio.Play(SfxId.UiBack); return; } // locked: the button says the level
+                if (LockLevel(heroPeek) > 0 || heroPeek >= HeroCatalog.Count) { BamAudio.Play(SfxId.UiBack); return; } // locked: the button says the level; a preview hero is not chosen
                 BamAudio.Play(SfxId.UiConfirm);
                 BamSettings.LastHero = (int)HeroCatalog.All[heroPeek].Id;
                 ShowTab(0);
@@ -486,7 +486,7 @@ namespace BAM.UI
             b.targetGraphic = back;
             b.transition = Selectable.Transition.None;
             b.navigation = new Navigation { mode = Navigation.Mode.None };
-            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiConfirm); StartHeroTest(HeroCatalog.All[heroPeek].Id); });
+            b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiConfirm); StartHeroTest(HeroCatalog.MenuList[heroPeek].Id); });
             rt.gameObject.AddComponent<ButtonFx>();
         }
 
@@ -536,14 +536,14 @@ namespace BAM.UI
 
         static void OpenHero(int index)
         {
-            heroPeek = Mathf.Clamp(index, 0, HeroCatalog.Count - 1);
+            heroPeek = Mathf.Clamp(index, 0, HeroCatalog.MenuList.Length - 1);
             if (stack.Count == 0 || stack[stack.Count - 1] != heroPage) Push(heroPage);
             else RefreshHeroPage();
         }
 
         static void RefreshHeroPage()
         {
-            var info = HeroCatalog.All[heroPeek];
+            var info = HeroCatalog.MenuList[heroPeek];
             var def = Defs.Hero(info.Id);
             bool chosen = BamSettings.LastHero == (int)info.Id;
 
@@ -590,8 +590,8 @@ namespace BAM.UI
             FillAbility(heroAbilities[1], "PASSIVE", info.PassiveName, info.PassiveDesc, "passive_" + lower);
 
             heroSelectedTag.SetActive(chosen);
-            heroCount.text = (heroPeek + 1) + "/" + HeroCatalog.Count;
-            heroSelectRt.gameObject.SetActive(!chosen); // already chosen: SELECTED on the stage says it
+            heroCount.text = (heroPeek + 1) + "/" + HeroCatalog.MenuList.Length;
+            heroSelectRt.gameObject.SetActive(!chosen && heroPeek < HeroCatalog.Count); // already chosen: SELECTED on the stage says it; a preview hero (editor) only has TRY
             SelectLocked(LockLevel(heroPeek), info.Name);
 
             // the stage takes the height that is left, so everything fits without scrolling on a phone
