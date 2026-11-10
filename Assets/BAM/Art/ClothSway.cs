@@ -17,7 +17,7 @@ namespace BAM.Art
     /// </summary>
     sealed class ClothSway
     {
-        enum Kind { Skirt, Tail }
+        enum Kind { Skirt, Tail, HipTail }
 
         /// <summary>One cloth part of one hero. Distances are fractions of the model's height in its bind pose.</summary>
         sealed class Spec
@@ -30,6 +30,7 @@ namespace BAM.Art
                                              // for loincloth panels front and back on a hero whose thighs are thick
             public float Back0, Back1;       // Tail: distance behind the head bone where the sway starts and is full
             public float PivotUp;            // Tail: the tie point, this far above the head bone (on the Back0 plane)
+            public float Above = 0.04f;      // HipTail: only what is at most this far above the hips (not the back)
             public float Hz = 2.4f;          // spring frequency
             public float Damping = 0.4f;     // share of critical damping (lower = more overshoot)
             public float MaxAngle = 28f;     // degrees the part may swing from its rest
@@ -54,6 +55,9 @@ namespace BAM.Art
                         new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.06f, Clear1 = 0.10f, Drop = 0.10f, MaxSide = 0.07f, Hz = 2.8f, Damping = 0.62f, MaxAngle = 10f, Drag = 0.025f, Flare = 0.06f },
                         new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.08f, Hz = 2.8f, Damping = 0.55f, MaxAngle = 13f, Drag = 0.025f },
                     };
+                case 11: // Ragn (preview): his wolf tail behind the hips (Rickard 2026-11-10: "ragns svans kanske kan få röra sig som vi
+                         // gjort med annat innan?", "när man snurrar gubben osv"); it trails when he runs and swings out when he is spun
+                    return new[] { new Spec { Kind = Kind.HipTail, Back0 = 0.11f, Back1 = 0.17f, Above = 0.04f, Hz = 2.2f, Damping = 0.38f, MaxAngle = 30f, Drag = 0.06f, Flare = 0.3f } };
                 // Knut, Bram, Blast, Tikta, Oaken: nothing hangs free of the body (Knut's mane is the top of his back). Hilde (not in the
                 // game yet): her long braid reaches her hips and needs a chain of bones, not one; when she comes in.
                 default: return null;
@@ -269,6 +273,33 @@ namespace BAM.Art
                         Add(i, boneOf[k0], sw[i] * (1f - f));
                         if (k1 != k0) Add(i, boneOf[k1], sw[i] * f);
                     }
+                }
+                else if (sp.Kind == Kind.HipTail)
+                {
+                    // a tail behind the hips: what sits on the hips, behind them and not up the back, hangs on one spring bone tied on
+                    // at the rump (Ragn.fbx has the tail wholly on Hips)
+                    Vector3 hp = At(hips), back = -fwd;
+                    int[] setA = { hips };
+                    Vector3 pivot = hp + back * (sp.Back0 * H) + up * (sp.PivotUp * H);
+                    var sw = new float[n];
+                    Vector3 sum = Vector3.zero; float ws = 0f;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (Vector3.Dot(v[i] - hp, up) > sp.Above * H || Share(i, setA) < 0.8f) continue;
+                        float bk = Vector3.Dot(v[i] - hp, back) / H;
+                        float s = Smooth((bk - sp.Back0) / Mathf.Max(1e-4f, sp.Back1 - sp.Back0));
+                        if (s <= 0.005f) continue;
+                        sw[i] = s;
+                        sum += (v[i] - pivot) * (s * s); ws += s * s;
+                    }
+                    if (ws < 1f) continue;
+                    int bi = bones.Length + defs.Count;
+                    defs.Add(new BoneDef
+                    {
+                        Parent = hips, Pivot = bind[hips].MultiplyPoint3x4(pivot), Rest = bind[hips].MultiplyVector(sum / ws), Spec = sp,
+                        OutLocal = bind[hips].MultiplyVector(back).normalized, // a spin swings it out behind, never in through the legs
+                    });
+                    for (int i = 0; i < n; i++) if (sw[i] > 0f) Add(i, bi, sw[i]);
                 }
                 else
                 {
