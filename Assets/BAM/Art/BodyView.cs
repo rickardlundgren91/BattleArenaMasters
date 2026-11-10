@@ -1066,6 +1066,7 @@ namespace BAM.Art
                     GroundFeet(dt, 1f - moveW);
                 }
             }
+            if (imported && IsHero && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
             if (!Preview && imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggAim();
             // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
             if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
@@ -1642,6 +1643,28 @@ namespace BAM.Art
         // Kugg's right arm is his cannon (Rickard 2026-11-09, his picture: the arm held straight out at the target and the shot leaving its
         // mouth). Firing A Gun holds a rifle across the chest, so while his attack plays the upper arm and then the forearm are turned
         // until the forearm points level where he faces (his target in a fight); MuzzleAt then puts the shot at the barrel's mouth
+        // Nässla in Moa's Idle (Rickard 2026-11-10, his picture: her right hand grey and lumpy): Moa's hands hang at her hips, and
+        // Nässla's long hands went in through her tunic. At rest both arms turn out from her sides, as far as they hang (a raised arm
+        // in her throw or cast is left alone), on the menu stage too
+        const float NasslaArmOut = 14f;
+        void ArmsOut(float deg)
+        {
+            if (anim == null || !anim.isHuman) return;
+            float w = (1f - Mathf.Clamp01(gearAct)) * deg;
+            if (w <= 0.01f) return;
+            Vector3 fwd = transform.forward, down = -transform.up;
+            void Out(HumanBodyBones u, HumanBodyBones l, float side)
+            {
+                Transform up = anim.GetBoneTransform(u), lo = anim.GetBoneTransform(l);
+                if (up == null || lo == null) return;
+                Vector3 d = lo.position - up.position;
+                float m = d.magnitude, hang = m < 1e-6f ? 1f : Mathf.Clamp01(Vector3.Dot(d / m, down) / 0.7f);
+                up.rotation = Quaternion.AngleAxis(side * w * hang, fwd) * up.rotation;
+            }
+            Out(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, 1f);
+            Out(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, -1f);
+        }
+
         void KuggAim()
         {
             float w = Mathf.Clamp01(gearAtk);
