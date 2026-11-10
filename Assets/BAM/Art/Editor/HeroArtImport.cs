@@ -86,6 +86,16 @@ namespace BAM.Art.Editor
             var mi = (ModelImporter)assetImporter;
             mi.animationType = ModelImporterAnimationType.Human;
             mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            // a clip whose first frame is far from a standing pose (Ragn's Running Crawl, on all fours) gives Unity no usable avatar of
+            // its own, and then no clip at all (Rickard 2026-11-10: "no clip in Ragn/Anim/RunFour.fbx"): it borrows the avatar of its
+            // hero's body (Models/<Hero>/<Hero>.fbx), built from the standing bind pose
+            if (IsClip && Path.GetFileNameWithoutExtension(assetPath).StartsWith("RunFour"))
+            {
+                string heroDir = Path.GetDirectoryName(Path.GetDirectoryName(assetPath)).Replace('\\', '/');
+                Avatar body = AssetDatabase.LoadAssetAtPath<Avatar>(heroDir + "/" + Path.GetFileName(heroDir) + ".fbx");
+                if (body != null) { mi.avatarSetup = ModelImporterAvatarSetup.CopyFromOther; mi.sourceAvatar = body; }
+                else Debug.LogWarning("[BAM.Art] " + assetPath + ": no avatar in " + heroDir + " to borrow, its own is used");
+            }
             mi.importCameras = false;
             mi.importLights = false;
             mi.importVisibility = false;
