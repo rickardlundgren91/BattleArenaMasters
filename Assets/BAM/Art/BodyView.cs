@@ -892,7 +892,13 @@ namespace BAM.Art
 
         public override void SetChannel(float progress01) => channel = progress01;
         public override void SetSprint(bool on) => sprint = on;
-        public override void SetFourLegs(bool on) => fourOn = on;
+        public override void SetFourLegs(bool on)
+        {
+            fourOn = on;
+#if UNITY_EDITOR
+            Debug.Log("[BAM.Art] " + name + " Wolf Run " + (on ? "on" : "off") + (on && cFour < 0 ? ": no RunFour clip in his HeroArt (BAM > Art > Rebuild Hero Models)" : ""));
+#endif
+        }
 
         // Ragn's Wolf Run (Rickard 2026-11-10: "kan vi få ragn att springa som ett djur när hans passiva är igång?"): his all-fours run
         // takes the run's place, blended in and out over a quarter second, on the same stride phase as the run
@@ -1261,10 +1267,11 @@ namespace BAM.Art
             float runK = Stride(dt);
             mixer.SetInputWeight(CIdle, rest * (1f - moveW) * (1f - stanceW));
             if (bowHero) mixer.SetInputWeight(CStance, rest * (1f - moveW) * stanceW);
-            mixer.SetInputWeight(CWalk, rest * moveW * (1f - runK));
             fourW = cFour >= 0 ? Mathf.MoveTowards(fourW, fourOn && !dead ? 1f : 0f, dt * 4f) : 0f;
+            mixer.SetInputWeight(CWalk, rest * moveW * (1f - runK) * (1f - fourW));
             mixer.SetInputWeight(CRun, rest * moveW * runK * (1f - fourW));
-            if (cFour >= 0) { four.SetTime(gaitPh * fourLen); mixer.SetInputWeight(cFour, rest * moveW * runK * fourW); }
+            // on all fours at any pace: the crawl takes the walk's share too (at a jog the walk carried most of the stride)
+            if (cFour >= 0) { four.SetTime(gaitPh * fourLen); mixer.SetInputWeight(cFour, rest * moveW * fourW); }
             mixer.SetInputWeight(CAttack, wAtk);
             mixer.SetInputWeight(CCast, wCast);
             mixer.SetInputWeight(CHit, wHit);
