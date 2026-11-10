@@ -205,7 +205,7 @@ namespace BAM.Game
             // the match trace for the bots to learn from (Sim/MatchTrace.cs, Core/MatchTraces.cs): every real match, not the guided
             // one or HERO TEST; the editor's are marked (its Immortal switch changes the match)
             trace = null; traceSaved = false;
-            if (!cfg.Tutorial && !cfg.HeroTest && MatchTraces.Share)
+            if (!cfg.Tutorial && !cfg.HeroTest && MatchTraces.Share && HeroCatalog.InGame((int)cfg.PlayerHero)) // never a preview hero (editor only)
                 trace = MatchTrace.Begin(cfg, net != null && cfg.Seats != null ? cfg.Seats.Length : 1, MatchTraces.Protocol, Application.version,
                     System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(), net != null, Application.isEditor);
             if (net != null && net.Predicts)

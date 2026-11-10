@@ -112,7 +112,7 @@ namespace BAM.Online.UI
 
             // the hero (and battle spell) picked on Home's hero page is this player's hero in the room
             var me = MpRoom.Me;
-            if (st == MpRoom.Phase.Lobby && me != null && (me.Hero != (HeroId)BamSettings.LastHero || me.Spell != BamSettings.Spell))
+            if (st == MpRoom.Phase.Lobby && me != null && (me.Hero != HeroCatalog.Clean(BamSettings.LastHero) || me.Spell != BamSettings.Spell)) // Clean: an editor preview hero is Tyra online, not a new Pick every frame
                 MpRoom.Pick(HeroCatalog.Clean(BamSettings.LastHero));
 
             // the leader pressed PLAY while someone was still in the last match

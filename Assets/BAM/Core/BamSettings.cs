@@ -181,7 +181,7 @@ namespace BAM.Core
             consent = (Consent)PlayerPrefs.GetInt(Key + "consent", 0);
             tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;
             tutorialCard = PlayerPrefs.GetInt(Key + "tutcard", 0) == 1;
-            lastHero = (int)BAM.Sim.HeroCatalog.Clean(PlayerPrefs.GetInt(Key + "hero", (int)BAM.Sim.HeroId.Tyra));
+            lastHero = (int)BAM.Sim.HeroCatalog.CleanMenu(PlayerPrefs.GetInt(Key + "hero", (int)BAM.Sim.HeroId.Tyra)); // keeps an editor preview hero (Ragn, Nässla)
             lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, (int)BAM.Sim.Difficulty.Ultra);
             // Hard's lock came 2026-11-04: a phone that already had Hard or Ultra picked, or a win against Hard, keeps Hard open.
             // Decided once, on the first start with the lock, and saved, so it never changes after that (a new phone: locked).

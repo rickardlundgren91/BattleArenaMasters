@@ -120,6 +120,15 @@ namespace BAM.Sim
         /// Count is All[i]; from Count on it is a preview hero, which can be tried in HERO TEST but not chosen.</summary>
         public static HeroInfo[] MenuList => menuList ??= MakeMenuList(); // lazy: All is declared below
         static HeroInfo[] menuList;
+
+        /// <summary>Where a hero stands on the HEROES page (MenuList), or -1. The preview heroes there (editor only) can also be
+        /// SELECTed for offline matches on Rickard's computer (Rickard 2026-11-10: "se till att dom är upplåsta för mig på datorn nu");
+        /// online the game still sends Clean(), so a preview hero plays Tyra there. In a phone build MenuList is All.</summary>
+        public static int MenuIndexOf(HeroId id) => System.Array.FindIndex(MenuList, h => h.Id == id);
+
+        /// <summary>Clean, but a hero on the HEROES page (MenuList, with the editor's preview heroes) stays itself: the saved pick.</summary>
+        public static HeroId CleanMenu(int id) => id >= 0 && id < 256 && MenuIndexOf((HeroId)id) >= 0 ? (HeroId)id : Clean(id);
+
         static HeroInfo[] MakeMenuList()
         {
             var l = new System.Collections.Generic.List<HeroInfo>(All);

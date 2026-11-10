@@ -144,7 +144,7 @@ namespace BAM.Online
             => (won ? XpWin : XpLoss) + Math.Min(XpFightMax, Math.Max(0, kills) * XpKill) + (won && firstWinToday ? XpFirstWin : 0);
 
         /// <summary>The tutorial, matches left from the pause menu and very short matches give nothing (as in Speltest).</summary>
-        public static bool Counts(MatchResult r) => !r.Tutorial && !r.Quit && r.Seconds >= MinSeconds;
+        public static bool Counts(MatchResult r) => !r.Tutorial && !r.Quit && r.Seconds >= MinSeconds && HeroCatalog.InGame((int)r.Hero); // never a preview hero (Ragn, Nässla: editor only) to ReportMatch
 
         /// <summary>Called by the game once per finished match. Queues it for the server and updates the shown numbers.</summary>
         public static void MatchEnded(MatchResult r)

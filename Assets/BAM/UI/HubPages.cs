@@ -252,7 +252,7 @@ namespace BAM.UI
         static void RefreshHeroSelect()
         {
             ClampHero();
-            int chosen = HeroCatalog.IndexOf((HeroId)BamSettings.LastHero); // LastHero is a HeroId, the cards go in list order
+            int chosen = HeroCatalog.MenuIndexOf((HeroId)BamSettings.LastHero); // LastHero is a HeroId, the cards go in list order (MenuList: with the editor's preview heroes)
             foreach (var c in heroCards)
             {
                 int lv = LockLevel(c.Index);
@@ -449,9 +449,9 @@ namespace BAM.UI
             sb.navigation = new Navigation { mode = Navigation.Mode.None };
             sb.onClick.AddListener(() =>
             {
-                if (LockLevel(heroPeek) > 0 || heroPeek >= HeroCatalog.Count) { BamAudio.Play(SfxId.UiBack); return; } // locked: the button says the level; a preview hero is not chosen
+                if (LockLevel(heroPeek) > 0) { BamAudio.Play(SfxId.UiBack); return; } // locked: the button says the level
                 BamAudio.Play(SfxId.UiConfirm);
-                BamSettings.LastHero = (int)HeroCatalog.All[heroPeek].Id;
+                BamSettings.LastHero = (int)HeroCatalog.MenuList[heroPeek].Id; // a preview hero too (editor only, Rickard 2026-11-10)
                 ShowTab(0);
             });
             heroSelectRt.gameObject.AddComponent<ButtonFx>().PressScale = false;
@@ -591,7 +591,7 @@ namespace BAM.UI
 
             heroSelectedTag.SetActive(chosen);
             heroCount.text = (heroPeek + 1) + "/" + HeroCatalog.MenuList.Length;
-            heroSelectRt.gameObject.SetActive(!chosen && heroPeek < HeroCatalog.Count); // already chosen: SELECTED on the stage says it; a preview hero (editor) only has TRY
+            heroSelectRt.gameObject.SetActive(!chosen); // already chosen: SELECTED on the stage says it; the editor's preview heroes can be selected too (Rickard 2026-11-10)
             SelectLocked(LockLevel(heroPeek), info.Name);
 
             // the stage takes the height that is left, so everything fits without scrolling on a phone

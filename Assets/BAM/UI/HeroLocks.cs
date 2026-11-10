@@ -22,6 +22,7 @@ namespace BAM.UI
         /// <summary>A locked chosen hero becomes the first open one (Progression.ClampHero).</summary>
         static void ClampHero()
         {
+            if (HeroCatalog.MenuIndexOf((HeroId)BamSettings.LastHero) >= HeroCatalog.Count) return; // a preview hero chosen in the editor (Ragn, Nässla): no lock
             int chosen = HeroCatalog.IndexOf((HeroId)BamSettings.LastHero);
             if (chosen >= 0 && LockLevel(chosen) == 0) return;
             for (int i = 0; i < HeroCatalog.Count; i++)
