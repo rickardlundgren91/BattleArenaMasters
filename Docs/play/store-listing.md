@@ -86,7 +86,7 @@ Report bugs and anything that feels unfair to support@battlearenamasters.com or 
 <en-US>
 Battle Arena Masters 0.4.0
 From your feedback:
-• Two new heroes for everyone: Ragn the Werewolf and Nässla the Swamp Witch (Øli's ideas)
+• Two new heroes for everyone: Ragn the Werewolf and Nässla the Swamp Witch (a tester's ideas)
 Also new:
 • Balance: Fenn tankier, Blast hits harder, Moa's shields last longer, Bram's echo on every attack, Tyra a bit weaker
 • Kugg can't get stuck anchored
