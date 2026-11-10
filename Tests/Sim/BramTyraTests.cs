@@ -21,11 +21,11 @@ namespace BAM.Sim
             for (int i = 0; i * Rules.Tick < BramS.DropDelay + 0.02f; i++) m.UpdateProjectiles(Rules.Tick);
             Check(a.Hp < a.MaxHp && c.Hp < c.MaxHp && a.Has(St.Stun) && c.Has(St.Stun), "both enemies under it are hurt and stunned");
 
-            // Backlash: the 4th hit sends an echo back towards Bram that hits the first other enemy
+            // Backlash: every EchoEvery-th hit (every hit since 2026-11-10) sends an echo back towards Bram that hits the first other enemy
             Place(a, x + 3, y); Place(c, x + 1.5f, y); b.PassHits = 0;
-            for (int i = 0; i < 3; i++) m.BramBacklash(b, a);
+            for (int i = 0; i < BramS.EchoEvery - 1; i++) m.BramBacklash(b, a);
             bool none = true; foreach (var p in m.Projs) if (p.Mode == ProjMode.Echo && !p.Done) none = false;
-            Check(none, "no echo before the 4th hit");
+            Check(none, "no echo before the EchoEvery-th hit");
             m.BramBacklash(b, a);
             for (int i = 0; i < 30; i++) m.UpdateProjectiles(Rules.Tick);
             Check(Near(c.MaxHp - c.Hp, b.StatDmg() * BramS.EchoCoeff * c.TakenMult, 0.05f) && a.Hp == a.MaxHp, "the echo hits the enemy between, not the target");

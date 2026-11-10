@@ -166,7 +166,7 @@ namespace BAM.Sim
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
                 SpecialName = "Hammer Throw", SpecialDesc = "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
                 OneTapName = "Anvil Drop", OneTapDesc = "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
-                PassiveName = "Backlash", PassiveDesc = "Every 4th attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
+                PassiveName = "Backlash", PassiveDesc = "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
                 Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = "Pack Runner", Role = "Fighter", Ranged = false,
                 SpecialName = "Call of the Pack", SpecialDesc = "Calls a wolf that picks the nearest enemy and bites it for 4 s, then guards Fenn. Drag to throw it up to 6 tiles: it hunts an enemy hero, or bites minions when no hero is near. Walls stop it.",
@@ -197,7 +197,7 @@ namespace BAM.Sim
                 SpecialName = "Ground Slam", SpecialDesc = "Slams his club into the ground: enemies around him take damage and are stunned for a moment. Drag to roll a boulder along a line instead: it hits the first enemy and knocks it back. Walls stop it.",
                 OneTapDesc = "Tap: slams his club into the ground with all his might: every enemy in a big circle around him takes heavy damage and is stunned for 0.8 s. Only with an enemy in the circle.",
                 PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
-                Health = 3, Damage = 1, Speed = 2, Difficulty = 1 },
+                Health = 2, Damage = 1, Speed = 2, Difficulty = 1 }, // health 3 -> 2: Fenn 240 hp tops the terciles now (2026-11-10)
         };
     }
 }

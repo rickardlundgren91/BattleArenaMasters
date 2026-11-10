@@ -33,7 +33,7 @@ namespace BAM.Sim
     /// kanske inte ska ha ett extra liv som ginette"): at every tick her ally heroes in it get HealPct of their max health back.</summary>
     public static class NasslaS
     {
-        public const float Reach = 3.6f, Radius = 1.75f, Warn = 0.5f, Tick = 1, Slow = -0.75f, SlowTime = 1, PoisonCoeff = 1.5f, HealPct = 0.02f;
+        public const float Reach = 3.8f, Radius = 1.75f, Warn = 0.5f, Tick = 1, Slow = -0.75f, SlowTime = 1, PoisonCoeff = 1.5f, HealPct = 0.02f;
         public const int PoisonTicks = 4;
         public const float Duration = Warn + Tick * (PoisonTicks - 1) + 0.5f; // the last tick at 3.5 s, gone at 4 s (ExtraLifetime 0.5)
     }

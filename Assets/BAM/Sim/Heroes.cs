@@ -16,10 +16,10 @@ namespace BAM.Sim
         /// <summary>Anvil Drop (the drag since 2026-10-28, XYZ 2026-10-25): lands DropDelay s later on the aimed point within Reach,
         /// hurts and stuns every enemy hero and minion within DropRadius with a clear line from it.</summary>
         public const float DropDelay = 0.6f, DropRadius = 1.1f, DropCoeff = 1.0f, DropStun = 1.5f;
-        /// <summary>Backlash (Simon's Återslaget, the passive since 2026-10-28): every 4th auto attack an echo flies from the target
-        /// back towards Bram, up to 2.25 tiles, and hits the first other enemy hero or minion for 65 % of his damage.</summary>
-        public const int EchoEvery = 4;
-        public const float EchoDistance = 2.25f, EchoSpeed = 14, EchoHitbox = 0.35f, EchoCoeff = 0.65f;
+        /// <summary>Backlash (Simon's Återslaget, the passive since 2026-10-28): every auto attack (every 4th until 2026-11-10) an echo flies
+        /// from the target back towards Bram, up to 2.25 tiles, and hits the first other enemy hero or minion for 25 % of his damage.</summary>
+        public const int EchoEvery = 1; // every attack since 2026-11-10 (Rickard: "låt hans passiva vara alltid och inte var 4e"), 4 before
+        public const float EchoDistance = 2.25f, EchoSpeed = 14, EchoHitbox = 0.35f, EchoCoeff = 0.25f; // 65 % every 4th -> 25 % every attack (bots on Hard: Bram 43 -> 51 %)
     }
 
     /// <summary>Fenn, Call of the Pack. Tap: a wolf that follows him and bites enemies near him. Drag: the wolf is thrown up to
@@ -95,12 +95,12 @@ namespace BAM.Sim
         public const float Range = 5, ShieldPercent = 0.18f, Duration = 3, AreaRadius = 1.8f, AreaShieldPercent = 0.06f, AreaDuration = 3, FieldDuration = 2;
         /// <summary>The honey field's shield with the one-tap special (Match.OneTap): 12 %, it is no longer placed over several
         /// allies on purpose (Rickard 2026-11-01); AreaShieldPercent (6 %) is the old drag's.</summary>
-        public const float FieldShieldOneTap = 0.08f; // 10 -> 8 % (tester 2026-11-03: Moa the strongest; Rickard ok)
+        public const float FieldShieldOneTap = 0.07f; // 10 -> 8 % (tester 2026-11-03: Moa the strongest; Rickard ok); 8 -> 7 % as it lasts 8 s (Rickard 2026-11-10)
         // was // 12 -> 10 % (Rickard 2026-11-02 "nerfa skölden lite men inte i tid"; Hard bots Moa 61 -> 55 %)
         /// <summary>How long the one-tap field's shield lasts: 5 s (Rickard 2026-11-02 "minst 5"; AreaDuration 3 s is the old drag's).</summary>
-        public const float FieldShieldTimeOneTap = 5;
+        public const float FieldShieldTimeOneTap = 8; // 5 -> 8 s (Rickard 2026-11-10: "Moas sköldar ska hålla 3 sek längre, ge mindre mängd sköld")
         public const float SpeedBonus = 0.1f, SpeedDuration = 1.5f;
-        public const float QueenRange = 4, QueenThreshold = 0.25f, QueenShieldPercent = 0.08f, QueenDuration = 2, QueenCooldown = 22;
+        public const float QueenRange = 4, QueenThreshold = 0.25f, QueenShieldPercent = 0.07f, QueenDuration = 5, QueenCooldown = 22;
     }
 
     /// <summary>Knut, Anchor Throw. Tap: Anchor Slam round him (Hero5.cs). Drag: the anchor on a chain, thrown the full
