@@ -225,13 +225,16 @@ namespace BAM.Art.Editor
             new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/Idle", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
             // Ragn (hero 11, preview, 2026-11-10): Rickard's Tripo werewolf blacksmith rigged in Mixamo, his own clips: Mutant Breathing
             // Idle, Mutant Run, Mutant Swiping (both arms fastest at 0.44-0.45 of the 2.7 s clip) and the long Mutant Jumping (crouch, leap
-            // with arms up, land) for Månsprång. Hit and death are Bonk's, walk Knut's, as Bonk's. A little shorter than Bonk, whose body he wore.
-            new Spec { Hero = "Ragn", Model = "Ragn/Ragn", Idle = "Ragn/Anim/Idle", Run = "Ragn/Anim/Run", Attack = "Ragn/Anim/Attack1", Cast = "Ragn/Anim/Cast", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.95f, Release = 0.45f },
+            // with arms up, land) for Månsprång. Idle is Bonk's Orc Idle 1 since 2026-11-10: Mutant Breathing Idle held his right hand up
+            // at his face (Rickard: "samma problem som med kugg"). Hit and death are Bonk's, walk Knut's, as Bonk's. A little shorter than Bonk, whose body he wore.
+            new Spec { Hero = "Ragn", Model = "Ragn/Ragn", Idle = "Bonk/Anim/IdleOrc1", Run = "Ragn/Anim/Run", Attack = "Ragn/Anim/Attack1", Cast = "Ragn/Anim/Cast", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.95f, Release = 0.45f },
             // Nässla (hero 12, preview, 2026-11-10): Rickard's second Tripo swamp witch (short tunic, no staff: the first one with a long
             // ragged cloak and a root staff failed Mixamo's auto-rigger) rigged in Mixamo, his own clips: Old Man Idle, Running, Standing
             // 1H Magic Attack 01 (the throwing forearm fastest at 0.32-0.35) and Standing 2H Magic Area Attack 02 for Taggsnår (arms wide,
-            // facing forward). Hit, death and walk are Moa's, whose body she wore. A small hunched goblin, shorter than Moa.
-            new Spec { Hero = "Nassla", Model = "Nassla/Nassla", Idle = "Nassla/Anim/Idle", Run = "Nassla/Anim/Run", Attack = "Nassla/Anim/Attack1", Cast = "Nassla/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.62f, Release = 0.36f },
+            // facing forward). Idle is Moa's since 2026-11-10 (Old Man Idle bowed her head so the hat hid her face); her hat and basket
+            // are skinned wholly to Head and Spine2 in Nassla.fbx (Mixamo had tied the basket to the shoulders and arms, so the hat
+            // and basket broke apart when the arms came down: Rickard "hatten och korgen buggat ur helt"). Hit, death and walk are Moa's, whose body she wore. A small hunched goblin, shorter than Moa.
+            new Spec { Hero = "Nassla", Model = "Nassla/Nassla", Idle = "Moa/Anim/Idle", Run = "Nassla/Anim/Run", Attack = "Nassla/Anim/Attack1", Cast = "Nassla/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.62f, Release = 0.36f },
         };
 
         // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original
