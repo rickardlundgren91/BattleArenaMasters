@@ -74,7 +74,7 @@ namespace BAM.Art
 
         static int Key(int kind, int sub, int team) => (kind * 64 + sub) * 4 + team;
 
-        /// <summary>The body a new hero borrows until Rickard's own model is in (Hero8.cs): Ragn Bonk's, Nässla Moa's, Skrall Blast's,
+        /// <summary>The body a new hero borrows until Rickard's own model is in (Hero8.cs; once BAMArt/Heroes/<hero> exists it wins, Ragn's since 2026-11-10): Ragn Bonk's, Nässla Moa's, Skrall Blast's,
         /// Ravna Tikta's (the closest build and weapon each). PRACTICE > HERO TEST only.</summary>
         static bool StandIn(HeroId hero, out HeroId body)
         {

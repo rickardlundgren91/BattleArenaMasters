@@ -223,6 +223,10 @@ namespace BAM.Art.Editor
             // and Standing To Kneeling Down as he anchors (the turret takes over 0.3 s later, BodyForm.cs). Hit, death and walk are
             // Oaken's heavy golem clips. Height as Oaken's, whose body he wore until now (the turret form is sized from it).
             new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/Idle", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
+            // Ragn (hero 11, preview, 2026-11-10): Rickard's Tripo werewolf blacksmith rigged in Mixamo, his own clips: Mutant Breathing
+            // Idle, Mutant Run, Mutant Swiping (both arms fastest at 0.44-0.45 of the 2.7 s clip) and the long Mutant Jumping (crouch, leap
+            // with arms up, land) for Månsprång. Hit and death are Bonk's, walk Knut's, as Bonk's. A little shorter than Bonk, whose body he wore.
+            new Spec { Hero = "Ragn", Model = "Ragn/Ragn", Idle = "Ragn/Anim/Idle", Run = "Ragn/Anim/Run", Attack = "Ragn/Anim/Attack1", Cast = "Ragn/Anim/Cast", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.95f, Release = 0.45f },
         };
 
         // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original
