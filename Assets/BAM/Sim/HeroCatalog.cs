@@ -97,11 +97,7 @@ namespace BAM.Sim
         /// <summary>Whether HERO TEST also lists the Preview heroes waiting in Coming (Ragn, Nässla, Skrall, Ravna). Only in the Unity
         /// editor, so Rickard can try their new bodies (2026-11-10), never in a phone build (Rickard 2026-11-09: "dom nya hjältarna ska
         /// inte in nu, bara kugg"). The headless tests run without UNITY_EDITOR, so they see the phone build's list.</summary>
-#if UNITY_EDITOR
-        public const bool PreviewsInHeroTest = true;
-#else
-        public const bool PreviewsInHeroTest = false;
-#endif
+        public const bool PreviewsInHeroTest = false; // hidden in the editor too (Rickard 2026-11-10: "göm andra heroes som e nya"): of the new ones only Ragn and Nässla show
 
         /// <summary>The preview heroes the HEROES page also shows, after the heroes in the game, now that they have Rickard's own bodies
         /// (Rickard 2026-11-10: "lägg in dom två med modeller i menyn nu istället så man ser dom som dom ska vara sen"). Only in the
