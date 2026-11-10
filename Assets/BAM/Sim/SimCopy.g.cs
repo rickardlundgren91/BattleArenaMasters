@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "962635569dea859d";
+            Generated = true; GeneratedHash = "58ecad258083cf94";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -651,6 +651,7 @@ namespace BAM.Sim
             R = __s.R;
             RagnFromX = __s.RagnFromX;
             RagnFromY = __s.RagnFromY;
+            RagnHome = __m.Map(__s.RagnHome);
             RagnLeapEnd = __s.RagnLeapEnd;
             RagnLeapStart = __s.RagnLeapStart;
             RagnToX = __s.RagnToX;

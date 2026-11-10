@@ -39,10 +39,16 @@ namespace BAM.Sim
             Check(m.TryTapSpecial(h), "the tap leaps");
             Check(h.RagnLeaping && h.Has(St.Casting) && h.Charge == 0, "in the air: casting, the charge spent");
             for (int i = 0; i < 120 && h.RagnLeaping; i++) { m.Time += Rules.Tick; m.RagnTick(h); }
-            Check(!h.RagnLeaping && Math.Abs(h.X - (x + 4)) < 0.6f, $"he came down on the enemy's spot ({h.X:0.00})");
+            Check(!h.RagnLeaping && SimMath.Dist(h, a) <= h.R + a.R + RagnS.Contact, $"he rushed up to the enemy ({h.X:0.00})");
             Check(a.Hp < a0 && a.Has(St.Stun) && a.KnockT > 0, $"the landing hit, stunned and shoved him ({a0 - a.Hp:0})");
-            Check(Near(a0 - a.Hp, h.StatDmg() * RagnS.LandCoeff * a.TakenMult, 0.5f), $"1.6 x his damage ({a0 - a.Hp:0.0})");
-            Check(Near(h.ShieldAmount, h.MaxHp * RagnS.ShieldPct, 0.5f) && m.HasEvent(EventType.RagnLand), $"a shield of 15 % on landing ({h.ShieldAmount:0})");
+            Check(Near(a0 - a.Hp, h.StatDmg() * RagnS.LandCoeff * a.TakenMult, 0.5f), $"2 x his damage ({a0 - a.Hp:0.0})");
+            Check(Near(h.ShieldAmount, h.MaxHp * RagnS.ShieldPct, 0.5f) && m.HasEvent(EventType.RagnLand), $"a shield of 20 % on landing ({h.ShieldAmount:0})");
+
+            // Bulldoze: the rush follows its enemy as it walks away, and still hits it
+            Place(h, x, y); Place(a, x + 4, y); a.ClearStatuses(); a.KnockT = 0; a.KnockFreeAt = 0; h.ClearStatuses(); h.Charge = h.HDef.MaxCharge; a0 = a.Hp;
+            Check(m.TryTapSpecial(h), "a second rush");
+            for (int i = 0; i < 120 && h.RagnLeaping; i++) { m.Time += Rules.Tick; a.Y += 0.04f; m.RagnTick(h); }
+            Check(a.Hp < a0 && a.Has(St.Stun), $"it followed him {a.Y - y:0.0} tiles sideways and hit ({a0 - a.Hp:0})");
 
             // a landing on nothing still gives the shield, hurts nobody
             Place(a, x + 20, y); Place(h, x, y); m.Events.Clear(); h.Charge = h.HDef.MaxCharge;
@@ -61,7 +67,7 @@ namespace BAM.Sim
             float run = m.SpeedOf(h);
             h.LastCombat = m.Time;
             float fight = m.SpeedOf(h);
-            Check(Near(run, fight * (1 + RagnS.RunBonus), 0.01f), $"Wolf Run: 15 % faster out of combat ({run:0.00} vs {fight:0.00})");
+            Check(Near(run, fight * (1 + RagnS.RunBonus), 0.01f), $"Wolf Run: 40 % faster out of combat ({run:0.00} vs {fight:0.00})");
 
             // death ends a leap
             h.Charge = h.HDef.MaxCharge; Place(a, x + 4, y);
@@ -81,15 +87,21 @@ namespace BAM.Sim
             h.Charge = h.HDef.MaxCharge;
             Check(m.TryTapSpecial(h), "the tap throws the seed pod");
             Proj b = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Bramble) b = p;
-            Check(b != null && b.Zone == ZoneKind.Bramble && Near(b.X, a.X, 0.05f), "a thicket grows on the enemy's spot");
-            Check(Near(m.SpeedOf(a), sp0 * (1 + NasslaS.Slow), 0.02f), $"the enemy in it is slowed 35 % at once ({m.SpeedOf(a):0.00})");
+            Check(b != null && b.Zone == ZoneKind.Bramble && Near(b.X, a.X, 0.05f) && b.Tgt == a, "brambles on the enemy");
+            Check(Near(m.SpeedOf(a), sp0, 0.02f), "no slow before the first tick");
+            for (int i = 0; i < 10; i++) { m.Time += Rules.Tick; a.Y += 0.03f; m.UpdateProjectiles(Rules.Tick); }
+            Check(Near(b.Y, a.Y, 0.05f), $"for the first half second they follow him ({b.Y - y:0.00})");
+            for (int i = 0; i < 30 && b.Ticks == 0; i++) { m.Time += Rules.Tick; m.UpdateProjectiles(Rules.Tick); }
+            Check(b.Ticks == 1 && Near(m.SpeedOf(a), sp0 * (1 + NasslaS.Slow), 0.02f), $"the first tick slows him 75 % ({m.SpeedOf(a):0.00})");
+            float by = b.Y; a.Y += 0.3f;
             int hits = 0;
             for (int i = 0; i < 300; i++) { m.Time += Rules.Tick; m.UpdateProjectiles(Rules.Tick); }
+            Check(Near(b.Y, by, 0.01f), "after the first tick they stay");
             foreach (var e in m.Events) if (e.Type == EventType.Hit && e.B == a && (ProjKind)e.Kind == ProjKind.NasslaBramble) hits++;
-            Check(hits == NasslaS.PoisonTicks, $"three poison ticks, about one a second ({hits})");
-            Check(Near(a0 - a.Hp, h.StatDmg() * NasslaS.PoisonCoeff * a.TakenMult, 1f), $"1.2 x her damage in all ({a0 - a.Hp:0.0})");
-            Check(Near(ally.Hp - al0, ally.MaxHp * NasslaS.HealPct * NasslaS.PoisonTicks, 0.5f), $"Healing Sap: the ally got 3 x 2 % ({ally.Hp - al0:0.0})");
-            Check(b.Done, "the thicket is gone after 3 s");
+            Check(hits == NasslaS.PoisonTicks, $"four poison ticks, one a second ({hits})");
+            Check(Near(a0 - a.Hp, h.StatDmg() * NasslaS.PoisonCoeff * a.TakenMult, 1f), $"1.5 x her damage in all ({a0 - a.Hp:0.0})");
+            Check(Near(ally.Hp - al0, ally.MaxHp * NasslaS.HealPct * NasslaS.PoisonTicks, 0.5f), $"Healing Sap: the ally got 4 x 2 % ({ally.Hp - al0:0.0})");
+            Check(b.Done, "the thicket is gone after 4 s");
 
             // it ends with her
             h.Charge = h.HDef.MaxCharge; Place(a, x + 3, y);

@@ -7,26 +7,35 @@ namespace BAM.Sim
     // into a flock of crows, a witch who throws plants that slow and poison). Rickard 2026-11-09: "vi bygger alla fyra", kit approved on
     // a card the same day (doc "Nya egna hjältar – förslag"). Their own names, looks and numbers: nothing from the old game's heroes.
     // In HeroCatalog.Coming (Preview, PRACTICE > HERO TEST only) with stand-in bodies until Rickard's own models are in.
+    // Rickard 2026-11-10: "ragn och nässla ska vara byggda på bronson och ginette", "kan du göra så att dom känns lite mer som i abc2":
+    // Ragn's special and passive now play as the old game's Brawler (Bronson: Bulldoze, Ardor) and Nässla's special as its Witch's
+    // (Ginette: Bramble Blossom), with abc2_gamedata.json's numbers and the live Speltest rules (SimCombat.cs, Sim.cs).
 
-    /// <summary>Ragn, the werewolf blacksmith (hero 12, Fighter). Special, Moon Leap: he leaps up to LeapReach tiles onto a random enemy
-    /// in reach (walls and bases stop the leap). Landing, the nearest enemy hero or minion within LandRadius takes LandCoeff of his
-    /// damage, a Stun and a Shove (a knockback); Ragn gets a shield of ShieldPct of his max health for ShieldTime s either way.
-    /// Passive, Wolf Run: after CalmTime s out of combat he runs RunBonus faster, until the next hit given or taken.</summary>
+    /// <summary>Ragn, the werewolf blacksmith (hero 12, Fighter). Special, Moon Leap (as ABC2's Bulldoze): he rushes up to LeapReach
+    /// tiles at a random enemy in reach and follows it as it moves (walls and bases stop him). Reaching it, that enemy takes LandCoeff
+    /// of his damage, a Stun and a Shove of Shove tiles; if it got away, the nearest enemy within LandRadius of where he stops does.
+    /// Ragn gets a shield of ShieldPct of his max health for ShieldTime s either way (Speltest BULLDOZE_SHIELD 20 % / 2 s).
+    /// Passive, Wolf Run (as Ardor): after CalmTime s out of combat he runs RunBonus faster, until the next hit given or taken
+    /// (Ardor: +1 tile/s flat on the Brawler's 2.16).</summary>
     public static class RagnS
     {
-        public const float LeapReach = 5, LeapSpeed = 12, MinLeapTime = 0.2f, LandRadius = 1.2f, LandCoeff = 1.6f, Stun = 0.8f, Shove = 2;
-        public const float ShieldPct = 0.15f, ShieldTime = 3;
-        public const float CalmTime = 3, RunBonus = 0.15f;
+        public const float LeapReach = 5, LeapSpeed = 14, MinLeapTime = 0.2f, LandRadius = 1.2f, LandCoeff = 2, Stun = 1.25f, Shove = 4;
+        public const float ShieldPct = 0.2f, ShieldTime = 2;
+        public const float CalmTime = 3, RunBonus = 0.4f;
+        /// <summary>He stops this far short of the enemy's edge, and hits it if he is within Contact of touching.</summary>
+        public const float Gap = 0.1f, Contact = 0.5f;
     }
 
-    /// <summary>Nässla, the swamp witch (hero 13, Mage/Support). Special, Thorn Thicket: a seed pod on a random enemy's spot in her
-    /// range grows into a bramble of Radius for Duration s. Every Tick s enemies in it are slowed by Slow (Nässlas do not stack); every
-    /// second (at 0.5, 1.5, 2.5 s) they take a poison tick (PoisonCoeff of her damage in all, split over the ticks) and her ally heroes
-    /// in it get HealPct of their max health back (Passive, Healing Sap). It ends early when she dies.</summary>
+    /// <summary>Nässla, the swamp witch (hero 13, Mage/Support). Special, Thorn Thicket (as ABC2's Bramble Blossom): brambles on a
+    /// random enemy in her range; for the first Warn s they follow that enemy, then they root to the spot. At Warn s and every Tick s
+    /// after, PoisonTicks times, every enemy within Radius takes a tick (PoisonCoeff of her damage in all) and is slowed by Slow for
+    /// SlowTime s. It ends early when she dies. Passive, Healing Sap (her own, not the Witch's extra life: Rickard 2026-11-10 "nässla
+    /// kanske inte ska ha ett extra liv som ginette"): at every tick her ally heroes in it get HealPct of their max health back.</summary>
     public static class NasslaS
     {
-        public const float Reach = 3.6f, Radius = 2, Duration = 3, Tick = 0.5f, Slow = -0.35f, SlowTime = 0.6f, PoisonCoeff = 1.2f, HealPct = 0.02f;
-        public const int PoisonTicks = 3;
+        public const float Reach = 3.6f, Radius = 1.75f, Warn = 0.5f, Tick = 1, Slow = -0.75f, SlowTime = 1, PoisonCoeff = 1.5f, HealPct = 0.02f;
+        public const int PoisonTicks = 4;
+        public const float Duration = Warn + Tick * (PoisonTicks - 1) + 0.5f; // the last tick at 3.5 s, gone at 4 s (ExtraLifetime 0.5)
     }
 
     /// <summary>Skrall, the storm monk (hero 14, Mage). Passive, Trance: every full second he stands still with nobody in his reach (so
@@ -54,6 +63,9 @@ namespace BAM.Sim
     {
         /// <summary>Ragn: while his Moon Leap flies (RagnLeapEnd >= 0), where it left from, where it lands and when it started.</summary>
         public float RagnLeapEnd = -1; internal float RagnFromX, RagnFromY, RagnToX, RagnToY, RagnLeapStart;
+        /// <summary>Ragn: the enemy his rush follows (null: a dragged rush to a spot).</summary>
+        internal Unit RagnHome;
+
         /// <summary>Skrall: Trance steps gathered (0-3) and how long he has stood still towards the next.</summary>
         public int TranceSteps; internal float TranceStill;
         /// <summary>Ravna: while her Crow Flock flies (RavnaFlockEnd >= 0), its direction, and whom it has torn at.</summary>
@@ -85,6 +97,8 @@ namespace BAM.Sim
         {
             if (h.RagnLeaping || !Aimed(h, out float aa, out float ak)) return false; // a leap needs a spot (the tap gives its target's)
             RagnLandPoint(h, aa, ak, out float x, out float y);
+            h.RagnHome = EnemyAt(h, x, y);
+            if (h.RagnHome != null) RagnStopShort(h, h.RagnHome, ref x, ref y);
             float d = SimMath.Hypot(x - h.X, y - h.Y), t = Math.Max(RagnS.MinLeapTime, d / RagnS.LeapSpeed);
             h.RagnFromX = h.X; h.RagnFromY = h.Y; h.RagnToX = x; h.RagnToY = y; h.RagnLeapStart = Time; h.RagnLeapEnd = Time + t;
             if (d > 1e-3f) h.Facing = SimMath.Atan2(y - h.Y, x - h.X);
@@ -94,10 +108,46 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>Every tick for a living Ragn: the leap's flight and landing.</summary>
+        /// <summary>The enemy hero or minion (a hittable one, clear line from Ragn) closest to a spot, within a tile of it: the one a
+        /// tap aimed at, or one a drag dropped on.</summary>
+        Unit EnemyAt(Unit h, float x, float y)
+        {
+            Unit best = null; float bd = float.MaxValue;
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (!Hurtable(h, u) || u.Kind == UnitKind.Tower) continue;
+                float d = SimMath.Dist(u, x, y);
+                if (d > 1 + u.R || !Map.LosClear(h, u)) continue;
+                if (d < bd || (d == bd && u.Serial < best.Serial)) { bd = d; best = u; }
+            }
+            return best;
+        }
+
+        /// <summary>Where the rush stops: Gap short of the enemy's edge, on the line from Ragn (walls cut it as for a dragged rush).</summary>
+        void RagnStopShort(Unit h, Unit t, ref float x, ref float y)
+        {
+            float d = SimMath.Hypot(t.X - h.X, t.Y - h.Y), stop = Math.Max(0, d - h.R - t.R - RagnS.Gap);
+            if (d < 1e-4f) { x = h.X; y = h.Y; return; }
+            float ang = SimMath.Atan2(t.Y - h.Y, t.X - h.X);
+            RagnLandPoint(h, ang, Math.Min(1, stop / RagnS.LeapReach), out x, out y);
+        }
+
+        /// <summary>Every tick for a living Ragn: the rush, following its enemy, and the blow at its end.</summary>
         void RagnTick(Unit h)
         {
             if (!h.RagnLeaping) return;
+            var home = h.RagnHome;
+            if (home != null && home.Alive && !home.Has(St.Untargetable))
+            {
+                // the enemy moved: aim the rest of the rush at where it is now, at the rush's own speed
+                float tx = h.RagnToX, ty = h.RagnToY;
+                RagnStopShort(h, home, ref tx, ref ty);
+                float left = SimMath.Hypot(tx - h.X, ty - h.Y);
+                h.RagnFromX = h.X; h.RagnFromY = h.Y; h.RagnToX = tx; h.RagnToY = ty;
+                h.RagnLeapStart = Time - Rules.Tick; h.RagnLeapEnd = Time + Math.Max(0, left / RagnS.LeapSpeed - Rules.Tick);
+                if (left > 1e-3f) h.Facing = SimMath.Atan2(ty - h.Y, tx - h.X);
+            }
             float span = Math.Max(1e-3f, h.RagnLeapEnd - h.RagnLeapStart), k = SimMath.Clamp((Time - h.RagnLeapStart) / span, 0, 1);
             h.X = SimMath.Lerp(h.RagnFromX, h.RagnToX, k); h.Y = SimMath.Lerp(h.RagnFromY, h.RagnToY, k); h.MovedAt = Time;
             if (k < 1) return;
@@ -109,7 +159,9 @@ namespace BAM.Sim
         void RagnLand(Unit h)
         {
             Unit best = null; float bd = float.MaxValue;
-            for (int i = 0; i < Units.Count; i++)
+            var home = h.RagnHome; h.RagnHome = null;
+            if (home != null && Hurtable(h, home) && SimMath.Dist(home, h) <= h.R + home.R + RagnS.Contact) { best = home; bd = SimMath.Dist(home, h); }
+            for (int i = 0; i < Units.Count && best != home; i++)
             {
                 var u = Units[i];
                 if (!Hurtable(h, u)) continue;
@@ -139,24 +191,25 @@ namespace BAM.Sim
             LandPoint(h, aa, ak, NasslaS.Reach, out float x, out float y);
             var p = NewProj(ProjMode.Bramble, h, x, y);
             p.Kind = ProjKind.NasslaBramble; p.Radius = NasslaS.Radius; p.Dur = NasslaS.Duration; p.Dmg = dmg * NasslaS.PoisonCoeff / NasslaS.PoisonTicks;
+            p.Tgt = EnemyAt(h, x, y); // the brambles follow it until they root (ABC2: until the first tick)
+            if (p.Tgt != null) { p.X = p.Tgt.X; p.Y = p.Tgt.Y; }
             h.Facing = SimMath.Atan2(y - h.Y, x - h.X); h.AimT = Time + 0.4f;
-            AddStatus(h, St.Casting, 0.25f); AddStatus(h, St.Disarm, 0.25f);
-            BrambleUpdate(p); // the slow is on at once
+            AddStatus(h, St.Casting, 0.5f); AddStatus(h, St.Disarm, 0.5f); // ABC2: Duration 0.5, disarmed while it is cast
             castX = x; castY = y;
             return true;
         }
 
-        /// <summary>The thicket: the slow every Tick s on every enemy inside (clear line from its middle), the poison and the sap on
-        /// the odd ticks (about once a second, as every damage-over-time number shows). Ends after Duration or with Nässla.</summary>
+        /// <summary>The thicket (ABC2 brambleUpdate): it follows its enemy until the first tick at Warn s, then stays; at every tick
+        /// each enemy inside (clear line from its middle) takes a poison tick and the slow, each ally hero the sap. Ends after Duration or with Nässla.</summary>
         void BrambleUpdate(Proj p)
         {
             var h = p.Src;
             if (h == null || !h.Alive || p.T >= NasslaS.Duration - 1e-4f) { p.Done = true; return; }
-            int due = (int)Math.Floor((p.T + 1e-4f) / NasslaS.Tick) + 1; // tick 1 at the cast, then every 0.5 s
+            if (p.Ticks == 0 && p.Tgt != null && p.Tgt.Alive) { p.X = p.Tgt.X; p.Y = p.Tgt.Y; }
+            int due = p.T + 1e-4f < NasslaS.Warn ? 0 : Math.Min(NasslaS.PoisonTicks, (int)Math.Floor((p.T - NasslaS.Warn + 1e-4f) / NasslaS.Tick) + 1);
             while (p.Ticks < due)
             {
                 p.Ticks++;
-                bool sap = p.Ticks % 2 == 0; // 0.5, 1.5, 2.5 s
                 areaBuf.Clear();
                 for (int i = 0; i < Units.Count; i++)
                 {
@@ -169,12 +222,9 @@ namespace BAM.Sim
                 {
                     var u = areaBuf[i];
                     if (!u.Alive) continue;
-                    if (u.Team != h.Team)
-                    {
-                        AddSlowOnce(u, St.SlowPct, NasslaS.SlowTime, NasslaS.Slow, h);
-                        if (sap) SpecialHit(h, u, p.Dmg, ProjKind.NasslaBramble, false, DmgKind.Special, DmgFlags.NotDirect);
-                    }
-                    else if (sap && u.Kind == UnitKind.Hero && !u.IsClone) Heal(u, u.MaxHp * NasslaS.HealPct, h);
+                    if (u.Team == h.Team) { if (u.Kind == UnitKind.Hero && !u.IsClone) Heal(u, u.MaxHp * NasslaS.HealPct, h); continue; }
+                    SpecialHit(h, u, p.Dmg, ProjKind.NasslaBramble, false, DmgKind.Special, DmgFlags.NotDirect);
+                    if (u.Alive) AddSlowOnce(u, St.SlowPct, NasslaS.SlowTime, NasslaS.Slow, h);
                 }
             }
         }
@@ -327,7 +377,7 @@ namespace BAM.Sim
         /// <summary>A death ends a leap, a flock and the Trance.</summary>
         static void Hero8Reset(Unit h)
         {
-            h.RagnLeapEnd = -1; h.RavnaFlockEnd = -1; h.FlockHit.Clear(); h.TranceSteps = 0; h.TranceStill = 0;
+            h.RagnLeapEnd = -1; h.RagnHome = null; h.RavnaFlockEnd = -1; h.FlockHit.Clear(); h.TranceSteps = 0; h.TranceStill = 0;
         }
     }
 }
