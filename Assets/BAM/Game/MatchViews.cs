@@ -50,7 +50,7 @@ namespace BAM.Game
             public bool Ready;
             public StatusFlags Flags;
             public float Channel = -1f;    // the recall channel shown, -1 none
-            public bool Sprint;
+            public bool Sprint, Four;
             public int Form = -1;          // the body's form shown (UnitView.SetForm), -1 never told
             public bool Marked, Spark;     // Tikta's Deathmark and Blast's chain spark shown (Tikta 2.0 / Blast 2.0)
             public float ChainCd = -1f;    // the player's Blast: the chain cooldown arc shown, -1 none
@@ -1284,6 +1284,8 @@ namespace BAM.Game
                 if (ch != r.Channel) { r.Channel = ch; v.SetChannel(ch); }
                 bool sprint = u.Spell == SpellId.Sprint && Sprinting(u);
                 if (sprint != r.Sprint) { r.Sprint = sprint; v.SetSprint(sprint); }
+                bool four = u.Hero == HeroId.Ragn && m.RagnRunning(u); // Wolf Run: on all fours (Rickard 2026-11-10)
+                if (four != r.Four) { r.Four = four; v.SetFourLegs(four); }
                 int form = u.Hero == HeroId.Kugg && u.KuggRooted ? 1 : 0; // Kugg stands as a turret in his Anchor (Hero7.cs)
                 if (form != r.Form) { r.Form = form; v.SetForm(form); }
                 HeroMarks(r, u, v);

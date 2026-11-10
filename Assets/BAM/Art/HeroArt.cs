@@ -16,6 +16,8 @@ namespace BAM.Art
         public AnimationClip Idle, Run, Attack, Cast, Hit, Death;
         /// <summary>The slow stride, blended into the run by the speed over the ground (old Speltest's HeroMixamoGait).</summary>
         public AnimationClip Walk;
+        /// <summary>A run on all fours, played instead of the run while the hero's speed passive is on (Ragn's Wolf Run); null = none.</summary>
+        public AnimationClip RunFour;
         /// <summary>Standing height in units the model is scaled to.</summary>
         public float Height = 1f;
         /// <summary>Where in the attack clip (0..1) the blow lands or the shot leaves; PlayAttack's windup is lined up with it.</summary>

@@ -442,7 +442,8 @@ namespace BAM.Art
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             var output = AnimationPlayableOutput.Create(graph, "Anim", anim);
             bowHero = def.Gear != null && def.Gear == Weapons.For(HeroId.Tyra);
-            mixer = AnimationMixerPlayable.Create(graph, src2.Length + (bowHero ? 1 : 0));
+            cFour = art.RunFour != null ? src2.Length + (bowHero ? 1 : 0) : -1;
+            mixer = AnimationMixerPlayable.Create(graph, src2.Length + (bowHero ? 1 : 0) + (cFour >= 0 ? 1 : 0));
             animOut = output;
             output.SetSourcePlayable(mixer);
             layers = AnimationLayerMixerPlayable.Create(graph, 2);
@@ -477,6 +478,15 @@ namespace BAM.Art
                 stance.Pause();
                 graph.Connect(stance, 0, mixer, CStance);
                 mixer.SetInputWeight(CStance, 0f);
+            }
+            if (cFour >= 0)
+            {
+                four = AnimationClipPlayable.Create(graph, art.RunFour);
+                four.SetApplyFootIK(true);
+                four.Pause();
+                fourLen = Mathf.Max(0.1f, art.RunFour.length);
+                graph.Connect(four, 0, mixer, cFour);
+                mixer.SetInputWeight(cFour, 0f);
             }
             // walk and run are posed by hand each frame (AnimateImported): their time is the stride phase, not the clock; so are the
             // attack (its four phases) and the cast (so the upper-body copies stay on the same frame)
@@ -618,7 +628,7 @@ namespace BAM.Art
         /// <summary>Fresh state for a new life out of the pool.</summary>
         public void ResetState()
         {
-            moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; ownT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false;
+            moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; ownT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false; fourOn = false; fourW = 0f;
             atkCarry = castCarry = lastAtkW = lastCastW = 0f; drAtk = drCast = drHit = drUpA = drUpC = 0f;
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
@@ -882,6 +892,14 @@ namespace BAM.Art
 
         public override void SetChannel(float progress01) => channel = progress01;
         public override void SetSprint(bool on) => sprint = on;
+        public override void SetFourLegs(bool on) => fourOn = on;
+
+        // Ragn's Wolf Run (Rickard 2026-11-10: "kan vi få ragn att springa som ett djur när hans passiva är igång?"): his all-fours run
+        // takes the run's place, blended in and out over a quarter second, on the same stride phase as the run
+        AnimationClipPlayable four;
+        int cFour = -1;
+        bool fourOn;
+        float fourW, fourLen;
         public override void SetSquared(bool on) => squared = on;
         public override void SetDeathmark(float left) { if (left >= 0f || marks != null) Marks().SetDeathmark(left); }
         public override void SetChainSpark(bool on) { if (on || marks != null) Marks().SetChainSpark(on); }
@@ -1243,7 +1261,9 @@ namespace BAM.Art
             mixer.SetInputWeight(CIdle, rest * (1f - moveW) * (1f - stanceW));
             if (bowHero) mixer.SetInputWeight(CStance, rest * (1f - moveW) * stanceW);
             mixer.SetInputWeight(CWalk, rest * moveW * (1f - runK));
-            mixer.SetInputWeight(CRun, rest * moveW * runK);
+            fourW = cFour >= 0 ? Mathf.MoveTowards(fourW, fourOn && !dead ? 1f : 0f, dt * 4f) : 0f;
+            mixer.SetInputWeight(CRun, rest * moveW * runK * (1f - fourW));
+            if (cFour >= 0) { four.SetTime(gaitPh * fourLen); mixer.SetInputWeight(cFour, rest * moveW * runK * fourW); }
             mixer.SetInputWeight(CAttack, wAtk);
             mixer.SetInputWeight(CCast, wCast);
             mixer.SetInputWeight(CHit, wHit);

@@ -157,7 +157,7 @@ namespace BAM.Art.Editor
         struct Spec
         {
             public string Out; // null = Heroes
-            public string Hero, Model, Idle, Run, Attack, Cast, Hit, Death, Walk;
+            public string Hero, Model, Idle, Run, Attack, Cast, Hit, Death, Walk, RunFour;
             public float Height, Release, Start;
         }
 
@@ -228,7 +228,7 @@ namespace BAM.Art.Editor
             // Idle, Mutant Run, Mutant Swiping (both arms fastest at 0.44-0.45 of the 2.7 s clip) and the long Mutant Jumping (crouch, leap
             // with arms up, land) for Månsprång. Idle is Bonk's Orc Idle 1 since 2026-11-10: Mutant Breathing Idle held his right hand up
             // at his face (Rickard: "samma problem som med kugg"). Hit and death are Bonk's, walk Knut's, as Bonk's. A little shorter than Bonk, whose body he wore.
-            new Spec { Hero = "Ragn", Model = "Ragn/Ragn", Idle = "Bonk/Anim/IdleOrc1", Run = "Ragn/Anim/Run", Attack = "Ragn/Anim/Attack1", Cast = "Ragn/Anim/Cast", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.95f, Release = 0.45f },
+            new Spec { Hero = "Ragn", Model = "Ragn/Ragn", Idle = "Bonk/Anim/IdleOrc1", Run = "Ragn/Anim/Run", Attack = "Ragn/Anim/Attack1", Cast = "Ragn/Anim/Cast", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", RunFour = "Ragn/Anim/RunFour", Height = 1.95f, Release = 0.45f },
             // Nässla (hero 12, preview, 2026-11-10): Rickard's second Tripo swamp witch (short tunic, no staff: the first one with a long
             // ragged cloak and a root staff failed Mixamo's auto-rigger) rigged in Mixamo, his own clips: Old Man Idle, Running, Standing
             // 1H Magic Attack 01 (the throwing forearm fastest at 0.32-0.35) and Standing 2H Magic Area Attack 02 for Taggsnår (arms wide,
@@ -332,6 +332,7 @@ namespace BAM.Art.Editor
                 art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ModelsDir + ModelOf(s) + "_Tex.jpg");
                 art.Idle = Clip(s.Idle, 0); art.Run = Clip(s.Run, 1); art.Attack = Clip(s.Attack, 2);
                 art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
+                art.RunFour = s.RunFour != null ? Load(s.RunFour) : null;
                 art.Height = s.Height;
                 art.AttackRelease = s.Release;
                 art.AttackStart = s.Start;
