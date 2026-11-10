@@ -194,7 +194,7 @@ namespace BAM.UI
             return t;
         }
 
-        static string Lower(HeroId id) => HeroCatalog.Get(id).Name.ToLowerInvariant();
+        static string Lower(HeroId id) => HeroCatalog.FileName(HeroCatalog.Get(id).Name);
         // A new hero (Bonk) can come before his portrait: then the dark picture box stays empty, like Speltest's Custom card.
         static Texture2D Portrait(HeroId id) => Picture("portrait_" + Lower(id), true);
 

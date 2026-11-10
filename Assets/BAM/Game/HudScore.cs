@@ -130,7 +130,7 @@ namespace BAM.Game
                 {
                     row.Shown = u; row.K = row.D = row.A = row.S = -1;
                     var info = HeroCatalog.Get(u.Hero);
-                    row.Pic.texture = Resources.Load<Texture2D>("BAM/Menu/portrait_" + info.Name.ToLowerInvariant());
+                    row.Pic.texture = Resources.Load<Texture2D>("BAM/Menu/portrait_" + HeroCatalog.FileName(info.Name));
                     row.Back.color = u == m.Player ? RowMine : RowOther;
                     row.Stripe.color = t == 0 ? ScoreBlue : ScoreRed;
                     // online a person's row carries the seat's name, a bot's the hero's, as the names over the heroes (HudOverhead;

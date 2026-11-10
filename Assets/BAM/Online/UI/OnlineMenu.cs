@@ -192,7 +192,7 @@ namespace BAM.Online.UI
         static Grad VGrad(float y0, float y1, string a, string b) { var g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, a); g.addColorStop(1, b); return g; }
 
         // Rickard's hero portraits (Resources/BAM/Menu/portrait_<hero>), the same pictures as the game's own menus
-        static Img HeroIcon(string hero) => Img.Get("portrait_" + (hero ?? "").ToLowerInvariant());
+        static Img HeroIcon(string hero) => Img.Get("portrait_" + HeroCatalog.FileName(hero));
         // the heroes in the game, from the one list (Bonk was missing from this private copy, bug review 2026-11-02 nr 36, then Kugg,
         // full review 2026-11-09 nr 82): a hero's portrait file is portrait_<id in lower case>, as the game's own menus
         static readonly string[] HEROES = Array.ConvertAll(BAM.Sim.HeroCatalog.All, h => h.Id.ToString());

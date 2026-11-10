@@ -47,6 +47,10 @@ namespace BAM.Sim
             return l.ToArray();
         }
 
+        /// <summary>A hero name as it is spelled in picture file names: lower case, plain ASCII ("Nässla" -> "nassla"; Rickard
+        /// 2026-11-10: her portrait was missing in the game, the files are portrait_nassla.png).</summary>
+        public static string FileName(string name) => (name ?? "").ToLowerInvariant().Replace('ä', 'a').Replace('å', 'a').Replace('ö', 'o');
+
         /// <summary>The special's icon in Resources/BAM/Menu (each hero's one picture shows the form the one-tap special keeps).</summary>
         public static string SpecialIcon(HeroId id)
         {

@@ -128,7 +128,7 @@ namespace BAM.Game
             s.Root.gameObject.SetActive(u != null);
             if (u == null) return;
             if (!feedPics.TryGetValue(u.Hero, out var tex))
-                feedPics[u.Hero] = tex = Resources.Load<Texture2D>("BAM/Menu/portrait_" + HeroCatalog.Get(u.Hero).Name.ToLowerInvariant());
+                feedPics[u.Hero] = tex = Resources.Load<Texture2D>("BAM/Menu/portrait_" + HeroCatalog.FileName(HeroCatalog.Get(u.Hero).Name));
             s.Pic.texture = tex;
             s.Dark.enabled = false;
             s.Edge.color = u == m.Player ? PlayerEdge : u.Team == m.Player.Team ? TopOwn : TopFoe;

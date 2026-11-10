@@ -108,7 +108,7 @@ namespace BAM.Game
                 if (count[team] >= 3) continue;
                 var p = portraits[team * 3 + count[team]++];
                 p.Unit = h; p.Shown = -2; p.WasAlive = !h.Alive; // forces the first look
-                p.Pic.texture = Resources.Load<Texture2D>("BAM/Menu/portrait_" + HeroCatalog.Get(h.Hero).Name.ToLowerInvariant());
+                p.Pic.texture = Resources.Load<Texture2D>("BAM/Menu/portrait_" + HeroCatalog.FileName(HeroCatalog.Get(h.Hero).Name));
                 p.Root.gameObject.SetActive(true);
             }
             for (int i = 0; i < 2; i++) { bars[i].Trailing = 1f; bars[i].Since = 0f; bars[i].Shown = -1; }
