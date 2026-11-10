@@ -54,7 +54,7 @@ namespace BAM.Sim
             Place(a, x + 20, y); Place(h, x, y); m.Events.Clear(); h.Charge = h.HDef.MaxCharge;
             Check(m.TryCastSpecial(h, 0, 0.6f), "a dragged leap 3 tiles to the right");
             for (int i = 0; i < 120 && h.RagnLeaping; i++) { m.Time += Rules.Tick; m.RagnTick(h); }
-            Check(Near(h.X, x + 3, 0.15f) && h.ShieldAmount > 0 && !m.HasEvent(EventType.Hit), $"he lands 3 tiles on, shielded, nobody hit ({h.X - x:0.00})");
+            Check(Near(h.X, x + 3, 0.15f) && h.ShieldAmount == 0 && !m.HasEvent(EventType.Hit), $"he lands 3 tiles on, nobody hit, no shield (Bronson) ({h.X - x:0.00})");
 
             // a wall stops the leap: aimed into the map's edge, he never ends inside it
             Place(h, 1.2f, y); h.Charge = h.HDef.MaxCharge;

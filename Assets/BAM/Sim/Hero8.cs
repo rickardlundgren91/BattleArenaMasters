@@ -14,7 +14,8 @@ namespace BAM.Sim
     /// <summary>Ragn, the werewolf blacksmith (hero 12, Fighter). Special, Moon Leap (as ABC2's Bulldoze): he rushes up to LeapReach
     /// tiles at a random enemy in reach and follows it as it moves (walls and bases stop him). Reaching it, that enemy takes LandCoeff
     /// of his damage, a Stun and a Shove of Shove tiles; if it got away, the nearest enemy within LandRadius of where he stops does.
-    /// Ragn gets a shield of ShieldPct of his max health for ShieldTime s either way (Speltest BULLDOZE_SHIELD 20 % / 2 s).
+    /// Only when the landing hits someone does Ragn get a shield of ShieldPct of his max health for ShieldTime s (Speltest BULLDOZE_SHIELD
+    /// 20 % / 2 s; Rickard 2026-11-10: the shield only when the dash hits, as Bronson's).
     /// Passive, Wolf Run (as Ardor): after CalmTime s out of combat he runs RunBonus faster, until the next hit given or taken
     /// (Ardor: +1 tile/s flat on the Brawler's 2.16).</summary>
     public static class RagnS
@@ -169,8 +170,8 @@ namespace BAM.Sim
                 if (d > RagnS.LandRadius + u.R || !Map.LosClear(h, u)) continue;
                 if (d < bd || (d == bd && u.Serial < best.Serial)) { bd = d; best = u; }
             }
-            float sh = h.MaxHp * RagnS.ShieldPct;
-            AddStatus(h, St.Shield, RagnS.ShieldTime, 0, sh, h);
+            float sh = best != null ? h.MaxHp * RagnS.ShieldPct : 0; // a miss gives no shield (as Bronson's Bulldoze)
+            if (sh > 0) AddStatus(h, St.Shield, RagnS.ShieldTime, 0, sh, h);
             Emit(EventType.RagnLand, h, best, sh, (byte)HeroId.Ragn, best != null, h.X, h.Y);
             if (best == null) return;
             bool free = CcImmune(best);

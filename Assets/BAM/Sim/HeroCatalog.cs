@@ -81,7 +81,7 @@ namespace BAM.Sim
             // Tester Øli's four ideas as BAM's own heroes (Rickard 2026-11-09 "vi bygger alla fyra", kit approved on a card; Hero8.cs). In
             // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs)
             new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false, Preview = true,
-                SpecialName = "Moon Leap", SpecialDesc = "Leaps up to 5 tiles onto a random enemy in reach. Landing, the enemy nearest him is hit hard, stunned for 0.8 s and shoved 2 tiles back, and Ragn gets a shield of 15% of his health for 3 s.",
+                SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles at a random enemy in reach and follows it. If he reaches it, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
                 PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 15% faster, until he hits or is hit.",
                 Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
             new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true, Preview = true,
