@@ -1654,6 +1654,9 @@ namespace BAM.Art
         // Nässla's long hands went in through her tunic. At rest both arms turn out from her sides, as far as they hang (a raised arm
         // in her throw or cast is left alone), on the menu stage too
         const float NasslaArmOut = 14f;
+        // and her palms face forward in Moa's Idle (Rickard 2026-11-10, his picture: "hennes händer är vända med handflaterna framåt"):
+        // each hanging arm also turns about its own length, so the palms face her sides (checked on Unity's own pose of her idle)
+        const float NasslaPalmIn = 60f;
         void ArmsOut(float deg)
         {
             if (anim == null || !anim.isHuman) return;
@@ -1667,6 +1670,7 @@ namespace BAM.Art
                 Vector3 d = lo.position - up.position;
                 float m = d.magnitude, hang = m < 1e-6f ? 1f : Mathf.Clamp01(Vector3.Dot(d / m, down) / 0.7f);
                 up.rotation = Quaternion.AngleAxis(side * w * hang, fwd) * up.rotation;
+                if (m >= 1e-6f) up.rotation = Quaternion.AngleAxis(side * NasslaPalmIn * (w / deg) * hang, d / m) * up.rotation;
             }
             Out(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, 1f);
             Out(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, -1f);
