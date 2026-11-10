@@ -25,7 +25,7 @@ Battle Arena Masters is a fast, bite-sized arena brawler for your phone. Two tea
 minions, and one tower each side. Destroy the enemy tower before they destroy yours.
 
 PICK YOUR HERO
-Nine heroes, each with an auto attack, a special ability and a passive:
+Eleven heroes, each with an auto attack, a special ability and a passive:
 • Bram the Anvil – throws his huge hammer from range
 • Fenn the Pack Runner – a swift fighter with a spectral wolf at his side
 • Tyra the Longshot – an archer who hits from very far away
@@ -35,6 +35,8 @@ Nine heroes, each with an auto attack, a special ability and a passive:
 • Blast the Pyromaniac – bombs, fire and a lot of noise
 • Bonk the Caveman – a huge stone club and a ground slam that stuns everyone around him
 • Kugg the Rune Golem – drives his spikes into the ground and becomes a cannon that fires faster and farther
+• Ragn the Werewolf – leaps on his prey, stuns it and knocks it back
+• Nässla the Swamp Witch – grows thorny thickets that poison and slow
 
 SIMPLE TO PLAY, HARD TO MASTER
 Move with one thumb. Tap your special and it finds a target in range. Hide in the grass, fight around the walls,
@@ -75,6 +77,21 @@ Battle Arena Masters 0.2: online play!
 • Eight heroes, including the new Bonk
 • You can still play offline against bots
 Report bugs and anything that feels unfair to support@battlearenamasters.com or in our Discord.
+</en-US>
+```
+
+## Closed test release notes 0.4.0 (code 24, next build after 23, paste in "Release notes"; Discord: the longer text in bam-work/release/0.4.0-notes.txt)
+
+```
+<en-US>
+Battle Arena Masters 0.4.0
+From your feedback:
+• Two new heroes for everyone: Ragn the Werewolf and Nässla the Swamp Witch (Øli's ideas)
+Also new:
+• Balance: Fenn tankier, Blast hits harder, Moa's shields last longer, Bram's echo on every attack, Tyra a bit weaker
+• Kugg can't get stuck anchored
+• About 50 bug fixes and smarter bots
+Update to play online.
 </en-US>
 ```
 
