@@ -18,8 +18,13 @@ namespace BAM.Sim
             foreach (var id in new[] { HeroId.Ragn, HeroId.Nassla, HeroId.Skrall, HeroId.Ravna })
             {
                 var info = HeroCatalog.Get(id);
-                Check(info.Id == id && info.Preview && HeroCatalog.IndexOf(id) < 0, $"{id} waits in Coming, a preview hero");
-                Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == id) == HeroCatalog.PreviewsInHeroTest, $"HERO TEST lists {id} only with PreviewsInHeroTest");
+                bool inGame = id == HeroId.Ragn || id == HeroId.Nassla; // in All for everyone since 0.4.0 (Rickard 2026-11-10)
+                if (inGame) Check(info.Id == id && !info.Preview && HeroCatalog.InGame((int)id) && Array.Exists(HeroCatalog.HeroTestList, i => i.Id == id), $"{id} is in the game, in HERO TEST too");
+                else
+                {
+                    Check(info.Id == id && info.Preview && HeroCatalog.IndexOf(id) < 0, $"{id} waits in Coming, a preview hero");
+                    Check(Array.Exists(HeroCatalog.HeroTestList, i => i.Id == id) == HeroCatalog.PreviewsInHeroTest, $"HERO TEST lists {id} only with PreviewsInHeroTest");
+                }
                 Check(Defs.Hero(id).Id == id, $"{id} has its own numbers in Defs");
             }
             Check(HeroCatalog.Get(HeroId.Nassla).Name == "Nässla" && HeroCatalog.SpecialIcon(HeroId.Nassla) == "special_nassla", "Nässla shows her name, her icon file is plain ASCII");
@@ -44,11 +49,11 @@ namespace BAM.Sim
             Check(Near(a0 - a.Hp, h.StatDmg() * RagnS.LandCoeff * a.TakenMult, 0.5f), $"2 x his damage ({a0 - a.Hp:0.0})");
             Check(Near(h.ShieldAmount, h.MaxHp * RagnS.ShieldPct, 0.5f) && m.HasEvent(EventType.RagnLand), $"a shield of 20 % on landing ({h.ShieldAmount:0})");
 
-            // Bulldoze: the rush follows its enemy as it walks away, and still hits it
+            // the rush does not follow (Rickard 2026-11-10: a good player can dodge an ult): an enemy that steps out of the circle is missed
             Place(h, x, y); Place(a, x + 4, y); a.ClearStatuses(); a.KnockT = 0; a.KnockFreeAt = 0; h.ClearStatuses(); h.Charge = h.HDef.MaxCharge; a0 = a.Hp;
             Check(m.TryTapSpecial(h), "a second rush");
-            for (int i = 0; i < 120 && h.RagnLeaping; i++) { m.Time += Rules.Tick; a.Y += 0.04f; m.RagnTick(h); }
-            Check(a.Hp < a0 && a.Has(St.Stun), $"it followed him {a.Y - y:0.0} tiles sideways and hit ({a0 - a.Hp:0})");
+            for (int i = 0; i < 120 && h.RagnLeaping; i++) { m.Time += Rules.Tick; a.Y += 2.5f * Rules.Tick; m.RagnTick(h); }
+            Check(a.Hp == a0 && !a.Has(St.Stun) && h.ShieldAmount == 0, $"he stepped {a.Y - y:0.0} tiles sideways and was missed, no shield ({a0 - a.Hp:0})");
 
             // a landing on nothing still gives the shield, hurts nobody
             Place(a, x + 20, y); Place(h, x, y); m.Events.Clear(); h.Charge = h.HDef.MaxCharge;
@@ -90,7 +95,7 @@ namespace BAM.Sim
             Check(b != null && b.Zone == ZoneKind.Bramble && Near(b.X, a.X, 0.05f) && b.Tgt == a, "brambles on the enemy");
             Check(Near(m.SpeedOf(a), sp0, 0.02f), "no slow before the first tick");
             for (int i = 0; i < 10; i++) { m.Time += Rules.Tick; a.Y += 0.03f; m.UpdateProjectiles(Rules.Tick); }
-            Check(Near(b.Y, a.Y, 0.05f), $"for the first half second they follow him ({b.Y - y:0.00})");
+            Check(Near(b.Y, y, 0.01f), $"they stay where she aimed, they do not follow him ({b.Y - y:0.00})");
             for (int i = 0; i < 30 && b.Ticks == 0; i++) { m.Time += Rules.Tick; m.UpdateProjectiles(Rules.Tick); }
             Check(b.Ticks == 1 && Near(m.SpeedOf(a), sp0 * (1 + NasslaS.Slow), 0.02f), $"the first tick slows him 75 % ({m.SpeedOf(a):0.00})");
             float by = b.Y; a.Y += 0.3f;

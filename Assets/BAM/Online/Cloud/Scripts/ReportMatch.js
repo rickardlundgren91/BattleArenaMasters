@@ -61,9 +61,10 @@ async function sweepPvp(data, projectId, now) {
     }
   } catch (e) { }
 }
-// Kugg joined the game as hero 2 for everyone (0.3.9, main 5d8275e); a hero missing here makes every match with him refused
+// Kugg joined the game as hero 2 for everyone (0.3.9, main 5d8275e), Ragn and Nässla (code name Nassla) in 0.4.0; a hero missing
+// here makes every match with him refused
 // ("hero or bot level") and the phone drops it for good (full review 2026-11-09 nr 68). Keep this list equal to HeroCatalog.All.
-const HEROES = ["Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk", "Kugg", "Hilde", "Oaken"], LEVELS = ["Easy", "Normal", "Hard", "Ultra"];
+const HEROES = ["Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk", "Kugg", "Hilde", "Oaken", "Ragn", "Nassla"], LEVELS = ["Easy", "Normal", "Hard", "Ultra"];
 
 const xpToNext = l => 100 + 50 * (l - 1);
 function levelOf(xp) { let l = 1; while (l < MAX_LEVEL && xp >= xpToNext(l)) { xp -= xpToNext(l); l++; } return l; }

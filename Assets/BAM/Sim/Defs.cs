@@ -91,8 +91,8 @@ namespace BAM.Sim
             // Ragn and Nässla as ABC2's Bronson and Ginette (Rickard 2026-11-10 "kan du göra så att dom känns lite mer som i abc2"):
             // their charges (6, 7) and attack pace (1.3 s, 2.0 s) from abc2_gamedata.json, Nässla slower than Ragn as the Witch is than
             // the Brawler (1.92 vs 2.16); damage per hit set with bots (Hard 3200 matches, BAM_HEROES=15): at BAM's damage per second
-            // the stronger specials made them 62.5 and 61.6 %, at 17.5/4 and 23/5 they are 50.8 and 53.2 % (before: 53.3 and 51.7 %)
-            H(HeroId.Ragn, 0.4f, 2.5f, 6, false, 270, 45, 17.5f, 4, 1.3f, -0.03f, 2.4f, 0.15f, 0, 0.075f, ProjKind.RagnClaw, RagnS.LeapReach, AimShape.Circle, RagnS.LeapReach, RagnS.LandRadius),
+            // the stronger specials made them 62.5 and 61.6 %, at 17.5/4 and 23/5 they are 50.8 and 53.2 % (before: 53.3 and 51.7 %); a Moon Leap that can be dodged (2026-11-10) put Ragn at 41.8 %, so 21/5 and LandCoeff 2.6: 51.3 %
+            H(HeroId.Ragn, 0.4f, 2.5f, 6, false, 270, 45, 21, 5, 1.3f, -0.03f, 2.4f, 0.15f, 0, 0.075f, ProjKind.RagnClaw, RagnS.LeapReach, AimShape.Circle, RagnS.LeapReach, RagnS.LandRadius),
             H(HeroId.Nassla, 0.25f, 2.25f, 7, false, 190, 30, 23, 5, 2.0f, -0.036f, 3.8f, 0.2f, 0, 0.25f, ProjKind.NasslaThorn, NasslaS.Reach, AimShape.Circle, NasslaS.Reach, NasslaS.Radius),
             H(HeroId.Skrall, 0.3f, 2.3f, 9, false, 185, 29, 24, 5.5f, 1.7f, -0.036f, 3.8f, 0.25f, 0, 0.08f, ProjKind.SkrallBolt, 3.8f, AimShape.None, 0, 0),
             H(HeroId.Ravna, 0.25f, 2.6f, 10, false, 205, 32, 15, 3.5f, 0.9f, -0.018f, 2.3f, 0.12f, 0, 0.08f, ProjKind.RavnaSlash, RavnaS.FlockReach, AimShape.Line, RavnaS.FlockReach, RavnaS.HitRadius),

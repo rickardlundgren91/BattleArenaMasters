@@ -28,7 +28,7 @@ namespace BAM.Sim
     {
         /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in, Kugg 2026-11-09; Hilde and
         /// Oaken (HeroId 8 and 9) wait in Coming for theirs.</summary>
-        public const int Count = 9;
+        public const int Count = 11;
 
         /// <summary>Is this HeroId one of the heroes in the game (All)? HeroIds are not contiguous since Kugg (10) went in before Hilde (8)
         /// and Oaken (9), so a number below Count is not enough.</summary>
@@ -78,16 +78,8 @@ namespace BAM.Sim
                 SpecialName = "Earth Judgement", SpecialDesc = "Tap: after a short moment he slams the ground, hurting every enemy around him. Drag: a quake runs along a line, hurting every enemy in it and knocking enemy heroes back. Walls stop it.",
                 PassiveName = "Stored Impact", PassiveDesc = "After 4 s without losing health, the next hit from an enemy hero is cut by 30%, and part of it is added to his next attack. Every 16 s.",
                 Health = 3, Damage = 2, Speed = 1, Difficulty = 2 },
-            // Tester Øli's four ideas as BAM's own heroes (Rickard 2026-11-09 "vi bygger alla fyra", kit approved on a card; Hero8.cs). In
-            // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs)
-            new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false, Preview = true,
-                SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles at a random enemy in reach and follows it. If he reaches it, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
-                PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 15% faster, until he hits or is hit.",
-                Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
-            new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true, Preview = true,
-                SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod at a random enemy in her range. A thicket grows there for 3 s: enemies in it are slowed 35% and poisoned.",
-                PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back every second.",
-                Health = 1, Damage = 2, Speed = 2, Difficulty = 2 },
+            // Tester Øli's ideas Skrall and Ravna (Rickard 2026-11-09 "vi bygger alla fyra", kit approved on a card; Hero8.cs). In
+            // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs); Ragn and Nässla are in All
             new HeroInfo { Id = HeroId.Skrall, Name = "Skrall", Title = "The Storm Monk", Role = "Mage", Ranged = true, Preview = true,
                 SpecialName = "Thunder Judgement", SpecialDesc = "Three lightning strikes fall on random enemies in his range, each after a short red warning. Every enemy under one is hurt; heroes are stunned for 0.3 s.",
                 PassiveName = "Trance", PassiveDesc = "Every second he stands still with no enemy in reach he gathers a step, up to 3. His next attack deals 40% more per step; with all 3 it also jumps to another enemy close by.",
@@ -110,11 +102,7 @@ namespace BAM.Sim
         /// <summary>The preview heroes the HEROES page also shows, after the heroes in the game, now that they have Rickard's own bodies
         /// (Rickard 2026-11-10: "lägg in dom två med modeller i menyn nu istället så man ser dom som dom ska vara sen"). Only in the
         /// Unity editor, like PreviewsInHeroTest: there they can be looked at and tried (TRY), not picked for a match.</summary>
-#if UNITY_EDITOR
-        static readonly HeroId[] menuPreviews = { HeroId.Ragn, HeroId.Nassla };
-#else
-        static readonly HeroId[] menuPreviews = { };
-#endif
+        static readonly HeroId[] menuPreviews = { }; // Ragn and Nässla were here (editor only) until they joined All for 0.4.0
 
         /// <summary>What the HEROES page lists: All, then (in the editor) the preview heroes with their own bodies. Index i below
         /// Count is All[i]; from Count on it is a preview hero, which can be tried in HERO TEST but not chosen.</summary>
@@ -198,6 +186,16 @@ namespace BAM.Sim
                 OneTapDesc = "Tap: slams his club into the ground with all his might: every enemy in a big circle around him takes heavy damage and is stunned for 0.8 s. Only with an enemy in the circle.",
                 PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
                 Health = 2, Damage = 1, Speed = 2, Difficulty = 1 }, // health 3 -> 2: Fenn 240 hp tops the terciles now (2026-11-10)
+            // Tester Øli's Ragn and Nässla (after the old game's Bronson and Ginette) with Rickard's own bodies: in the game for everyone
+            // in 0.4.0 (Rickard 2026-11-10: "för 0.4.0 ska ragn och nässla vara tillgängliga för alla"), open from the start like Kugg
+            new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false,
+                SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles to where a random enemy in reach stands. If it is still there, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
+                PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
+                Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
+            new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
+                SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 75% for 1 s.",
+                PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
+                Health = 1, Damage = 1, Speed = 1, Difficulty = 2 }, // bars from Defs' terciles (Fix0400ClientTests)
         };
     }
 }

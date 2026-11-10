@@ -12,23 +12,24 @@ namespace BAM.Sim
     // (Ginette: Bramble Blossom), with abc2_gamedata.json's numbers and the live Speltest rules (SimCombat.cs, Sim.cs).
 
     /// <summary>Ragn, the werewolf blacksmith (hero 12, Fighter). Special, Moon Leap (as ABC2's Bulldoze): he rushes up to LeapReach
-    /// tiles at a random enemy in reach and follows it as it moves (walls and bases stop him). Reaching it, that enemy takes LandCoeff
-    /// of his damage, a Stun and a Shove of Shove tiles; if it got away, the nearest enemy within LandRadius of where he stops does.
+    /// tiles at a random enemy in reach, to where it stood (he does not follow it: a good player can dodge it; walls and bases stop him). Reaching it, that enemy takes LandCoeff
+    /// of his damage, a Stun and a Shove of Shove tiles; if it stepped away, the nearest enemy within LandRadius of where he stops does
+    /// (the red warning circle; LandRadius 1.2 -> 0.7 and Contact 0.5 -> 0.2 and LeapSpeed 14 -> 10, so stepping sideways at once at walking pace dodges a long leap).
     /// Only when the landing hits someone does Ragn get a shield of ShieldPct of his max health for ShieldTime s (Speltest BULLDOZE_SHIELD
     /// 20 % / 2 s; Rickard 2026-11-10: the shield only when the dash hits, as Bronson's).
     /// Passive, Wolf Run (as Ardor): after CalmTime s out of combat he runs RunBonus faster, until the next hit given or taken
     /// (Ardor: +1 tile/s flat on the Brawler's 2.16).</summary>
     public static class RagnS
     {
-        public const float LeapReach = 5, LeapSpeed = 14, MinLeapTime = 0.2f, LandRadius = 1.2f, LandCoeff = 2, Stun = 1.25f, Shove = 4;
+        public const float LeapReach = 5, LeapSpeed = 10, MinLeapTime = 0.2f, LandRadius = 0.7f, LandCoeff = 2.6f, Stun = 1.25f, Shove = 4;
         public const float ShieldPct = 0.2f, ShieldTime = 2;
         public const float CalmTime = 3, RunBonus = 0.4f;
         /// <summary>He stops this far short of the enemy's edge, and hits it if he is within Contact of touching.</summary>
-        public const float Gap = 0.1f, Contact = 0.5f;
+        public const float Gap = 0.1f, Contact = 0.2f;
     }
 
     /// <summary>Nässla, the swamp witch (hero 13, Mage/Support). Special, Thorn Thicket (as ABC2's Bramble Blossom): brambles on a
-    /// random enemy in her range; for the first Warn s they follow that enemy, then they root to the spot. At Warn s and every Tick s
+    /// random enemy in her range, rooted to its spot (they do not follow it: Warn s to step out). At Warn s and every Tick s
     /// after, PoisonTicks times, every enemy within Radius takes a tick (PoisonCoeff of her damage in all) and is slowed by Slow for
     /// SlowTime s. It ends early when she dies. Passive, Healing Sap (her own, not the Witch's extra life: Rickard 2026-11-10 "nässla
     /// kanske inte ska ha ett extra liv som ginette"): at every tick her ally heroes in it get HealPct of their max health back.</summary>
@@ -138,17 +139,8 @@ namespace BAM.Sim
         void RagnTick(Unit h)
         {
             if (!h.RagnLeaping) return;
-            var home = h.RagnHome;
-            if (home != null && home.Alive && !home.Has(St.Untargetable))
-            {
-                // the enemy moved: aim the rest of the rush at where it is now, at the rush's own speed
-                float tx = h.RagnToX, ty = h.RagnToY;
-                RagnStopShort(h, home, ref tx, ref ty);
-                float left = SimMath.Hypot(tx - h.X, ty - h.Y);
-                h.RagnFromX = h.X; h.RagnFromY = h.Y; h.RagnToX = tx; h.RagnToY = ty;
-                h.RagnLeapStart = Time - Rules.Tick; h.RagnLeapEnd = Time + Math.Max(0, left / RagnS.LeapSpeed - Rules.Tick);
-                if (left > 1e-3f) h.Facing = SimMath.Atan2(ty - h.Y, tx - h.X);
-            }
+            // the rush goes where it was aimed and does not follow (Rickard 2026-11-10: the first version, "som kunde missa och följde
+            // regeln om att man ska kunna dodgea ult om man är bra"): an enemy that steps away is missed
             float span = Math.Max(1e-3f, h.RagnLeapEnd - h.RagnLeapStart), k = SimMath.Clamp((Time - h.RagnLeapStart) / span, 0, 1);
             h.X = SimMath.Lerp(h.RagnFromX, h.RagnToX, k); h.Y = SimMath.Lerp(h.RagnFromY, h.RagnToY, k); h.MovedAt = Time;
             if (k < 1) return;
@@ -192,7 +184,8 @@ namespace BAM.Sim
             LandPoint(h, aa, ak, NasslaS.Reach, out float x, out float y);
             var p = NewProj(ProjMode.Bramble, h, x, y);
             p.Kind = ProjKind.NasslaBramble; p.Radius = NasslaS.Radius; p.Dur = NasslaS.Duration; p.Dmg = dmg * NasslaS.PoisonCoeff / NasslaS.PoisonTicks;
-            p.Tgt = EnemyAt(h, x, y); // the brambles follow it until they root (ABC2: until the first tick)
+            // they root where she aimed and do not follow (Rickard 2026-11-10: a good player can dodge an ult, as he chose on a card)
+            p.Tgt = EnemyAt(h, x, y);
             if (p.Tgt != null) { p.X = p.Tgt.X; p.Y = p.Tgt.Y; }
             h.Facing = SimMath.Atan2(y - h.Y, x - h.X); h.AimT = Time + 0.4f;
             AddStatus(h, St.Casting, 0.5f); AddStatus(h, St.Disarm, 0.5f); // ABC2: Duration 0.5, disarmed while it is cast
@@ -206,7 +199,6 @@ namespace BAM.Sim
         {
             var h = p.Src;
             if (h == null || !h.Alive || p.T >= NasslaS.Duration - 1e-4f) { p.Done = true; return; }
-            if (p.Ticks == 0 && p.Tgt != null && p.Tgt.Alive) { p.X = p.Tgt.X; p.Y = p.Tgt.Y; }
             int due = p.T + 1e-4f < NasslaS.Warn ? 0 : Math.Min(NasslaS.PoisonTicks, (int)Math.Floor((p.T - NasslaS.Warn + 1e-4f) / NasslaS.Tick) + 1);
             while (p.Ticks < due)
             {
