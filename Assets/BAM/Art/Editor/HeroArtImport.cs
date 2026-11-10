@@ -221,8 +221,10 @@ namespace BAM.Art.Editor
             // Kugg (hero 10, 2026-11-09): Rickard's Tripo rune golem rigged in Mixamo (the cannon is his right arm), his own clips:
             // Mutant Breathing Idle, Male Weighted Run, Firing A Gun (the kick at 0.30-0.33 s of 1.17, so the shot leaves at 27 %)
             // and Standing To Kneeling Down as he anchors (the turret takes over 0.3 s later, BodyForm.cs). Hit, death and walk are
-            // Oaken's heavy golem clips. Height as Oaken's, whose body he wore until now (the turret form is sized from it).
-            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/Idle", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
+            // Oaken's heavy golem clips. Height as Oaken's, whose body he wore until now (the turret form is sized from it). Idle is
+            // Bonk's Orc Idle 1 since 2026-11-10, as Ragn's (Rickard: "ändra kugg på samma sätt med idle som ragn"): Mutant Breathing
+            // Idle lifted his cannon arm. Kugg/Anim/Idle.fbx stays in the project so the old idle is one line away.
+            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Bonk/Anim/IdleOrc1", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
             // Ragn (hero 11, preview, 2026-11-10): Rickard's Tripo werewolf blacksmith rigged in Mixamo, his own clips: Mutant Breathing
             // Idle, Mutant Run, Mutant Swiping (both arms fastest at 0.44-0.45 of the 2.7 s clip) and the long Mutant Jumping (crouch, leap
             // with arms up, land) for Månsprång. Idle is Bonk's Orc Idle 1 since 2026-11-10: Mutant Breathing Idle held his right hand up
