@@ -149,6 +149,10 @@ namespace BAM.Art
         /// <summary>Degrees added to <see cref="ArmSpread"/> in code only (the Weapon Tuner and WeaponTune.json leave it alone), so
         /// hands that hang close to the legs stay off the thighs as the idle sways (Tyra, ANIM-24).</summary>
         public float HandsOff;
+        /// <summary>Every finger of both hands is held in the model's own pose each frame, before the fist closes, so no clip moves
+        /// them (Tyra: her Avatar maps only the index, so her idle and run moved that one finger alone while the rest stood still,
+        /// Cajsa 2026-11-11: "Tyras fingrar är så klåfingriga"). Code only.</summary>
+        public bool StillFingers;
         /// <summary>At rest the right arm bends so the fist sits in front of the shoulder and the weapon lies back over it (Bonk);
         /// attack and cast clips play untouched.</summary>
         public bool Shoulder;
@@ -235,8 +239,12 @@ namespace BAM.Art
             // torch from the front (Rickard 2026-10-26: "moa håller inte i sina vapen"): the staff now stands up through her right
             // fist, face to the front, and the crest sits on her left hand turned half to the front; (2026-10-28) it stays up through
             // her swing and cast, leaning a third of the way with her hand, instead of flipping over in her fist
+            // (Cajsa 2026-11-11: "Moas arm/stav går in i hennes kropp", "andra handen går in i Moas ben") her idle hangs both hands
+            // against her hips, so the staff's fist and the staff went into her tunic and the left hand into her thigh; both arms 14
+            // degrees out, as Nässla in the same idle (Blender renders bam-work/feedback-cajsa-modeller/moa_fore_efter.png)
             g[(int)HeroId.Moa] = new GearDef
             {
+                HandsOff = 14f,
                 Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, SwingFollow = 0.35f } },
                 Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true, Turn = 45f, Off = 0.12f },
             };
@@ -262,6 +270,7 @@ namespace BAM.Art
             g[(int)HeroId.Tyra] = new GearDef
             {
                 HandsOff = 12f,
+                StillFingers = true, // her idle and run moved only the index (Cajsa 2026-11-11: "klåfingriga")
                 Weapons = new[]
                 {
                     new WeaponDef
@@ -567,6 +576,7 @@ namespace BAM.Art
                 h.carryLo = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
                 h.carryHand = an.GetBoneTransform(HumanBodyBones.RightHand);
             }
+            if (g.StillFingers) h.KeepFingers(an);
             for (int i = 0; i < nw; i++) h.AddWeapon(i, g.Weapons[i], an, figH, rends, op, fd);
             if (g.Shield != null) h.AddShield(g.Shield, an, figH, rends, op, fd);
             if (g.Cannon != null) h.AddCannon(g.Cannon, an, figH, rends, op, fd);
@@ -654,6 +664,32 @@ namespace BAM.Art
                     : hd.TransformPoint(W.NoFingerThumb * (ixB != null ? hd.InverseTransformPoint(ixB.position).magnitude : fl));
                 Anatomy(i, W, hd, ixP, thP);
             }
+        }
+
+        // GearDef.StillFingers: every finger bone of both hands (by the Avatar, else by its Mixamo name) and its pose as built, the
+        // bind pose (the weapons go on before the clips play)
+        Transform[] stillB;
+        Quaternion[] stillR;
+
+        void KeepFingers(Animator an)
+        {
+            var bs = new List<Transform>();
+            for (int side = 0; side < 2; side++)
+            {
+                bool left = side == 1;
+                Transform hd = an.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+                if (hd == null) continue;
+                int f0 = (int)(left ? HumanBodyBones.LeftThumbProximal : HumanBodyBones.RightThumbProximal);
+                for (int k = 0; k < 15; k++)
+                {
+                    Transform b = an.GetBoneTransform((HumanBodyBones)(f0 + k));
+                    if (b == null) b = HandBone(hd, left, FingerNames[k / 3] + (k % 3 + 1));
+                    if (b != null && !bs.Contains(b)) bs.Add(b);
+                }
+            }
+            stillB = bs.ToArray();
+            stillR = new Quaternion[stillB.Length];
+            for (int i = 0; i < stillB.Length; i++) stillR[i] = stillB[i].localRotation;
         }
 
         /// <summary>A finger's root bone under the hand by its Mixamo name (LeftHandThumb1 and so on), for rigs whose Avatar does not
@@ -846,6 +882,8 @@ namespace BAM.Art
                 show = backIn > PopIn ? 0f : 1f - Mathf.Max(0f, backIn) / PopIn;
                 if (backIn < 0f) { backIn = -1f; show = 1f; }
             }
+            // GearDef.StillFingers: the fingers back in the model's own pose before anything below bends them (Close hand)
+            if (stillB != null) for (int i = 0; i < stillB.Length; i++) stillB[i].localRotation = stillR[i];
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
             ArmTune(dead ? 0f : 1f - Mathf.Clamp01(actW));
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
