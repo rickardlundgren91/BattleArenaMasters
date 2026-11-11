@@ -42,6 +42,7 @@ namespace BAM.Sim
             {
                 if (!(u.AimT > Time)) u.Facing = SimMath.Atan2(dy, dx);
                 u.WalkT += moved; u.MovedAt = Time;
+                RavnaRestless(u, moved); // Ravna's walking charges her special (Hero8.cs)
             }
         }
 

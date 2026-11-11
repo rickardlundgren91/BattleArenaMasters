@@ -59,6 +59,15 @@ namespace BAM.Sim
     public static class RavnaS
     {
         public const float FlockReach = 5.5f, FlockSpeed = 5.5f, HitRadius = 0.6f, FlockCoeff = 1.0f, MarkTime = 3;
+        /// <summary>Night Flight (Rickard 2026-11-11 "ron blir ravna": ABC2's Ron, Banshee, Darkslide + Restless, with BAM's own
+        /// numbers, "inte exakta siffror"): the flock lasts FlockTime s at FlightSpeed, goes THROUGH walls (only bases and the arena's
+        /// edge stop it) and after SteerDelay s turns towards the joystick at TurnRate rad/s (a bot steers at the nearest enemy hero
+        /// it has not torn yet). Each enemy it touches (FlightRadius) takes FlightCoeff once and is slowed FlightSlow for SlowTime s.
+        /// Passive Restless: walking charges her special, one hit's worth per RunPerCharge tiles (the special ring fills as she runs);
+        /// Crow's Eye is gone. false = the 9 Nov Crow Flock (straight 5.5 tiles, walls stop it) and Crow's Eye.</summary>
+        public const bool NightFlight = true;
+        public const float FlockTime = 2.2f, FlightSpeed = 5.2f, SteerDelay = 0.35f, TurnRate = 3.5f, FlightRadius = 0.75f,
+            FlightCoeff = 1.1f, FlightSlow = 0.3f, SlowTime = 1.5f, RunPerCharge = 9f;
     }
 
     public sealed partial class Unit
@@ -302,13 +311,27 @@ namespace BAM.Sim
         }
 
         // ---------- Ravna ----------
-        /// <summary>How far her flock flies from (x, y) along ang before a wall or a base stops it (also the red warning's length).</summary>
-        public float FlockReach(Unit h, float ang) => TowerReach(h.X, h.Y, ang, Map.LaneReach(h.X, h.Y, ang, RavnaS.FlockReach), h.R);
+        /// <summary>Night Flight and Restless are on (RavnaS.NightFlight); Tests/Sim runs its older Ravna checks with the 9 Nov flock.</summary>
+        internal static bool NightFlightOn = RavnaS.NightFlight;
+
+        /// <summary>How far her flock flies from (x, y) along ang before it is stopped (also the red warning's length): walls and a
+        /// base, or with Night Flight only a base and the arena's edge (it flies through walls, and on for FlockTime).</summary>
+        public float FlockReach(Unit h, float ang) => TowerReach(h.X, h.Y, ang,
+            NightFlightOn ? EdgeReach(h.X, h.Y, ang, RavnaS.FlockReach, h.R) : Map.LaneReach(h.X, h.Y, ang, RavnaS.FlockReach), h.R);
+
+        /// <summary>How far from (x, y) along ang (up to len) a circle of radius r stays inside the arena.</summary>
+        float EdgeReach(float x, float y, float ang, float len, float r)
+        {
+            float c = SimMath.Cos(ang), s = SimMath.Sin(ang), d = len;
+            if (c > 1e-5f) d = Math.Min(d, (Map.W - r - x) / c); else if (c < -1e-5f) d = Math.Min(d, (r - x) / c);
+            if (s > 1e-5f) d = Math.Min(d, (Map.H - r - y) / s); else if (s < -1e-5f) d = Math.Min(d, (r - y) / s);
+            return Math.Max(0, d);
+        }
 
         bool CastRavna(Unit h)
         {
             if (h.RavnaFlying || !Aimed(h, out float aa, out _)) return false; // the flock needs a way (the tap gives its target's)
-            float len = FlockReach(h, aa), t = Math.Max(0.1f, len / RavnaS.FlockSpeed);
+            float len = FlockReach(h, aa), t = NightFlightOn ? RavnaS.FlockTime : Math.Max(0.1f, len / RavnaS.FlockSpeed);
             h.RavnaAng = aa; h.RavnaFlockEnd = Time + t; h.FlockHit.Clear();
             h.Facing = aa; h.AimT = Time + t + 0.1f;
             AddStatus(h, St.Untargetable, t); AddStatus(h, St.Casting, t); AddStatus(h, St.Disarm, t);
@@ -317,26 +340,59 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>Every tick for a living Ravna: the flock flies on (stopping at a wall or a base) and tears at whom it passes.</summary>
+        /// <summary>Every tick for a living Ravna: the flock flies on (stopping where FlockReach says) and tears at whom it passes.</summary>
         void RavnaTick(Unit h, float dt)
         {
             if (!h.RavnaFlying) return;
-            float c = SimMath.Cos(h.RavnaAng), s = SimMath.Sin(h.RavnaAng), step = RavnaS.FlockSpeed * dt;
+            if (NightFlightOn && Time - (h.RavnaFlockEnd - RavnaS.FlockTime) >= RavnaS.SteerDelay && RavnaSteer(h, out float want))
+            {
+                float diff = want - h.RavnaAng;
+                while (diff > SimMath.PI) diff -= 2 * SimMath.PI;
+                while (diff < -SimMath.PI) diff += 2 * SimMath.PI;
+                float turn = RavnaS.TurnRate * dt;
+                h.RavnaAng += SimMath.Clamp(diff, -turn, turn); h.Facing = h.RavnaAng;
+            }
+            float c = SimMath.Cos(h.RavnaAng), s = SimMath.Sin(h.RavnaAng), step = (NightFlightOn ? RavnaS.FlightSpeed : RavnaS.FlockSpeed) * dt;
             float nx = h.X + c * step, ny = h.Y + s * step;
-            bool stop = !Map.Free(nx, ny, h.R) || TowerAt(nx, ny, h.R);
+            bool stop = NightFlightOn ? EdgeReach(h.X, h.Y, h.RavnaAng, step, h.R) < step - 1e-4f || TowerAt(nx, ny, h.R)
+                : !Map.Free(nx, ny, h.R) || TowerAt(nx, ny, h.R);
             if (!stop) { h.X = nx; h.Y = ny; h.MovedAt = Time; RavnaTears(h); }
+            else if (NightFlightOn && Time - (h.RavnaFlockEnd - RavnaS.FlockTime) >= RavnaS.SteerDelay) stop = false; // at the edge she can still turn away
             if (stop || Time >= h.RavnaFlockEnd - 1e-4f) RavnaLand(h);
+        }
+
+        /// <summary>Where Night Flight wants to turn: the player's joystick, a bot the nearest enemy hero it sees and has not torn.</summary>
+        bool RavnaSteer(Unit h, out float ang)
+        {
+            ang = 0;
+            if (h.Bot == null)
+            {
+                if (h.Seat < 0) return false;
+                float mx = seatMoveX[h.Seat], my = seatMoveY[h.Seat];
+                if (mx * mx + my * my < 0.04f) return false;
+                ang = SimMath.Atan2(my, mx); return true;
+            }
+            Unit best = null; float bd = 6;
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (u.Kind != UnitKind.Hero || u.IsClone || !Hurtable(h, u) || h.FlockHit.Contains(u) || !IsVisibleTo(u, h.Team)) continue;
+                float d = SimMath.Dist(h, u); if (d < bd) { bd = d; best = u; }
+            }
+            if (best == null) return false;
+            ang = SimMath.Atan2(best.Y - h.Y, best.X - h.X); return true;
         }
 
         void RavnaTears(Unit h)
         {
-            float dmg = h.StatDmg() * RavnaS.FlockCoeff;
+            float dmg = h.StatDmg() * (NightFlightOn ? RavnaS.FlightCoeff : RavnaS.FlockCoeff), r = NightFlightOn ? RavnaS.FlightRadius : RavnaS.HitRadius;
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                if (!Hurtable(h, u) || h.FlockHit.Contains(u) || SimMath.Dist(u, h) > RavnaS.HitRadius + u.R) continue;
+                if (!Hurtable(h, u) || h.FlockHit.Contains(u) || SimMath.Dist(u, h) > r + u.R) continue;
                 h.FlockHit.Add(u);
                 SpecialHit(h, u, dmg, ProjKind.RavnaFlock, true);
+                if (NightFlightOn && u.Alive && (u.Kind == UnitKind.Hero || u.IsMinionLike)) AddSlowOnce(u, St.SlowPct, RavnaS.SlowTime, -RavnaS.FlightSlow, h);
             }
         }
 
@@ -344,8 +400,15 @@ namespace BAM.Sim
         {
             h.RavnaFlockEnd = -1; h.FlockHit.Clear();
             h.RemoveAll(St.Untargetable); h.RemoveAll(St.Casting); h.RemoveAll(St.Disarm);
-            Unstick(h);
+            Unstick(h); // Night Flight may end over a wall: the nearest free spot
             Emit(EventType.FlockEnd, h, null, 0, (byte)HeroId.Ravna, false, h.X, h.Y);
+        }
+
+        /// <summary>Restless (RavnaS.NightFlight): her own walking charges her special.</summary>
+        internal static void RavnaRestless(Unit u, float moved)
+        {
+            if (!NightFlightOn || u.Kind != UnitKind.Hero || u.Hero != HeroId.Ravna || u.IsClone || u.RavnaFlying || u.HDef == null) return;
+            u.Charge = Math.Min(u.HDef.MaxCharge, u.Charge + moved / RavnaS.RunPerCharge);
         }
 
         /// <summary>Crow's Eye: an enemy hero her auto attack hurt stays seen for MarkTime s, in grass too (RevealT).</summary>

@@ -20,6 +20,14 @@ namespace BAM.Sim
         /// from the target back towards Bram, up to 2.25 tiles, and hits the first other enemy hero or minion for 25 % of his damage.</summary>
         public const int EchoEvery = 1; // every attack since 2026-11-10 (Rickard: "låt hans passiva vara alltid och inte var 4e"), 4 before
         public const float EchoDistance = 2.25f, EchoSpeed = 14, EchoHitbox = 0.35f, EchoCoeff = 0.25f; // 65 % every 4th -> 25 % every attack (bots on Hard: Bram 43 -> 51 %)
+        /// <summary>Bram as ABC2's Silver (Marksman; Rickard 2026-11-11, card "Silver (Marksman)", BAM's own numbers). Special, Hammer
+        /// Line: the hammer flies straight LineReach tiles the aimed way (a tap: at a random enemy in reach) and hits EVERY enemy hero
+        /// and minion it passes (LineHitbox) once for LineCoeff; walls and bases stop it. Passive, Focus: each auto attack in a row on
+        /// the same target hits FocusStep harder, up to FocusMax steps; a new target starts again. Anvil Drop, the bouncing hammer
+        /// and Backlash stay in the code for SilverOn false.</summary>
+        public const bool Silver = true;
+        public const float LineReach = 6.5f, LineSpeed = 14, LineWidth = 0.4f, LineCoeff = 1.5f, FocusStep = 0.08f;
+        public const int FocusMax = 5;
     }
 
     /// <summary>Fenn, Call of the Pack. Tap: a wolf that follows him and bites enemies near him. Drag: the wolf is thrown up to
@@ -41,6 +49,19 @@ namespace BAM.Sim
         public const float EscapeBonus = 0.2f, EscapeTime = 1;
         /// <summary>The clone's damage as a share of Fenn's: none, it is a decoy (the old illusion dealt all of it).</summary>
         public const float CloneDamage = 0;
+        /// <summary>Veil (Rickard 2026-11-11: "fenn blir omega", card "Special blir osynlighet"): ABC2's Omega (Thief, Visage of the
+        /// End) special Ignus Fatuus replaces the wolf. A tap anywhere (nothing to aim, nobody needed in reach): his decoy appears
+        /// where he stands and Fenn turns invisible to the enemy for VeilTime s (nothing sees him: not grass sight, a hit or a tower;
+        /// Match.IsVisibleTo) and runs VeilSpeed faster. His first auto attack ends it: the Shadow Strike hits StrikeBonus harder and
+        /// slows by StrikeSlow for StrikeSlowTime s. ABC2 numbers: 4 s, +1 tile/s on a 2.0 hero, up to +75 %. false = the wolf.</summary>
+        public const bool Veil = true;
+        public const float VeilTime = 3.5f, VeilSpeed = 0.35f, StrikeBonus = 1.2f, StrikeSlow = 0.35f, StrikeSlowTime = 1.25f; // BAM's own numbers (Rickard: "kör likadant men inte exakta siffror")
+        /// <summary>Proj.Ticks on Fenn's auto attack that is the Shadow Strike (the slow lands with the hit).</summary>
+        internal const int StrikeTag = 1;
+        /// <summary>A Fenn bot vanishes to strike with an enemy hero this close (tiles).</summary>
+        internal const float VeilEngage = 3.5f;
+        /// <summary>Hits to charge the Veil (the wolf took 5).</summary>
+        public const int VeilCharge = 4;
     }
 
     /// <summary>Tyra, Pinpoint Bolt (the drag): a short draw, then a heavy bolt that flies on until it hits something: the first
@@ -281,8 +302,60 @@ namespace BAM.Sim
         }
 
         // ---------- Bram ----------
+        /// <summary>Bram plays as Silver (BramS.Silver); Tests/Sim runs its older Bram checks with the anvil and Backlash.</summary>
+        internal static bool SilverOn = BramS.Silver;
+
+        /// <summary>How far the Hammer Line flies from h along ang: LineReach, cut at a wall or a base.</summary>
+        internal float HammerLineReach(Unit h, float ang) => TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, BramS.LineReach), BramS.LineWidth);
+
+        /// <summary>Hammer Line: a straight throw that hits every enemy it passes once.</summary>
+        bool CastHammerLine(Unit h, float dmg)
+        {
+            float aa;
+            if (!Aimed(h, out aa, out _))
+            {
+                var l = EnemiesInRange(h, Match.TapReach(HeroId.Bram), Pick.HeroOrMinion, true, spBuf);
+                if (l.Count == 0) return false;
+                var t = PickRandom(l); aa = SimMath.Atan2(t.Y - h.Y, t.X - h.X); castTgt = t;
+            }
+            float len = HammerLineReach(h, aa);
+            h.Facing = aa; h.AimT = Time + 0.25f;
+            AddStatus(h, St.Casting, 0.2f);
+            var p = NewProj(ProjMode.HammerLine, h, h.X, h.Y);
+            p.Kind = ProjKind.BramHammerSpecial; p.Ang = aa; p.Speed = BramS.LineSpeed; p.Travel = len; p.Radius = BramS.LineWidth; p.Dmg = dmg * BramS.LineCoeff; p.Big = true;
+            castX = h.X + SimMath.Cos(aa) * len; castY = h.Y + SimMath.Sin(aa) * len;
+            return true;
+        }
+
+        /// <summary>The Hammer Line flies on: every enemy hero or minion its path touches this tick takes the hit, once.</summary>
+        void HammerLineUpdate(Proj p, float dt)
+        {
+            float step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
+            float ox = p.X, oy = p.Y, ex = ox + SimMath.Cos(p.Ang) * step, ey = oy + SimMath.Sin(p.Ang) * step;
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (p.Src == null || !Hurtable(p.Src, u) || u.Team == p.Team || p.HasHit(u)) continue;
+                if (SimMath.PtSeg(u.X, u.Y, ox, oy, ex, ey) > p.Radius + u.R) continue;
+                p.AddHit(u);
+                SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
+            }
+            p.X = ex; p.Y = ey; p.D += step;
+            if (p.D >= p.Travel - 1e-4f) p.Done = true;
+        }
+
+        /// <summary>Focus: the share more this auto attack of Bram's on tgt deals (0 when it is a new target); counts the step.</summary>
+        float BramFocus(Unit u, Unit tgt)
+        {
+            if (!SilverOn || u.Hero != HeroId.Bram || u.IsClone) return 0;
+            u.PassHits = tgt == u.FocusTgt ? Math.Min(BramS.FocusMax, u.PassHits + 1) : 0;
+            u.FocusTgt = tgt;
+            return BramS.FocusStep * u.PassHits;
+        }
+
         bool CastBram(Unit h, float dmg)
         {
+            if (SilverOn) return CastHammerLine(h, dmg);
             if (Aimed(h, out float aa, out float ak)) return CastAnvilDrop(h, dmg, aa, ak); // Hero5.cs
             var l = EnemiesInRange(h, BramS.Reach, Pick.HeroOrMinion, true, spBuf); // any enemy hero or minion, no hero first (Simon's tap rule)
             if (l.Count == 0) return false;
@@ -327,8 +400,42 @@ namespace BAM.Sim
         }
 
         // ---------- Fenn ----------
+        /// <summary>Fenn casts Shadow Veil (FennS.Veil). A property, not a field, so SimCopy.g.cs (online) stays as it is.</summary>
+        public bool FennVeil => FennVeilDefault;
+        /// <summary>Tests/Sim runs its older checks with the wolf (false), FennVeilTests.cs with the Veil.</summary>
+        internal static bool FennVeilDefault = FennS.Veil;
+
+        /// <summary>Veil (FennS.Veil): the decoy where he stands, then Fenn vanishes and runs faster. Always fires (an escape too).</summary>
+        bool CastFennVeil(Unit h)
+        {
+            for (int i = 0; i < Units.Count; i++) { var c = Units[i]; if (c.IsClone && c.Alive && c.Owner == h) EndClone(c); } // one decoy: the new one
+            h.ClonePending = true; // FlushClones puts it beside him this tick (the passive's cooldown is not touched)
+            h.RemoveAll(St.Veil); h.RemoveAll(St.SpeedPct);
+            AddStatus(h, St.Veil, FennS.VeilTime, 0, 0, h);
+            AddStatus(h, St.SpeedPct, FennS.VeilTime, FennS.VeilSpeed, 0, h);
+            h.RevealT = 0;
+            Emit(EventType.FennVeil, h, null, FennS.VeilTime, 0, false, h.X, h.Y);
+            return true;
+        }
+
+        /// <summary>Fenn attacks: if his Veil is on, it ends and this attack is the Shadow Strike (true).</summary>
+        bool FennVeilStrike(Unit u, Unit tgt)
+        {
+            if (u.Hero != HeroId.Fenn || u.IsClone || !u.Has(St.Veil)) return false;
+            u.RemoveAll(St.Veil); RemoveVeilSpeed(u);
+            Emit(EventType.VeilStrike, u, tgt, 0, 0, true, u.X, u.Y);
+            return true;
+        }
+
+        /// <summary>The Veil's speed goes with it (ShadowEscape's 20 % is a smaller SpeedPct by Fenn and stays).</summary>
+        static void RemoveVeilSpeed(Unit u)
+        {
+            for (int i = u.StCount - 1; i >= 0; i--) if (u.Sts[i].Type == St.SpeedPct && u.Sts[i].V == FennS.VeilSpeed && u.Sts[i].By == u) u.RemoveAt(i);
+        }
+
         bool CastFenn(Unit h)
         {
+            if (FennVeil) return CastFennVeil(h);
             // one wolf at a time: a new one replaces the old
             for (int i = 0; i < Units.Count; i++)
             {

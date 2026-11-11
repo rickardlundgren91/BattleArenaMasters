@@ -23,7 +23,7 @@ namespace BAM.Sim
         public bool DragAimOn => OneTap && DragAim && Tut == null;
 
         /// <summary>Has h's special anything to aim? Bonk's Ground Slam lands round him and Kugg's turret where he stands: tap only.</summary>
-        public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg && id != HeroId.Skrall; // Skrall's three strikes pick their own enemies (Hero8.cs)
+        public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg && id != HeroId.Skrall && !(id == HeroId.Fenn && FennS.Veil); // Fenn's Veil is cast where he stands (Heroes.cs) // Skrall's three strikes pick their own enemies (Hero8.cs)
 
         /// <summary>The share of the form's reach (TryCastSpecial's k) a drag with share k aims at: a placed form (Bram's anvil, Blast's bomb,
         /// Fenn's thrown wolf, Moa's field) lands at most at the white ring (TapReach), as far as a tap can put it, so the drag gives
@@ -71,6 +71,7 @@ namespace BAM.Sim
         {
             if (h == null || !h.Alive || h.Kind != UnitKind.Hero) return false;
             if (h.Hero == HeroId.Moa) return true;
+            if (h.Hero == HeroId.Fenn && FennVeil) return true; // the Veil needs nobody in reach: it is an escape too
             if (h.Hero == HeroId.Kugg && h.KuggRooted) return false;
             return TapTargets(h).Count > 0;
         }
@@ -96,6 +97,7 @@ namespace BAM.Sim
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
             Unit t;
             if (h.Hero == HeroId.Moa) t = TapAlly(h) ?? h;
+            else if (h.Hero == HeroId.Fenn && FennVeil) return TryCastSpecial(h, float.NaN, 0); // the Veil where he stands: no aim, no warning (it hurts nobody)
             else
             {
                 var l = TapTargets(h);
@@ -132,7 +134,7 @@ namespace BAM.Sim
         /// chooses where it goes. Bonk and Kugg have nothing to aim, so their drag is a tap. False (nothing spent) when it cannot fire now.</summary>
         public bool TryAimSpecial(Unit h, float ang, float k)
         {
-            if (float.IsNaN(ang) || !CanDragAim(h.Hero)) return TryTapSpecial(h);
+            if (float.IsNaN(ang) || !(CanDragAim(h.Hero) || h.Hero == HeroId.Fenn && !FennVeil)) return TryTapSpecial(h); // a test's wolf Fenn still aims
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
             k = DragShare(h.Hero, k);
             if (TeleOn) return TeleTime(h.Hero) > 0 ? StartTelegraph(h, null, ang, k) : CastWithFlash(h, null, ang, k);

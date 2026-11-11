@@ -76,6 +76,7 @@ namespace BAM.Sim
             }
             foreach (var (hero, foe) in new[] { (HeroId.Bram, HeroId.Knut), (HeroId.Hilde, HeroId.Bram), (HeroId.Blast, HeroId.Bram) })
             {
+                if (hero == HeroId.Bram && SilverOn) continue; // Bram throws the Hammer Line now (a line, SpecialPreview_HitSet_EqualsSim checks it)
                 var d = Defs.Hero(hero); float er = Defs.Hero(foe).Radius;
                 // the landing spot at full and half drag, as the indicator puts it: min(reach, max(1.5, k reach)) out
                 PDragHits(hero, foe, Up, 1, 0.5f, 0.5f, out float cx1, out float cy1);

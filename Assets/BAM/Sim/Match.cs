@@ -378,7 +378,11 @@ namespace BAM.Sim
                 for (int k = u.StCount - 1; k >= 0; k--)
                 {
                     u.Sts[k].T -= dt;
-                    if (!(u.Sts[k].T > 0) || (u.Sts[k].Type == St.Shield && u.Sts[k].Amount <= 0)) u.RemoveAt(k);
+                    if (!(u.Sts[k].T > 0) || (u.Sts[k].Type == St.Shield && u.Sts[k].Amount <= 0))
+                    {
+                        if (u.Sts[k].Type == St.Veil) Emit(EventType.VeilEnd, u, null, 0, 0, false, u.X, u.Y); // Fenn's Veil ran out (Heroes.cs)
+                        u.RemoveAt(k);
+                    }
                 }
                 if (!u.Alive) continue; // a burn or poison tick killed it
                 if (u.KnockT > 0) KnockStep(u, dt);
@@ -491,6 +495,7 @@ namespace BAM.Sim
         {
             if (!u.Alive) return false;
             if (u.Team == team) return true;
+            if (u.Kind == UnitKind.Hero && u.Has(St.Veil)) return false; // Fenn's Veil beats every sight: hits, towers, grass (Heroes.cs)
             if (u.RevealT > 0) return true;
             var tw = Towers[team];
             if (tw != null && tw.Alive && SimMath.Dist(tw, u) <= tw.UDef.Range) return true;

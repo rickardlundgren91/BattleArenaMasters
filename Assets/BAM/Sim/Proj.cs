@@ -4,7 +4,7 @@ namespace BAM.Sim
     {
         Auto,        // an auto attack: homing (Speed > 0) or a timed flight from the release point (Travel s)
         Hammer,      // Bram tap: homes in on an enemy hero or minion, then bounces to up to two more enemies
-        HammerLine,  // unused since 2026-10-28 (Bram's old drag); kept so the numbers after it stay the same
+        HammerLine,  // Bram's Hammer Line (as ABC2's Silver, 2026-11-11): straight, hits every enemy it passes once (unused 2026-10-28 to 11-11)
         Bolt,        // Tyra: straight after a short draw, stops in the first enemy
         Hook,        // Knut drag: flies out and comes back on its chain, pulls the first enemy it touches
         Needle,      // Tikta tap: homes in on its target

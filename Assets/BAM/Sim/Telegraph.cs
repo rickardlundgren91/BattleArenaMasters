@@ -27,7 +27,7 @@ namespace BAM.Sim
         /// <summary>The red warning h's special already shows at its cast before anything can land, its aim already fixed: Tyra's draw,
         /// Bram's falling anvil, Blast's fuse, Bonk's wind-up (0 = none: Knut's hook, Tikta's needles and Fenn's homing wolf hit at
         /// once, Moa's shield is at once).</summary>
-        public static float OwnWarning(HeroId id) => id == HeroId.Tyra ? TyraS.Windup : id == HeroId.Bram ? BramS.DropDelay
+        public static float OwnWarning(HeroId id) => id == HeroId.Tyra ? TyraS.Windup : id == HeroId.Bram ? (SilverOn ? 0 : BramS.DropDelay)
             : id == HeroId.Blast ? BlastS.Delay : id == HeroId.Bonk ? BonkS.SlamWindup : id == HeroId.Skrall ? SkrallS.Warn : 0;
 
         /// <summary>A special that warns by itself (OwnWarning) is cast at once, as before, with the same flash on the hero (Telegraph
@@ -43,7 +43,7 @@ namespace BAM.Sim
         public static bool Telegraphing(Unit h) => h != null && h.TeleAt >= 0;
 
         /// <summary>The forms that land on a spot (the spot is locked); the rest fly along a line (the direction is locked).</summary>
-        static bool PlacedForm(HeroId id) => id == HeroId.Bram || id == HeroId.Blast || id == HeroId.Fenn || id == HeroId.Moa || id == HeroId.Ragn || id == HeroId.Nassla;
+        static bool PlacedForm(HeroId id) => id == HeroId.Bram && !SilverOn || id == HeroId.Blast || id == HeroId.Fenn || id == HeroId.Moa || id == HeroId.Ragn || id == HeroId.Nassla;
 
         /// <summary>The tap's start: the aim (ang, k as TryCastSpecial takes them; ang NaN for Bonk's slam round him) is locked, the
         /// warning shows, the cast follows in TeleTime. tgt is the picked target (only for the event).</summary>
@@ -54,6 +54,13 @@ namespace BAM.Sim
             float ex = h.X, ey = h.Y;
             switch (h.Hero)
             {
+                case HeroId.Bram when SilverOn:
+                {   // the Hammer Line's path (Heroes.cs)
+                    float len = HammerLineReach(h, ang);
+                    WarnLine(h, ang, len, BramS.LineWidth, tt);
+                    ex = h.X + SimMath.Cos(ang) * len; ey = h.Y + SimMath.Sin(ang) * len;
+                    break;
+                }
                 case HeroId.Bram:
                     AnvilPoint(h, ang, k, out h.TeleX, out h.TeleY);
                     WarnCircle(h, h.TeleX, h.TeleY, BramS.DropRadius, tt);
@@ -115,7 +122,7 @@ namespace BAM.Sim
                 case HeroId.Ravna:
                 {
                     float len = FlockReach(h, ang);
-                    WarnLine(h, ang, len, RavnaS.HitRadius, tt);
+                    WarnLine(h, ang, len, NightFlightOn ? RavnaS.FlightRadius : RavnaS.HitRadius, tt);
                     ex = h.X + SimMath.Cos(ang) * len; ey = h.Y + SimMath.Sin(ang) * len;
                     break;
                 }

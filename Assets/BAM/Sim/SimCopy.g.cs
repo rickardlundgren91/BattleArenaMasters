@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "482e0e18aac3df52";
+            Generated = true; GeneratedHash = "be40fc8172878535";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -585,6 +585,7 @@ namespace BAM.Sim
             Facing = __s.Facing;
             FeatherReadyAt = __s.FeatherReadyAt;
             __m.ListMap(FlockHit, __s.FlockHit);
+            FocusTgt = __m.Map(__s.FocusTgt);
             HDef = __s.HDef;
             Hero = __s.Hero;
             HeroIndex = __s.HeroIndex;

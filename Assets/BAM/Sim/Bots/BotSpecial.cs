@@ -47,6 +47,13 @@ namespace BAM.Sim
             {   // one tap at a random enemy in reach (OneTap.cs): wanted with an enemy hero in that reach, or a minion pack of 3+ to
                 // clear; the same rule on both teams and every level (the levels differ in how fast and how often, not in the brain)
                 float r = Match.TapReach(h.Hero);
+                if (h.Hero == HeroId.Fenn && M.FennVeil)
+                {   // Shadow Veil (Heroes.cs): vanish next to an enemy hero to strike it (Omega's old AI went in on a hero), or to get away
+                    // when hurt and chased; the brain then walks in and swings, or keeps running, as it would anyway
+                    if (h.Has(St.Veil)) return false;
+                    if ((retreat || danger) && HpR(h) < 0.45f) return Foes(5, true, false, l) > 0;
+                    return !retreat && HpR(h) >= 0.3f && Foes(FennS.VeilEngage, true, false, l) > 0;
+                }
                 if (!M.TapHasTarget(h)) return false;
                 // Kugg's Anchor roots him for up to 10 s (Hero7.cs): ROI17's old AI (SimAI AI_Joker) deployed above 60 % health with an
                 // enemy hero within 7 tiles or 4 enemies in reach, never to escape. The bot waits for KuggAnchorStocks (he may anchor from
@@ -199,7 +206,8 @@ namespace BAM.Sim
                         ang = AngTo(best.X, best.Y); k = SimMath.Clamp(Dist(h, best) / range, 0, 1); return true;
                     }
                 case HeroId.Fenn:
-                    {   // the thrown wolf homes on an enemy hero but walls stop it (Rickard 2026-10-25), so throw it at the lowest
+                    {   if (M.FennVeil) return false; // Shadow Veil has nothing to aim (SpecialWanted taps it)
+                        // the thrown wolf homes on an enemy hero but walls stop it (Rickard 2026-10-25), so throw it at the lowest
                         // enemy hero within the throw that has no wall in between and that the wolf's real flight gets near
                         float reach = FennS.ThrowReach; var hs = FoeHeroes(h, reach - 0.3f); Unit t = null;
                         for (int i = 0; i < hs.Count; i++)
@@ -212,7 +220,8 @@ namespace BAM.Sim
                         ang = AngTo(t.X, t.Y); k = SimMath.Clamp(Dist(h, t) / reach, 0, 1); return true;
                     }
                 case HeroId.Bram:
-                    {   // Anvil Drop on an enemy hero in reach with another enemy hero next to it, so the stun lands on two (XYZ SimBotDrag.cs)
+                    {   if (Match.SilverOn) return false; // the Hammer Line is tapped at a random enemy (SpecialWanted)
+                        // Anvil Drop on an enemy hero in reach with another enemy hero next to it, so the stun lands on two (XYZ SimBotDrag.cs)
                         float reach = BramS.Reach, r = BramS.DropRadius; var os = FoeHeroes(h, reach + r); // FoeHeroes refills one list: no second call below
                         for (int i = 0; i < os.Count; i++)
                         {

@@ -37,6 +37,7 @@ namespace BAM.Sim
             var pred = new List<Unit>();
             foreach (var hero in AimHeroes)
             {
+                if (hero == HeroId.Fenn && FennVeilDefault) continue; // Shadow Veil has nothing to aim (Heroes.cs)
                 int bad = 0;
                 for (int sc = 0; sc < 120; sc++)
                 {

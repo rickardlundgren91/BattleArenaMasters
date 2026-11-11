@@ -355,7 +355,9 @@ namespace BAM.Sim
                 dmg = u.StatDmg();
                 coeff *= HeroAttackCoeff(u, tgt, ref big);
                 if (u.Hero == HeroId.Skrall && !u.IsClone) { coeff *= TranceSpend(u, out trance); if (trance > 0) big = true; } // Trance (Hero8.cs)
-                if (AmbushReady(u)) { coeff *= 1 + Rules.AmbushBonus; big = true; Emit(EventType.Ambush, u, tgt); }
+                float focus = BramFocus(u, tgt); if (focus > 0) { coeff *= 1 + focus; big = u.PassHits >= BramS.FocusMax; } // Focus (Heroes.cs)
+                if (FennVeilStrike(u, tgt)) { coeff *= 1 + FennS.StrikeBonus; big = true; trance = FennS.StrikeTag; } // Shadow Strike (Heroes.cs; Fenn never has Trance)
+                else if (AmbushReady(u)) { coeff *= 1 + Rules.AmbushBonus; big = true; Emit(EventType.Ambush, u, tgt); }
             }
             else
             {
@@ -406,6 +408,7 @@ namespace BAM.Sim
                 {
                     case ProjMode.Auto: UpdateAuto(p, dt); break;
                     case ProjMode.Hammer: HammerUpdate(p, dt); break;
+                    case ProjMode.HammerLine: HammerLineUpdate(p, dt); break; // Bram as Silver (Heroes.cs)
                     case ProjMode.Bolt: BoltUpdate(p, dt); break;
                     case ProjMode.Hook: HookUpdate(p, dt); break;
                     case ProjMode.Needle: NeedleUpdate(p, dt); break;
@@ -545,11 +548,12 @@ namespace BAM.Sim
             // a killing blow puts nothing on the corpse: Knut's slow sat on a dead hero through the wait (statuses do not tick while
             // dead) and came back with him (full review 2026-11-09 nr 72). The charge and the hero's own passives are still his.
             if (t.Alive && h.HDef.OnHitSlow != 0 && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddSlowOnce(t, St.SlowFlat, h.HDef.OnHitSlowTime, h.HDef.OnHitSlow, h);
-            if (h.Hero == HeroId.Bram) BramBacklash(h, t);
+            if (h.Hero == HeroId.Bram && !SilverOn) BramBacklash(h, t);
             if (h.Hero == HeroId.Tyra) Featherstep(h, t, dealt); // Hero5.cs
             if (h.Hero == HeroId.Oaken) OakenRelease(h, t); // Hero6.cs
             if (h.Hero == HeroId.Skrall && p.Ticks >= SkrallS.Steps) TranceJump(h, t, p.Dmg); // a full Trance jumps on (Hero8.cs)
-            if (h.Hero == HeroId.Ravna && t.Alive) CrowsEye(h, t, dealt); // Hero8.cs; no mark on a corpse (nr 72)
+            if (h.Hero == HeroId.Ravna && t.Alive && !NightFlightOn) CrowsEye(h, t, dealt); // Hero8.cs; no mark on a corpse (nr 72)
+            if (h.Hero == HeroId.Fenn && p.Ticks == FennS.StrikeTag && t.Alive && (t.Kind == UnitKind.Hero || t.IsMinionLike)) AddSlowOnce(t, St.SlowPct, FennS.StrikeSlowTime, -FennS.StrikeSlow, h); // Shadow Strike
         }
 
         // ---------- what the bots know ----------

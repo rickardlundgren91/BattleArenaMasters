@@ -14,6 +14,7 @@ namespace BAM.Sim
         AtkHaste, // V more attacks per second, as a share (0.4 = 40 % faster): the Haste battle spell
         TiktaMark, // Tikta 2.0 Deathmark: By = the Tikta whose next Needle Storm needle on this hero hits harder
         QuarryMark, // the Quarry Mark item (Items.cs): By = the marker; the next hit from another of its team hits harder
+        Veil,       // Fenn's Veil (FennS.Veil, Omega's Ignus Fatuus from ABC2): no enemy sees him until he attacks or it runs out
     }
 
     public struct Status
@@ -103,6 +104,8 @@ namespace BAM.Sim
         internal float KnockFreeAt = -99;                           // Rules.KnockCooldown: no new knockback before this time
         internal KegCrash KnockKeg;                                 // Hilde: the keg blast behind this slide (Wall Crash), null for any other
         internal BonkRoll KnockRoll;                                // Bonk: the Boulder Toss that sent this pin sliding (it knocks on others), null for any other
+        /// <summary>Bram's Focus (Heroes.cs BramS.Silver): the target his last auto attack went at.</summary>
+        internal Unit FocusTgt;
         internal int PassHits;                                      // Bram: hits towards the next Backlash; Bonk: swings towards the next power hit
         public float FeatherReadyAt;                                // Tyra: Featherstep is ready again at this time
         internal int VolleyCast; internal readonly System.Collections.Generic.List<Unit> VolleyHit = new System.Collections.Generic.List<Unit>(8); // Tyra: her last Arrow Volley and whom it hurt

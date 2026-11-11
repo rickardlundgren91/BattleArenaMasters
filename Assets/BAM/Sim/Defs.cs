@@ -95,7 +95,9 @@ namespace BAM.Sim
             H(HeroId.Ragn, 0.4f, 2.5f, 6, false, 270, 45, 19.5f, 4.6f, 1.3f, -0.03f, 2.4f, 0.15f, 0, 0.075f, ProjKind.RagnClaw, RagnS.LeapReach, AimShape.Circle, RagnS.LeapReach, RagnS.LandRadius),
             H(HeroId.Nassla, 0.25f, 2.25f, 7, false, 190, 30, 20.5f, 4.5f, 2.0f, -0.036f, 3.8f, 0.2f, 0, 0.25f, ProjKind.NasslaThorn, NasslaS.Reach, AimShape.Circle, NasslaS.Reach, NasslaS.Radius),
             H(HeroId.Skrall, 0.3f, 2.3f, 9, false, 185, 29, 24, 5.5f, 1.7f, -0.036f, 3.8f, 0.25f, 0, 0.08f, ProjKind.SkrallBolt, 3.8f, AimShape.None, 0, 0),
-            H(HeroId.Ravna, 0.25f, 2.6f, 10, false, 205, 32, 15, 3.5f, 0.9f, -0.018f, 2.3f, 0.12f, 0, 0.08f, ProjKind.RavnaSlash, RavnaS.FlockReach, AimShape.Line, RavnaS.FlockReach, RavnaS.HitRadius),
+            // Ravna as ABC2's Ron (Night Flight + Restless, 2026-11-11): Ron's slower, heavier swing (BAM's own numbers near abc2's 26 dmg /
+            // 1.5 s, 6 charges) instead of the quick 15 / 0.9 cuts; tuned with bots (Hard, BAM_HEROES=15)
+            H(HeroId.Ravna, 0.25f, 2.6f, 7, false, 238, 36, 26, 5.3f, 1.45f, -0.036f, 2.3f, 0.12f, 0, 0.08f, ProjKind.RavnaSlash, RavnaS.FlockReach, AimShape.Line, RavnaS.FlockReach, RavnaS.HitRadius),
         };
 
         public static HeroDef Hero(HeroId id) => Heroes[(int)id];
@@ -116,7 +118,7 @@ namespace BAM.Sim
                     b.MaxCharge = 7; Heroes[(int)HeroId.Bram].MaxCharge = 6; Heroes[(int)HeroId.Tikta].MaxCharge = 8;
                     // Fenn's thrown wolf no longer turns onto a hero (it lands on the warned spot): his special comes one hit sooner
                     // instead, 5 instead of 6, so the bite and root stay as strong (Rickard 2026-11-02, his rule: never weaken the effect)
-                    Heroes[(int)HeroId.Fenn].MaxCharge = 5;
+                    Heroes[(int)HeroId.Fenn].MaxCharge = FennS.Veil ? FennS.VeilCharge : 5;
                 }
             }
         }

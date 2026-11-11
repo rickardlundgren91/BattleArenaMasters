@@ -89,8 +89,13 @@ namespace BAM.Sim
                 PassiveName = "Trance", PassiveDesc = "Every second he stands still with no enemy in reach he gathers a step, up to 3. His next attack deals 40% more per step; with all 3 it also jumps to another enemy close by.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 3 },
             new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false, Preview = true,
-                SpecialName = "Crow Flock", SpecialDesc = "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
-                PassiveName = "Crow's Eye", PassiveDesc = "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
+                // Night Flight + Restless = ABC2's Ron (Rickard 2026-11-11 "ron blir ravna"); the Crow Flock texts stay for RavnaS.NightFlight = false
+                SpecialName = RavnaS.NightFlight ? "Night Flight" : "Crow Flock", SpecialDesc = RavnaS.NightFlight
+                    ? "Turns into a flock of crows for 2.2 s that flies through walls and can be steered with the joystick. As a flock she cannot be hit; every enemy she flies through is torn once and slowed by 30% for 1.5 s."
+                    : "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
+                PassiveName = RavnaS.NightFlight ? "Restless" : "Crow's Eye", PassiveDesc = RavnaS.NightFlight
+                    ? "Running charges her special: the ring fills as she moves, not only when she hits."
+                    : "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
                 Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
         };
 
@@ -151,14 +156,21 @@ namespace BAM.Sim
                 SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles and he fires faster. Each hit loads a shot, up to 6, and he can anchor once 2 are loaded: he fires them all (or 10 s pass), then pulls the spikes up again.",
                 PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
                 Health = 2, Damage = 3, Speed = 2, Difficulty = 3 }, // damage bar 2 -> 3: third highest dps once Tyra dropped under him (nr 75, terciles of Defs)
+            // Hammer Line + Focus = ABC2's Silver (Rickard 2026-11-11, card "Silver (Marksman)"); the anvil texts stay for BramS.Silver = false
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
-                SpecialName = "Hammer Throw", SpecialDesc = "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
-                OneTapName = "Anvil Drop", OneTapDesc = "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
-                PassiveName = "Backlash", PassiveDesc = "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
+                SpecialName = BramS.Silver ? "Hammer Line" : "Hammer Throw", SpecialDesc = BramS.Silver ? "Hurls his hammer straight ahead up to 6.5 tiles. It hits every enemy on its way. Walls stop it."
+                    : "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
+                OneTapName = BramS.Silver ? "Hammer Line" : "Anvil Drop", OneTapDesc = BramS.Silver ? "Tap: hurls his hammer straight at a random enemy in reach. It flies on up to 6.5 tiles and hits every enemy on its way."
+                    : "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
+                PassiveName = BramS.Silver ? "Focus" : "Backlash", PassiveDesc = BramS.Silver ? "Each attack in a row on the same target hits 8% harder, up to 40%. A new target starts again."
+                    : "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
                 Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
-            new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = "Pack Runner", Role = "Fighter", Ranged = false,
-                SpecialName = "Call of the Pack", SpecialDesc = "Calls a wolf that picks the nearest enemy and bites it for 4 s, then guards Fenn. Drag to throw it up to 6 tiles: it hunts an enemy hero, or bites minions when no hero is near. Walls stop it.",
-                OneTapDesc = "Tap: throws his wolf at a random enemy in his range. It hunts enemy heroes, or bites minions when no hero is near. Walls stop it.",
+            new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = FennS.Veil ? "Shadow Runner" : "Pack Runner", Role = "Fighter", Ranged = false,
+                // Shadow Veil = ABC2's Omega (Ignus Fatuus), Rickard 2026-11-11; the wolf texts stay for FennS.Veil = false
+                SpecialName = FennS.Veil ? "Shadow Veil" : "Call of the Pack", SpecialDesc = FennS.Veil ? "Leaves a decoy behind and turns invisible for 4 s, running 40% faster. His first attack ends it: a Shadow Strike that deals 75% more damage and slows by 40% for 1.5 s."
+                    : "Calls a wolf that picks the nearest enemy and bites it for 4 s, then guards Fenn. Drag to throw it up to 6 tiles: it hunts an enemy hero, or bites minions when no hero is near. Walls stop it.",
+                OneTapDesc = FennS.Veil ? "Tap: leaves a decoy and turns invisible for 4 s, 40% faster. His next attack is a Shadow Strike: 75% more damage and a slow. Works with nobody in range, to escape too."
+                    : "Tap: throws his wolf at a random enemy in his range. It hunts enemy heroes, or bites minions when no hero is near. Walls stop it.",
                 PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit; if an enemy hero's attack hits it, Fenn runs 20% faster for 1 s. Every 18 s.",
                 Health = 2, Damage = 1, Speed = 2, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,

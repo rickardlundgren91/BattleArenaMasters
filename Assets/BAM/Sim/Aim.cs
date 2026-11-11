@@ -43,6 +43,7 @@ namespace BAM.Sim
                 case HeroId.Bonk: Line(ref a, TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, BonkS.BoulderReach), BonkS.BoulderHitbox), BonkS.BoulderHitbox, true); break;
                 case HeroId.Blast: BombPoint(h, ang, k, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = BlastS.Radius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break; // Supernova (the drag since 2026-10-30)
                 case HeroId.Oaken: Line(ref a, Map.LaneReach(h.X, h.Y, ang, OakenS.QuakeRange), OakenS.QuakeHalfWidth, false); a.Tip = 0; a.Los = true; break; // flat ends (OakenQuake)
+                case HeroId.Bram when SilverOn: Line(ref a, HammerLineReach(h, ang), BramS.LineWidth, false); break; // Hammer Line: every enemy on the way (its reach is already cut at the wall)
                 case HeroId.Bram:
                     AnvilPoint(h, ang, k, out a.CX, out a.CY); // the aimed point, off a wall tile as the anvil lands (BRAM-02/03)
                     a.Shape = AimShape.Circle; a.Radius = BramS.DropRadius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true;
@@ -51,7 +52,7 @@ namespace BAM.Sim
                 case HeroId.Moa: Circle(ref a, h, ang, k, MoaS.Range, 0f, MoaS.AreaRadius); a.Allies = true; break;
                 case HeroId.Nassla: LandPoint(h, ang, k, NasslaS.Reach, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = NasslaS.Radius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
                 case HeroId.Ragn: RagnLandPoint(h, ang, k, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = RagnS.LandRadius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
-                case HeroId.Ravna: Line(ref a, FlockReach(h, ang), RavnaS.HitRadius, false); break; // the flock tears through everyone on its way
+                case HeroId.Ravna: Line(ref a, FlockReach(h, ang), NightFlightOn ? RavnaS.FlightRadius : RavnaS.HitRadius, false); break; // the flock tears through everyone on its way
                 case HeroId.Fenn:
                 {
                     // as CastFenn: the aimed point, then cut where a wall stops the flying wolf (it leaves from Fenn's spot)

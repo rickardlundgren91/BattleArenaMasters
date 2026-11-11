@@ -31,7 +31,7 @@ namespace BAM.Sim
                 Check(m.DragAimOn, $"DRAG {hero}: drag aim on in a normal match");
                 float up = SimMath.PI / 2; // +y on the map
                 bool cast = CastOf(m, p, DragIn(up, 1), 2, out float ax, out float ay);
-                if (!CanDragAim(hero))
+                if (!CanDragAim(hero) && !(hero == HeroId.Fenn && !m.FennVeil)) // the wolf Fenn of the older checks still aims (FennVeilTests.cs has the Veil)
                 {
                     Check(!cast && p.SpecialReady, $"DRAG {hero}: nothing to aim, so a drag is a tap: nobody near, no cast, the charge stays");
                     continue;
