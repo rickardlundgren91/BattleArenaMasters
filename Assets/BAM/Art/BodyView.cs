@@ -82,7 +82,7 @@ namespace BAM.Art
         HeldGear gear;            // weapons and shield in the hands (Weapons.cs), imported heroes only
         Vector3[][] gearVerts;    // their meshes' vertices, read once by GearTop (the menu stages)
         PreviewBreath breath;     // the menu hero's living idle on top of its clip (Preview only)
-        ClothSway cloth;          // cloth and hair on spring bones (Fenn, Tyra), made at the first frame
+        ClothSway cloth;          // cloth and hair on spring bones (Fenn, Tyra, Bonk, Ragn, Nässla), made at the first frame
         bool clothTried;
         // the menu hero's feet kept on the stage (Rickard 2026-10-27: Bram and Fenn floated above the ring on Home): each idle stands
         // the model at its own height over the root, so the lowest foot bone is held where it was in the bind pose, standing on the ground
@@ -705,6 +705,8 @@ namespace BAM.Art
                 atkTotal = Phased(HeroIndex) ? windup + atkHold + atkRec : Mathf.Min((len - atkStart) / atkSpeed, windup + 0.45f);
                 if (AnimFix.BlowTiming && !Phased(HeroIndex)) BlowSegment(len);
             }
+            // secondary action (Cajsa 2026-11-11): the coil tugs the cloth back a little, the blow throws it on past the body
+            if (cloth != null) { cloth.Kick(0f, -0.2f, 0f); cloth.Kick(atkSeg ? atkHitAt : windup, 0.6f, 0.15f); }
             if (gear != null)
             {
                 // a bomb leaves the hand as the shot leaves it; Tikta's needle leaves the fist she throws with for a moment (TIKTA-06)
@@ -765,6 +767,7 @@ namespace BAM.Art
                 clips[CCast].SetTime(c0); clips[CCast].SetTime(c0); upCast.SetTime(c0); upCast.SetTime(c0);
             }
             if (gear != null) ThrowOnCast(clips != null ? castBlowAt : castLen * 0.35f);
+            cloth?.Kick(clips != null ? castBlowAt : castLen * 0.35f, 0.8f, 0.3f); // a special's peak throws the cloth harder than a swing
         }
 
         // what leaves the hand at the cast's peak: Blast's bomb (Thrown), and Knut's anchor only on the hook (the drag), for about as
@@ -826,6 +829,7 @@ namespace BAM.Art
             }
             hitLen = big ? 0.25f : 0.14f;
             recoil = big ? 1f : 0.6f;
+            cloth?.Kick(0f, big ? -0.8f : -0.35f, big ? 0.25f : 0.1f); // the flinch jolts the cloth back
             flashColor = big ? new Color(1f, 0.55f, 0.35f) : new Color(1f, 0.45f, 0.4f); // a short red blink on every hit (MLBB analysis 7)
         }
 

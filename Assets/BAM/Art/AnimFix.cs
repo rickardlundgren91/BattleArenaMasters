@@ -54,5 +54,9 @@ namespace BAM.Art
         /// <summary>Tester idea 2026-11-06 (pilot, Fenn and Tyra): cloth and hair swing after the body on spring bones (ClothSway):
         /// Fenn's cape and tabard, Tyra's ponytail. Off = they move stiffly with the body as before.</summary>
         public static bool Cloth = true;
+        /// <summary>Tester idea 2026-11-11 (Cajsa: "secondary action, det skapar tyngd i materialet"): the swinging cloth and hair also
+        /// get a push from what the hero does (the blow of an attack, a special's peak, a hit taken, a Blink, a hard stop), so they
+        /// swing past and settle after the body. Off = they only follow the body's motion, as before.</summary>
+        public static bool ClothKicks = true;
     }
 }

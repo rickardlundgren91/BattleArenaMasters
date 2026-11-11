@@ -26,6 +26,8 @@ namespace BAM.Art
             public int Sectors = 6;          // Skirt: spring bones round the hips
             public float Clear0, Clear1;     // Skirt: distance from the leg bones where the sway starts and is full
             public float Drop = 0.12f;       // Skirt: how far below the hips the sway reaches full
+            public float MaxBelow;           // Skirt: only cloth at most this far below the hips (0 = no limit); keeps the calves still
+                                             // under a short tunic
             public float MaxSide;            // Skirt: only cloth this close to the body's middle line, to the sides (0 = all round);
                                              // for loincloth panels front and back on a hero whose thighs are thick
             public float Back0, Back1;       // Tail: distance behind the head bone where the sway starts and is full
@@ -37,6 +39,7 @@ namespace BAM.Art
             public float Drag = 0.05f;       // seconds of the hips' or head's velocity it trails by
             public float Flare;              // Skirt: outward swing at a full spin (share of its length)
             public float Inward = 0.12f;     // Skirt: how far a part may swing in towards the legs (share of its length)
+            public float Kick = 1f;          // how hard the hero's own moves push it (secondary action, Kick); 0 = never
         }
 
         static Spec[] SpecsFor(int hero)
@@ -52,12 +55,17 @@ namespace BAM.Art
                     return new[]
                     {
                         // Rickard 2026-11-09 after testing: "bonk har för mycket rörelse i kläder": about half the swing, stiffer and better damped
-                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.06f, Clear1 = 0.10f, Drop = 0.10f, MaxSide = 0.07f, Hz = 2.8f, Damping = 0.62f, MaxAngle = 10f, Drag = 0.025f, Flare = 0.06f },
-                        new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.08f, Hz = 2.8f, Damping = 0.55f, MaxAngle = 13f, Drag = 0.025f },
+                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.06f, Clear1 = 0.10f, Drop = 0.10f, MaxSide = 0.07f, Hz = 2.8f, Damping = 0.62f, MaxAngle = 10f, Drag = 0.025f, Flare = 0.06f, Kick = 0.5f },
+                        new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.08f, Hz = 2.8f, Damping = 0.55f, MaxAngle = 13f, Drag = 0.025f, Kick = 0.5f },
                     };
                 case 11: // Ragn (preview): his wolf tail behind the hips (Rickard 2026-11-10: "ragns svans kanske kan få röra sig som vi
                          // gjort med annat innan?", "när man snurrar gubben osv"); it trails when he runs and swings out when he is spun
                     return new[] { new Spec { Kind = Kind.HipTail, Back0 = 0.11f, Back1 = 0.17f, Above = 0.04f, Hz = 2.2f, Damping = 0.38f, MaxAngle = 30f, Drag = 0.06f, Flare = 0.3f } };
+                case 12: // Nässla: her short tunic, free of her legs from the belt down to the hem (Cajsa 2026-11-11, "mer c/h simulering",
+                         // Rickard "1 och 2"); measured on Nassla.fbx: the hem ends 0.15 of her height below the hips, the calves stay put
+                    return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.08f, Drop = 0.10f, MaxBelow = 0.165f, Hz = 2.4f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.2f } };
+                // Moa (again 2026-11-11): her long hair lies on her back as part of the same shell (Moa.fbx: the hair IS the back's
+                // surface from the neck to the waist, weighted to Spine1/Spine2), so swinging it would bend her back. No sway.
                 // Knut, Bram, Blast, Tikta, Oaken: nothing hangs free of the body (Knut's mane is the top of his back). Hilde (not in the
                 // game yet): her long braid reaches her hips and needs a chain of bones, not one; when she comes in.
                 default: return null;
@@ -93,6 +101,14 @@ namespace BAM.Art
         readonly Transform body;   // the model root: its yaw speed drives the flare
         Vector3 lastFwd;
         bool wasOn = true;
+
+        // secondary action (Kick): pushes waiting to land, in the body's own frame (forward, up), and the run that a hard stop ends
+        struct Push { public float At, Fwd, Up; }
+        readonly Push[] pushes = new Push[4];
+        int pushN;
+        Vector3 lastBody, runDir;
+        float runSpeed, runPeak;
+        bool bodyLive;
 
         ClothSway(Spring[] s, Transform body) { springs = s; this.body = body; lastFwd = body.forward; }
 
@@ -232,6 +248,7 @@ namespace BAM.Art
                         float below = -Vector3.Dot(v[i] - hp, up);
                         if (below <= 0f || Share(i, setA) < 0.8f) continue; // above the hips, or an arm hanging past them
                         if (Mathf.Abs(Vector3.Dot(v[i] - hp, right)) > side) continue;
+                        if (sp.MaxBelow > 0f && below > sp.MaxBelow * H) continue;
                         float d = Mathf.Min(Mathf.Min(SegDist(v[i], aL, bL), SegDist(v[i], bL, cL)), Mathf.Min(SegDist(v[i], aR, bR), SegDist(v[i], bR, cR))) / H;
                         float s = Smooth((d - sp.Clear0) / Mathf.Max(1e-4f, sp.Clear1 - sp.Clear0)) * Smooth(below / (sp.Drop * H));
                         if (s <= 0.005f) continue;
@@ -360,17 +377,67 @@ namespace BAM.Art
             return new Baked { Mesh = m, Bones = defs.ToArray() };
         }
 
+        /// <summary>Secondary action (Cajsa 2026-11-11): the hero's own move pushes the cloth and hair, so they swing past the body and
+        /// settle after it instead of only trailing it. delay: seconds until the push lands (the blow, a special's peak); fwd and up:
+        /// its size along the hero's facing and up (1 swings a part about 20 degrees before MaxAngle caps it).</summary>
+        internal void Kick(float delay, float fwd, float up)
+        {
+            if (!AnimFix.ClothKicks) return;
+            if (pushN == pushes.Length) { for (int i = 1; i < pushN; i++) pushes[i - 1] = pushes[i]; pushN--; } // the oldest goes
+            pushes[pushN++] = new Push { At = Mathf.Max(0f, delay), Fwd = fwd, Up = up };
+        }
+
+        void PushAll(Vector3 dirWorld)
+        {
+            foreach (Spring s in springs)
+            {
+                if (!s.Live) continue;
+                Spec sp = s.Def.Spec;
+                float L = s.Parent.TransformVector(s.Def.Rest).magnitude;
+                s.Vel += dirWorld * (sp.Kick * L * 2f * Mathf.PI * sp.Hz * 0.6f);
+            }
+        }
+
         /// <summary>After everything else has posed the body this frame (BodyView.LateUpdate). dt: the view's frame time.</summary>
         internal void Tick(float dt, bool on)
         {
             if (!on)
             {
                 if (wasOn) { wasOn = false; foreach (Spring s in springs) { s.T.localRotation = Quaternion.identity; s.Live = false; } }
+                pushN = 0; bodyLive = false;
                 return;
             }
             wasOn = true;
             if (dt <= 0f) return;
             Vector3 fwd = body.forward;
+            Vector3 jump = Vector3.zero; // a Blink or a dash too fast for the springs: the cloth starts at rest, then trails the jump
+            {
+                Vector3 bp = body.position;
+                Vector3 d = bp - lastBody; d.y = 0f;
+                if (!bodyLive) { bodyLive = true; d = Vector3.zero; }
+                lastBody = bp;
+                float spd = d.magnitude / dt;
+                if (spd > 12f) { if (d.magnitude > 1f && d.magnitude < 6f) jump = d; runPeak = 0f; } // not a respawn's jump across the map, nor an online snap
+                else
+                {
+                    if (spd > 0.5f) runDir = d / (spd * dt);
+                    runSpeed = Mathf.Lerp(runSpeed, spd, 1f - Mathf.Exp(-dt * 20f));
+                    runPeak = Mathf.Max(runPeak * Mathf.Exp(-dt * 4f), runSpeed);
+                    // a hard stop after a run: the cloth swings on forward past the body and settles
+                    if (AnimFix.ClothKicks && runSpeed < 0.3f && runPeak > 1.5f)
+                    {
+                        PushAll(runDir * (0.45f * Mathf.Clamp01(runPeak / 3f)));
+                        runPeak = 0f;
+                    }
+                }
+            }
+            for (int i = 0; i < pushN;)
+            {
+                pushes[i].At -= dt;
+                if (pushes[i].At > 0f) { i++; continue; }
+                PushAll(fwd * pushes[i].Fwd + Vector3.up * pushes[i].Up);
+                pushes[i] = pushes[--pushN];
+            }
             float yawRate = Mathf.Abs(Vector3.SignedAngle(lastFwd, fwd, Vector3.up)) / dt; // degrees per second
             lastFwd = fwd;
             float spin = Mathf.Clamp01((yawRate - 90f) / 540f);
@@ -392,6 +459,8 @@ namespace BAM.Art
                 {
                     s.Live = true; s.Tip = target; s.Vel = Vector3.zero; s.LastPivot = pivot; s.LastTarget = target;
                     s.T.localRotation = Quaternion.identity;
+                    // after a Blink the cloth swings on in the jump's direction, as if it had flown with the body
+                    if (AnimFix.ClothKicks && jump.sqrMagnitude > 0f) s.Vel = jump.normalized * (0.5f * sp.Kick * L * 2f * Mathf.PI * sp.Hz * 0.6f);
                     continue;
                 }
                 // air: the part trails the body's motion and flares out in a spin

@@ -80,10 +80,15 @@ namespace BAM.Art.Editor
                 "Fenn, Knut, Bonk and Oaken: the weapon reaches its target on the moment the damage number shows, instead of the "
                 + "swing's fastest moment showing a little before it.",
                 AnimFix.ContactTiming);
-            AnimFix.Cloth = Part("Cloth and hair swing (Fenn, Tyra pilot)",
-                "Fenn's cape and tabard and Tyra's ponytail hang on spring bones: they lag when the hero turns or starts, flare out "
-                + "in a spin and trail on the run. Off = they move stiffly with the body as before.",
+            AnimFix.Cloth = Part("Cloth and hair swing",
+                "Fenn's cape and tabard, Tyra's ponytail, Bonk's loincloth and hair, Ragn's tail and Nässla's tunic hang on spring "
+                + "bones: they lag when the hero turns or starts, flare out in a spin and trail on the run. Off = they move stiffly "
+                + "with the body as before.",
                 AnimFix.Cloth);
+            AnimFix.ClothKicks = Part("Cloth secondary action (weight)",
+                "The swinging cloth and hair also get a push from the blow of an attack, a special's peak, a hit taken, a Blink and "
+                + "a hard stop, so they swing past and settle after the body (tester Cajsa). Off = they only follow the body's motion.",
+                AnimFix.ClothKicks);
 
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("All on")) SetAll(true);
@@ -116,6 +121,7 @@ namespace BAM.Art.Editor
             AnimFix.AnatomicalWrist = on;
             AnimFix.GripLockFull = on;
             AnimFix.Cloth = on;
+            AnimFix.ClothKicks = on;
         }
     }
 }
