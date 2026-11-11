@@ -1665,7 +1665,7 @@ namespace BAM.Art
             if (anim == null || !anim.isHuman) return;
             float w = (1f - Mathf.Clamp01(gearAct)) * deg;
             if (w <= 0.01f) return;
-            Vector3 fwd = transform.forward, down = -transform.up;
+            Vector3 fwd = anim.transform.forward, down = -anim.transform.up; // her own axes (the menu stage turns the model, not the view)
             void Out(HumanBodyBones u, HumanBodyBones l, float side)
             {
                 Transform up = anim.GetBoneTransform(u), lo = anim.GetBoneTransform(l);
@@ -1692,7 +1692,15 @@ namespace BAM.Art
             Transform up = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), lo = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm),
                 hand = anim.GetBoneTransform(HumanBodyBones.LeftHand);
             if (up == null || lo == null || hand == null) return;
-            Vector3 fwd = transform.forward, upW = transform.up, outW = -transform.right; // his left
+            // "out" is measured on the body itself: from his chest out through this shoulder, level (Rickard 2026-11-11, "handen i
+            // magen": the fist went in front of his belly, so the side taken from the transform's axes was the wrong one here)
+            Transform body = anim.transform, chest = anim.GetBoneTransform(HumanBodyBones.Chest);
+            if (chest == null) chest = anim.GetBoneTransform(HumanBodyBones.Spine);
+            Vector3 fwd = body.forward, upW = body.up;
+            Vector3 outW = chest != null ? Vector3.ProjectOnPlane(up.position - chest.position, upW) : -body.right;
+            if (outW.sqrMagnitude < 1e-8f) return;
+            outW.Normalize();
+            fwd = Vector3.ProjectOnPlane(fwd, outW).normalized;
             Vector3 a = up.position, b = lo.position, c = hand.position;
             float la = (b - a).magnitude, lb = (c - b).magnitude, arm = la + lb;
             if (la < 1e-5f || lb < 1e-5f) return;
