@@ -1684,7 +1684,7 @@ namespace BAM.Art
         // his broad stone body it went into his head. Standing, a two-bone IK lowers it instead: the fist hangs beside his hip, a little
         // out and forward of the shoulder (KuggFist, in arm lengths: out, down, forward), the elbow out and back. Not on the move
         // (his walk and run swing as made) and not while he swings or casts.
-        static readonly Vector3 KuggFist = new Vector3(0.3f, 0.7f, 0.25f);
+        static readonly Vector3 KuggFist = new Vector3(0.55f, 0.6f, 0.3f); // 0.3 out still went into his body (Rickard 2026-11-11: "armen går in i hans kropp")
         void KuggGuard()
         {
             float w = (1f - Mathf.Clamp01(gearAct)) * (1f - Mathf.Clamp01(moveW));
@@ -1697,7 +1697,7 @@ namespace BAM.Art
             float la = (b - a).magnitude, lb = (c - b).magnitude, arm = la + lb;
             if (la < 1e-5f || lb < 1e-5f) return;
             Vector3 goal = a + (outW * KuggFist.x - upW * KuggFist.y + fwd * KuggFist.z) * arm;
-            Vector3 hint = a + (outW * 0.6f - upW * 0.3f - fwd * 0.2f) * arm;
+            Vector3 hint = a + (outW * 0.9f - upW * 0.2f - fwd * 0.2f) * arm;
             goal = Vector3.Lerp(c, goal, w);
             Vector3 at = goal - a;
             float d = Mathf.Clamp(at.magnitude, Mathf.Abs(la - lb) + 1e-4f, arm - 1e-4f);
