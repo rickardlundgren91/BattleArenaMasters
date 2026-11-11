@@ -286,12 +286,19 @@ namespace BAM.Game
             }
         }
 
+        // the file-name part of a hero's own sounds (HeroDeath_Nassla): the HeroId names, made once
+        static readonly string[] heroVoice = System.Enum.GetNames(typeof(HeroId));
+        static string HeroVoice(HeroId h) => (int)h < heroVoice.Length ? heroVoice[(int)h] : null;
+
         UnitRec AddUnit(Unit u)
         {
             UnitView v;
             switch (u.Kind)
             {
-                case UnitKind.Hero: v = ArtKit.CreateHero(u.Hero, Side(u.Team)); break;
+                case UnitKind.Hero:
+                    v = ArtKit.CreateHero(u.Hero, Side(u.Team));
+                    if (!u.IsClone) BamAudio.Preload(SfxId.HeroDeath, HeroVoice(u.Hero)); // its own death sound is ready before it dies
+                    break;
                 case UnitKind.Tower: v = ArtKit.CreateTower(Side(u.Team)); break;
                 case UnitKind.Wolf: v = ArtKit.CreateWolf(Side(u.Team)); break;
                 default: v = u == TutDummy ? ArtKit.CreateTarget() : ArtKit.CreateMinion(u.Minion, Side(u.Team)); break; // the guided match's practice target is a board
@@ -692,9 +699,15 @@ namespace BAM.Game
                         bool myKill = b.Team != m.Player.Team && b.IsRealHero && e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
                         if (myKill) BamAudio.Duck(1f); // the rest of the world steps back for the player's kill (Speltest sound mix v2)
                         if (myKill) ArtKit.PlayFx(FxKind.Kill, Coords.Of(b), 1.2f, Side(b.Team)); // Rickard's gold kill burst (2026-10-31)
-                        if (b == m.Player) BamAudio.Play(SfxId.HeroDeath);
-                        else if (myKill) BamAudio.Play(SfxId.HeroDeath); // the kill confirm: loud, not by distance (Brawl Stars idea 5); no extra chime (Speltest sound mix v2)
-                        else BamAudio.PlayAt(b.Team == Mine ? SfxId.AllyDeath : SfxId.HeroDeath, Coords.Of(b));
+                        // each hero has its own death sound, HeroDeath_<hero> (Rickard 2026-11-11, Cajsa's feedback), for the player, allies
+                        // and enemies alike; until that file is in, the shared HeroDeath (AllyDeath for an ally) plays as before. A clone
+                        // dies with its hero's voice too, so the sound never gives the decoy away.
+                        string voice = HeroVoice(b.Hero);
+                        bool own = BamAudio.HasVariant(SfxId.HeroDeath, voice);
+                        if (b == m.Player) BamAudio.Play(SfxId.HeroDeath, voice);
+                        else if (myKill) BamAudio.Play(SfxId.HeroDeath, voice); // the kill confirm: loud, not by distance (Brawl Stars idea 5); no extra chime (Speltest sound mix v2)
+                        else if (own || b.Team != Mine) BamAudio.PlayAt(SfxId.HeroDeath, voice, Coords.Of(b));
+                        else BamAudio.PlayAt(SfxId.AllyDeath, Coords.Of(b));
                         if (b.IsRealHero) MultiKill(e);
                     }
                     // the player's last hit on a minion: a small coin chime (Speltest sound mix v2); others' minion kills stay silent

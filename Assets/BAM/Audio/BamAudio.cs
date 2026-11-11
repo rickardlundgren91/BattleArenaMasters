@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using BAM.Core;
 using UnityEngine;
@@ -71,6 +72,7 @@ namespace BAM.Audio
             Array.Clear(built, 0, built.Length);
             Array.Clear(voiceEnd, 0, Voices);
             nextBuild = 1; buildMs = 0;
+            variants.Clear();
             synth = new SfxSynth();
 
             host = new GameObject("BAM.Audio");
@@ -98,17 +100,60 @@ namespace BAM.Audio
         }
 
         /// <summary>A 2D sound (UI, the player's own hero).</summary>
-        public static void Play(SfxId id, float volume = 1f, float pitch = 1f) => Start(id, volume, pitch, 0f);
+        public static void Play(SfxId id, float volume = 1f, float pitch = 1f) => Start(id, volume, pitch, 0f, null);
 
         /// <summary>A sound in the world: quieter the farther it is from the listener point.</summary>
-        public static void PlayAt(SfxId id, Vector3 worldPosition, float volume = 1f)
+        public static void PlayAt(SfxId id, Vector3 worldPosition, float volume = 1f) => PlayAt(id, null, worldPosition, volume);
+
+        /// <summary>
+        /// Like Play, with one variant of the sound: Resources/BAM/Sfx/&lt;id&gt;_&lt;variant&gt; (HeroDeath_Tyra) when that file is in,
+        /// else the plain id's clip. The variant shares the id's limits (voices, gap, priority).
+        /// </summary>
+        public static void Play(SfxId id, string variant, float volume = 1f) => Start(id, volume, 1f, 0f, variant);
+
+        /// <summary>Like PlayAt, with one variant of the sound (see Play with a variant).</summary>
+        public static void PlayAt(SfxId id, string variant, Vector3 worldPosition, float volume = 1f)
         {
             float dx = worldPosition.x - listener.x, dz = worldPosition.z - listener.z;
             float d = Mathf.Sqrt(dx * dx + dz * dz);
             float t = Mathf.Clamp01((d - NearDist) / (FarDist - NearDist));
             float att = Mathf.Lerp(1f, FarFloor, t * t * (3f - 2f * t));
             if (Ducked) att *= DuckLevel;
-            Start(id, volume * att, 1f, Mathf.Clamp(dx / PanDist, -1f, 1f) * PanMax);
+            Start(id, volume * att, 1f, Mathf.Clamp(dx / PanDist, -1f, 1f) * PanMax, variant);
+        }
+
+        // Per-hero variants of one sound (Rickard 2026-11-11, Cajsa's feedback: each hero its own death sound). A variant file is
+        // looked up once, the first time it is asked for, and remembered (null when it is not there, so a missing file costs nothing
+        // after that). Its gain is worked out like any recorded clip's, against the plain id's level.
+        sealed class Variant { public AudioClip Clip; public float Gain; }
+        static readonly Dictionary<string, Variant> variants = new Dictionary<string, Variant>();
+
+        /// <summary>Loads a variant ahead of time (match start), so the first death does not wait on the file.</summary>
+        public static void Preload(SfxId id, string variant)
+        {
+            int k = (int)id;
+            if (Ready && k > 0 && k < SfxRecipes.Count && !string.IsNullOrEmpty(variant)) GetVariant(k, variant);
+        }
+
+        /// <summary>True when the variant's own file is in (HeroDeath_Tyra.mp3), so a caller can choose it over another sound.</summary>
+        public static bool HasVariant(SfxId id, string variant)
+        {
+            int k = (int)id;
+            return Ready && k > 0 && k < SfxRecipes.Count && !string.IsNullOrEmpty(variant) && GetVariant(k, variant).Clip != null;
+        }
+
+        static Variant GetVariant(int k, string variant)
+        {
+            string name = ((SfxId)k).ToString() + "_" + variant;
+            if (variants.TryGetValue(name, out Variant v)) return v;
+            v = new Variant { Clip = Resources.Load<AudioClip>(SfxFolder + name) };
+            if (v.Clip != null)
+            {
+                v.Gain = FileGain(v.Clip, info[k].Level);
+                if (AllBuilt) gainBuf = null; // FileGain's buffer is only kept while the builder still runs
+            }
+            variants[name] = v;
+            return v;
         }
 
         // Speltest's sound mix v2 (Sound.cs DuckNow): on the player's kill or special the music and the world's other sounds
@@ -174,13 +219,15 @@ namespace BAM.Audio
             }
         }
 
-        static void Start(SfxId id, float volume, float pitch, float pan)
+        static void Start(SfxId id, float volume, float pitch, float pan, string variant)
         {
             int k = (int)id;
             if (!Ready || k <= 0 || k >= SfxRecipes.Count) return;
+            Variant vr = string.IsNullOrEmpty(variant) ? null : GetVariant(k, variant);
+            if (vr != null && vr.Clip == null) vr = null; // no file for this variant: the plain clip
             // Rickard 2026-10-26: the synth whistles and beeps are embarrassing, so every code sound is silent (SfxMute.cs).
             // A recorded clip in Resources/BAM/Sfx still plays.
-            if (SfxMute.IsMuted(id))
+            if (vr == null && SfxMute.IsMuted(id))
             {
                 if (!built[k]) Build(k);
                 if (!isFile[k]) return;
@@ -206,7 +253,7 @@ namespace BAM.Audio
             int vi = free >= 0 ? free : steal;
             if (vi < 0) return;
 
-            var clip = clips[k];
+            var clip = vr != null ? vr.Clip : clips[k];
             if (clip == null) clip = Build(k); // asked for before the builder got to it: make it now
 
             if (inf.Vary > 0f) pitch *= 1f + inf.Vary * (Rand() * 2f - 1f);
@@ -215,7 +262,7 @@ namespace BAM.Audio
             a.clip = clip;
             a.pitch = pitch;
             a.panStereo = pan;
-            v *= clipGain[k];
+            v *= vr != null ? vr.Gain : clipGain[k];
             a.volume = Mathf.Min(1f, v * master);
             a.Play();
 
