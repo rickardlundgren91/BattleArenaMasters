@@ -115,7 +115,7 @@ namespace BAM.Sim
             {
                 amount *= tgt.TakenMult;
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
-                amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark (Items.cs)
+                amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark, Minion Skewer, Crushing Spanner, Heroes Bane (Items.cs)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
                 if (tgt.Kind == UnitKind.Tower && src != null && src.Kind == UnitKind.Wolf) amount *= Rules.WolfVsTower; // half (tester 2026-11-03 via Discord, Rickard ok)
@@ -155,6 +155,7 @@ namespace BAM.Sim
             tgt.Hp -= amount;
             if (taken > 0 && tgt.Kind == UnitKind.Hero && tgt.Hero == HeroId.Oaken) tgt.OakenLastLoss = Time;
             Emit(EventType.Damage, att, tgt, taken, 0, false, 0, 0, kind);
+            ItemLifesteal(att, tgt, taken); // Parascythe (Items.cs)
             if (src != null && src.Kind == UnitKind.Hero && !src.IsClone && src.Hero == HeroId.Blast && !burning && (flags & DmgFlags.NoIgnite) == 0) Ignite(src, tgt, amount);
             if (tgt.Hp <= 0) Kill(tgt, src);
             else { CloneOnHurt(tgt, src, kind, flags); ItemsOnHurt(att, tgt, hpBefore, kind, dot); } // Guardian's Thread, Rally Beacon (Items.cs)

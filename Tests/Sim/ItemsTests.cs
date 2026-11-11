@@ -118,6 +118,21 @@ namespace BAM.Sim
             Check(ally.ShieldAmount > 0 && ally.Find(St.SpeedPct) >= 0, "Rally Beacon: shield and speed when health falls through 30 %");
             ally.ClearStatuses(); ally.Hp = ally.MaxHp * 0.35f; m.DealDamage(e, ally, ally.MaxHp * 0.1f, DmgKind.Auto);
             Check(ally.ShieldAmount == 0, "the team's cooldown holds the second");
+            a.ItemCount = 0; ally.ClearStatuses(); ally.Hp = ally.MaxHp;
+
+            // the four plain items (Rickard 2026-11-11): +15 % on minions, +10 % on towers, +5 % on heroes, 10 % lifesteal
+            Unit mn = null; for (int i = 0; i < m.Units.Count; i++) if (m.Units[i].Kind == UnitKind.Minion && m.Units[i].Team != a.Team && m.Units[i].Alive) { mn = m.Units[i]; break; }
+            Give(a, ItemId.MinionDmg); Give(a, ItemId.HeroDmg);
+            Check(mn == null || Math.Abs(m.PlainDamageMult(a, mn) - 1.15f) < 1e-4f, "Minion Skewer: +15 % on minions");
+            Check(Math.Abs(m.PlainDamageMult(a, e) - 1.05f) < 1e-4f, "Heroes Bane: +5 % on heroes");
+            Check(m.PlainDamageMult(a, m.Towers[1 - a.Team]) == 1, "no tower bonus without Crushing Spanner");
+            a.ItemCount = 0; Give(a, ItemId.TowerDmg);
+            Check(Math.Abs(m.PlainDamageMult(a, m.Towers[1 - a.Team]) - 1.10f) < 1e-4f && m.PlainDamageMult(a, e) == 1, "Crushing Spanner: +10 % on towers only");
+            a.ItemCount = 0; Give(a, ItemId.Lifesteal);
+            a.Hp = a.MaxHp * 0.5f; e.Hp = e.MaxHp; e.ClearStatuses(); float ah = a.Hp;
+            float took = m.DealDamage(a, e, 20, DmgKind.Auto);
+            Check(Math.Abs(a.Hp - ah - took * 0.1f) < 1e-3f && took > 0, $"Parascythe: heals 10 % of the damage dealt ({a.Hp - ah:0.00} of {took:0.0})");
+            a.ItemCount = 0;
         }
     }
 

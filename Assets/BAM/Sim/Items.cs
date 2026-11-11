@@ -4,7 +4,7 @@ namespace BAM.Sim
 {
     /// <summary>The match items (Rickard 2026-11-11, thread "Lägg in sex items i BAM"): Simon's Items V2 from the old game
     /// (Speltest SimItemsV2.cs, XYZ main cb45566), the six Rickard kept. Sole Target Sigil and Siege Banner are left out.</summary>
-    public enum ItemId : byte { None = 0, Echo = 1, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6 }
+    public enum ItemId : byte { None = 0, Echo = 1, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10 }
 
     /// <summary>One item a hero holds and its state. Times are match times (ReadyAt: the item works again from then).</summary>
     public struct ItemSlot
@@ -42,6 +42,9 @@ namespace BAM.Sim
         public const float RallyRange = 2.5f, RallyBelow = 0.3f, RallyShield = 0.12f, RallySpeed = 0.12f, RallyTime = 1.25f, RallyCd = 6;
         // Steadfast Charm (common)
         public const float CharmCut = 0.25f, CharmMaxCut = 0.35f, CharmSpeed = 0.10f, CharmSpeedTime = 0.75f, CharmCd = 5;
+        // the four plain items (Rickard 2026-11-11: "10% lifesteal, 15% minion dmg, 10% tower dmg, 5% hero dmg"; the old game's
+        // Parascythe, Minion Skewer, Crushing Spanner and Heroes Bane, with Rickard's numbers)
+        public const float Lifesteal = 0.10f, MinionDmg = 0.15f, TowerDmg = 0.10f, HeroDmg = 0.05f;
     }
 
     /// <summary>Names, rarity, icon and text of the items (HUD and menus; the rules read only Rarity).</summary>
@@ -69,10 +72,18 @@ namespace BAM.Sim
                 Text = $"When you or an ally within {ItemS.RallyRange} tiles drops to {P(ItemS.RallyBelow)} health: a {P(ItemS.RallyShield)} max HP shield and +{P(ItemS.RallySpeed)} move speed for {ItemS.RallyTime}s (once per team every {ItemS.RallyCd}s)" },
             new Info { Id = ItemId.Charm, Name = "Steadfast Charm", Rarity = 0, Icon = "item_v2_steadfast_charm",
                 Text = $"A stun, root, slow or disarm from an enemy hero lasts {P(ItemS.CharmCut)} shorter (max {ItemS.CharmMaxCut}s); when it ends, +{P(ItemS.CharmSpeed)} move speed for {ItemS.CharmSpeedTime}s (cd {ItemS.CharmCd}s)" },
+            new Info { Id = ItemId.Lifesteal, Name = "Parascythe", Rarity = 3, Icon = "item_bloodBlade",
+                Text = $"Heal for {P(ItemS.Lifesteal)} of the damage you deal" },
+            new Info { Id = ItemId.MinionDmg, Name = "Minion Skewer", Rarity = 0, Icon = "item_spear",
+                Text = $"+{P(ItemS.MinionDmg)} damage to minions" },
+            new Info { Id = ItemId.TowerDmg, Name = "Crushing Spanner", Rarity = 0, Icon = "item_hammer",
+                Text = $"+{P(ItemS.TowerDmg)} damage to towers" },
+            new Info { Id = ItemId.HeroDmg, Name = "Heroes Bane", Rarity = 2, Icon = "item_dagger",
+                Text = $"+{P(ItemS.HeroDmg)} damage to heroes" },
         };
         static string P(float v) => Math.Round(v * 100) + "%";
 
-        public const int Count = 6;
+        public const int Count = 10;
         public static Info Get(ItemId id) => id > ItemId.None && (int)id <= Count ? all[(int)id] : null;
         public static int Rarity(ItemId id) { var i = Get(id); return i != null ? i.Rarity : 0; }
     }
@@ -145,7 +156,7 @@ namespace BAM.Sim
         /// Steadfast Charm fit everyone.</summary>
         static bool Fits(Role r, ItemId k)
         {
-            if (k == ItemId.Echo || k == ItemId.Charm || r == Role.Any) return true;
+            if (k == ItemId.Echo || k == ItemId.Charm || k >= ItemId.Lifesteal || r == Role.Any) return true; // the four plain items fit everyone
             switch (r)
             {
                 case Role.Tank: case Role.Support: return k == ItemId.Thread || k == ItemId.Rally;
@@ -298,6 +309,22 @@ namespace BAM.Sim
         /// <summary>Quarry Mark: the first auto or special hit from another ally of the marker spends the mark for its bonus.</summary>
         float ItemDamageMult(Unit att, Unit tgt, DmgKind kind, bool dot)
         {
+            float plain = PlainDamageMult(att, tgt);
+            return plain == 1 ? MarkMult(att, tgt, kind, dot) : plain * MarkMult(att, tgt, kind, dot);
+        }
+
+        /// <summary>Minion Skewer, Crushing Spanner, Heroes Bane: the holder's damage of every kind (its wolf's too) on that kind of unit.</summary>
+        float PlainDamageMult(Unit att, Unit tgt)
+        {
+            if (!RealHero(att) || att.ItemCount == 0 || att.Team == tgt.Team) return 1;
+            if (tgt.Kind == UnitKind.Minion) return att.HasItem(ItemId.MinionDmg) ? 1 + ItemS.MinionDmg : 1;
+            if (tgt.Kind == UnitKind.Tower) return att.HasItem(ItemId.TowerDmg) ? 1 + ItemS.TowerDmg : 1;
+            if (tgt.Kind == UnitKind.Hero) return att.HasItem(ItemId.HeroDmg) ? 1 + ItemS.HeroDmg : 1;
+            return 1;
+        }
+
+        float MarkMult(Unit att, Unit tgt, DmgKind kind, bool dot)
+        {
             if (dot || kind == DmgKind.Passive || !RealHero(att) || !RealHero(tgt) || att.Team == tgt.Team) return 1;
             for (int i = 0; i < tgt.StCount; i++)
             {
@@ -350,6 +377,13 @@ namespace BAM.Sim
             ItemShield(tgt, ItemId.Rally, ItemS.RallyTime, tgt.MaxHp * ItemS.RallyShield);
             AddStatus(tgt, St.SpeedPct, ItemS.RallyTime, ItemS.RallySpeed);
             ItemProc(tgt, ItemId.Rally);
+        }
+
+        /// <summary>Parascythe: the holder heals for 10 % of the health its damage took (its wolf's and burns too), from any enemy unit.</summary>
+        void ItemLifesteal(Unit att, Unit tgt, float taken)
+        {
+            if (taken <= 0 || !RealHero(att) || !att.Alive || att.ItemCount == 0 || att.Team == tgt.Team || tgt.IsClone) return;
+            if (att.HasItem(ItemId.Lifesteal)) Heal(att, taken * ItemS.Lifesteal, att);
         }
 
         // ---------- the special (Heroes.cs, after a cast that went off) ----------
