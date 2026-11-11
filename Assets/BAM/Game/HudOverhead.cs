@@ -24,6 +24,7 @@ namespace BAM.Game
             public RectTransform Root;
             public Text Name;
             public Image Eye, Diamond, ChanBack, ChanFill;
+            public Image ItemMark; public readonly Image[] Echo = new Image[ItemS.EchoMax]; // HudItems.cs
             public Outline NameEdge, DiamondEdge;   // kept from the build, so no GetComponent every frame
             public float EyeA;
             // name tags pushed apart where they collide (video review 2026-11-03: "MTyraFenn" when three stood together):
@@ -75,6 +76,7 @@ namespace BAM.Game
                 o.ChanBack = Plain(o.Root, "ChannelBack", new Color(8f / 255f, 10f / 255f, 24f / 255f, 0.85f));
                 o.ChanFill = Plain(o.ChanBack.rectTransform, "Fill", Color.white);
                 o.ChanFill.rectTransform.anchorMin = o.ChanFill.rectTransform.anchorMax = o.ChanFill.rectTransform.pivot = new Vector2(0f, 0.5f);
+                BuildItemMarks(o);
                 o.Root.gameObject.SetActive(false);
                 overheads[i] = o;
             }
@@ -189,6 +191,7 @@ namespace BAM.Game
                     o.ChanFill.rectTransform.sizeDelta = new Vector2(cw * k, 4f);
                     o.ChanFill.color = foe ? new Color(1f, 0.62f, 0.15f, 0.6f + 0.4f * Mathf.Sin(Time.unscaledTime * 30f)) : new Color(1f, 1f, 1f, 0.7f);
                 }
+                ItemMarksFrame(o, u, ts, bw);
             }
             Declutter(ts, dt);
         }

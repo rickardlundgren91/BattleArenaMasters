@@ -47,6 +47,7 @@ namespace BAM.Online.Mp
         readonly PlayerInput[] latest;
         readonly Queue<PlayerInput>[] specQ, spellQ;
         readonly TeamSignal[] sigQ; // a guest's team signal waiting for the next frame
+        readonly byte[] pickQ; // a guest's item pick waiting for the next frame (Sim/Items.cs)
         readonly bool[] gone;
         int pendingMask;
         readonly long[] hashFrame = new long[128];
@@ -88,7 +89,7 @@ namespace BAM.Online.Mp
             for (int i = 0; i < guessHashAt.Length; i++) guessHashAt[i] = -1;
             ring = new PlayerInput[Cap * seats];
             latest = new PlayerInput[seats];
-            specQ = new Queue<PlayerInput>[seats]; spellQ = new Queue<PlayerInput>[seats]; sigQ = new TeamSignal[seats];
+            specQ = new Queue<PlayerInput>[seats]; spellQ = new Queue<PlayerInput>[seats]; sigQ = new TeamSignal[seats]; pickQ = new byte[seats];
             gone = new bool[seats];
             for (int s = 0; s < seats; s++) { latest[s] = PlayerInput.None; specQ[s] = new Queue<PlayerInput>(MaxPresses); spellQ[s] = new Queue<PlayerInput>(MaxPresses); }
             for (int i = 0; i < hashFrame.Length; i++) hashFrame[i] = -1;
@@ -143,7 +144,7 @@ namespace BAM.Online.Mp
         {
             if (!Host || Started) return;
             Started = true;
-            for (int s = 0; s < Seats; s++) { latest[s] = PlayerInput.None; specQ[s].Clear(); spellQ[s].Clear(); sigQ[s] = TeamSignal.None; }
+            for (int s = 0; s < Seats; s++) { latest[s] = PlayerInput.None; specQ[s].Clear(); spellQ[s].Clear(); sigQ[s] = TeamSignal.None; pickQ[s] = 0; }
         }
 
         void Build(in PlayerInput own)
@@ -163,13 +164,14 @@ namespace BAM.Online.Mp
                         var x = fut[j]; futT[j] = -1; latest[s] = x;
                         if (x.Special) { i.Special = true; i.AimAngle = x.AimAngle; i.AimK = x.AimK; }
                         if (x.Spell) { i.Spell = true; i.SpellAngle = x.SpellAngle; i.SpellK = x.SpellK; }
-                        i.Signal = x.Signal;
+                        i.Signal = x.Signal; i.ItemPick = x.ItemPick;
                     }
                     i.MoveX = latest[s].MoveX; i.MoveY = latest[s].MoveY;
                     // presses that came too late for their tick: at the next frame
                     if (!i.Special && specQ[s].Count > 0) { var p = specQ[s].Dequeue(); i.Special = true; i.AimAngle = p.AimAngle; i.AimK = p.AimK; }
                     if (!i.Spell && spellQ[s].Count > 0) { var p = spellQ[s].Dequeue(); i.Spell = true; i.SpellAngle = p.SpellAngle; i.SpellK = p.SpellK; }
                     if (i.Signal == TeamSignal.None) { i.Signal = sigQ[s]; sigQ[s] = TeamSignal.None; }
+                    if (i.ItemPick == 0) { i.ItemPick = pickQ[s]; pickQ[s] = 0; }
                 }
                 ring[b + s] = i;
             }
@@ -219,6 +221,7 @@ namespace BAM.Online.Mp
                 if (i.Special && specQ[seat].Count < MaxPresses) specQ[seat].Enqueue(i);
                 if (i.Spell && spellQ[seat].Count < MaxPresses) spellQ[seat].Enqueue(i);
                 if (i.Signal != TeamSignal.None) sigQ[seat] = i.Signal;
+                if (i.ItemPick != 0) pickQ[seat] = i.ItemPick;
             }
         }
 
@@ -329,7 +332,7 @@ namespace BAM.Online.Mp
         static bool SameInput(in PlayerInput a, in PlayerInput b) =>
             Bits(a.MoveX) == Bits(b.MoveX) && Bits(a.MoveY) == Bits(b.MoveY) && a.Special == b.Special && Bits(a.AimAngle) == Bits(b.AimAngle)
             && Bits(a.AimK) == Bits(b.AimK) && a.Spell == b.Spell && Bits(a.SpellAngle) == Bits(b.SpellAngle) && Bits(a.SpellK) == Bits(b.SpellK)
-            && a.Signal == b.Signal;
+            && a.Signal == b.Signal && a.ItemPick == b.ItemPick;
         static int Bits(float f) => BitConverter.SingleToInt32Bits(f);
 
         // ---------------------------------------------------------------- guest prediction

@@ -108,6 +108,7 @@ namespace BAM.Game
             BeginScore();
             BeginEmote();
             BeginSpell();
+            BeginItems();
             BeginHeroTest();
             rings.Begin(m, views);
             // the hero's own special icon covers the disc (the old SpIcon); the name only if the picture is missing
@@ -188,6 +189,7 @@ namespace BAM.Game
             input.MoveX = v.x;
             input.MoveY = -v.y;
             input.Signal = TakeSignal(); // ATTACK or DEFEND from the emote wheel (HudEmote.cs)
+            input.ItemPick = TakeItemPick(); // the item offer's choice (HudItems.cs)
             if (specialQueued)
             {
                 specialQueued = false;
@@ -286,6 +288,7 @@ namespace BAM.Game
             ScoreFrame();
             EmoteFrame(hidden);
             SpellFrame(hidden);
+            ItemsFrame(hidden);
             HoldFrame(hidden);
             HeroTestFrame(hidden);
             Special();
@@ -796,6 +799,7 @@ namespace BAM.Game
             BuildPause();
             BuildScore();
             BuildSpell();
+            BuildItems(); // the item offer and the items held (HudItems.cs)
             BuildHold();
             BuildHeroTest();
 

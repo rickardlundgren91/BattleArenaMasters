@@ -62,6 +62,8 @@ namespace BAM.Sim
         public float SpellAngle, SpellK;
         /// <summary>A team signal called this tick (ATTACK or DEFEND on the emote wheel), else None.</summary>
         public TeamSignal Signal;
+        /// <summary>The item offer's choice taken this tick: 1-3, 0 = none (Items.cs).</summary>
+        public byte ItemPick;
         public static PlayerInput None => new PlayerInput { AimAngle = float.NaN, SpellAngle = float.NaN, SpellK = 1 };
     }
 
@@ -328,6 +330,7 @@ namespace BAM.Sim
                 if (input.Special) { seatSpecBuf[s] = Rules.SpecialBuffer; seatBufAng[s] = input.AimAngle; seatBufK[s] = input.AimK; seatSpecAt[s] = Time; }
                 if (input.Spell) CastSpell(h, input.SpellAngle, input.SpellK); // the battle spell (Spells.cs)
                 if (input.Signal != TeamSignal.None) CallSignal(h, input.Signal); // a team signal (Signals.cs)
+                if (input.ItemPick > 0) PickItem(h, input.ItemPick - 1); // the item offer's choice (Items.cs)
             }
 
             // minions of a wave come out one by one
@@ -346,10 +349,13 @@ namespace BAM.Sim
             int lvl = Tut != null ? 1 : Config.HeroTest ? Level : Math.Min(Rules.MaxLevel, 1 + (int)Math.Floor(Time / Rules.SecondsPerLevel));
             if (lvl != Level)
             {
+                int oldLvl = Level;
                 Level = lvl;
                 for (int i = 0; i < Units.Count; i++) if (Units[i].Kind == UnitKind.Hero) Units[i].SetLevel(lvl);
                 Emit(EventType.LevelUp, null, null, lvl);
+                if (lvl > oldLvl) ItemLevelUp(oldLvl, lvl); // a choice of three items at levels 6 and 12 (Items.cs)
             }
+            BotItemPicks();
             if (Tut == null && !Config.HeroTest) WaveT -= dt;
             if (WaveT <= 0) { WaveT += Rules.WavePeriod * PacingWaveMult(); SpawnWave(); }
 
@@ -389,7 +395,7 @@ namespace BAM.Sim
                 }
                 if (u.Kind == UnitKind.Hero)
                 {
-                    if (!u.IsClone) { TelegraphTick(u); UpdateSpecial(u, dt); SpellTick(u); if (u.Hero == HeroId.Kugg) KuggTick(u, dt); else if (u.Hero >= HeroId.Ragn) Hero8Tick(u, dt); }
+                    if (!u.IsClone) { ItemsTick(u); TelegraphTick(u); UpdateSpecial(u, dt); SpellTick(u); if (u.Hero == HeroId.Kugg) KuggTick(u, dt); else if (u.Hero >= HeroId.Ragn) Hero8Tick(u, dt); }
                     if (!u.InFight(Time) && !u.IsClone)
                     {
                         u.RegenT += dt;

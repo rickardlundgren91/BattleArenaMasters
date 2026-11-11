@@ -13,6 +13,7 @@ namespace BAM.Sim
         Poison,   // Tikta's needles: V per second, Amount gathered for the next tick
         AtkHaste, // V more attacks per second, as a share (0.4 = 40 % faster): the Haste battle spell
         TiktaMark, // Tikta 2.0 Deathmark: By = the Tikta whose next Needle Storm needle on this hero hits harder
+        QuarryMark, // the Quarry Mark item (Items.cs): By = the marker; the next hit from another of its team hits harder
     }
 
     public struct Status
@@ -22,6 +23,7 @@ namespace BAM.Sim
         public Unit By;
         public bool Queen; // Moa's Queen's Instinct shield: it never blocks control
         public float Amount0; // what a shield started with: only the art reads it (Moa's hex ring goes dark as it is used)
+        public ItemId Item; // a shield from an item (Items.cs): a new one from the same item replaces it
     }
 
     /// <summary>How Fenn's wolf is behaving.</summary>
@@ -223,7 +225,7 @@ namespace BAM.Sim
         {
             if (StCount >= MaxStatus) return -1; // never in a real match: the oldest-ending one would be a fine victim, but none is needed
             ref var s = ref Sts[StCount];
-            s.Type = type; s.T = t; s.V = v; s.Amount = amount; s.By = by; s.Queen = queen; s.Amount0 = amount;
+            s.Type = type; s.T = t; s.V = v; s.Amount = amount; s.By = by; s.Queen = queen; s.Amount0 = amount; s.Item = ItemId.None;
             return StCount++;
         }
         internal void RemoveAt(int i)

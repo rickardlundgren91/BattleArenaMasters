@@ -38,6 +38,7 @@ namespace BAM.Sim
         internal int AddStatus(Unit u, St type, float dur, float v = 0, float amount = 0, Unit by = null, bool queen = false)
         {
             if (IsControl(type) && CcImmune(u)) return -1;
+            dur = CharmCutDur(u, type, dur, v, by); // Steadfast Charm (Items.cs)
             int i = u.AddRaw(type, dur, v, amount, by, queen);
             if ((type == St.Stun || type == St.Root) && dur > 0 && u.Kind == UnitKind.Hero) InterruptSpecial(u, type == St.Stun);
             return i;
@@ -48,6 +49,7 @@ namespace BAM.Sim
         internal void AddSlowOnce(Unit u, St type, float dur, float v, Unit by)
         {
             if (CcImmune(u)) return;
+            dur = CharmCutDur(u, type, dur, v, by); // Steadfast Charm (Items.cs)
             for (int i = 0; i < u.StCount; i++)
             {
                 ref var s = ref u.Sts[i];
@@ -113,6 +115,7 @@ namespace BAM.Sim
             {
                 amount *= tgt.TakenMult;
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
+                amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark (Items.cs)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
                 if (tgt.Kind == UnitKind.Tower && src != null && src.Kind == UnitKind.Wolf) amount *= Rules.WolfVsTower; // half (tester 2026-11-03 via Discord, Rickard ok)
@@ -148,13 +151,13 @@ namespace BAM.Sim
             if (tgt.Kind == UnitKind.Hero && tgt.Hero == HeroId.Oaken) amount = StoredImpact(src, tgt, amount, kind, flags); // Hero6.cs
             amount = QueenInstinct(src, tgt, amount, kind, flags);
             if (amount <= 0) return 0;
-            float taken = Math.Min(amount, tgt.Hp);
+            float taken = Math.Min(amount, tgt.Hp), hpBefore = tgt.Hp;
             tgt.Hp -= amount;
             if (taken > 0 && tgt.Kind == UnitKind.Hero && tgt.Hero == HeroId.Oaken) tgt.OakenLastLoss = Time;
             Emit(EventType.Damage, att, tgt, taken, 0, false, 0, 0, kind);
             if (src != null && src.Kind == UnitKind.Hero && !src.IsClone && src.Hero == HeroId.Blast && !burning && (flags & DmgFlags.NoIgnite) == 0) Ignite(src, tgt, amount);
             if (tgt.Hp <= 0) Kill(tgt, src);
-            else CloneOnHurt(tgt, src, kind, flags);
+            else { CloneOnHurt(tgt, src, kind, flags); ItemsOnHurt(att, tgt, hpBefore, kind, dot); } // Guardian's Thread, Rally Beacon (Items.cs)
             return taken;
         }
 
@@ -188,6 +191,7 @@ namespace BAM.Sim
             u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0; u.KnockPad = false; u.KnockKeg = null; u.KnockRoll = null; u.KnockFreeAt = -99;
             u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
+            ItemsOnDeath(u); // no Echo or armed fang comes back with him (Items.cs)
             KuggReset(u); // his Anchor ends with him
             Hero8Reset(u); // Ragn's leap, Ravna's flock, Skrall's Trance (Hero8.cs)
             int kt = Teams.Other(u.Team);
@@ -524,7 +528,7 @@ namespace BAM.Sim
         {
             var s = p.Src; var t = p.Tgt;
             if (!t.Alive) return;
-            float dealt = DealDamage(s, t, p.Dmg, DmgKind.Auto);
+            float dealt = DealDamage(s, t, p.OnHit ? p.Dmg * ItemAutoMult(s, t) : p.Dmg, DmgKind.Auto); // Thicket Fang (Items.cs)
             Emit(EventType.Hit, s, t, dealt, (byte)p.Kind, p.Big, t.X, t.Y, DmgKind.Auto); // always: every attack shows where it landed
             if (!p.OnHit || (!s.Alive && !s.IsClone)) return;
             if (s.Kind == UnitKind.Hero && !s.IsClone) OnHeroHit(s, t, p, dealt);
@@ -535,6 +539,7 @@ namespace BAM.Sim
             if (t.IsClone) return; // Fenn's decoy gives no charge and no on-hit passives (old phantomHit)
             if (dealt <= 0 && t.Has(St.Invulnerable)) return; // nor does a hit on respawn protection (precision CHAINMAP-06; a shield still charges)
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
+            ItemsOnAutoHit(h, t); // Resonance Core, Quarry Mark, Thicket Fang (Items.cs)
             if (!h.KuggRooted) h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1); // Kugg gathers no charge while anchored (ROI17's stocks)
             // a killing blow puts nothing on the corpse: Knut's slow sat on a dead hero through the wait (statuses do not tick while
             // dead) and came back with him (full review 2026-11-09 nr 72). The charge and the hero's own passives are still his.

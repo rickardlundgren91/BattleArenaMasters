@@ -44,6 +44,8 @@ namespace BAM.Sim
         RagnLand,      // Ragn A came down from his Moon Leap at X/Y (B = the enemy the landing hit, can be null); V = the shield he got
         TranceStep,    // Skrall A's Trance gathered one more step: V = the steps he has now (1-3); Big = the full three
         FlockEnd,      // Ravna A is herself again at X/Y after her Crow Flock
+        ItemPicked,    // hero A took item Kind (ItemId) from its offer (Items.cs)
+        ItemProc,      // item Kind (ItemId) worked on A: V = Resonance Core's Echoes now (0 = spent), Quarry Mark 0 = marked, 1 = spent
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>

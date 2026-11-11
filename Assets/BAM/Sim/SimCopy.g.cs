@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "58ecad258083cf94";
+            Generated = true; GeneratedHash = "482e0e18aac3df52";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -281,12 +281,14 @@ namespace BAM.Sim
             SimMirror.SetRo(__t, "Humans", SimMirror.NewList(__s.Humans));
             SimMirror.SetRo(__t, "Kills", SimMirror.NewArr(__s.Kills));
             SimMirror.SetRo(__t, "Projs", SimMirror.NewList(__s.Projs));
+            SimMirror.SetRo(__t, "RallyReadyAt", SimMirror.NewArr(__s.RallyReadyAt));
             SimMirror.SetRo(__t, "Stars", SimMirror.NewArr(__s.Stars));
             SimMirror.SetRo(__t, "Towers", SimMirror.NewArr(__s.Towers));
             SimMirror.SetRo(__t, "Units", SimMirror.NewList(__s.Units));
             SimMirror.SetRo(__t, "aiBuf", SimMirror.NewList(__s.aiBuf));
             SimMirror.SetRo(__t, "areaBuf", SimMirror.NewList(__s.areaBuf));
             SimMirror.SetRo(__t, "atkBuf", SimMirror.NewList(__s.atkBuf));
+            SimMirror.SetRo(__t, "itemPool", SimMirror.NewArr(__s.itemPool));
             SimMirror.SetRo(__t, "mobBuf", SimMirror.NewList(__s.mobBuf));
             SimMirror.SetRo(__t, "oneInput", SimMirror.NewArr(__s.oneInput));
             SimMirror.SetRo(__t, "projBuf", SimMirror.NewList(__s.projBuf));
@@ -321,6 +323,7 @@ namespace BAM.Sim
             OneTap = __s.OneTap;
             Player = __m.Map(__s.Player);
             __m.ListMap(Projs, __s.Projs);
+            SimMirror.Arr(RallyReadyAt, __s.RallyReadyAt);
             if (!ReferenceEquals(Rng, __m.Map(__s.Rng))) SimMirror.SetRo(this, "Rng", __m.Map(__s.Rng));
             SpecialDeniedAt = __s.SpecialDeniedAt;
             SimMirror.Arr(Stars, __s.Stars);
@@ -344,6 +347,7 @@ namespace BAM.Sim
             htAllyFullT = __s.htAllyFullT;
             htCdT = __s.htCdT;
             if (__s.htSlots == null) htSlots = null; else if (htSlots == null || htSlots.Length != __s.htSlots.Length || ReferenceEquals(htSlots, __s.htSlots)) htSlots = new global::BAM.Sim.Match.HtSlot[__s.htSlots.Length]; __m.ArrMap(htSlots, __s.htSlots);
+            SimMirror.Arr(itemPool, __s.itemPool);
             __m.ListMap(mobBuf, __s.mobBuf);
             nextSerial = __s.nextSerial;
             SimMirror.Arr(oneInput, __s.oneInput);
@@ -544,11 +548,13 @@ namespace BAM.Sim
             SimMirror.SetRo(__t, "CastSeen", SimMirror.NewArr(__s.CastSeen));
             SimMirror.SetRo(__t, "FlockHit", SimMirror.NewList(__s.FlockHit));
             SimMirror.SetRo(__t, "HidAt", SimMirror.NewArr(__s.HidAt));
+            SimMirror.SetRo(__t, "Items", SimMirror.NewArr(__s.Items));
             SimMirror.SetRo(__t, "LastHitBy", SimMirror.NewArr(__s.LastHitBy));
             SimMirror.SetRo(__t, "LastSeenT", SimMirror.NewArr(__s.LastSeenT));
             SimMirror.SetRo(__t, "LastSeenX", SimMirror.NewArr(__s.LastSeenX));
             SimMirror.SetRo(__t, "LastSeenY", SimMirror.NewArr(__s.LastSeenY));
             SimMirror.SetRo(__t, "NoticeAt", SimMirror.NewArr(__s.NoticeAt));
+            SimMirror.SetRo(__t, "Offer", SimMirror.NewArr(__s.Offer));
             SimMirror.SetRo(__t, "Sts", SimMirror.NewArr(__s.Sts));
             SimMirror.SetRo(__t, "VisSince", SimMirror.NewArr(__s.VisSince));
             SimMirror.SetRo(__t, "VolleyHit", SimMirror.NewList(__s.VolleyHit));
@@ -565,6 +571,7 @@ namespace BAM.Sim
             AtkTimer = __s.AtkTimer;
             BlastChainReadyAt = __s.BlastChainReadyAt;
             Bot = __m.Map(__s.Bot);
+            BotPickAt = __s.BotPickAt;
             SimMirror.Arr(CastSeen, __s.CastSeen);
             Charge = __s.Charge;
             ClonePending = __s.ClonePending;
@@ -585,6 +592,8 @@ namespace BAM.Sim
             Hp = __s.Hp;
             IsClone = __s.IsClone;
             IsPlayer = __s.IsPlayer;
+            ItemCount = __s.ItemCount;
+            SimMirror.Arr(Items, __s.Items);
             Kills = __s.Kills;
             Kind = __s.Kind;
             KnockFreeAt = __s.KnockFreeAt;
@@ -641,6 +650,9 @@ namespace BAM.Sim
             OakenReadyAt = __s.OakenReadyAt;
             OakenStored = __s.OakenStored;
             OakenStoredUntil = __s.OakenStoredUntil;
+            SimMirror.Arr(Offer, __s.Offer);
+            OfferCount = __s.OfferCount;
+            OfferQueued = __s.OfferQueued;
             Owner = __m.Map(__s.Owner);
             PX = __s.PX;
             PY = __s.PY;

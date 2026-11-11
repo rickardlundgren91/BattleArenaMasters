@@ -214,7 +214,7 @@ namespace BAM.Sim
             public static void Write(byte[] d, int o, in PlayerInput i)
             {
                 d[o] = (byte)Q(i.MoveX); d[o + 1] = (byte)Q(i.MoveY);
-                d[o + 2] = (byte)((i.Special ? 1 : 0) | (i.Spell ? 2 : 0) | ((int)i.Signal & 3) << 2);
+                d[o + 2] = (byte)((i.Special ? 1 : 0) | (i.Spell ? 2 : 0) | ((int)i.Signal & 3) << 2 | (i.ItemPick & 3) << 4); // bits 4-5: an item pick
                 int a = i.Special ? Ang(i.AimAngle) : NoAngle; d[o + 3] = (byte)a; d[o + 4] = (byte)(a >> 8); d[o + 5] = (byte)(i.Special ? K(i.AimK) : 0);
                 a = i.Spell ? Ang(i.SpellAngle) : NoAngle; d[o + 6] = (byte)a; d[o + 7] = (byte)(a >> 8); d[o + 8] = (byte)(i.Spell ? K(i.SpellK) : 255);
             }
@@ -224,7 +224,7 @@ namespace BAM.Sim
                 var i = PlayerInput.None;
                 i.MoveX = (sbyte)d[o] / 127f; i.MoveY = (sbyte)d[o + 1] / 127f;
                 int f = d[o + 2];
-                i.Special = (f & 1) != 0; i.Spell = (f & 2) != 0; i.Signal = (TeamSignal)((f >> 2) & 3);
+                i.Special = (f & 1) != 0; i.Spell = (f & 2) != 0; i.Signal = (TeamSignal)((f >> 2) & 3); i.ItemPick = (byte)((f >> 4) & 3);
                 int a = d[o + 3] | d[o + 4] << 8, k = d[o + 5];
                 if (i.Special) { i.AimAngle = UnAng(a); i.AimK = k / 255f; }
                 a = d[o + 6] | d[o + 7] << 8; k = d[o + 8];
