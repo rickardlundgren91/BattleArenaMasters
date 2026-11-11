@@ -1073,6 +1073,7 @@ namespace BAM.Art
                 }
             }
             if (imported && IsHero && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
+            if (imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggGuard();
             if (!Preview && imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggAim();
             // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
             if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
@@ -1674,6 +1675,35 @@ namespace BAM.Art
             }
             Out(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, 1f);
             Out(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, -1f);
+        }
+
+        // Kugg's free left fist in his mirrored idle (Kugg/Anim/IdleMirror, Rickard 2026-11-11, his picture: "nu håller han andra handen
+        // i huvudet"): the clip holds it up in front of the face, and on his broad stone body it went into his head and shoulder.
+        // The upper arm turns out from his side about his forward axis until the fist is outside the shoulder by KuggFistOut of the
+        // arm's length (at most KuggGuardMax degrees); a fist already out there is left alone. Standing only, not while he swings or casts.
+        const float KuggFistOut = 0.3f, KuggGuardMax = 50f;
+        void KuggGuard()
+        {
+            float w = (1f - Mathf.Clamp01(gearAct)) * (1f - Mathf.Clamp01(moveW)); // standing only: his walk and run swing as made
+            if (w <= 0.01f || anim == null || !anim.isHuman) return;
+            Transform up = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), lo = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm),
+                hand = anim.GetBoneTransform(HumanBodyBones.LeftHand);
+            if (up == null || lo == null || hand == null) return;
+            Vector3 fwd = transform.forward, upW = transform.up, outW = -transform.right; // his left
+            Vector3 v = hand.position - up.position;
+            v -= fwd * Vector3.Dot(v, fwd); // in his front plane, the turn about his forward axis
+            float len = v.magnitude, arm = (lo.position - up.position).magnitude + (hand.position - lo.position).magnitude;
+            if (len < 1e-4f || arm < 1e-4f) return;
+            float o = Vector3.Dot(v, outW), want = KuggFistOut * arm;
+            if (o >= want) return;
+            float now = Mathf.Atan2(o, Vector3.Dot(v, upW)) * Mathf.Rad2Deg; // from up towards out
+            float goal = Vector3.Dot(v, upW) >= 0f ? Mathf.Asin(Mathf.Clamp(want / len, -1f, 1f)) * Mathf.Rad2Deg
+                : 180f - Mathf.Asin(Mathf.Clamp(want / len, -1f, 1f)) * Mathf.Rad2Deg; // a fist below the shoulder swings out and down
+            float turn = Mathf.Clamp(goal - now, 0f, KuggGuardMax) * w;
+            if (turn <= 0.01f) return;
+            Vector3 dir = v / len, axis = Vector3.Cross(dir, outW);
+            if (axis.sqrMagnitude < 1e-8f) return;
+            up.rotation = Quaternion.AngleAxis(turn, axis.normalized) * up.rotation;
         }
 
         void KuggAim()
