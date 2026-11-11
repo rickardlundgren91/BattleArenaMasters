@@ -180,6 +180,9 @@ namespace BAM.Art
         Heal = 30,          // a green "+N" shows on a friendly hero (HudTop): his plus signs float up over it
         Kill = 31,          // the player's kill on an enemy hero: his gold burst on the body
         HookDrag = 32,      // a hero hauled in by Knut's hook: a small puff of ground dust at its feet (sent every few frames)
+        // Fenn the Spectral Knight (Rickard 2026-11-11 "fenn spectral knight, assassin" / "gör effekter på hans modell")
+        SpectralVeil = 33,  // he fades into a ghost (his decoy stands there) or comes back out of it: pale ghost wisps, glow and a ring
+        SpectralStrike = 34, // his Phantom Strike out of the Veil: a pale ghost sword cut on its target
     }
 
     public static class ArtKit

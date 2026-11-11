@@ -157,6 +157,12 @@ namespace BAM.Art
         Color flashColor = Color.white;
         float ownT = -1f, ownLen = 0.15f, ownPeak; // the player's own hit: a white flash over the red blink (PlayOwnHit)
         bool flashLit;                             // the emission is not black (a flash is showing or just ended)
+        // Fenn the Spectral Knight (Rickard 2026-11-11 "fenn spectral knight, assassin", "gör effekter på hans modell"): his own
+        // Clay-Fenn model in a soft pale-blue ghost light, ghost wisps rising off him, and a ghost tint when he is half seen (Veil)
+        bool Spectral => HeroIndex == (int)HeroId.Fenn && def.Kind != RigKind.Wolf && !dead;
+        static readonly Color SpectralGlow = new Color(0.09f, 0.2f, 0.3f), SpectralFade = new Color(0.7f, 0.9f, 1f);
+        static readonly Color32 SpectralWisp = new Color32(170, 230, 255, 170);
+        float wispT;
         UnitMarker marker = UnitMarker.None;
 
         public void Build(RigDef d, int team)
@@ -1000,7 +1006,7 @@ namespace BAM.Art
             bool wantFade = a < 0.99f;
             if (wantFade)
             {
-                Color c = new Color(1f, 1f, 1f, a);
+                Color c = Spectral ? new Color(SpectralFade.r, SpectralFade.g, SpectralFade.b, a) : new Color(1f, 1f, 1f, a);
                 for (int i = 0; i < fadeMats.Length; i++) fadeMats[i].SetColor(ArtMaterials.BaseColor, c);
                 if (!fading)
                 {
@@ -1048,7 +1054,13 @@ namespace BAM.Art
             // the player's own hit flashes white and wins over the red blink every hit has (tester feedback, Ski 2026-11-07)
             if (ownT >= 0f) SetFlash(Color.white * (ownPeak * (1f - ownT / ownLen)));
             else if (hitT >= 0f) SetFlash(flashColor * ((1f - hitT / hitLen) * 0.9f));
+            else if (Spectral) SetFlash(SpectralGlow * (0.75f + 0.25f * Mathf.Sin(idleT * 2.4f + seed))); // his ghost light breathes
             else if (flashLit) SetFlash(Color.black); // a tower's shot pulse (PoseTower, later this frame) lights it again
+            if (Spectral && !Preview && renderersOn && vis > 0.3f && !dead && (wispT -= dt) <= 0f)
+            {   // pale ghost wisps rise off him, more as he runs (none at all while the enemy cannot see him: renderersOn is off)
+                wispT = moving ? 0.12f : 0.3f;
+                Fx.Wisps(transform.position + new Vector3(0f, 0.25f + Random.value * 0.6f, 0f), 1, SpectralWisp, 0.35f, 0.4f, 0.7f, 0.6f, 0.2f);
+            }
             recoil = Mathf.MoveTowards(recoil, 0f, dt * 5f);
 
             if (imported) AnimateImported(dt);

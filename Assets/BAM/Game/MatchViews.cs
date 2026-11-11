@@ -824,7 +824,13 @@ namespace BAM.Game
                     }
                     break;
                 case EventType.CloneSpawn:
-                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) { ArtKit.PlayFx(FxKind.CloneSpawn, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneAppear, Coords.Of(e.A)); } // FENN-09
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) { ArtKit.PlayFx(Spectral(e.A) ? FxKind.SpectralVeil : FxKind.CloneSpawn, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneAppear, Coords.Of(e.A)); } // FENN-09
+                    break;
+                case EventType.VeilStrike: // the Spectral Knight's Phantom Strike (Heroes.cs FennVeilStrike)
+                    if (e.B != null && m.IsVisibleTo(e.B, Mine)) ArtKit.PlayFx(FxKind.SpectralStrike, Coords.Of(e.B), 1f, Side(e.A != null ? e.A.Team : 0));
+                    break;
+                case EventType.VeilEnd: // the Veil ran out: he steps back out of the ghost light where this phone can see him
+                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.SpectralVeil, Coords.Of(e.A), 0.7f, Side(e.A.Team));
                     break;
                 case EventType.CloneEnd:
                     if (e.A != null && unitBySerial.TryGetValue(e.A.Serial, out UnitRec cv) && cv.Vis > 0f) { ArtKit.PlayFx(FxKind.CloneEnd, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneVanish, Coords.Of(e.A)); } // FENN-09
@@ -1325,6 +1331,9 @@ namespace BAM.Game
             }
             return false;
         }
+
+        // the decoy Fenn leaves as he fades into the Spectral Veil: its puff is the ghost one (the clone of his passive keeps the violet)
+        bool Spectral(Unit clone) => m.FennVeil && clone.Owner != null && clone.Owner.Hero == HeroId.Fenn && clone.Owner.Has(St.Veil);
 
         // Fenn's wolf is drawn about 2 tiles long on a 0.2-tile disc: in a throw it leaps (how far along its red strip it is, cut short
         // at the prey it turned onto, FENN-07), and a wall right in front of it pulls its body back so its head stays out (FENN-06)

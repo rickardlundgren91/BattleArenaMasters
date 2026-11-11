@@ -1258,6 +1258,24 @@ namespace BAM.Art
                     Ring(p, 0.2f * size, 1.2f * size, (Color)m, 0.45f);
                     break;
                 }
+                case FxKind.SpectralVeil:
+                {
+                    Color g = Pal.Get(Pal.Ghost);
+                    Flash(mid, 0.15f * size, 0.9f * size, new Color(0.8f, 0.95f, 1f, 0.8f), 0.1f);
+                    Wisps(mid, 8, C(Pal.Ghost, 220), 0.6f * size, 1.4f, 0.7f, 0.9f, 0.3f);
+                    Glow(mid, 10, C(Pal.Ghost), 0.2f * size, 2f, 0.5f, 0.6f, 0.3f);
+                    Smoke(mid, 6, C(Pal.GhostDark, 140), 0.5f * size, 1f, 0.6f, 0.4f, 0.25f);
+                    Ring(p, 0.2f * size, 1.1f * size, new Color(g.r, g.g, g.b, 0.8f), 0.35f);
+                    break;
+                }
+                case FxKind.SpectralStrike:
+                {
+                    Color g = Pal.Get(Pal.Ghost);
+                    Pic("tx_wow_sword_slash", mid, new Color(g.r, g.g, g.b, 1f), 1.7f * size, 0.2f); // his sword cut, in ghost light
+                    Flash(mid, 0.15f * size, 0.7f * size, new Color(0.85f, 0.97f, 1f, 0.9f), 0.08f);
+                    Wisps(mid, 5, C(Pal.Ghost, 220), 0.5f * size, 1.6f, 0.5f, 0.6f, 0.25f);
+                    break;
+                }
                 case FxKind.CloneSpawn:
                 case FxKind.CloneEnd:
                     Smoke(mid, 10, C(Pal.Violet, 170), 0.5f * size, 1.2f, 0.6f, 0.5f, 0.25f);
