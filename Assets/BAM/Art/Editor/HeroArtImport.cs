@@ -136,6 +136,9 @@ namespace BAM.Art.Editor
             if (clips == null || clips.Length == 0) return;
             string name = Path.GetFileNameWithoutExtension(assetPath);
             bool loop = name.StartsWith("Idle") || name.StartsWith("Run") || name.StartsWith("Walk");
+            // a clip whose file name ends in Mirror plays left for right (Kugg's IdleMirror: Oaken's idle with the raised fist on the
+            // right, the cannon arm; Rickard 2026-11-11)
+            bool mirror = Mirrored(name);
             for (int i = 0; i < clips.Length; i++)
             {
                 ModelImporterClipAnimation c = clips[i];
@@ -149,9 +152,12 @@ namespace BAM.Art.Editor
                 c.keepOriginalOrientation = true;
                 c.keepOriginalPositionY = true;
                 c.keepOriginalPositionXZ = true;
+                c.mirror = mirror;
             }
             mi.clipAnimations = clips;
         }
+
+        static bool Mirrored(string clipName) => clipName.EndsWith("Mirror");
 
         static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
@@ -233,7 +239,9 @@ namespace BAM.Art.Editor
             // Down as he anchors (the turret takes over 0.3 s later, BodyForm.cs). Idle, hit, death and walk are
             // Oaken's heavy golem clips: Mutant Breathing Idle held the cannon arm up at his face, and Bonk's Orc Idle 1 (tried 2026-11-10)
             // pressed his arms in against his wide body and tilted his face (Rickard: "hans armar är lite nära och han är lite skev"). Height as Oaken's, whose body he wore until now (the turret form is sized from it).
-            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Oaken/Anim/Idle", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
+            // Since 2026-11-11 Oaken's idle plays mirrored (Kugg/Anim/IdleMirror, a copy of Oaken/Anim/Idle): its raised fist was his
+            // left, and Rickard wanted the cannon in that raised hand ("bättre med kugg kanonen i andra handen", his menu pictures)
+            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/IdleMirror", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
             // Ragn (hero 11, preview, 2026-11-10): Rickard's Tripo werewolf blacksmith rigged in Mixamo, his own clips: Mutant Breathing
             // Idle, Mutant Run, Mutant Swiping (both arms fastest at 0.44-0.45 of the 2.7 s clip) and the long Mutant Jumping (crouch, leap
             // with arms up, land) for Månsprång. Idle is Bonk's Orc Idle 1 since 2026-11-10: Mutant Breathing Idle held his right hand up
@@ -306,6 +314,11 @@ namespace BAM.Art.Editor
                     {
                         ModelImporterClipAnimation[] c = mi.clipAnimations;
                         stale = c == null || c.Length == 0 || !c[0].loopTime;
+                    }
+                    if (!stale && path.Contains("/Anim/"))
+                    {
+                        ModelImporterClipAnimation[] c = mi.clipAnimations;
+                        stale = c == null || c.Length == 0 || c[0].mirror != Mirrored(name);
                     }
                     if (!stale) continue;
                     Debug.Log("[BAM.Art] Importing " + path + " again with the hero rules (humanoid, looping idle and run)");
