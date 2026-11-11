@@ -6,7 +6,7 @@ namespace BAM.Sim
     /// (Kugg)"). The old game's ROI17 ("Joker", Resourceful Robo, abc2_gamedata.json) in BAM's own shape: a squat stone and brass
     /// golem whose right forearm is a rune cannon. Auto attack: a short cannon ball. Special, Anchor (Rotfäste, ROI's Remote
     /// Demolition Mode): he drives his heel spikes into the ground and becomes a cannon: he cannot walk, his reach grows by
-    /// RangeBonus (to 8 tiles), he fires faster (CdMult) for ShotCoeff of his damage, and he sees into grass GrassSight tiles away.
+    /// RangeBonus (to 8 tiles), he fires faster (CdMult) for ShotCoeff of his damage; no extra sight into grass (Rickard 2026-11-11).
     /// Every shot spends one of Shots; with none left (or after MaxTime, BAM's own guard so a player is never stuck in an empty
     /// lane) he pulls the spikes up for PackTime s and walks again. No charge is gathered while anchored. Passive, Spark Shot
     /// (ROI's Misfire): every SparkMin to SparkMax s the cannon fires by itself at a random enemy hero or minion within SparkRange
@@ -14,7 +14,7 @@ namespace BAM.Sim
     public static class KuggS
     {
         /// <summary>Anchor: ROI's AttackRangeBuff 5.75 on a 2.25 range gave 8 tiles; Kugg's own range is 2.5, so +5.5.</summary>
-        public const float RangeBonus = 5.5f, CdMult = 0.7f, ShotCoeff = 0.9f, GrassSight = 6, DeployTime = 0.6f, PackTime = 1.1f, MaxTime = 10;
+        public const float RangeBonus = 5.5f, CdMult = 0.7f, ShotCoeff = 0.9f, DeployTime = 0.6f, PackTime = 1.1f, MaxTime = 10;
         public const int Shots = 6;
         /// <summary>The Anchor can go from this many stocks (Rickard 2026-11-09: "kuggs ult ska man kunna använda så fort man har 2 skott");
         /// it fires as many shots as he has stocks, up to <see cref="Shots"/> (ROI17's stocks).</summary>

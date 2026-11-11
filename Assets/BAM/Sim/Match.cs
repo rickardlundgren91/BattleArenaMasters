@@ -493,7 +493,7 @@ namespace BAM.Sim
                 for (int i = 0; i < Units.Count; i++)
                 {
                     var o = Units[i];
-                    if (o.Alive && o.Team == team && SimMath.Dist(o, u) <= (o.KuggShots > 0 ? KuggS.GrassSight : Rules.GrassSight)) return true; // Kugg's Anchor sees further into grass (Hero7.cs)
+                    if (o.Alive && o.Team == team && SimMath.Dist(o, u) <= Rules.GrassSight) return true; // Kugg's Anchor gives no extra sight (Rickard 2026-11-11: "Kugg ska inte få vision av sin special")
                 }
                 return false;
             }
