@@ -1072,8 +1072,10 @@ namespace BAM.Art
                     GroundFeet(dt, 1f - moveW);
                 }
             }
-            if (imported && IsHero && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
-            if (imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggGuard();
+            // (IsHero is false on the menu stages, where HeroIndex still names the hero: these two go by HeroIndex alone so they show
+            // there too; Kugg's fist stayed in his head on Home, Rickard 2026-11-11)
+            if (imported && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
+            if (imported && !dead && HeroIndex == (int)HeroId.Kugg) KuggGuard();
             if (!Preview && imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggAim();
             // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
             if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
