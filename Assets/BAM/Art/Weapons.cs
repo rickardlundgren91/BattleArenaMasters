@@ -576,7 +576,7 @@ namespace BAM.Art
                 h.carryLo = an.GetBoneTransform(HumanBodyBones.RightLowerArm);
                 h.carryHand = an.GetBoneTransform(HumanBodyBones.RightHand);
             }
-            if (g.StillFingers) h.KeepFingers(an);
+            if (g.StillFingers) h.KeepFingers(an, g);
             for (int i = 0; i < nw; i++) h.AddWeapon(i, g.Weapons[i], an, figH, rends, op, fd);
             if (g.Shield != null) h.AddShield(g.Shield, an, figH, rends, op, fd);
             if (g.Cannon != null) h.AddCannon(g.Cannon, an, figH, rends, op, fd);
@@ -666,30 +666,82 @@ namespace BAM.Art
             }
         }
 
-        // GearDef.StillFingers: every finger bone of both hands (by the Avatar, else by its Mixamo name) and its pose as built, the
-        // bind pose (the weapons go on before the clips play)
+        // GearDef.StillFingers: every finger bone of both hands (by the Avatar, else by its Mixamo name) and the pose it is held in:
+        // the bind pose for a hand that holds a weapon (Close hand curls it after), a relaxed curl for a free hand, so it is not a
+        // flat mannequin hand (the bind pose's fingers are straight). stillM: the Avatar drives it, so a swing or cast plays its
+        // own fingers (Tyra's draw in Shoot); a bone the Avatar does not drive is set whole every frame (nothing else resets it).
         Transform[] stillB;
         Quaternion[] stillR;
+        bool[] stillM;
+        /// <summary>Degrees a free hand's finger joints bend in its relaxed pose (knuckle, middle, tip; the thumb half).</summary>
+        static readonly float[] RelaxBend = { 20f, 20f, 15f };
 
-        void KeepFingers(Animator an)
+        void KeepFingers(Animator an, GearDef g)
         {
             var bs = new List<Transform>();
+            var ms = new List<bool>();
+            var rel = new List<Quaternion>();
             for (int side = 0; side < 2; side++)
             {
                 bool left = side == 1;
                 Transform hd = an.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
                 if (hd == null) continue;
+                bool held = false;
+                if (g.Weapons != null) foreach (WeaponDef w in g.Weapons) if (w != null && w.Left == left) held = true;
                 int f0 = (int)(left ? HumanBodyBones.LeftThumbProximal : HumanBodyBones.RightThumbProximal);
+                var f = new Transform[15];
+                var fm = new bool[15];
                 for (int k = 0; k < 15; k++)
                 {
                     Transform b = an.GetBoneTransform((HumanBodyBones)(f0 + k));
+                    fm[k] = b != null;
                     if (b == null) b = HandBone(hd, left, FingerNames[k / 3] + (k % 3 + 1));
-                    if (b != null && !bs.Contains(b)) bs.Add(b);
+                    f[k] = b;
+                }
+                var bind = new Quaternion[15];
+                for (int k = 0; k < 15; k++) if (f[k] != null) bind[k] = f[k].localRotation;
+                if (!held) Relax(f);
+                for (int k = 0; k < 15; k++)
+                {
+                    if (f[k] == null || bs.Contains(f[k])) continue;
+                    bs.Add(f[k]); ms.Add(fm[k]); rel.Add(f[k].localRotation);
+                    f[k].localRotation = bind[k]; // the weapons go on in the bind pose
                 }
             }
             stillB = bs.ToArray();
-            stillR = new Quaternion[stillB.Length];
-            for (int i = 0; i < stillB.Length; i++) stillR[i] = stillB[i].localRotation;
+            stillR = rel.ToArray();
+            stillM = ms.ToArray();
+        }
+
+        // a free hand's relaxed curl, from the bind pose: the four fingers bend about the knuckle line towards the palm (the side
+        // the thumb's tip is on), the thumb a little in towards the index's root
+        static void Relax(Transform[] f)
+        {
+            if (f[3] == null || f[4] == null || f[12] == null) return;
+            Vector3 kn = f[12].position - f[3].position, dir = f[4].position - f[3].position;
+            Transform tip = f[2] != null ? f[2] : f[1] != null ? f[1] : f[0];
+            if (tip == null || kn.sqrMagnitude < 1e-12f || dir.sqrMagnitude < 1e-12f) return;
+            Vector3 palm = Vector3.ProjectOnPlane(Vector3.ProjectOnPlane(tip.position - f[3].position, dir.normalized), kn.normalized);
+            if (palm.sqrMagnitude < 1e-12f) return;
+            Vector3 axis = Vector3.Cross(dir, palm).normalized;
+            axis = Vector3.Dot(axis, kn) < 0f ? -kn.normalized : kn.normalized;
+            Vector3 thAxis = Vector3.zero;
+            if (f[0] != null && f[1] != null)
+            {
+                Vector3 td = f[1].position - f[0].position, to = Vector3.ProjectOnPlane(f[3].position - f[0].position, td.normalized);
+                if (td.sqrMagnitude > 1e-12f && to.sqrMagnitude > 1e-12f) thAxis = Vector3.Cross(td, to).normalized;
+            }
+            for (int n = 0; n < 5; n++)
+            {
+                Vector3 ax = n == 0 ? thAxis : axis;
+                if (ax == Vector3.zero) continue;
+                for (int j = 0; j < 3; j++)
+                {
+                    Transform b = f[n * 3 + j];
+                    if (b == null) break;
+                    b.rotation = Quaternion.AngleAxis(RelaxBend[j] * (n == 0 ? 0.5f : 1f), ax) * b.rotation;
+                }
+            }
         }
 
         /// <summary>A finger's root bone under the hand by its Mixamo name (LeftHandThumb1 and so on), for rigs whose Avatar does not
@@ -882,8 +934,14 @@ namespace BAM.Art
                 show = backIn > PopIn ? 0f : 1f - Mathf.Max(0f, backIn) / PopIn;
                 if (backIn < 0f) { backIn = -1f; show = 1f; }
             }
-            // GearDef.StillFingers: the fingers back in the model's own pose before anything below bends them (Close hand)
-            if (stillB != null) for (int i = 0; i < stillB.Length; i++) stillB[i].localRotation = stillR[i];
+            // GearDef.StillFingers: the fingers back in their held pose before anything below bends them (Close hand); a finger the
+            // Avatar drives plays its clip in a swing or cast (Tyra's draw), one it does not is always set whole
+            if (stillB != null)
+            {
+                float sw = Mathf.Clamp01(actW);
+                for (int i = 0; i < stillB.Length; i++)
+                    stillB[i].localRotation = stillM[i] && sw > 0.001f ? Quaternion.Slerp(stillR[i], stillB[i].localRotation, sw) : stillR[i];
+            }
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
             ArmTune(dead ? 0f : 1f - Mathf.Clamp01(actW));
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
