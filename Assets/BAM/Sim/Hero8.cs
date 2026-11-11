@@ -14,18 +14,18 @@ namespace BAM.Sim
     /// <summary>Ragn, the werewolf blacksmith (hero 12, Fighter). Special, Moon Leap (as ABC2's Bulldoze): he rushes up to LeapReach
     /// tiles at a random enemy in reach, to where it stood (he does not follow it: a good player can dodge it; walls and bases stop him). Reaching it, that enemy takes LandCoeff
     /// of his damage, a Stun and a Shove of Shove tiles; if it stepped away, the nearest enemy within LandRadius of where he stops does
-    /// (the red warning circle; LandRadius 1.2 -> 0.7 and Contact 0.5 -> 0.2 and LeapSpeed 14 -> 10, so stepping sideways at once at walking pace dodges a long leap).
+    /// (the red warning circle; LandRadius 1.2 -> 0.7 and Contact 0.5 -> 0.2 and LeapSpeed 14 -> 10, so stepping sideways at once at walking pace dodges a long leap; Rickard 2026-11-11 "har lite svårt att träffa special, öka ytan lite": LandRadius 0.9, Contact 0.3, LandCoeff 2.6 -> 2.1 to keep him at 53 % vs Hard bots; now a dodge takes a quick step or a speed boost).
     /// Only when the landing hits someone does Ragn get a shield of ShieldPct of his max health for ShieldTime s (Speltest BULLDOZE_SHIELD
     /// 20 % / 2 s; Rickard 2026-11-10: the shield only when the dash hits, as Bronson's).
     /// Passive, Wolf Run (as Ardor): after CalmTime s out of combat he runs RunBonus faster, until the next hit given or taken
     /// (Ardor: +1 tile/s flat on the Brawler's 2.16).</summary>
     public static class RagnS
     {
-        public const float LeapReach = 5, LeapSpeed = 10, MinLeapTime = 0.2f, LandRadius = 0.7f, LandCoeff = 2.6f, Stun = 1.25f, Shove = 4;
+        public const float LeapReach = 5, LeapSpeed = 10, MinLeapTime = 0.2f, LandRadius = 0.9f, LandCoeff = 2.1f, Stun = 1.25f, Shove = 4;
         public const float ShieldPct = 0.2f, ShieldTime = 2;
         public const float CalmTime = 3, RunBonus = 0.4f;
         /// <summary>He stops this far short of the enemy's edge, and hits it if he is within Contact of touching.</summary>
-        public const float Gap = 0.1f, Contact = 0.2f;
+        public const float Gap = 0.1f, Contact = 0.3f;
     }
 
     /// <summary>Nässla, the swamp witch (hero 13, Mage/Support). Special, Thorn Thicket (as ABC2's Bramble Blossom): brambles on a

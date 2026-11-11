@@ -52,7 +52,7 @@ namespace BAM.Sim
             // the rush does not follow (Rickard 2026-11-10: a good player can dodge an ult): an enemy that steps out of the circle is missed
             Place(h, x, y); Place(a, x + 4, y); a.ClearStatuses(); a.KnockT = 0; a.KnockFreeAt = 0; h.ClearStatuses(); h.Charge = h.HDef.MaxCharge; a0 = a.Hp;
             Check(m.TryTapSpecial(h), "a second rush");
-            for (int i = 0; i < 120 && h.RagnLeaping; i++) { m.Time += Rules.Tick; a.Y += 2.5f * Rules.Tick; m.RagnTick(h); }
+            for (int i = 0; i < 120 && h.RagnLeaping; i++) { m.Time += Rules.Tick; a.Y += 3.5f * Rules.Tick; m.RagnTick(h); }
             Check(a.Hp == a0 && !a.Has(St.Stun) && h.ShieldAmount == 0, $"he stepped {a.Y - y:0.0} tiles sideways and was missed, no shield ({a0 - a.Hp:0})");
 
             // a landing on nothing still gives the shield, hurts nobody
