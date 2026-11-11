@@ -459,7 +459,7 @@ namespace BAM.Sim
 
         // ---------- waves ----------
         static readonly MinionKind[] WaveKinds = { MinionKind.Melee, MinionKind.Siege, MinionKind.Ranged };
-        static readonly int[] WaveCount = { 2, 1, 1 }, WaveEvery = { 1, 3, 1 };
+        static readonly int[] WaveCount = { 3, 1, 1 }, WaveEvery = { 1, 3, 1 };
 
         void SpawnWave()
         {
