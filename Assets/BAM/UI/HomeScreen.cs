@@ -541,7 +541,7 @@ namespace BAM.UI
                 UiKit.Stretch(pic);
                 homePortraitImg = pic.gameObject.AddComponent<RawImage>();
                 homePortraitImg.raycastTarget = false;
-                homePortraitImg.uvRect = new Rect(0.115f, 0.1f, 0.77f, 0.9f); // the 400x308 portraits: a square around the face
+                homePortraitImg.uvRect = new Rect(0.1535f, 0.1f, 0.693f, 0.9f); // the 400x308 portraits: a true square around the face (277x277 px; was 308x277, squeezed the face sideways, Cajsa 2026-11-11)
 
                 float tx = 17.4f * Cw;
                 homeName = Lil(top, "", 3.8f, HubText);
