@@ -112,6 +112,10 @@ namespace BAM.Online
                     }
                     else if (Application.isEditor)
                     {
+                        // Multiplayer Play Mode: the virtual players share the editor's PlayerPrefs, so they would all reuse one
+                        // anonymous session (= the same player, and Lobby refuses the second join). Each gets its own profile.
+                        string vp = VirtualPlayerProfile();
+                        if (vp != null && auth.Profile != vp) auth.SwitchProfile(vp);
                         await auth.SignInAnonymouslyAsync();   // editor test account only, never in a build
                     }
                     else
@@ -202,6 +206,20 @@ namespace BAM.Online
         {
             State = s;
             Changed?.Invoke();
+        }
+
+        /// <summary>Editor only: a Multiplayer Play Mode virtual player runs from Library/VP/&lt;id&gt;; null in the main editor.</summary>
+        static string VirtualPlayerProfile()
+        {
+            string path = Application.dataPath.Replace('\\', '/');
+            int at = path.IndexOf("/Library/VP/", StringComparison.OrdinalIgnoreCase);
+            if (at < 0) return null;
+            string rest = path.Substring(at + "/Library/VP/".Length);
+            int slash = rest.IndexOf('/');
+            if (slash >= 0) rest = rest.Substring(0, slash);
+            var sb = new System.Text.StringBuilder("vp");
+            foreach (char c in rest) if (char.IsLetterOrDigit(c) || c == '-' || c == '_') sb.Append(c);
+            return sb.Length > 30 ? sb.ToString(0, 30) : sb.ToString();
         }
 
         internal static string Short(Exception e)
