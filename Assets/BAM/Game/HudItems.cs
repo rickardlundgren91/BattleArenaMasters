@@ -9,28 +9,29 @@ using EventType = BAM.Sim.EventType;
 namespace BAM.Game
 {
     /// <summary>
-    /// The match items (Sim/Items.cs; Rickard 2026-11-11 "välja av tre items lvl 6 och lvl 12"). The choice is the old game's compact
-    /// offer (Speltest HudOffer.cs, Rickard 2026-10-24/25): a small glass panel with a gold edge above the controls, three round item
-    /// icons with the name in its rarity colour and the effect under each; one tap on an item takes it, no SELECT button. The match
-    /// does not stop: the panel waits until the player picks (keys 1-3 in the editor). The items held sit as two small icons left of
-    /// the SPECIAL, dark while they cool down, Resonance Core with its Echoes. Pure display and input: the pick goes to the rules
-    /// through PlayerInput.ItemPick.
+    /// The match items (Sim/Items.cs; Rickard 2026-11-11 "välja av tre items lvl 6 och lvl 12"). The choice: three item cards side
+    /// by side in the upper half of the field, under a "CHOOSE AN ITEM" title (Rickard 2026-11-11 21:13 "FÖR dåligt med shoppen ...
+    /// städa upp det ui": the first panel sat low over the joystick and the SPECIAL with tiny text). Each card has the item's own
+    /// icon (drawn in code, ItemIconArt), its name, its rarity and one short line; a tap anywhere on a card takes it, no SELECT
+    /// button. The match does not stop: the cards wait until the player picks (keys 1-3 in the editor), and they keep clear of
+    /// every control. The items held sit as two small icons left of the SPECIAL, dark while they cool down, Resonance Core with
+    /// its Echoes. Pure display and input: the pick goes to the rules through PlayerInput.ItemPick.
     /// </summary>
     sealed partial class Hud
     {
-        static readonly Color OfferGlass = new Color(0.03f, 0.05f, 0.13f, 0.78f), OfferGold = new Color(0.91f, 0.71f, 0.31f, 0.85f);
-        // the old game's rarity colours: the disc behind the icon and the name (RARITY_BG, RARITY_COL)
-        static readonly Color[] RarityBg = { Hex(0x4c7a98), Hex(0x00d98f), Hex(0xf500ff), Hex(0xffc004) };
-        static readonly Color[] RarityText = { Hex(0xb9d6ea), Hex(0x5cf0b8), Hex(0xf08cff), Hex(0xffd75a) };
+        static readonly Color CardGlass = new Color(0.035f, 0.05f, 0.13f, 0.9f), CardText = new Color(0.86f, 0.89f, 0.98f, 1f);
+        // rarity colours for the card's edge, glow and rarity word (common, rare, epic, legendary)
+        static readonly Color[] RarityEdge = { Hex(0x8fb4d4), Hex(0x2fe0a0), Hex(0xd77bff), Hex(0xffc83a) };
+        static readonly string[] RarityWord = { "COMMON", "RARE", "EPIC", "LEGENDARY" };
 
-        RectTransform offerRoot;
-        readonly RectTransform[] offerCol = new RectTransform[ItemS.Choices];
-        readonly Image[] offerDisc = new Image[ItemS.Choices], offerIcon = new Image[ItemS.Choices];
-        readonly Text[] offerName = new Text[ItemS.Choices], offerText = new Text[ItemS.Choices];
+        RectTransform offerRoot, offerTitleRt;
+        readonly RectTransform[] offerCard = new RectTransform[ItemS.Choices];
+        readonly Image[] offerEdge = new Image[ItemS.Choices], offerGlow = new Image[ItemS.Choices], offerIcon = new Image[ItemS.Choices];
+        readonly Text[] offerName = new Text[ItemS.Choices], offerRarity = new Text[ItemS.Choices], offerText = new Text[ItemS.Choices];
         Text offerTitle;
         readonly ItemId[] offerShown = new ItemId[ItemS.Choices];
-        int offerShownCount = -1;
-        float offerShownAt = -99f;
+        int offerShownCount = -1, offerPressed = -1;
+        float offerShownAt = -99f, offerLaidW = -1f;
         byte itemPickQueued;
 
         readonly RectTransform[] heldRoot = new RectTransform[Unit.MaxItems];
@@ -39,45 +40,54 @@ namespace BAM.Game
         readonly ItemId[] heldShown = new ItemId[Unit.MaxItems];
         readonly float[] heldPulse = new float[Unit.MaxItems];
 
+        // the icons, drawn once per item in code (ItemIconArt) and kept for the app's life
+        const int IconPx = 160;
         static readonly Sprite[] itemSprites = new Sprite[ItemCatalog.Count + 1];
         static Sprite ItemSprite(ItemId id)
         {
             int k = (int)id; if (k <= 0 || k > ItemCatalog.Count) return null;
             if (itemSprites[k] != null) return itemSprites[k];
-            var tex = Resources.Load<Texture2D>("BAM/Hud/" + ItemCatalog.Get(id).Icon);
-            if (tex == null) { Debug.LogWarning("[BAM.Game] item icon missing: " + ItemCatalog.Get(id).Icon); return null; }
-            return itemSprites[k] = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            var tex = new Texture2D(IconPx, IconPx, TextureFormat.RGBA32, false) { name = "BAM.Item." + id, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            tex.LoadRawTextureData(ItemIconArt.Render(k, ItemCatalog.Rarity(id), IconPx));
+            tex.Apply(false, true);
+            return itemSprites[k] = Sprite.Create(tex, new Rect(0, 0, IconPx, IconPx), new Vector2(0.5f, 0.5f), 100f);
         }
 
         void BuildItems()
         {
-            // the offer panel: a raycast target of its own, so a touch on its glass never reaches the joystick under it
             offerRoot = UiKit.NewRect("ItemOffer", safe);
             offerRoot.anchorMin = offerRoot.anchorMax = offerRoot.pivot = new Vector2(0.5f, 0.5f);
-            var glass = UiKit.Fill(offerRoot, OfferGlass, UiKit.Rounded);
-            glass.type = Image.Type.Sliced; glass.raycastTarget = true;
-            var edge = UiKit.Fill(offerRoot, OfferGold, UiKit.Ring);
-            edge.type = Image.Type.Sliced; edge.raycastTarget = false;
-            offerTitle = UiKit.Label(offerRoot, "CHOOSE AN ITEM", 26, TextAnchor.UpperCenter, UiKit.Gold);
-            offerTitle.raycastTarget = false;
+            offerRoot.sizeDelta = Vector2.zero;
+            // the title: a dark pill with a gold edge
+            offerTitleRt = UiKit.NewRect("Title", offerRoot);
+            offerTitleRt.anchorMin = offerTitleRt.anchorMax = offerTitleRt.pivot = new Vector2(0.5f, 0.5f);
+            var pill = UiKit.Fill(offerTitleRt, CardGlass, UiKit.Rounded); pill.type = Image.Type.Sliced; pill.raycastTarget = false;
+            var pillEdge = UiKit.Fill(offerTitleRt, UiKit.Trim, UiKit.Ring); pillEdge.type = Image.Type.Sliced; pillEdge.raycastTarget = false;
+            offerTitle = UiKit.Label(offerTitleRt, "CHOOSE AN ITEM", 30, TextAnchor.MiddleCenter, UiKit.Gold);
+            offerTitle.fontStyle = FontStyle.Bold; offerTitle.raycastTarget = false;
+            UiKit.Stretch(offerTitle.rectTransform);
             for (int i = 0; i < ItemS.Choices; i++)
             {
                 int idx = i;
-                var col = offerCol[i] = UiKit.NewRect("Choice" + i, offerRoot);
-                col.anchorMin = col.anchorMax = col.pivot = new Vector2(0.5f, 0.5f);
-                var hit = col.gameObject.AddComponent<Image>(); hit.color = Color.clear; hit.raycastTarget = true;
-                var tap = col.gameObject.AddComponent<EmoteButton>(); // down and up in the safe area's coordinates, fingers read directly
-                tap.Up = _ => OfferTapped(idx);
-                var disc = offerDisc[i] = UiKit.Fill(col, Color.white, UiKit.Circle);
-                disc.raycastTarget = false; disc.rectTransform.anchorMin = disc.rectTransform.anchorMax = new Vector2(0.5f, 1f);
-                var icon = offerIcon[i] = UiKit.Fill(col, Color.white);
-                icon.raycastTarget = false; icon.preserveAspect = true; icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = new Vector2(0.5f, 1f);
-                var nm = offerName[i] = UiKit.Label(col, "", 28, TextAnchor.UpperCenter, Color.white);
-                nm.raycastTarget = false; nm.resizeTextForBestFit = true; nm.resizeTextMinSize = 16; nm.resizeTextMaxSize = 28;
-                UiKit.AddOutline(nm, 2);
-                var tx = offerText[i] = UiKit.Label(col, "", 22, TextAnchor.UpperCenter, new Color(0.9f, 0.93f, 1f, 0.9f));
+                var card = offerCard[i] = UiKit.NewRect("Card" + i, offerRoot);
+                card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
+                var bg = UiKit.Fill(card, CardGlass, UiKit.Rounded); bg.type = Image.Type.Sliced; bg.raycastTarget = true; // the whole card takes the tap
+                var tap = card.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
+                tap.Down = _ => offerPressed = idx;
+                tap.Up = _ => { offerPressed = -1; OfferTapped(idx); };
+                var glow = offerGlow[i] = UiKit.Fill(card, Color.white, UiKit.Rounded); glow.type = Image.Type.Sliced; glow.raycastTarget = false;
+                var edge = offerEdge[i] = UiKit.Fill(card, Color.white, UiKit.Ring); edge.type = Image.Type.Sliced; edge.raycastTarget = false;
+                var icon = offerIcon[i] = UiKit.Fill(card, Color.white); icon.raycastTarget = false; icon.preserveAspect = true;
+                TopCentre(icon.rectTransform);
+                var nm = offerName[i] = UiKit.Label(card, "", 34, TextAnchor.MiddleCenter, Color.white);
+                nm.fontStyle = FontStyle.Bold; nm.raycastTarget = false; nm.horizontalOverflow = HorizontalWrapMode.Wrap; nm.verticalOverflow = VerticalWrapMode.Truncate;
+                nm.resizeTextForBestFit = true; nm.lineSpacing = 0.9f;
+                UiKit.AddOutline(nm, 2); TopCentre(nm.rectTransform);
+                var rw = offerRarity[i] = UiKit.Label(card, "", 22, TextAnchor.MiddleCenter, Color.white);
+                rw.fontStyle = FontStyle.Bold; rw.raycastTarget = false; TopCentre(rw.rectTransform);
+                var tx = offerText[i] = UiKit.Label(card, "", 26, TextAnchor.UpperCenter, CardText);
                 tx.raycastTarget = false; tx.horizontalOverflow = HorizontalWrapMode.Wrap; tx.verticalOverflow = VerticalWrapMode.Truncate;
-                tx.resizeTextForBestFit = true; tx.resizeTextMinSize = 14; tx.resizeTextMaxSize = 22;
+                tx.resizeTextForBestFit = true; tx.lineSpacing = 0.95f; TopCentre(tx.rectTransform);
             }
             offerRoot.gameObject.SetActive(false);
 
@@ -86,7 +96,6 @@ namespace BAM.Game
             {
                 var r = heldRoot[i] = UiKit.NewRect("Item" + i, safe);
                 r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
-                var back = UiKit.Fill(r, new Color(0.03f, 0.05f, 0.13f, 0.7f), UiKit.Circle); back.raycastTarget = false;
                 var ic = heldIcon[i] = UiKit.Fill(r, Color.white); ic.raycastTarget = false; ic.preserveAspect = true;
                 var cd = heldCd[i] = UiKit.Fill(r, new Color(0f, 0f, 0f, 0.6f), UiKit.Circle);
                 cd.raycastTarget = false; cd.type = Image.Type.Filled; cd.fillMethod = Image.FillMethod.Radial360;
@@ -97,9 +106,12 @@ namespace BAM.Game
             }
         }
 
+        // a child laid out from its parent's top centre
+        static void TopCentre(RectTransform rt) { rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f); rt.pivot = new Vector2(0.5f, 0.5f); }
+
         void BeginItems()
         {
-            itemPickQueued = 0; offerShownCount = -1; offerShownAt = -99f;
+            itemPickQueued = 0; offerShownCount = -1; offerShownAt = -99f; offerPressed = -1; offerLaidW = -1f;
             for (int i = 0; i < Unit.MaxItems; i++) { heldShown[i] = ItemId.None; heldPulse[i] = -99f; }
             if (offerRoot != null) offerRoot.gameObject.SetActive(false);
             for (int i = 0; i < Unit.MaxItems; i++) if (heldRoot[i] != null) heldRoot[i].gameObject.SetActive(false);
@@ -109,7 +121,7 @@ namespace BAM.Game
         {
             var p = m.Player;
             if (p == null || i >= p.OfferCount || itemPickQueued != 0) return;
-            if (Time.unscaledTime - offerShownAt < 0.35f) return; // a tap already under way when the panel came does not take one
+            if (Time.unscaledTime - offerShownAt < 0.35f) return; // a tap already under way when the cards came does not take one
             itemPickQueued = (byte)(i + 1);
             BamAudio.Play(SfxId.UiTap, 1f);
         }
@@ -134,46 +146,75 @@ namespace BAM.Game
         void OfferFrame(bool show)
         {
             if (offerRoot.gameObject.activeSelf != show) offerRoot.gameObject.SetActive(show);
-            if (!show) { offerShownCount = -1; return; }
+            if (!show) { offerShownCount = -1; offerPressed = -1; return; }
             var p = m.Player; int n = p.OfferCount;
             bool fresh = offerShownCount != n;
             for (int i = 0; i < n && !fresh; i++) if (offerShown[i] != p.Offer[i]) fresh = true;
-            float W = SafeW, w = W * 0.66f, h = W * 0.4f;
-            Vector3 c = safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
-            float x = safe.rect.xMin + W * 0.4f, y = c.y + SpecialButton.Radius + W * 0.06f + h / 2;
+            float W = SafeW;
+            // the cards: 0.29 W wide with 0.025 W between, 0.5 W tall, the title 0.42 W under the safe area's top (under the score, the
+            // team portraits, the kill feed and the menu and heart buttons), so they cover only the field's upper half and never a control
+            float cw = W * 0.29f, gap = W * 0.025f, ch = W * 0.5f, titleH = W * 0.075f;
+            float top = safe.rect.yMax - W * 0.42f, cardsY = top - titleH - W * 0.02f - ch / 2f, cx = safe.rect.center.x;
             if (fresh)
             {
-                offerShownCount = n; offerShownAt = Time.unscaledTime;
+                offerShownCount = n; offerShownAt = Time.unscaledTime; offerPressed = -1;
                 offerRoot.SetAsLastSibling();
-                offerRoot.sizeDelta = new Vector2(w, h);
-                offerTitle.rectTransform.anchorMin = new Vector2(0f, 1f); offerTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
-                offerTitle.rectTransform.pivot = new Vector2(0.5f, 1f);
-                offerTitle.rectTransform.sizeDelta = new Vector2(0f, W * 0.05f); offerTitle.rectTransform.anchoredPosition = new Vector2(0f, -W * 0.012f);
-                float cw = w / ItemS.Choices, r = W * 0.06f;
                 for (int i = 0; i < ItemS.Choices; i++)
                 {
-                    bool on = i < n; offerCol[i].gameObject.SetActive(on); if (!on) continue;
-                    var id = offerShown[i] = p.Offer[i]; var info = ItemCatalog.Get(id);
-                    offerCol[i].sizeDelta = new Vector2(cw - W * 0.01f, h - W * 0.05f);
-                    offerCol[i].localPosition = new Vector3(-w / 2 + cw * (i + 0.5f), -W * 0.022f, 0f);
-                    float top = -W * 0.012f - r;
-                    var dr = offerDisc[i].rectTransform; dr.sizeDelta = new Vector2(2f * r, 2f * r); dr.anchoredPosition = new Vector2(0f, top);
-                    offerDisc[i].color = RarityBg[info.Rarity];
-                    var ir = offerIcon[i].rectTransform; ir.sizeDelta = new Vector2(2.3f * r, 2.3f * r); ir.anchoredPosition = new Vector2(0f, top);
-                    offerIcon[i].sprite = ItemSprite(id); offerIcon[i].enabled = offerIcon[i].sprite != null;
-                    var nr = offerName[i].rectTransform; nr.anchorMin = new Vector2(0f, 1f); nr.anchorMax = new Vector2(1f, 1f); nr.pivot = new Vector2(0.5f, 1f);
-                    nr.sizeDelta = new Vector2(0f, W * 0.032f); nr.anchoredPosition = new Vector2(0f, top - r * 1.2f);
-                    offerName[i].text = info.Name; offerName[i].color = RarityText[info.Rarity];
-                    var tr = offerText[i].rectTransform; tr.anchorMin = new Vector2(0f, 0f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-                    tr.offsetMin = new Vector2(W * 0.006f, W * 0.006f); tr.offsetMax = new Vector2(-W * 0.006f, top - r * 1.2f - W * 0.034f);
-                    offerText[i].text = info.Text;
+                    bool on = i < n; offerCard[i].gameObject.SetActive(on); if (!on) continue;
+                    var id = offerShown[i] = p.Offer[i]; var info = ItemCatalog.Get(id); var rc = RarityEdge[info.Rarity];
+                    offerEdge[i].color = rc;
+                    offerGlow[i].color = new Color(rc.r, rc.g, rc.b, 0.22f);
+                    offerIcon[i].sprite = ItemSprite(id);
+                    offerName[i].text = info.Name;
+                    offerRarity[i].text = RarityWord[info.Rarity]; offerRarity[i].color = rc;
+                    offerText[i].text = info.Short;
+                }
+                offerLaidW = -1f;
+            }
+            if (offerLaidW != W)
+            {   // sizes follow the screen: laid out again only when it changes
+                offerLaidW = W;
+                offerTitleRt.sizeDelta = new Vector2(W * 0.5f, titleH);
+                offerTitle.fontSize = Mathf.RoundToInt(W * 0.042f);
+                int nameMax = Mathf.RoundToInt(W * 0.045f), textMax = Mathf.RoundToInt(W * 0.036f);
+                for (int i = 0; i < ItemS.Choices; i++)
+                {
+                    offerCard[i].sizeDelta = new Vector2(cw, ch);
+                    offerGlow[i].rectTransform.anchorMin = new Vector2(0f, 0.55f); offerGlow[i].rectTransform.anchorMax = Vector2.one;
+                    offerGlow[i].rectTransform.offsetMin = new Vector2(W * 0.008f, 0f); offerGlow[i].rectTransform.offsetMax = new Vector2(-W * 0.008f, -W * 0.008f);
+                    UiKit.Stretch(offerEdge[i].rectTransform);
+                    float ir = W * 0.19f;
+                    offerIcon[i].rectTransform.sizeDelta = new Vector2(ir, ir); offerIcon[i].rectTransform.anchoredPosition = new Vector2(0f, -W * 0.02f - ir / 2f);
+                    float y = -W * 0.02f - ir - W * 0.005f;
+                    var nr = offerName[i].rectTransform; nr.sizeDelta = new Vector2(cw - W * 0.02f, W * 0.085f); nr.anchoredPosition = new Vector2(0f, y - W * 0.0425f);
+                    offerName[i].resizeTextMaxSize = nameMax; offerName[i].resizeTextMinSize = Mathf.RoundToInt(nameMax * 0.6f); offerName[i].fontSize = nameMax;
+                    y -= W * 0.085f;
+                    var rr = offerRarity[i].rectTransform; rr.sizeDelta = new Vector2(cw, W * 0.03f); rr.anchoredPosition = new Vector2(0f, y - W * 0.012f);
+                    offerRarity[i].fontSize = Mathf.RoundToInt(W * 0.026f);
+                    y -= W * 0.032f;
+                    float th = ch + y - W * 0.015f; // what is left down to the card's bottom edge
+                    var tr = offerText[i].rectTransform; tr.sizeDelta = new Vector2(cw - W * 0.03f, th); tr.anchoredPosition = new Vector2(0f, y - th / 2f);
+                    offerText[i].resizeTextMaxSize = textMax; offerText[i].resizeTextMinSize = Mathf.RoundToInt(textMax * 0.7f); offerText[i].fontSize = textMax;
                 }
             }
-            // slides up and fades in over 0.22 s, as the old panel
-            float k = Mathf.Clamp01((Time.unscaledTime - offerShownAt) / 0.22f), e = 1f - (1f - k) * (1f - k) * (1f - k);
-            offerRoot.localPosition = new Vector3(x, y - (1f - e) * W * 0.06f, 0f);
-            offerRoot.localScale = Vector3.one * (0.96f + 0.04f * e);
+            // the title and the cards drop in one after another over 0.25 s; a pressed card sinks a little
+            float now = Time.unscaledTime;
+            float kt = Ease(Mathf.Clamp01((now - offerShownAt) / 0.2f));
+            offerRoot.localPosition = Vector3.zero;
+            offerTitleRt.localPosition = new Vector3(cx, top - titleH / 2f + (1f - kt) * W * 0.04f, 0f);
+            offerTitleRt.localScale = Vector3.one * (0.9f + 0.1f * kt);
+            float total = n * cw + (n - 1) * gap;
+            for (int i = 0; i < n; i++)
+            {
+                float k = Ease(Mathf.Clamp01((now - offerShownAt - 0.05f * i) / 0.22f));
+                float x = cx - total / 2f + cw / 2f + i * (cw + gap);
+                offerCard[i].localPosition = new Vector3(x, cardsY + (1f - k) * W * 0.06f, 0f);
+                float s = (0.85f + 0.15f * k) * (offerPressed == i ? 0.95f : 1f);
+                offerCard[i].localScale = new Vector3(s, s, 1f);
+            }
         }
+        static float Ease(float k) => 1f - (1f - k) * (1f - k) * (1f - k);
 
         void HeldFrame(bool live)
         {
@@ -191,7 +232,7 @@ namespace BAM.Game
                 if (heldRoot[i].gameObject.activeSelf != show) heldRoot[i].gameObject.SetActive(show);
                 if (!show) continue;
                 var it = p.Items[i];
-                if (heldShown[i] != it.Id) { heldShown[i] = it.Id; heldIcon[i].sprite = ItemSprite(it.Id); heldIcon[i].enabled = heldIcon[i].sprite != null; }
+                if (heldShown[i] != it.Id) { heldShown[i] = it.Id; heldIcon[i].sprite = ItemSprite(it.Id); }
                 // left of the SPECIAL, one above the other
                 heldRoot[i].localPosition = new Vector3(c.x - SpecialButton.Radius - W * 0.03f - r, c.y + (i == 0 ? 1.15f : -1.15f) * r, 0f);
                 float pulse = Mathf.Clamp01(1f - (Time.unscaledTime - heldPulse[i]) / 0.35f);

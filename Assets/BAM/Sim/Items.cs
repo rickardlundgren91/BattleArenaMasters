@@ -53,6 +53,8 @@ namespace BAM.Sim
         public sealed class Info
         {
             public ItemId Id; public string Name, Icon, Text; public int Rarity;
+            /// <summary>One short line for the item choice in the match (Text is the whole rule).</summary>
+            public string Short;
         }
 
         public static readonly string[] RarityName = { "Common", "Rare", "Epic", "Legendary" };
@@ -60,25 +62,25 @@ namespace BAM.Sim
         static readonly Info[] all =
         {
             null,
-            new Info { Id = ItemId.Echo, Name = "Resonance Core", Rarity = 2, Icon = "item_v2_resonance_core",
+            new Info { Id = ItemId.Echo, Short = $"Hits on heroes charge your SPECIAL with a shield and speed", Name = "Resonance Core", Rarity = 2, Icon = "item_v2_resonance_core",
                 Text = $"Every {ItemS.EchoHits} hits on heroes build an Echo (max {ItemS.EchoMax}). Your next SPECIAL spends them: a {P(ItemS.EchoShield)} max HP shield and +{P(ItemS.EchoSpeed)} move speed for {ItemS.EchoSpeedTime}s per Echo" },
-            new Info { Id = ItemId.Mark, Name = "Quarry Mark", Rarity = 1, Icon = "item_v2_hunters_mark",
+            new Info { Id = ItemId.Mark, Short = $"Mark a hero: the next ally hit deals +{P(ItemS.MarkBonus)}", Name = "Quarry Mark", Rarity = 1, Icon = "item_v2_hunters_mark",
                 Text = $"Your attack marks an enemy hero for {ItemS.MarkTime}s. The next hit on it from another ally deals +{P(ItemS.MarkBonus)} damage (cd {ItemS.MarkCd}s)" },
-            new Info { Id = ItemId.Fang, Name = "Thicket Fang", Rarity = 1, Icon = "item_v2_thicket_fang",
+            new Info { Id = ItemId.Fang, Short = $"Leave a bush: your next hit deals +{P(ItemS.FangBonus)} and slows", Name = "Thicket Fang", Rarity = 1, Icon = "item_v2_thicket_fang",
                 Text = $"Leaving a bush empowers your next hit on a hero within {ItemS.FangArm}s: +{P(ItemS.FangBonus)} damage and a {P(-ItemS.FangSlow)} slow for {ItemS.FangSlowTime}s (cd {ItemS.FangCd}s)" },
-            new Info { Id = ItemId.Thread, Name = "Guardian's Thread", Rarity = 1, Icon = "item_v2_guardians_thread",
+            new Info { Id = ItemId.Thread, Short = $"Enemy SPECIAL hits you or an ally near you: a shield", Name = "Guardian's Thread", Rarity = 1, Icon = "item_v2_guardians_thread",
                 Text = $"When an enemy SPECIAL hurts you or an ally within {ItemS.ThreadRange} tiles, they get a {P(ItemS.ThreadShield)} max HP shield for {ItemS.ThreadTime}s (cd {ItemS.ThreadCd}s)" },
-            new Info { Id = ItemId.Rally, Name = "Rally Beacon", Rarity = 3, Icon = "item_v2_rally_beacon",
+            new Info { Id = ItemId.Rally, Short = $"You or an ally near you drops below {P(ItemS.RallyBelow)} HP: shield and speed", Name = "Rally Beacon", Rarity = 3, Icon = "item_v2_rally_beacon",
                 Text = $"When you or an ally within {ItemS.RallyRange} tiles drops to {P(ItemS.RallyBelow)} health: a {P(ItemS.RallyShield)} max HP shield and +{P(ItemS.RallySpeed)} move speed for {ItemS.RallyTime}s (once per team every {ItemS.RallyCd}s)" },
-            new Info { Id = ItemId.Charm, Name = "Steadfast Charm", Rarity = 0, Icon = "item_v2_steadfast_charm",
+            new Info { Id = ItemId.Charm, Short = $"Stuns, roots and slows on you are {P(ItemS.CharmCut)} shorter", Name = "Steadfast Charm", Rarity = 0, Icon = "item_v2_steadfast_charm",
                 Text = $"A stun, root, slow or disarm from an enemy hero lasts {P(ItemS.CharmCut)} shorter (max {ItemS.CharmMaxCut}s); when it ends, +{P(ItemS.CharmSpeed)} move speed for {ItemS.CharmSpeedTime}s (cd {ItemS.CharmCd}s)" },
-            new Info { Id = ItemId.Lifesteal, Name = "Parascythe", Rarity = 3, Icon = "item_bloodBlade",
+            new Info { Id = ItemId.Lifesteal, Short = $"Heal {P(ItemS.Lifesteal)} of the damage you deal", Name = "Parascythe", Rarity = 3, Icon = "item_bloodBlade",
                 Text = $"Heal for {P(ItemS.Lifesteal)} of the damage you deal" },
-            new Info { Id = ItemId.MinionDmg, Name = "Minion Skewer", Rarity = 0, Icon = "item_spear",
+            new Info { Id = ItemId.MinionDmg, Short = $"+{P(ItemS.MinionDmg)} damage to minions", Name = "Minion Skewer", Rarity = 0, Icon = "item_spear",
                 Text = $"+{P(ItemS.MinionDmg)} damage to minions" },
-            new Info { Id = ItemId.TowerDmg, Name = "Crushing Spanner", Rarity = 0, Icon = "item_hammer",
+            new Info { Id = ItemId.TowerDmg, Short = $"+{P(ItemS.TowerDmg)} damage to towers", Name = "Crushing Spanner", Rarity = 0, Icon = "item_hammer",
                 Text = $"+{P(ItemS.TowerDmg)} damage to towers" },
-            new Info { Id = ItemId.HeroDmg, Name = "Heroes Bane", Rarity = 2, Icon = "item_dagger",
+            new Info { Id = ItemId.HeroDmg, Short = $"+{P(ItemS.HeroDmg)} damage to heroes", Name = "Heroes Bane", Rarity = 2, Icon = "item_dagger",
                 Text = $"+{P(ItemS.HeroDmg)} damage to heroes" },
         };
         static string P(float v) => Math.Round(v * 100) + "%";
