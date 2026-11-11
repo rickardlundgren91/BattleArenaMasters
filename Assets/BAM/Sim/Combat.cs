@@ -286,6 +286,9 @@ namespace BAM.Sim
             if (u.Has(St.Stun) || u.Has(St.Disarm)) return;
             float cd = u.AttackCd;
             u.AtkTimer += dt;
+            // a veiled Fenn never swings by himself (Rickard 2026-11-11: "när man gör invis med fenn nära någon så slår man automatiskt
+            // direkt och kan inte fly"): the player strikes with SPECIAL (FennStrikeNow); a bot strikes a hero in reach when not hurt
+            if (u.VeilStrikeReady && (u.Bot == null || u.Hp < u.MaxHp * FennS.BotStrikeHp)) return;
             if (u.AtkTimer < cd) return;
             // a hero thrown by a jump pad (Grove) swings at nobody in the air: the timer runs on, the swing comes as it lands. A knockback
             // slide is not a flight: Bonk's pins keep swinging as before (full review 2026-11-09 nr 78)
@@ -316,6 +319,7 @@ namespace BAM.Sim
             }
             else if (u.Kind == UnitKind.Minion) tgt = u.MbTgt != null && targets.Contains(u.MbTgt) ? u.MbTgt : Nearest(targets, u.X, u.Y);
             else if (u.Kind == UnitKind.Wolf) tgt = u.WolfPrey != null && targets.Contains(u.WolfPrey) ? u.WolfPrey : Nearest(targets, u.X, u.Y);
+            else if (u.VeilStrikeReady) { for (int i = targets.Count - 1; i >= 0; i--) if (targets[i].Kind != UnitKind.Hero) targets.RemoveAt(i); tgt = targets.Count > 0 ? PickRandom(targets) : null; } // a veiled bot Fenn strikes only a hero
             else tgt = targets.Count > 0 ? PickRandom(targets) : null; // D1: a hero's auto attack picks a random target in range
             if (tgt != null)
             {

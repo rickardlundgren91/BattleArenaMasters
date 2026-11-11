@@ -34,6 +34,20 @@ namespace BAM.Sim
             Check(!m.EnemiesInRange(a, 5, Pick.Any, false, new System.Collections.Generic.List<Unit>()).Contains(f), "VEIL: enemies cannot pick him");
             Check(m.HiddenFromFoes(f), "VEIL: the view draws him half seen for his own team (HiddenFromFoes)");
 
+            // a veiled Fenn next to an enemy does not swing by himself (Rickard 2026-11-11: he could not escape); SPECIAL strikes
+            m.Events.Clear(); f.AtkTimer = 99; var fBot = f.Bot; f.Bot = null; // as a player
+            m.UpdateAttack(f, Rules.Tick);
+            Check(f.Has(St.Veil) && !m.Projs.Exists(q => q.Mode == ProjMode.Auto && q.Src == f && !q.Done), "VEIL: no auto attack while veiled, even with an enemy in reach");
+            Check(m.VeilStrikeHasTarget(f) && f.VeilStrikeReady, "VEIL: SPECIAL is lit for the strike with an enemy in reach");
+            Place(a, x + 6, y); f.AddRaw(St.Veil, 1, 0, 0, f, false);
+            Check(!m.VeilStrikeHasTarget(f) && !m.TryTapSpecial(f) && f.Has(St.Veil), "VEIL: nobody in reach: SPECIAL does nothing, still veiled");
+            Place(a, x + 1, y); f.AddRaw(St.Veil, 1, 0, 0, f, false); f.AddRaw(St.SpeedPct, 1, FennS.VeilSpeed, 0, f, false);
+            Check(m.TryTapSpecial(f), "VEIL: SPECIAL while veiled is the Shadow Strike");
+            var ps = m.Projs.Find(q => q.Mode == ProjMode.Auto && q.Src == f && !q.Done);
+            Check(ps != null && ps.Big && ps.Tgt == a && !f.Has(St.Veil), "VEIL: it strikes the enemy and ends the Veil");
+            ps.Done = true; m.Projs.Remove(ps); f.Bot = fBot;
+            f.AddRaw(St.Veil, 1, 0, 0, f, false); f.AddRaw(St.SpeedPct, 1, FennS.VeilSpeed, 0, f, false);
+
             // the Shadow Strike: the first auto attack ends the Veil, hits StrikeBonus harder and slows
             m.Events.Clear();
             m.AutoAttack(f, a);

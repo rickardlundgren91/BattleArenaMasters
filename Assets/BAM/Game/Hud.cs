@@ -208,6 +208,7 @@ namespace BAM.Game
             if (m == null || !m.Player.Alive) return;
             // after the hold card has shown, letting go only hides it (Rickard 2026-10-26: reading must not cast); Space has no hold
             if (!fromKey && m.Tut == null && Time.unscaledTime - special.PressedAt >= HoldTime) return;
+            if (m.Player.VeilStrikeReady) { if (m.VeilStrikeHasTarget(m.Player)) Queue(float.NaN, 0f); else Denied(); return; } // veiled Fenn: SPECIAL is the Shadow Strike
             if (!m.Player.SpecialReady) { Denied(); return; }
             if (m.OneTap && !m.TapHasTarget(m.Player)) { Denied(); return; } // the button is grey (OneTap.cs)
             Queue(float.NaN, 0f);
@@ -336,7 +337,7 @@ namespace BAM.Game
         {
             var p = m.Player;
             // one-tap special: charged but nobody in reach shows as not ready, grey (Rickard 2026-11-01)
-            bool ready = p.Alive && p.SpecialReady && (!m.OneTap || m.TapHasTarget(p));
+            bool ready = p.Alive && p.SpecialReady && (!m.OneTap || m.TapHasTarget(p)) || p.Alive && m.VeilStrikeHasTarget(p); // veiled Fenn: lit with an enemy to strike
             // one tap + drag aim (tester Ski 2026-11-07): a tap rolls the random target, a drag aims by hand; not in the guided match
             // (it teaches the tap only) and not for Bonk's slam or Kugg's turret, which have nothing to aim (Match.CanDragAim)
             if (m.OneTap) special.NoDrag = !(m.DragAimOn && Match.CanDragAim(p.Hero));

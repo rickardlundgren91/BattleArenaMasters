@@ -60,6 +60,8 @@ namespace BAM.Sim
         internal const int StrikeTag = 1;
         /// <summary>A Fenn bot vanishes to strike with an enemy hero this close (tiles).</summary>
         internal const float VeilEngage = 3.5f;
+        /// <summary>A veiled bot Fenn strikes an enemy hero in reach only with at least this share of his health (else he runs).</summary>
+        internal const float BotStrikeHp = 0.4f;
         /// <summary>Hits to charge the Veil (the wolf took 5).</summary>
         public const int VeilCharge = 4;
     }
@@ -190,6 +192,7 @@ namespace BAM.Sim
         /// False (and nothing spent) when it cannot fire now: no charge, stunned, or a tap with nobody in reach.</summary>
         internal bool TryCastSpecial(Unit h, float aimAngle, float aimK)
         {
+            if (FennVeil && h.VeilStrikeReady) return FennStrikeNow(h); // SPECIAL again while veiled: the Shadow Strike
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play) return false;
             h.AimAng = aimAngle; h.AimK = SimMath.Clamp(float.IsNaN(aimK) ? 0 : aimK, 0, 1);
             bool drag = !float.IsNaN(aimAngle);
@@ -415,6 +418,20 @@ namespace BAM.Sim
             AddStatus(h, St.SpeedPct, FennS.VeilTime, FennS.VeilSpeed, 0, h);
             h.RevealT = 0;
             Emit(EventType.FennVeil, h, null, FennS.VeilTime, 0, false, h.X, h.Y);
+            return true;
+        }
+
+        /// <summary>Is there an enemy in Fenn's reach for the Shadow Strike (the HUD lights SPECIAL while he is veiled)?</summary>
+        public bool VeilStrikeHasTarget(Unit h) => h != null && h.VeilStrikeReady && EnemiesInRange(h, h.Range, Pick.Any, true, spBuf).Count > 0;
+
+        /// <summary>SPECIAL while veiled: the Shadow Strike now, at a random enemy in his reach (TARGETING RULE); false with nobody there.</summary>
+        bool FennStrikeNow(Unit h)
+        {
+            if (!h.Alive || h.Has(St.Stun) || h.Has(St.Disarm) || State != MatchState.Play) return false;
+            var l = EnemiesInRange(h, h.Range, Pick.Any, true, spBuf);
+            if (l.Count == 0) return false;
+            var t = PickRandom(l);
+            AutoAttack(h, t); h.AtkTimer = 0; h.Target = t; h.TargetT = Time; // AutoAttack ends the Veil (FennVeilStrike)
             return true;
         }
 

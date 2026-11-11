@@ -158,6 +158,9 @@ namespace BAM.Sim
         public float Charge01 => HDef != null ? Math.Min(1, Charge / HDef.MaxCharge) : 0;
         public float DefDmg => float.IsNaN(DmgOverride) ? UDef.Dmg : DmgOverride;
 
+        /// <summary>Fenn is veiled: his auto attack waits, a press of SPECIAL is the Shadow Strike (Heroes.cs FennStrikeNow).</summary>
+        public bool VeilStrikeReady => Hero == HeroId.Fenn && Kind == UnitKind.Hero && !IsClone && Has(St.Veil);
+
         public bool Has(St t)
         {
             for (int i = 0; i < StCount; i++) if (Sts[i].Type == t) return true;

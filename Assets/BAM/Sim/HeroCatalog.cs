@@ -167,9 +167,9 @@ namespace BAM.Sim
                 Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
             new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = FennS.Veil ? "Shadow Runner" : "Pack Runner", Role = "Fighter", Ranged = false,
                 // Shadow Veil = ABC2's Omega (Ignus Fatuus), Rickard 2026-11-11; the wolf texts stay for FennS.Veil = false
-                SpecialName = FennS.Veil ? "Shadow Veil" : "Call of the Pack", SpecialDesc = FennS.Veil ? "Leaves a decoy behind and turns invisible for 4 s, running 40% faster. His first attack ends it: a Shadow Strike that deals 75% more damage and slows by 40% for 1.5 s."
+                SpecialName = FennS.Veil ? "Shadow Veil" : "Call of the Pack", SpecialDesc = FennS.Veil ? "Leaves a decoy behind and turns invisible for 3.5 s, running 35% faster. He does not attack by himself while invisible: press SPECIAL again to strike an enemy in range with a Shadow Strike (120% more damage, slows by 35%)"
                     : "Calls a wolf that picks the nearest enemy and bites it for 4 s, then guards Fenn. Drag to throw it up to 6 tiles: it hunts an enemy hero, or bites minions when no hero is near. Walls stop it.",
-                OneTapDesc = FennS.Veil ? "Tap: leaves a decoy and turns invisible for 4 s, 40% faster. His next attack is a Shadow Strike: 75% more damage and a slow. Works with nobody in range, to escape too."
+                OneTapDesc = FennS.Veil ? "Tap: leaves a decoy and turns invisible for 3.5 s, 35% faster, to escape or sneak up. Tap again near an enemy for a Shadow Strike: 120% more damage and a slow"
                     : "Tap: throws his wolf at a random enemy in his range. It hunts enemy heroes, or bites minions when no hero is near. Walls stop it.",
                 PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit; if an enemy hero's attack hits it, Fenn runs 20% faster for 1 s. Every 18 s.",
                 Health = 2, Damage = 1, Speed = 2, Difficulty = 2 },

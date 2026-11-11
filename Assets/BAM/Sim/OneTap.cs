@@ -94,6 +94,7 @@ namespace BAM.Sim
         /// no random roll) when it cannot fire now.</summary>
         public bool TryTapSpecial(Unit h)
         {
+            if (FennVeil && h.VeilStrikeReady) return TryCastSpecial(h, float.NaN, 0); // the Shadow Strike (Heroes.cs FennStrikeNow)
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
             Unit t;
             if (h.Hero == HeroId.Moa) t = TapAlly(h) ?? h;
