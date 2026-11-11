@@ -27,7 +27,7 @@ namespace BAM.Sim
         /// <summary>The red warning h's special already shows at its cast before anything can land, its aim already fixed: Tyra's draw,
         /// Bram's falling anvil, Blast's fuse, Bonk's wind-up (0 = none: Knut's hook, Tikta's needles and Fenn's homing wolf hit at
         /// once, Moa's shield is at once).</summary>
-        public static float OwnWarning(HeroId id) => id == HeroId.Tyra ? TyraS.Windup : id == HeroId.Bram ? (SilverOn ? 0 : BramS.DropDelay)
+        public static float OwnWarning(HeroId id) => id == HeroId.Tyra ? TyraS.Windup : id == HeroId.Bram ? (SilverOn ? BramS.BeamCharge : BramS.DropDelay)
             : id == HeroId.Blast ? BlastS.Delay : id == HeroId.Bonk ? BonkS.SlamWindup : id == HeroId.Skrall ? SkrallS.Warn : 0;
 
         /// <summary>A special that warns by itself (OwnWarning) is cast at once, as before, with the same flash on the hero (Telegraph

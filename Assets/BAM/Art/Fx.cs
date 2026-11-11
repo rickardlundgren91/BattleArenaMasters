@@ -1492,6 +1492,10 @@ namespace BAM.Art
                 case ProjKind.SkrallStrike:
                     SpecialHit((int)(k == ProjKind.RagnLeap ? HeroId.Ragn : k == ProjKind.RavnaFlock ? HeroId.Ravna : HeroId.Skrall), p, 1f); // stand-ins until their own pictures
                     break;
+                case ProjKind.BramBolt: // Bram's lightning beam (stand-in until O-095)
+                    Pow(p, 1, heroMain[(int)HeroId.Bram], 0.7f, 0.12f);
+                    Sparks(p + Vector3.up * 0.3f, 7, new Color32(200, 235, 255, 255), 0.09f, 4f, 0.25f, 1f);
+                    break;
                 case ProjKind.SkrallBolt:
                     Pow(p, 1, heroMain[(int)HeroId.Skrall], 0.6f, 0.1f);
                     Sparks(p + Vector3.up * 0.3f, 5, heroAccent[(int)HeroId.Skrall], 0.08f, 3.5f, 0.2f, 1f);

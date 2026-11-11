@@ -414,6 +414,10 @@ namespace BAM.Art
                     b.Color(Pal.TeamLight(team)).Sphere(Vector3.zero, 0.06f, 8, 5);
                     b.Color(Pal.TeamLight(team)).Beam(new Vector3(0f, 0f, -0.12f), new Vector3(0f, 0f, 0.12f), 0.03f, 0.005f);
                     break;
+                case ProjKind.BramBolt: // a stand-in until Rickard's own picture (O-095): the bolt's bright head; the trail is the lightning
+                    b.Color(Pal.White).Sphere(Vector3.zero, 0.12f, 8, 5);
+                    b.Color(Pal.TeamLight(team)).Torus(Vector3.zero, 0.13f, 0.02f, 10, 4);
+                    break;
                 case ProjKind.SkrallBolt: // a stand-in until Rickard's own picture: a small bright spark (the flight is near-instant)
                     b.Color(Pal.White).Sphere(Vector3.zero, 0.08f, 8, 5);
                     b.Color(Pal.TeamLight(team)).Torus(Vector3.zero, 0.09f, 0.015f, 10, 4);

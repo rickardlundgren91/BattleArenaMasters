@@ -26,7 +26,11 @@ namespace BAM.Sim
         /// the same target hits FocusStep harder, up to FocusMax steps; a new target starts again. Anvil Drop, the bouncing hammer
         /// and Backlash stay in the code for SilverOn false.</summary>
         public const bool Silver = true;
-        public const float LineReach = 6.5f, LineSpeed = 14, LineWidth = 0.4f, LineCoeff = 1.5f, FocusStep = 0.08f;
+        /// <summary>Since 2026-11-11 evening (Rickard: "mer som silver ... en stråle och varnar på samma sätt men det är en blixt från
+        /// hammaren som han skjuter"): a beam, not a throw. He stands and charges BeamCharge s behind a red line (a stun cuts it), then a
+        /// lightning bolt from the hammer hits everyone in the whole line AT ONCE; LineSpeed is only how fast the bolt is drawn.</summary>
+        public const float BeamCharge = 0.45f;
+        public const float LineReach = 8, LineSpeed = 45, LineWidth = 0.5f, LineCoeff = 2.4f, FocusStep = 0.08f;
         public const int FocusMax = 5;
     }
 
@@ -322,16 +326,42 @@ namespace BAM.Sim
                 var t = PickRandom(l); aa = SimMath.Atan2(t.Y - h.Y, t.X - h.X); castTgt = t;
             }
             float len = HammerLineReach(h, aa);
-            h.Facing = aa; h.AimT = Time + 0.25f;
-            AddStatus(h, St.Casting, 0.2f);
+            h.Facing = aa; h.AimT = Time + BramS.BeamCharge + 0.15f;
             var p = NewProj(ProjMode.HammerLine, h, h.X, h.Y);
-            p.Kind = ProjKind.BramHammerSpecial; p.Ang = aa; p.Speed = BramS.LineSpeed; p.Travel = len; p.Radius = BramS.LineWidth; p.Dmg = dmg * BramS.LineCoeff; p.Big = true;
+            p.Kind = ProjKind.BramBolt; p.T = -BramS.BeamCharge; p.Ang = aa; p.Speed = BramS.LineSpeed; p.Travel = len; p.Radius = BramS.LineWidth; p.Dmg = dmg * BramS.LineCoeff; p.Big = true;
+            // the charge: he stands with the red line out as long as the beam can still hit (a stun cuts it, InterruptSpecial)
+            WarnOf(WarnLine(h, aa, len, BramS.LineWidth, BramS.BeamCharge + len / BramS.LineSpeed), p);
+            AddStatus(h, St.Casting, BramS.BeamCharge); AddStatus(h, St.Disarm, BramS.BeamCharge); Channel(h, BramS.BeamCharge);
             castX = h.X + SimMath.Cos(aa) * len; castY = h.Y + SimMath.Sin(aa) * len;
             return true;
         }
 
-        /// <summary>The Hammer Line flies on: every enemy hero or minion its path touches this tick takes the hit, once.</summary>
+        /// <summary>The bolt leaves the hammer: every enemy hero or minion in the whole line takes the hit at once (the beam), then the
+        /// bolt is drawn along it at LineSpeed.</summary>
         void HammerLineUpdate(Proj p, float dt)
+        {
+            if (p.D <= 0 && p.HitCount == 0 && p.Src != null)
+            {
+                float bx = p.X + SimMath.Cos(p.Ang) * p.Travel, by = p.Y + SimMath.Sin(p.Ang) * p.Travel;
+                int shot = emitShot; emitShot = 0; // a beam hit is not the flying bolt's touch: the view must not tie it to the bolt's head
+                for (int i = 0; i < Units.Count; i++)
+                {
+                    var u = Units[i];
+                    if (!Hurtable(p.Src, u) || u.Team == p.Team || p.HasHit(u)) continue;
+                    if (SimMath.PtSeg(u.X, u.Y, p.X, p.Y, bx, by) > p.Radius + u.R) continue;
+                    p.AddHit(u);
+                    SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
+                }
+                if (p.HitCount == 0) p.AddHit(p.Src); // marks the beam as fired (its own caster is never hurt by it)
+                emitShot = shot;
+            }
+            p.X += SimMath.Cos(p.Ang) * Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D)); p.Y += SimMath.Sin(p.Ang) * Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
+            p.D = Math.Min(p.Travel, p.D + p.Speed * dt);
+            if (p.D >= p.Travel - 1e-4f) p.Done = true;
+        }
+
+        /// <summary>The 11 Nov afternoon Hammer Line (a flying hammer hitting what it passes). Unused since the beam.</summary>
+        void HammerFlyUpdate(Proj p, float dt)
         {
             float step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
             float ox = p.X, oy = p.Y, ex = ox + SimMath.Cos(p.Ang) * step, ey = oy + SimMath.Sin(p.Ang) * step;

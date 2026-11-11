@@ -78,7 +78,7 @@ namespace BAM.Sim
             {
                 var p = Projs[i];
                 if (p.Src != u || p.Done) continue;
-                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam || p.Mode == ProjMode.Volley || p.Mode == ProjMode.AnchorSlam || p.Mode == ProjMode.Worldbreaker || p.Mode == ProjMode.Quake)) { p.Done = true; any = cut = true; } // still in the hand
+                if (p.T < 0 && (p.Mode == ProjMode.Bolt || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.NeedleLine || p.Mode == ProjMode.Boulder || p.Mode == ProjMode.Slam || p.Mode == ProjMode.Volley || p.Mode == ProjMode.AnchorSlam || p.Mode == ProjMode.Worldbreaker || p.Mode == ProjMode.Quake)) { p.Done = true; any = cut = true; } // still in the hand
                 else if (p.Mode == ProjMode.Hook && p.Out && p.Caught == null) { p.Out = false; p.Dur = p.T; p.Travel = p.D; any = true; } // the reel counts from here (HookUpdate)          // the anchor comes back
                 else if (stun && p.T < 0 && (p.Mode == ProjMode.Auto || p.Mode == ProjMode.Smash)) { p.Done = true; any = true; } // the swing never lands
             }

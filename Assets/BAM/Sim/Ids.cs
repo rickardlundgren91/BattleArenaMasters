@@ -64,6 +64,7 @@ namespace BAM.Sim
         SkrallStrike = 37,      // Skrall's Thunder Judgement: one of three lightning strikes from the sky
         RavnaSlash = 38,        // Ravna's auto attack, two quick talon cuts, near-instant (melee)
         RavnaFlock = 39,        // Ravna's Crow Flock: the crows tearing at an enemy they fly through
+        BramBolt = 40,          // Bram's Hammer Line as Silver's beam (2026-11-11): a lightning bolt fired from his hammer
     }
 
     /// <summary>Ground areas that last a while.</summary>
