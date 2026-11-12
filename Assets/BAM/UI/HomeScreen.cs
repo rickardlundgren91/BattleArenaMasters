@@ -587,6 +587,9 @@ namespace BAM.UI
 
             void Update()
             {
+                // a script reload during Play (files copied in while the game runs) clears the static fields but keeps this component:
+                // stand still instead of throwing every frame (Rickard 2026-11-12, HomeScreen.cs:593 x767); Play again rebuilds Home
+                if (homeBg == null || rune == null) return;
                 float t = Time.unscaledTime, cw = Cw;
                 float br = 0.5f - 0.5f * Mathf.Cos(t * Mathf.PI * 2 / 3f);
                 float s = (1 + 0.012f * Mathf.Sin(t * 0.45f)) * PartyTick();
