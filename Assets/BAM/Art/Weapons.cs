@@ -354,7 +354,8 @@ namespace BAM.Art
                 Weapons = new[] { new WeaponDef { Model = "nassla_staff", Len = 0.72f, Grip = 0.45f, Along = true, HoldUp = 82f, HoldOut = 24f, Upright = true, SwingAim = true, Follow = 1f, SwingFollow = 1f } },
                 Worn = new[]
                 {
-                    new WornDef { Model = "nassla_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.3f, At = new Vector3(0f, 0.03f, -0.045f), Flat = 0.45f, Skin = true },
+                    // no separate cloak (Rickard 2026-11-12 in Play, "värre"): the skinned nassla_cloak hung in long green strips from her left arm down past the
+                    // basket and in flaps round her waist (with only its renderer off in Unity they were all gone); her own green robe is the cloak
                     // her basket of glowing pods as its own part (Rickard 2026-11-12: "nässla borde vi nog göra korgen efteråt också"): her new
                     // body has none, so it no longer breaks apart with her arms; on her back over the cloak, its rim below the shoulders
                     new WornDef { Model = "nassla_basket", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.3f, At = new Vector3(0f, -0.22f, -0.115f), Yaw = 180f }, // its straps toward her back (Rickard: "korgen är bakofram")
