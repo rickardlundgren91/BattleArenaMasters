@@ -260,7 +260,9 @@ namespace BAM.Art.Editor
             // Mixamo (33 bones, index finger only, like Tyra), his clips downloaded 2026-11-12: Standing Idle, Running With Intention
             // (in place), Stabbing (the right fist furthest forward at 0.38 of the 2.7 s clip) and Standing 2H Cast Spell 01 for Night
             // Flight. Hit, death and walk are Tikta's, whose body she wore. The feather cloak and crow come later as their own parts.
-            new Spec { Hero = "Ravna", Model = "Ravna/Ravna", Idle = "Ravna/Anim/Idle", Run = "Ravna/Anim/Run", Attack = "Ravna/Anim/Attack1", Cast = "Ravna/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.8f, Release = 0.38f },
+            // Her idle is Moa's since 2026-11-12 (Rickard: "annan idle på ravna", "benet går igenom manteln"): her own Standing Idle stood
+            // wide-legged, so a knee came through the long mantle.
+            new Spec { Hero = "Ravna", Model = "Ravna/Ravna", Idle = "Moa/Anim/Idle", Run = "Ravna/Anim/Run", Attack = "Ravna/Anim/Attack1", Cast = "Ravna/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.8f, Release = 0.38f },
         };
 
         // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original
