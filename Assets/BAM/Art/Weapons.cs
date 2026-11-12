@@ -186,6 +186,10 @@ namespace BAM.Art
         /// <summary>When above 0: the part's width is this many times the distance from <see cref="From"/> to <see cref="To"/>
         /// (a cloak as wide as the shoulders), and Height is ignored.</summary>
         public float Wide;
+        /// <summary>Skinned to the body instead of fixed to one bone (Rickard 2026-11-12: "ravnas fjädrar sitter inte snyggt på. helt
+        /// stelt"): each vertex follows the nearest bones of the spine, neck, collarbones and hips, and a little of the thighs, so a
+        /// cloak bends and turns with the body and its hem moves with the legs. Sway is then unused.</summary>
+        public bool Skin;
         /// <summary>Degrees turned about the hero's up axis.</summary>
         public float Yaw;
         /// <summary>Depth scale (a thick cloak pressed flatter against the back); 1 = as made.</summary>
@@ -335,7 +339,7 @@ namespace BAM.Art
                 {
                     // her great raven-feather mantle as in Rickard's concept (2026-11-12: "hennes fjädrar ska vara så"): the tall collar round
                     // her neck, open in front, down to her ankles; its top 0.13 of her height over the shoulder joints (checked in Blender)
-                    new WornDef { Model = "ravna_mantle", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.88f, At = new Vector3(0f, 0.13f, -0.02f), Sway = 10f },
+                    new WornDef { Model = "ravna_mantle", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.82f, At = new Vector3(0f, 0.13f, -0.02f), Skin = true },
                     // the crow sits on the mantle's left shoulder, looking ahead
                     new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = HumanBodyBones.LeftUpperArm, Height = 0.1f, At = new Vector3(-0.015f, 0.04f, -0.015f) },
                 } }; // own copies, so tuning her never moves Tikta's
@@ -343,13 +347,13 @@ namespace BAM.Art
             // items", "hennes gröna kappa också"): the staff held upright as Moa's, the cloak from her shoulders under the basket, the basket on her back
             g[(int)HeroId.Nassla] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "nassla_staff", Len = 0.8f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, SwingFollow = 0.35f } },
+                Weapons = new[] { new WeaponDef { Model = "nassla_staff", Len = 0.72f, Grip = 0.45f, Along = true, HoldUp = 82f, HoldOut = 24f, Upright = true, SwingAim = true, SwingFollow = 0.35f } },
                 Worn = new[]
                 {
-                    new WornDef { Model = "nassla_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.3f, At = new Vector3(0f, 0.03f, -0.06f), Flat = 0.8f, Sway = 22f },
+                    new WornDef { Model = "nassla_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.3f, At = new Vector3(0f, 0.03f, -0.06f), Flat = 0.8f, Skin = true },
                     // her basket of glowing pods as its own part (Rickard 2026-11-12: "nässla borde vi nog göra korgen efteråt också"): her new
                     // body has none, so it no longer breaks apart with her arms; on her back over the cloak, its rim below the shoulders
-                    new WornDef { Model = "nassla_basket", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.3f, At = new Vector3(0f, -0.22f, -0.115f) },
+                    new WornDef { Model = "nassla_basket", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.3f, At = new Vector3(0f, -0.22f, -0.115f), Yaw = 180f }, // its straps toward her back (Rickard: "korgen är bakofram")
                 },
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
@@ -686,7 +690,82 @@ namespace BAM.Art
                 float ps = Mathf.Max(1e-6f, bone.lossyScale.x);
                 t.localScale = new Vector3(k, k, k * w.Flat) / ps;
                 wornT[i] = t; wornRest[i] = t.localRotation;
+                if (w.Skin && SkinWorn(go, mesh, an, rends)) wornT[i] = null; // follows the body now: no sway of its own
             }
+        }
+
+        // the bones a skinned part follows and where each one's segment ends; a thigh pulls at most ThighShare, the rest stays on the hips
+        static readonly HumanBodyBones[] SkinFrom = { HumanBodyBones.Hips, HumanBodyBones.Spine, HumanBodyBones.Chest, HumanBodyBones.UpperChest, HumanBodyBones.Neck,
+            HumanBodyBones.LeftShoulder, HumanBodyBones.RightShoulder, HumanBodyBones.LeftUpperLeg, HumanBodyBones.RightUpperLeg };
+        static readonly HumanBodyBones[] SkinTo = { HumanBodyBones.Spine, HumanBodyBones.Chest, HumanBodyBones.UpperChest, HumanBodyBones.Neck, HumanBodyBones.Head,
+            HumanBodyBones.LeftUpperArm, HumanBodyBones.RightUpperArm, HumanBodyBones.LeftLowerLeg, HumanBodyBones.RightLowerLeg };
+        const float ThighShare = 0.85f;
+
+        // turns a worn part, already placed in the bind pose, into a skinned mesh on the body's own bones: every vertex is weighted to
+        // its two nearest bone segments (inverse square of the distance), so the part bends with the body as the clips play
+        static bool SkinWorn(GameObject go, Mesh mesh, Animator an, List<Renderer> rends)
+        {
+            if (!mesh.isReadable) return false;
+            var bones = new List<Transform>(); var segA = new List<Vector3>(); var segB = new List<Vector3>(); var thigh = new List<bool>();
+            for (int b = 0; b < SkinFrom.Length; b++)
+            {
+                Transform a = an.GetBoneTransform(SkinFrom[b]);
+                if (a == null) continue;
+                Transform e = an.GetBoneTransform(SkinTo[b]);
+                if (e == null && SkinFrom[b] == HumanBodyBones.Chest) e = an.GetBoneTransform(HumanBodyBones.Neck);
+                bones.Add(a); segA.Add(a.position); segB.Add(e != null ? e.position : a.position);
+                thigh.Add(SkinFrom[b] == HumanBodyBones.LeftUpperLeg || SkinFrom[b] == HumanBodyBones.RightUpperLeg);
+            }
+            if (bones.Count == 0) return false;
+            int hips = 0; // Hips is first when the model has it (every humanoid does)
+            Transform t = go.transform;
+            Matrix4x4 l2w = t.localToWorldMatrix;
+            Vector3[] v = mesh.vertices;
+            var bw = new BoneWeight[v.Length];
+            for (int i = 0; i < v.Length; i++)
+            {
+                Vector3 p = l2w.MultiplyPoint3x4(v[i]);
+                int b0 = -1, b1 = -1; float d0 = float.MaxValue, d1 = float.MaxValue;
+                for (int b = 0; b < bones.Count; b++)
+                {
+                    Vector3 ab = segB[b] - segA[b];
+                    float u = ab.sqrMagnitude > 1e-8f ? Mathf.Clamp01(Vector3.Dot(p - segA[b], ab) / ab.sqrMagnitude) : 0f;
+                    float d = (p - (segA[b] + ab * u)).sqrMagnitude;
+                    if (d < d0) { d1 = d0; b1 = b0; d0 = d; b0 = b; } else if (d < d1) { d1 = d; b1 = b; }
+                }
+                float w0 = 1f / (d0 + 1e-4f), w1 = b1 >= 0 ? 1f / (d1 + 1e-4f) : 0f, sum = w0 + w1;
+                w0 /= sum; w1 /= sum;
+                float wh = 0f; // what a thigh gives up goes to the hips, so the hem swings with the legs but does not tear
+                if (thigh[b0]) { wh += w0 * (1f - ThighShare); w0 *= ThighShare; }
+                if (b1 >= 0 && thigh[b1]) { wh += w1 * (1f - ThighShare); w1 *= ThighShare; }
+                var x = new BoneWeight { boneIndex0 = b0, weight0 = w0 };
+                if (b1 >= 0) { x.boneIndex1 = b1; x.weight1 = w1; }
+                if (wh > 0f)
+                {
+                    if (b0 == hips) x.weight0 += wh; else if (b1 == hips) x.weight1 += wh; else { x.boneIndex2 = hips; x.weight2 = wh; }
+                }
+                bw[i] = x;
+            }
+            var sm = Object.Instantiate(mesh);
+            sm.name = mesh.name + " skinned";
+            sm.boneWeights = bw;
+            var bp = new Matrix4x4[bones.Count];
+            Transform body = an.transform;
+            t.SetParent(body, true);
+            l2w = t.localToWorldMatrix;
+            for (int b = 0; b < bones.Count; b++) bp[b] = bones[b].worldToLocalMatrix * l2w;
+            sm.bindposes = bp;
+            var mr = go.GetComponent<MeshRenderer>(); var mf = go.GetComponent<MeshFilter>();
+            Material[] mats = mr.sharedMaterials;
+            int ri = rends.IndexOf(mr);
+            Object.DestroyImmediate(mr); Object.DestroyImmediate(mf);
+            var r = go.AddComponent<SkinnedMeshRenderer>();
+            r.sharedMesh = sm; r.bones = bones.ToArray(); r.rootBone = bones[hips];
+            r.sharedMaterials = mats;
+            r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = true;
+            r.updateWhenOffscreen = true; // a long cloak reaches past the body's own bounds
+            if (ri >= 0) rends[ri] = r; // the fades and the menu see the skinned renderer
+            return true;
         }
 
         // a cloak's swing: a soft spring toward a lean that grows with running and a little with the swing of an attack, plus a
