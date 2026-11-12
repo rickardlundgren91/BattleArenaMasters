@@ -337,6 +337,8 @@ namespace BAM.Art
                     new WornDef { Model = "ravna_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.25f, At = new Vector3(0f, 0.035f, -0.06f), Flat = 0.8f, Sway = 28f },
                     // the crow sits on her left shoulder, looking ahead
                     new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = HumanBodyBones.LeftUpperArm, Height = 0.1f, At = new Vector3(0.012f, 0.012f, -0.01f) },
+                    // a crest of raven feathers on her head (Rickard 2026-11-12: "gör fjädrar till henne du också")
+                    new WornDef { Model = "ravna_feathers", Bone = HumanBodyBones.Head, From = HumanBodyBones.Head, Height = 0.16f, At = new Vector3(0f, 0.095f, -0.045f) },
                 } }; // own copies, so tuning her never moves Tikta's
             // Nässla's root staff with its glowing pod and her green cloak (Rickard's Tripo parts 2026-11-12: "samma med nässla vill jag ha
             // items", "hennes gröna kappa också"): the staff held upright as Moa's, the cloak from her shoulders under the basket
