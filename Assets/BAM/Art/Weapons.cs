@@ -179,6 +179,13 @@ namespace BAM.Art
         /// <summary>Where the mesh's origin goes in the bind pose, from the hero's feet, in shares of the figure's height: x to her
         /// right, y up, z forward. A cloak's origin is its top edge, anything else its bottom.</summary>
         public Vector3 At;
+        /// <summary>When set (not LastBone): At is measured from this bone's joint (or the point halfway to <see cref="To"/>) instead
+        /// of the feet, so the part sits on the body whatever pose the model is built in (Rickard 2026-11-12 "inte bra": the crow
+        /// floated by her head, the cloak hung like two narrow wings).</summary>
+        public HumanBodyBones From = HumanBodyBones.LastBone, To = HumanBodyBones.LastBone;
+        /// <summary>When above 0: the part's width is this many times the distance from <see cref="From"/> to <see cref="To"/>
+        /// (a cloak as wide as the shoulders), and Height is ignored.</summary>
+        public float Wide;
         /// <summary>Degrees turned about the hero's up axis.</summary>
         public float Yaw;
         /// <summary>Depth scale (a thick cloak pressed flatter against the back); 1 = as made.</summary>
@@ -326,10 +333,10 @@ namespace BAM.Art
             g[(int)HeroId.Ravna] = new GearDef { Weapons = new[] { new WeaponDef { Model = "ravna_dagger", Len = 0.3f, Grip = 0.06f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } }, new WeaponDef { Model = "ravna_dagger", Len = 0.3f, Grip = 0.06f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } } },
                 Worn = new[]
                 {
-                    // her feather cloak hangs from behind her shoulders to her knees and swings back as she runs
-                    new WornDef { Model = "ravna_cloak", Bone = HumanBodyBones.UpperChest, Height = 0.5f, At = new Vector3(0f, 0.785f, -0.085f), Flat = 0.6f, Sway = 28f },
+                    // her feather cloak: its shoulder plates on her shoulders, 1.25 times as wide as they are, hanging down her back to the knees (checked in Blender on her idle, 2026-11-12)
+                    new WornDef { Model = "ravna_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.25f, At = new Vector3(0f, 0.035f, -0.06f), Flat = 0.8f, Sway = 28f },
                     // the crow sits on her left shoulder, looking ahead
-                    new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, Height = 0.1f, At = new Vector3(-0.09f, 0.795f, -0.01f) },
+                    new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = HumanBodyBones.LeftUpperArm, Height = 0.1f, At = new Vector3(0.012f, 0.012f, -0.01f) },
                 } }; // own copies, so tuning her never moves Tikta's
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
@@ -654,9 +661,14 @@ namespace BAM.Art
                 MakeRenderer(go, mesh, w.Model, rends, op, fd);
                 Transform t = go.transform;
                 t.SetParent(bone, false);
-                t.position = root.position + (root.right * w.At.x + root.up * w.At.y + root.forward * w.At.z) * H;
+                Transform fa = w.From != HumanBodyBones.LastBone ? an.GetBoneTransform(w.From) : null;
+                Transform fb = fa != null && w.To != HumanBodyBones.LastBone ? an.GetBoneTransform(w.To) : null;
+                Vector3 from = fa == null ? root.position : fb == null ? fa.position : (fa.position + fb.position) * 0.5f;
+                t.position = from + (root.right * w.At.x + root.up * w.At.y + root.forward * w.At.z) * H;
                 t.rotation = root.rotation * Quaternion.Euler(0f, w.Yaw, 0f);
-                float k = w.Height * H / Mathf.Max(1e-4f, mesh.bounds.size.y);
+                float k = w.Wide > 0f && fb != null
+                    ? w.Wide * Vector3.Distance(fa.position, fb.position) / Mathf.Max(1e-4f, mesh.bounds.size.x)
+                    : w.Height * H / Mathf.Max(1e-4f, mesh.bounds.size.y);
                 float ps = Mathf.Max(1e-6f, bone.lossyScale.x);
                 t.localScale = new Vector3(k, k, k * w.Flat) / ps;
                 wornT[i] = t; wornRest[i] = t.localRotation;
