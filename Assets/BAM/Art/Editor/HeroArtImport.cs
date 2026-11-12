@@ -197,7 +197,9 @@ namespace BAM.Art.Editor
             // at rest, so the swing went "upp över huvudet, runt till andra sidan och sen svinga". Now the hammer rests on his shoulder
             // (Weapons.cs) and he strikes straight down from overhead with Bonk's Standing Melee Attack Downward, from 12 % (before
             // that the hammer swings out to the side first)
-            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.46f, Start = 0.12f },
+            // Bram stands in Bonk's Orc Idle 1 like Knut (Rickard 2026-11-12, lobby picture: "du ser hur bram står helt konstigt"): his
+            // Speltest idle leant him back with the hips pushed forward; the orc stance is upright, feet apart, the hammer arm free
+            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bonk/Anim/IdleOrc1", Run = "Bram/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.46f, Start = 0.12f },
             // Rickard 2026-10-28: Fenn "vänder sig bakåt och sparkar ut i luften för varje attack": his own Attack1 (Speltest's Power
             // Slash) is a jump with a whole turn (the hips turn 386 degrees and rise half a hip height). Knut's level swing after it was
             // made for an anchor hanging from the fist: Fenn's sword stood 35-60 degrees up at every blow (ANIM-21, Unity run 2), so he
