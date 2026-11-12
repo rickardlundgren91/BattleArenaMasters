@@ -228,9 +228,9 @@ namespace BAM.Art
                 // the volley's five arrows (Skill Visibility 2.0): at 18 tiles/s a 0.22 s trail is 4 tiles, her whole range, so every
                 // trail reached back to the bow and the five ran together into one gold wedge; 0.09 s (1.6 tiles) and a thinner line
                 // keep five arrows apart from a tile out (they fly 10 degrees apart: 0.17 tiles apart a tile out, 0.7 at the end)
-                trail.time = k == ProjKind.BramBolt ? 0.35f : k == ProjKind.TyraBolt ? 0.3f : k == ProjKind.TyraVolley ? 0.09f : k == ProjKind.TowerShot ? 0.22f : 0.16f;
+                trail.time = k == ProjKind.BramBolt ? 0.22f : k == ProjKind.TyraBolt ? 0.3f : k == ProjKind.TyraVolley ? 0.09f : k == ProjKind.TowerShot ? 0.22f : 0.16f;
                 trail.minVertexDistance = 0.08f;
-                trail.widthMultiplier = k == ProjKind.BramBolt ? 0.6f : k == ProjKind.TyraBolt ? 0.44f : k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : k == ProjKind.TyraVolley ? 0.08f : 0.14f; // Tyra's bolt: twice as wide (2026-10-28)
+                trail.widthMultiplier = k == ProjKind.BramBolt ? 0.32f : k == ProjKind.TyraBolt ? 0.44f : k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : k == ProjKind.TyraVolley ? 0.08f : 0.14f; // Tyra's bolt: twice as wide (2026-10-28)
                 trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
                 if (tm != null)
                 {
@@ -336,7 +336,7 @@ namespace BAM.Art
                 case ProjKind.BlastFire: c = new Color(1f, 0.55f, 0.2f, 0.45f); return true; // a faint fuse-smoke streak behind the bomb
                 case ProjKind.TiktaNeedleSpecial: c = new Color(0.2f, 1f, 0.85f, 0.8f); return true;
                 case ProjKind.BramHammerSpecial: c = Fx.HeroMain(HeroId.Bram); c.a = 0.8f; return true; // his forge orange, not the team's
-                case ProjKind.BramBolt: c = new Color(0.8f, 0.92f, 1f, 0.95f); return true; // his lightning beam, white-blue (stand-in until O-095)
+                case ProjKind.BramBolt: c = Fx.HeroMain(HeroId.Bram); c.a = 0.85f; return true; // his thrown hammer's forge-orange streak (a beam until 2026-11-12)
                 case ProjKind.TowerShot: c = Pal.Get(Pal.TeamLight(team)); c.a = 0.9f; return true;
                 case ProjKind.TyraArrow: c = new Color(1f, 1f, 1f, 0.45f); return true;
                 case ProjKind.TyraVolley: c = new Color(1f, 0.92f, 0.5f, 0.95f); return true; // the volley's warm gold (Speltest tyravolley)
@@ -407,6 +407,7 @@ namespace BAM.Art
             {
                 case ProjKind.BramHammer:
                 case ProjKind.BramHammerSpecial:
+                case ProjKind.BramBolt:
                     vis.rotation = look * Quaternion.Euler(spin, 0f, 0f);
                     break;
                 case ProjKind.BlastBomb:

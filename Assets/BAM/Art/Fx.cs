@@ -1510,9 +1510,9 @@ namespace BAM.Art
                 case ProjKind.SkrallStrike:
                     SpecialHit((int)(k == ProjKind.RagnLeap ? HeroId.Ragn : k == ProjKind.RavnaFlock ? HeroId.Ravna : HeroId.Skrall), p, 1f); // stand-ins until their own pictures
                     break;
-                case ProjKind.BramBolt: // Bram's lightning beam (stand-in until O-095)
+                case ProjKind.BramBolt: // Bram's thrown Hammer Line (stand-in until O-095)
                     Pow(p, 1, heroMain[(int)HeroId.Bram], 0.7f, 0.12f);
-                    Sparks(p + Vector3.up * 0.3f, 7, new Color32(200, 235, 255, 255), 0.09f, 4f, 0.25f, 1f);
+                    Sparks(p + Vector3.up * 0.3f, 7, C(Pal.FireCore), 0.09f, 4f, 0.25f, 1f);
                     break;
                 case ProjKind.SkrallBolt:
                     Pow(p, 1, heroMain[(int)HeroId.Skrall], 0.6f, 0.1f);
@@ -1556,7 +1556,7 @@ namespace BAM.Art
         public static void Fizzle(ProjKind k, Vector3 p, int team)
         {
             Color32 c = k == ProjKind.TyraVolley ? new Color32(255, 230, 140, 255) : k == ProjKind.TyraBolt ? heroMain[(int)HeroId.Tyra] : k == ProjKind.TiktaNeedleSpecial ? heroMain[(int)HeroId.Tikta]
-                : k == ProjKind.BramHammerSpecial ? heroMain[(int)HeroId.Bram] : C(Pal.TeamLight(team));
+                : k == ProjKind.BramHammerSpecial || k == ProjKind.BramBolt ? heroMain[(int)HeroId.Bram] : C(Pal.TeamLight(team));
             Glow(p, 3, c, 0.2f, 0.6f, 0.25f, 0.3f);
             Dust(p, 2, C(Pal.Ground, 180), 0.35f, 0.6f, 0.4f, 0.2f, 0.1f);
         }
@@ -1582,7 +1582,7 @@ namespace BAM.Art
                 // a small glow at each arrow's head (0.3 blobbed the five heads into one near the bow, where they fly 0.17 tiles apart a
                 // tile out), embers rarer
                 case ProjKind.TyraVolley: Glow(p, 1, new Color32(255, 230, 140, 220), 0.18f, 0.05f, 0.1f); if (Random.value < 0.2f) Embers(p, 1, new Color32(255, 214, 110, 255), 0.06f, 0.4f, 0.3f, 0.3f); break;
-                case ProjKind.BramHammerSpecial: Sparks(p, 1, heroAccent[(int)HeroId.Bram], 0.1f, 1.5f, 0.25f, 0.3f); break; // a forge tail
+                case ProjKind.BramHammerSpecial: case ProjKind.BramBolt: Sparks(p, 1, heroAccent[(int)HeroId.Bram], 0.1f, 1.5f, 0.25f, 0.3f); break; // a forge tail
                 case ProjKind.TowerShot: Glow(p, 1, C(Pal.TeamLight(team)), 0.35f, 0.1f, 0.2f); break;
                 case ProjKind.BonkBoulder:
                 {

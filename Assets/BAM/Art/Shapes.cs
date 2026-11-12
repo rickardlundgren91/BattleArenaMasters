@@ -334,11 +334,12 @@ namespace BAM.Art
             {
                 case ProjKind.BramHammer:
                 case ProjKind.BramHammerSpecial:
+                case ProjKind.BramBolt: // his thrown Hammer Line (2026-11-12: "kasta en hammare och inte en laserstråle"), the biggest
                 {
-                    float s = kind == ProjKind.BramHammerSpecial ? 1.35f : 1f;
+                    float s = kind == ProjKind.BramBolt ? 1.7f : kind == ProjKind.BramHammerSpecial ? 1.35f : 1f;
                     b.Color(Pal.Wood).Box(new Vector3(0f, -0.12f * s, 0f), new Vector3(0.05f, 0.3f, 0.05f) * s);
                     b.Color(Pal.Metal).Box(new Vector3(0f, 0.08f * s, 0f), new Vector3(0.17f, 0.17f, 0.3f) * s, Pal.Steel);
-                    b.Color(kind == ProjKind.BramHammerSpecial ? Pal.Team(team) : Pal.MetalDark).Box(new Vector3(0f, 0.08f * s, 0.16f * s), new Vector3(0.19f, 0.19f, 0.03f) * s);
+                    b.Color(kind != ProjKind.BramHammer ? Pal.Team(team) : Pal.MetalDark).Box(new Vector3(0f, 0.08f * s, 0.16f * s), new Vector3(0.19f, 0.19f, 0.03f) * s);
                     b.Box(new Vector3(0f, 0.08f * s, -0.16f * s), new Vector3(0.19f, 0.19f, 0.03f) * s);
                     break;
                 }
@@ -413,10 +414,6 @@ namespace BAM.Art
                 case ProjKind.NasslaThorn: // a stand-in until Rickard's own picture: a green thorn
                     b.Color(Pal.TeamLight(team)).Sphere(Vector3.zero, 0.06f, 8, 5);
                     b.Color(Pal.TeamLight(team)).Beam(new Vector3(0f, 0f, -0.12f), new Vector3(0f, 0f, 0.12f), 0.03f, 0.005f);
-                    break;
-                case ProjKind.BramBolt: // a stand-in until Rickard's own picture (O-095): the bolt's bright head; the trail is the lightning
-                    b.Color(Pal.White).Sphere(Vector3.zero, 0.12f, 8, 5);
-                    b.Color(Pal.TeamLight(team)).Torus(Vector3.zero, 0.13f, 0.02f, 10, 4);
                     break;
                 case ProjKind.SkrallBolt: // a stand-in until Rickard's own picture: a small bright spark (the flight is near-instant)
                     b.Color(Pal.White).Sphere(Vector3.zero, 0.08f, 8, 5);

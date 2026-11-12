@@ -2,7 +2,7 @@ using System;
 
 namespace BAM.Sim
 {
-    // Bram as ABC2's Silver (Heroes.cs BramS.Silver, Rickard 2026-11-11): Hammer Line (a charged lightning beam) + Focus.
+    // Bram as ABC2's Silver (Heroes.cs BramS.Silver, Rickard 2026-11-11): Hammer Line (a charge, then a thrown hammer that flies straight) + Focus.
     public sealed partial class Match
     {
         static void Hold(Unit u, float x, float y) { u.X = u.PX = x; u.Y = u.PY = y; }
@@ -17,7 +17,7 @@ namespace BAM.Sim
             b.Charge = b.HDef.MaxCharge;
             Check(m.TryCastSpecial(b, 0, 1), "SILVER: the Hammer Line beam is cast");
             var p = m.Projs.Find(q => q.Mode == ProjMode.HammerLine && !q.Done);
-            Check(p != null && p.Kind == ProjKind.BramBolt && p.T < 0, "SILVER: a lightning bolt waits in the hammer (the charge)");
+            Check(p != null && p.Kind == ProjKind.BramBolt && p.T < 0, "SILVER: the hammer waits in his hand (the charge)");
             Check(m.Projs.Exists(q => q.Mode == ProjMode.WarnLine && !q.Done), "SILVER: a red warning line shows during the charge");
             Check(b.Has(St.Disarm) && b.Has(St.Casting), "SILVER: he stands and charges");
             float ha = a.Hp, hc = c.Hp; int hits = 0, chargeTicks = 0;
@@ -30,7 +30,7 @@ namespace BAM.Sim
                 if (charging && hits == 0) chargeTicks++;
             }
             Check(Math.Abs(chargeTicks * Rules.Tick - BramS.BeamCharge) < 0.1f, $"SILVER: nothing is hit during the {BramS.BeamCharge} s charge ({chargeTicks * Rules.Tick:0.00})");
-            Check(a.Hp < ha && c.Hp < hc && hits == 2, $"SILVER: the bolt hits both enemies in the line, each once ({hits})");
+            Check(a.Hp < ha && c.Hp < hc && hits == 2, $"SILVER: the thrown hammer hits both enemies in the line, each once ({hits})");
             Check(p.Done && p.D <= BramS.LineReach + 0.01f, "SILVER: the bolt reaches at most LineReach");
 
             // a stun during the charge cuts the bolt

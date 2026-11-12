@@ -28,9 +28,11 @@ namespace BAM.Sim
         public const bool Silver = true;
         /// <summary>Since 2026-11-11 evening (Rickard: "mer som silver ... en stråle och varnar på samma sätt men det är en blixt från
         /// hammaren som han skjuter"): a beam, not a throw. He stands and charges BeamCharge s behind a red line (a stun cuts it), then a
-        /// lightning bolt from the hammer hits everyone in the whole line AT ONCE; LineSpeed is only how fast the bolt is drawn.</summary>
+        /// lightning bolt from the hammer hits everyone in the whole line AT ONCE; LineSpeed is only how fast the bolt is drawn.
+        /// Since 2026-11-12 (Rickard: "flyger för snabbt ... han ska ändå kasta en hammare och inte en laserstråle"): the same charge
+        /// and red line, then he throws the hammer, which flies straight at LineSpeed and hits every enemy it passes once.</summary>
         public const float BeamCharge = 0.45f;
-        public const float LineReach = 8, LineSpeed = 45, LineWidth = 0.6f, LineCoeff = 2.15f, FocusStep = 0.08f;
+        public const float LineReach = 8, LineSpeed = 16, LineWidth = 0.6f, LineCoeff = 3.2f, FocusStep = 0.08f; // thrown (2026-11-12): speed 45 -> 16, damage 2.15 -> 3.2 as it can now be dodged (Hard bots: 48.0 % as the beam, 39.2 % thrown at 2.15, 49.6 % at 3.2)
         public const int FocusMax = 5;
     }
 
@@ -336,9 +338,12 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>The bolt leaves the hammer: every enemy hero or minion in the whole line takes the hit at once (the beam), then the
-        /// bolt is drawn along it at LineSpeed.</summary>
-        void HammerLineUpdate(Proj p, float dt)
+        /// <summary>The thrown hammer (2026-11-12): flies straight at LineSpeed and hits every enemy hero or minion it passes once.</summary>
+        void HammerLineUpdate(Proj p, float dt) => HammerFlyUpdate(p, dt);
+
+        /// <summary>The 11 Nov evening beam: every enemy hero or minion in the whole line takes the hit at once, then the bolt is drawn
+        /// along it at LineSpeed. Unused since the thrown hammer.</summary>
+        void HammerBeamUpdate(Proj p, float dt)
         {
             if (p.D <= 0 && p.HitCount == 0 && p.Src != null)
             {
@@ -360,7 +365,7 @@ namespace BAM.Sim
             if (p.D >= p.Travel - 1e-4f) p.Done = true;
         }
 
-        /// <summary>The 11 Nov afternoon Hammer Line (a flying hammer hitting what it passes). Unused since the beam.</summary>
+        /// <summary>A flying hammer hitting every enemy it passes once (the 11 Nov afternoon Hammer Line, again since 2026-11-12).</summary>
         void HammerFlyUpdate(Proj p, float dt)
         {
             float step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
