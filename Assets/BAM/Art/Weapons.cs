@@ -333,12 +333,11 @@ namespace BAM.Art
             g[(int)HeroId.Ravna] = new GearDef { Weapons = new[] { new WeaponDef { Model = "ravna_dagger", Len = 0.3f, Grip = 0.06f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } }, new WeaponDef { Model = "ravna_dagger", Len = 0.3f, Grip = 0.06f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } } },
                 Worn = new[]
                 {
-                    // her feather cloak: its shoulder plates on her shoulders, 1.25 times as wide as they are, hanging down her back to the knees (checked in Blender on her idle, 2026-11-12)
-                    new WornDef { Model = "ravna_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.25f, At = new Vector3(0f, 0.035f, -0.06f), Flat = 0.8f, Sway = 28f },
-                    // the crow sits on her left shoulder, looking ahead
-                    new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = HumanBodyBones.LeftUpperArm, Height = 0.1f, At = new Vector3(0.012f, 0.012f, -0.01f) },
-                    // a crest of raven feathers on her head (Rickard 2026-11-12: "gör fjädrar till henne du också")
-                    new WornDef { Model = "ravna_feathers", Bone = HumanBodyBones.Head, From = HumanBodyBones.Head, Height = 0.16f, At = new Vector3(0f, 0.095f, -0.045f) },
+                    // her great raven-feather mantle as in Rickard's concept (2026-11-12: "hennes fjädrar ska vara så"): the tall collar round
+                    // her neck, open in front, down to her ankles; its top 0.13 of her height over the shoulder joints (checked in Blender)
+                    new WornDef { Model = "ravna_mantle", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.88f, At = new Vector3(0f, 0.13f, -0.02f), Sway = 10f },
+                    // the crow sits on the mantle's left shoulder, looking ahead
+                    new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = HumanBodyBones.LeftUpperArm, Height = 0.1f, At = new Vector3(-0.015f, 0.04f, -0.015f) },
                 } }; // own copies, so tuning her never moves Tikta's
             // Nässla's root staff with its glowing pod and her green cloak (Rickard's Tripo parts 2026-11-12: "samma med nässla vill jag ha
             // items", "hennes gröna kappa också"): the staff held upright as Moa's, the cloak from her shoulders under the basket
