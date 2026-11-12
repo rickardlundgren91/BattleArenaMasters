@@ -198,13 +198,13 @@ namespace BAM.Sim
                 SpecialName = "Ground Slam", SpecialDesc = "Slams his club into the ground: enemies around him take damage and are stunned for a moment. Drag to roll a boulder along a line instead: it hits the first enemy and knocks it back. Walls stop it.",
                 OneTapDesc = "Tap: slams his club into the ground with all his might: every enemy in a big circle around him takes heavy damage and is stunned for 0.8 s. Only with an enemy in the circle.",
                 PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
-                Health = 2, Damage = 1, Speed = 2, Difficulty = 1 }, // health 3 -> 2: Fenn 240 hp tops the terciles now (2026-11-10)
+                Health = 2, Damage = 2, Speed = 2, Difficulty = 1 }, // health 3 -> 2: Fenn 240 hp tops the terciles now (2026-11-10)
             // Tester Øli's Ragn and Nässla (after the old game's Bronson and Ginette) with Rickard's own bodies: in the game for everyone
             // in 0.4.0 (Rickard 2026-11-10: "för 0.4.0 ska ragn och nässla vara tillgängliga för alla"), open from the start like Kugg
             new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false,
                 SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles to where a random enemy in reach stands. If it is still there, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
                 PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
-                Health = 3, Damage = 2, Speed = 2, Difficulty = 1 },
+                Health = 3, Damage = 1, Speed = 2, Difficulty = 1 },
             new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
                 SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 75% for 1 s.",
                 PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
