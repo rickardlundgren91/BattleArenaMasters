@@ -278,9 +278,10 @@ namespace BAM.Art
             g[(int)HeroId.Moa] = new GearDef
             {
                 HandsOff = 14f,
-                // the staff fixed in her fist (Follow and SwingFollow 1; Rickard 2026-11-12: "det glider runt i annat tempo än moas hand":
-                // at 0.25 / 0.35 the staff turned with only a part of the hand's turn, so it seemed to slide round in the fist)
-                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, Follow = 1f, SwingFollow = 1f } },
+                // Follow back at 0.25 / SwingFollow 0.35: Rickard tuned her grip in the Weapon Tuner (WeaponTune.json, 2e09e8a) against
+                // these values, and with Follow 1 his tuned staff tilted out of her fist (his screenshot 2026-11-12). If it slides in the
+                // hand again, Follow 1 needs a new tune in the Weapon Tuner together with it.
+                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, SwingFollow = 0.35f } },
                 Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true, Turn = 45f, Off = 0.12f },
             };
             // her ornate bow (Rickard's Tripo model 2026-10-24, old fig_ornateBow; Rickard 2026-10-26: "ja", put it in her hand),
@@ -341,7 +342,7 @@ namespace BAM.Art
                 {
                     // her great raven-feather mantle as in Rickard's concept (2026-11-12: "hennes fjädrar ska vara så"): the tall collar round
                     // her neck, open in front, down to her ankles; its top 0.13 of her height over the shoulder joints (checked in Blender)
-                    new WornDef { Model = "ravna_mantle", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.82f, At = new Vector3(0f, 0.08f, -0.035f), Skin = true },
+                    new WornDef { Model = "ravna_capelet", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.5f, At = new Vector3(0f, 0.07f, -0.01f), Skin = true },
                     // the crow sits on the mantle's left shoulder, looking ahead
                     new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = HumanBodyBones.LeftUpperArm, Height = 0.1f, At = new Vector3(-0.015f, 0.04f, -0.015f) },
                 } }; // own copies, so tuning her never moves Tikta's
