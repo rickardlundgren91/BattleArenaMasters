@@ -325,6 +325,8 @@ namespace BAM.Art
             "tx_fx_knut_hit", "tx_fx_bram_hit", "tx_fx_tikta_hit",
             // Tyra's feather trail (O-058, 2026-11-04): a white feather on black, lying on the ground along her bolt's path
             "tx_fx_tyra_feather",
+            // Bram's Hammer Line hit (O-095, 2026-11-12): a white star of metal sparks
+            "tx_fx_bram_spark",
         };
 
         // the heroes whose autoattack hit has Rickard's own picture (Tyra 2026-10-31; Knut, Bram, Tikta 2026-11-02); the rest his hit stars
@@ -1510,8 +1512,9 @@ namespace BAM.Art
                 case ProjKind.SkrallStrike:
                     SpecialHit((int)(k == ProjKind.RagnLeap ? HeroId.Ragn : k == ProjKind.RavnaFlock ? HeroId.Ravna : HeroId.Skrall), p, 1f); // stand-ins until their own pictures
                     break;
-                case ProjKind.BramBolt: // Bram's thrown Hammer Line (stand-in until O-095)
+                case ProjKind.BramBolt: // Bram's thrown Hammer Line; his spark star where it hits (O-095)
                     Pow(p, 1, heroMain[(int)HeroId.Bram], 0.7f, 0.12f);
+                    Pic("tx_fx_bram_spark", p + Vector3.up * 0.4f, Color.white, 1.3f, 0.22f);
                     Sparks(p + Vector3.up * 0.3f, 7, C(Pal.FireCore), 0.09f, 4f, 0.25f, 1f);
                     break;
                 case ProjKind.SkrallBolt:
