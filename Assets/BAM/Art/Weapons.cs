@@ -352,14 +352,9 @@ namespace BAM.Art
             g[(int)HeroId.Nassla] = new GearDef
             {
                 Weapons = new[] { new WeaponDef { Model = "nassla_staff", Len = 0.72f, Grip = 0.45f, Along = true, HoldUp = 82f, HoldOut = 24f, Upright = true, SwingAim = true, Follow = 1f, SwingFollow = 1f } },
-                Worn = new[]
-                {
-                    // no separate cloak (Rickard 2026-11-12 in Play, "värre"): the skinned nassla_cloak hung in long green strips from her left arm down past the
-                    // basket and in flaps round her waist (with only its renderer off in Unity they were all gone); her own green robe is the cloak
-                    // her basket of glowing pods as its own part (Rickard 2026-11-12: "nässla borde vi nog göra korgen efteråt också"): her new
-                    // body has none, so it no longer breaks apart with her arms; on her back over the cloak, its rim below the shoulders
-                    new WornDef { Model = "nassla_basket", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.3f, At = new Vector3(0f, -0.22f, -0.115f), Yaw = 180f }, // its straps toward her back (Rickard: "korgen är bakofram")
-                },
+                // 0.4.1: her 0.4.0 body with the basket built in is back, and no separate cloak or basket (Rickard 2026-11-12, "värre",
+                // "genomskinlig"): the basket-less body had its back tunic weighted to her forearms, which tore into strips, and cutting
+                // those away left holes; the skinned cloak hung in strips of its own
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
