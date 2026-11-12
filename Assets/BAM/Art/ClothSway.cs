@@ -17,7 +17,7 @@ namespace BAM.Art
     /// </summary>
     sealed class ClothSway
     {
-        enum Kind { Skirt, Tail, HipTail }
+        enum Kind { Skirt, Tail, HipTail, BackFlaps }
 
         /// <summary>One cloth part of one hero. Distances are fractions of the model's height in its bind pose.</summary>
         sealed class Spec
@@ -39,6 +39,8 @@ namespace BAM.Art
             public float Drag = 0.05f;       // seconds of the hips' or head's velocity it trails by
             public float Flare;              // Skirt: outward swing at a full spin (share of its length)
             public float Inward = 0.12f;     // Skirt: how far a part may swing in towards the legs (share of its length)
+            public float Top0, Top1;         // BackFlaps: height above the hips (share of height) where the flaps hang free (Top1 = full)
+            public float Low;                // BackFlaps: and above this (the seat below stays put)
             public bool FrontOnly;           // Skirt: only cloth in front of the hips (a single front panel; the seat behind stays put)
             public float Kick = 1f;          // how hard the hero's own moves push it (secondary action, Kick); 0 = never
         }
@@ -78,7 +80,13 @@ namespace BAM.Art
                 // surface from the neck to the waist, weighted to Spine1/Spine2), so swinging it would bend her back. No sway.
                 case 5: // Tikta: the narrow purple cloth panel hanging in front between her legs (Rickard 2026-11-12, "på alla som det ser
                         // bra ut på"); front only and narrow, so her seat and thighs stay put (measured on Tikta.fbx)
-                    return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.03f, Clear1 = 0.06f, Drop = 0.12f, MaxBelow = 0.25f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.6f, Damping = 0.4f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f } };
+                    // + the two ends of her scarf hanging down her back (Rickard 2026-11-12: "tiktas halsduk skulle kunna behöva lite, iaf
+                    // ändarna som är bakom henne"): free of the back from 0.09 above the hips down to their tips (measured on Tikta.fbx)
+                    return new[]
+                    {
+                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.03f, Clear1 = 0.06f, Drop = 0.12f, MaxBelow = 0.25f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.6f, Damping = 0.4f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
+                        new Spec { Kind = Kind.BackFlaps, Top0 = 0.125f, Top1 = 0.09f, Low = 0.015f, Back0 = 0.05f, Back1 = 0.065f, Hz = 2.3f, Damping = 0.35f, MaxAngle = 30f, Drag = 0.06f, Flare = 0.25f, Inward = 0.05f },
+                    };
                 // Knut, Bram, Blast, Kugg, Oaken: nothing hangs free of the body (Knut's vest and mane are the top of his back, Blast's
                 // scarf is a collar, Kugg is stone and brass). Checked again on the models 2026-11-12. Hilde (not in the
                 // game yet): her long braid reaches her hips and needs a chain of bones, not one; when she comes in.
@@ -307,6 +315,47 @@ namespace BAM.Art
                         Add(i, boneOf[k0], sw[i] * (1f - f));
                         if (k1 != k0) Add(i, boneOf[k1], sw[i] * f);
                     }
+                }
+                else if (sp.Kind == Kind.BackFlaps)
+                {
+                    // flaps hanging down the back clear of it (Tikta's scarf ends): what is behind the hips by Back0..Back1, between Low
+                    // and Top0 above them, on the torso's bones; one spring bone per side, tied on at the flap's top, on the chest
+                    Vector3 hp = At(hips), back = -fwd;
+                    int s1 = Idx(HumanBodyBones.Spine), s2 = Idx(HumanBodyBones.Chest), s3 = Idx(HumanBodyBones.UpperChest);
+                    int lSh = Idx(HumanBodyBones.LeftShoulder), rSh = Idx(HumanBodyBones.RightShoulder);
+                    var set = new List<int> { hips };
+                    foreach (int b in new[] { s1, s2, s3, lSh, rSh }) if (b >= 0) set.Add(b);
+                    int[] setA = set.ToArray();
+                    int parent = s3 >= 0 ? s3 : s2 >= 0 ? s2 : s1 >= 0 ? s1 : hips;
+                    var sw = new float[n];
+                    var side = new int[n];
+                    var sum = new Vector3[2]; var ws = new float[2]; var top = new float[2];
+                    for (int i = 0; i < n; i++)
+                    {
+                        float ab = Vector3.Dot(v[i] - hp, up) / H;
+                        if (ab <= sp.Low || ab >= sp.Top0 || Share(i, setA) < 0.8f) continue;
+                        float bk = Vector3.Dot(v[i] - hp, back) / H;
+                        float s = Smooth((sp.Top0 - ab) / Mathf.Max(1e-4f, sp.Top0 - sp.Top1)) * Smooth((bk - sp.Back0) / Mathf.Max(1e-4f, sp.Back1 - sp.Back0));
+                        if (s <= 0.005f) continue;
+                        int k = Vector3.Dot(v[i] - hp, right) >= 0f ? 1 : 0;
+                        sw[i] = s; side[i] = k;
+                        sum[k] += v[i] * s; ws[k] += s;
+                    }
+                    var boneOf = new[] { -1, -1 };
+                    for (int k = 0; k < 2; k++)
+                    {
+                        if (ws[k] < 1f) continue;
+                        Vector3 mid = sum[k] / ws[k];
+                        // the tie point: above the flap's middle, where it leaves the back
+                        Vector3 pivot = mid + up * (Vector3.Dot(hp - mid, up) + sp.Top0 * H);
+                        boneOf[k] = bones.Length + defs.Count;
+                        defs.Add(new BoneDef
+                        {
+                            Parent = parent, Pivot = bind[parent].MultiplyPoint3x4(pivot), Rest = bind[parent].MultiplyVector(mid - pivot), Spec = sp,
+                            OutLocal = bind[parent].MultiplyVector(back).normalized, // a spin swings them out behind, never into her back
+                        });
+                    }
+                    for (int i = 0; i < n; i++) if (sw[i] > 0f && boneOf[side[i]] >= 0) Add(i, boneOf[side[i]], sw[i]);
                 }
                 else if (sp.Kind == Kind.HipTail)
                 {
