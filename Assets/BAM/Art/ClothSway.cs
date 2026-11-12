@@ -71,7 +71,8 @@ namespace BAM.Art
                     return new[]
                     {
                         new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 35f, Drag = 0.06f },
-                        new Spec { Kind = Kind.Fringe, PivotUp = 0.12f, Hz = 3.0f, Damping = 0.4f, MaxAngle = 12f, Drag = 0.035f, Inward = 0.03f, Kick = 0.6f },
+                        // Rickard 2026-11-12 after testing 12 degrees: "för lite på tyras lugg": about twice the swing, softer and slower
+                        new Spec { Kind = Kind.Fringe, PivotUp = 0.12f, Hz = 2.4f, Damping = 0.28f, MaxAngle = 24f, Drag = 0.07f, Inward = 0.05f, Kick = 1.2f },
                     };
                 case 3: // Moa: only the narrow embroidered panel hanging in front between her legs (Rickard 2026-11-12: "moas kläder och hår
                         // kanske kunde använda den nya funktionen"). Front only and narrow: the 9 Nov try (removed, "det buggar") took the
