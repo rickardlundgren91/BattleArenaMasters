@@ -92,19 +92,19 @@ namespace BAM.Sim
             h.Charge = h.HDef.MaxCharge;
             Check(m.TryTapSpecial(h), "the tap throws the seed pod");
             Proj b = null; foreach (var p in m.Projs) if (p.Mode == ProjMode.Bramble) b = p;
-            Check(b != null && b.Zone == ZoneKind.Bramble && Near(b.X, a.X, 0.05f) && b.Tgt == a, "brambles on the enemy");
+            Check(b != null && b.Zone == ZoneKind.Bramble && Near(b.X, a.X, 0.05f), "brambles on the enemy");
             Check(Near(m.SpeedOf(a), sp0, 0.02f), "no slow before the first tick");
             for (int i = 0; i < 10; i++) { m.Time += Rules.Tick; a.Y += 0.03f; m.UpdateProjectiles(Rules.Tick); }
             Check(Near(b.Y, y, 0.01f), $"they stay where she aimed, they do not follow him ({b.Y - y:0.00})");
             for (int i = 0; i < 30 && b.Ticks == 0; i++) { m.Time += Rules.Tick; m.UpdateProjectiles(Rules.Tick); }
-            Check(b.Ticks == 1 && Near(m.SpeedOf(a), sp0 * (1 + NasslaS.Slow), 0.02f), $"the first tick slows him 75 % ({m.SpeedOf(a):0.00})");
+            Check(b.Ticks == 1 && Near(m.SpeedOf(a), sp0 * (1 + NasslaS.Slow), 0.02f), $"the first tick slows him 50 % ({m.SpeedOf(a):0.00})");
             float by = b.Y; a.Y += 0.3f;
             int hits = 0;
             for (int i = 0; i < 300; i++) { m.Time += Rules.Tick; m.UpdateProjectiles(Rules.Tick); }
             Check(Near(b.Y, by, 0.01f), "after the first tick they stay");
             foreach (var e in m.Events) if (e.Type == EventType.Hit && e.B == a && (ProjKind)e.Kind == ProjKind.NasslaBramble) hits++;
             Check(hits == NasslaS.PoisonTicks, $"four poison ticks, one a second ({hits})");
-            Check(Near(a0 - a.Hp, h.StatDmg() * NasslaS.PoisonCoeff * a.TakenMult, 1f), $"1.5 x her damage in all ({a0 - a.Hp:0.0})");
+            Check(Near(a0 - a.Hp, h.StatDmg() * NasslaS.PoisonCoeff * a.TakenMult, 1f), $"{NasslaS.PoisonCoeff} x her damage in all ({a0 - a.Hp:0.0})");
             Check(Near(ally.Hp - al0, ally.MaxHp * NasslaS.HealPct * NasslaS.PoisonTicks, 0.5f), $"Healing Sap: the ally got 4 x 2 % ({ally.Hp - al0:0.0})");
             Check(b.Done, "the thicket is gone after 4 s");
 
@@ -115,6 +115,22 @@ namespace BAM.Sim
             m.Time += Rules.Tick; m.UpdateProjectiles(Rules.Tick);
             bool left = false; foreach (var p in m.Projs) if (p.Mode == ProjMode.Bramble && !p.Done) left = true;
             Check(!left, "the thicket dies with her");
+
+            // no aim help: a drag lands exactly where it was aimed, not on an enemy beside the spot (Rickard 2026-11-12)
+            m = Make(HeroId.Nassla, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Bram, HeroId.Knut, HeroId.Tikta });
+            h = m.Player; h.Bot = null; a = m.Foe(HeroId.Bram);
+            Place(h, x, y); Place(a, x + 2.5f, y + 0.7f); Place(m.Foe(HeroId.Knut), x - 9, y + 9); Place(m.Foe(HeroId.Tikta), x - 9, y - 9);
+            Place(m.Ally(HeroId.Moa), x - 9, y); Place(m.Ally(HeroId.Fenn), x - 9, y + 3);
+            h.Charge = h.HDef.MaxCharge; m.AddStatus(a, St.Stun, 999);
+            b = null;
+            for (int k = 0; k < 60 && b == null; k++)
+            {
+                var inp = PlayerInput.None;
+                if (k == 0) { inp.Special = true; inp.AimAngle = 0; inp.AimK = 2.5f / NasslaS.Reach; }
+                m.Step(inp);
+                foreach (var p in m.Projs) if (p.Mode == ProjMode.Bramble && p.Src == h) b = p;
+            }
+            Check(b != null && Math.Abs(b.Y - y) < 0.05f && b.X > x + 1, $"a drag beside an enemy lands where it was aimed, no pull onto him ({(b == null ? 0 : b.X - x):0.00}, {(b == null ? 0 : b.Y - y):0.00})");
         }
 
         static void Skrall()

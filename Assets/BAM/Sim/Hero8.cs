@@ -35,7 +35,8 @@ namespace BAM.Sim
     /// kanske inte ska ha ett extra liv som ginette"): at every tick her ally heroes in it get HealPct of their max health back.</summary>
     public static class NasslaS
     {
-        public const float Reach = 3.8f, Radius = 1.75f, Warn = 0.5f, Tick = 1, Slow = -0.5f, SlowTime = 1, PoisonCoeff = 1.25f, HealPct = 0.02f;
+        // Radius 1.75 -> 1.45 (Rickard 2026-11-12 "Nässla ska special va lite mindre area")
+        public const float Reach = 3.8f, Radius = 1.45f, Warn = 0.5f, Tick = 1, Slow = -0.5f, SlowTime = 1, PoisonCoeff = 1.25f, HealPct = 0.02f;
         public const int PoisonTicks = 4;
         public const float Duration = Warn + Tick * (PoisonTicks - 1) + 0.5f; // the last tick at 3.5 s, gone at 4 s (ExtraLifetime 0.5)
     }
@@ -206,16 +207,16 @@ namespace BAM.Sim
             LandPoint(h, aa, ak, NasslaS.Reach, out float x, out float y);
             var p = NewProj(ProjMode.Bramble, h, x, y);
             p.Kind = ProjKind.NasslaBramble; p.Radius = NasslaS.Radius; p.Dur = NasslaS.Duration; p.Dmg = dmg * NasslaS.PoisonCoeff / NasslaS.PoisonTicks;
-            // they root where she aimed and do not follow (Rickard 2026-11-10: a good player can dodge an ult, as he chose on a card)
-            p.Tgt = EnemyAt(h, x, y);
-            if (p.Tgt != null) { p.X = p.Tgt.X; p.Y = p.Tgt.Y; }
+            // they root where she aimed and do not follow (Rickard 2026-11-10: a good player can dodge an ult, as he chose on a card),
+            // exactly on the aimed spot: no pull onto an enemy near it (Rickard 2026-11-12 "Nässla ska special inte ha något automatiskt
+            // aim", a drag jumped to a creep or a hero); a tap aims at its target's spot anyway
             h.Facing = SimMath.Atan2(y - h.Y, x - h.X); h.AimT = Time + 0.4f;
             AddStatus(h, St.Casting, 0.5f); AddStatus(h, St.Disarm, 0.5f); // ABC2: Duration 0.5, disarmed while it is cast
             castX = x; castY = y;
             return true;
         }
 
-        /// <summary>The thicket (ABC2 brambleUpdate): it follows its enemy until the first tick at Warn s, then stays; at every tick
+        /// <summary>The thicket (ABC2 brambleUpdate): it stays where it landed; at every tick
         /// each enemy inside (clear line from its middle) takes a poison tick and the slow, each ally hero the sap. Ends after Duration or with Nässla.</summary>
         void BrambleUpdate(Proj p)
         {
