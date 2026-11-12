@@ -278,10 +278,11 @@ namespace BAM.Art
             g[(int)HeroId.Moa] = new GearDef
             {
                 HandsOff = 14f,
-                // Follow back at 0.25 / SwingFollow 0.35: Rickard tuned her grip in the Weapon Tuner (WeaponTune.json, 2e09e8a) against
-                // these values, and with Follow 1 his tuned staff tilted out of her fist (his screenshot 2026-11-12). If it slides in the
-                // hand again, Follow 1 needs a new tune in the Weapon Tuner together with it.
-                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, SwingFollow = 0.35f } },
+                // the staff locked in her fist (Follow and SwingFollow 1, Rickard 2026-11-12: "staven låser sig inte till handen för moa,
+                // den svävar fritt och glider ifrån ibland"). His Weapon Tuner values (WeaponTune.json, 2e09e8a) carry over unchanged: in
+                // her idle pose the hand is at its rest turn, so Follow changes nothing there; it only decides how much of the hand's
+                // turn away from the idle the staff takes with it (all of it now, see Share)
+                Weapons = new[] { new WeaponDef { Model = "moa_staff", Len = 0.95f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, Follow = 1f, SwingFollow = 1f } },
                 Shield = new ShieldDef { Model = "moa_shield", Dia = 0.45f, AlwaysSide = true, Turn = 45f, Off = 0.12f },
             };
             // her ornate bow (Rickard's Tripo model 2026-10-24, old fig_ornateBow; Rickard 2026-10-26: "ja", put it in her hand),
@@ -1711,6 +1712,10 @@ namespace BAM.Art
         static Quaternion Share(Quaternion q, float f)
         {
             if (f <= 0f) return Quaternion.identity;
+            // all of the turn (Follow 1): the hand's own turn, whatever its size, so the weapon is fixed in the fist. With the fade
+            // below a hand turned more than a quarter turn from its idle let go of part of its turn, and Moa's staff (Follow 1)
+            // floated free of her fist and slid off at times (Rickard 2026-11-12: "den svävar fritt och glider ifrån ibland")
+            if (f >= 1f) return q;
             if (q.w < 0f) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
             float w = Mathf.Min(q.w, 1f), s = Mathf.Sqrt(1f - w * w);
             if (s < 1e-5f) return Quaternion.identity;
