@@ -205,7 +205,7 @@ namespace BAM.Sim
             new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false,
                 // Night Flight + Restless = ABC2's Ron (Rickard 2026-11-11 "ron blir ravna"); the Crow Flock texts stay for RavnaS.NightFlight = false
                 SpecialName = RavnaS.NightFlight ? "Night Flight" : "Crow Flock", SpecialDesc = RavnaS.NightFlight
-                    ? "Turns into a flock of crows for 2.2 s that flies through walls and can be steered with the joystick. As a flock she cannot be hit; every enemy she flies through is torn once and slowed by 30% for 1.5 s."
+                    ? "Turns into a flock of crows for 2.2 s that flies the way she runs, through walls, and can be steered with the joystick. No aiming. As a flock she cannot be hit; every enemy she flies through is torn once and slowed by 30% for 1.5 s."
                     : "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
                 PassiveName = RavnaS.NightFlight ? "Restless" : "Crow's Eye", PassiveDesc = RavnaS.NightFlight
                     ? "Running charges her special: the ring fills as she moves, not only when she hits."

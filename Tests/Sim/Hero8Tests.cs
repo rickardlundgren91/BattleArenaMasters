@@ -28,7 +28,7 @@ namespace BAM.Sim
                 Check(Defs.Hero(id).Id == id, $"{id} has its own numbers in Defs");
             }
             Check(HeroCatalog.Get(HeroId.Nassla).Name == "Nässla" && HeroCatalog.SpecialIcon(HeroId.Nassla) == "special_nassla", "Nässla shows her name, her icon file is plain ASCII");
-            Check(!CanDragAim(HeroId.Skrall) && CanDragAim(HeroId.Ragn) && CanDragAim(HeroId.Nassla) && CanDragAim(HeroId.Ravna), "Skrall is tap only, the other three can aim");
+            Check(!CanDragAim(HeroId.Skrall) && CanDragAim(HeroId.Ragn) && CanDragAim(HeroId.Nassla) && !CanDragAim(HeroId.Ravna), "Skrall and Ravna are tap only, Ragn and Nässla can aim");
         }
 
         static void Ragn()

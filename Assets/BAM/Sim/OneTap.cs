@@ -23,7 +23,7 @@ namespace BAM.Sim
         public bool DragAimOn => OneTap && DragAim && Tut == null;
 
         /// <summary>Has h's special anything to aim? Bonk's Ground Slam lands round him and Kugg's turret where he stands: tap only.</summary>
-        public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg && id != HeroId.Skrall && !(id == HeroId.Fenn && FennS.Veil); // Fenn's Veil is cast where he stands (Heroes.cs) // Skrall's three strikes pick their own enemies (Hero8.cs)
+        public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg && id != HeroId.Skrall && !(id == HeroId.Fenn && FennS.Veil) && !(id == HeroId.Ravna && RavnaS.NightFlight); // Fenn's Veil is cast where he stands (Heroes.cs) // Skrall's three strikes pick their own enemies (Hero8.cs)
 
         /// <summary>The share of the form's reach (TryCastSpecial's k) a drag with share k aims at: a placed form (Bram's anvil, Blast's bomb,
         /// Fenn's thrown wolf, Moa's field) lands at most at the white ring (TapReach), as far as a tap can put it, so the drag gives
@@ -72,6 +72,7 @@ namespace BAM.Sim
             if (h == null || !h.Alive || h.Kind != UnitKind.Hero) return false;
             if (h.Hero == HeroId.Moa) return true;
             if (h.Hero == HeroId.Fenn && FennVeil) return true; // the Veil needs nobody in reach: it is an escape too
+            if (h.Hero == HeroId.Ravna && NightFlightOn) return true; // Night Flight goes the way she runs: nobody needed in reach
             if (h.Hero == HeroId.Kugg && h.KuggRooted) return false;
             return TapTargets(h).Count > 0;
         }
@@ -99,6 +100,7 @@ namespace BAM.Sim
             Unit t;
             if (h.Hero == HeroId.Moa) t = TapAlly(h) ?? h;
             else if (h.Hero == HeroId.Fenn && FennVeil) return TryCastSpecial(h, float.NaN, 0); // the Veil where he stands: no aim, no warning (it hurts nobody)
+            else if (h.Hero == HeroId.Ravna && NightFlightOn) return TryCastSpecial(h, RavnaRunAng(h), 1); // the flock sets off the way she runs, at once: no target, no aim, no warning (Rickard 2026-11-12, as ABC2's Ron)
             else
             {
                 var l = TapTargets(h);
@@ -124,6 +126,27 @@ namespace BAM.Sim
             float k = SimMath.Clamp(d / reach, 0, 1); // placed forms (Bram, Fenn, Blast, Moa) land on the target's spot
             if (TeleOn) return TeleTime(h.Hero) > 0 ? StartTelegraph(h, t, ang, k) : CastWithFlash(h, t, ang, k); // the warning first, aim locked now (Telegraph.cs)
             return TryCastSpecial(h, ang, k);
+        }
+
+        /// <summary>Night Flight's way (Rickard 2026-11-12: "ravnas special ska man inte sikta på någon den använder man och färdas i
+        /// samma riktning som man går helt enkelt", "precis som ron"): a player's joystick, else the way she faces; a bot sets off at a
+        /// random enemy hero in reach, or, hurt, the way it runs (BotSpecial: the same rule on both teams).</summary>
+        float RavnaRunAng(Unit h)
+        {
+            if (h.Bot == null)
+            {
+                if (h.Seat >= 0)
+                {
+                    float mx = seatMoveX[h.Seat], my = seatMoveY[h.Seat];
+                    if (mx * mx + my * my >= 0.04f) return SimMath.Atan2(my, mx);
+                }
+                return h.Facing;
+            }
+            if (h.Hp < h.MaxHp * 0.35f) return h.Facing; // hurt: away, the way she is running (BotSpecial)
+            var l = TapTargets(h); l.RemoveAll(u => u.Kind != UnitKind.Hero || u.IsClone);
+            if (l.Count == 0) return h.Facing;
+            var t = PickRandom(l);
+            return SimMath.Atan2(t.Y - h.Y, t.X - h.X);
         }
 
         /// <summary>How far the aim ring round the hero reaches while a drag aims (the HUD): with the one-tap special a placed form and

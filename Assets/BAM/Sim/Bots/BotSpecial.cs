@@ -54,6 +54,12 @@ namespace BAM.Sim
                     if ((retreat || danger) && HpR(h) < 0.45f) return Foes(5, true, false, l) > 0;
                     return !retreat && HpR(h) >= 0.3f && Foes(FennS.VeilEngage, true, false, l) > 0;
                 }
+                if (h.Hero == HeroId.Ravna && Match.NightFlightOn)
+                {   // Night Flight goes the way she runs (Rickard 2026-11-12, no target needed): the brain flies at an enemy hero in the
+                    // flock's reach, or away when hurt and chased; it then steers the flock as before (Hero8.cs RavnaSteer)
+                    if ((retreat || danger) && HpR(h) < 0.35f) return Foes(5, true, false, l) > 0;
+                    return !retreat && Foes(r, true, false, l) > 0;
+                }
                 if (!M.TapHasTarget(h)) return false;
                 // Kugg's Anchor roots him for up to 10 s (Hero7.cs): ROI17's old AI (SimAI AI_Joker) deployed above 60 % health with an
                 // enemy hero within 7 tiles or 4 enemies in reach, never to escape. The bot waits for KuggAnchorStocks (he may anchor from
