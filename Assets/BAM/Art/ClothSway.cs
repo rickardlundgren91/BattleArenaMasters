@@ -39,14 +39,24 @@ namespace BAM.Art
             public float Drag = 0.05f;       // seconds of the hips' or head's velocity it trails by
             public float Flare;              // Skirt: outward swing at a full spin (share of its length)
             public float Inward = 0.12f;     // Skirt: how far a part may swing in towards the legs (share of its length)
+            public bool FrontOnly;           // Skirt: only cloth in front of the hips (a single front panel; the seat behind stays put)
             public float Kick = 1f;          // how hard the hero's own moves push it (secondary action, Kick); 0 = never
         }
 
-        static Spec[] SpecsFor(int hero)
+        static Spec[] SpecsFor(int hero, Mesh body)
         {
             switch (hero)
             {
-                case 1: // Fenn (the Original body): the cape behind and the tabard in front, both hanging free of the legs
+                case 1 when !body.name.StartsWith("unamed"):
+                    // Fenn's Clay body, the one in the game (Rickard 2026-11-12: "lägg in den där textil och hår animation på alla som det
+                    // ser bra ut på"): the cloth panels in front and behind, between his legs (only the middle: the side tassets and the
+                    // knees are part of the leg shell and stay put; measured on Fenn/Fenn.fbx), and the helmet's plume behind his head
+                    return new[]
+                    {
+                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.08f, Drop = 0.10f, MaxBelow = 0.2f, MaxSide = 0.07f, Hz = 2.4f, Damping = 0.5f, MaxAngle = 18f, Drag = 0.04f, Flare = 0.12f },
+                        new Spec { Kind = Kind.Tail, Back0 = 0.06f, Back1 = 0.11f, PivotUp = 0.12f, Hz = 2.4f, Damping = 0.35f, MaxAngle = 25f, Drag = 0.05f },
+                    };
+                case 1: // Fenn (the Original body, mesh "unamed"): the cape behind and the tabard in front, both hanging free of the legs
                     return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.055f, Clear1 = 0.11f, Drop = 0.12f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 26f, Drag = 0.05f, Flare = 0.22f } };
                 case 2: // Tyra: the ponytail
                     return new[] { new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 35f, Drag = 0.06f } };
@@ -66,7 +76,11 @@ namespace BAM.Art
                     return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.08f, Drop = 0.10f, MaxBelow = 0.165f, Hz = 2.4f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.2f } };
                 // Moa (again 2026-11-11): her long hair lies on her back as part of the same shell (Moa.fbx: the hair IS the back's
                 // surface from the neck to the waist, weighted to Spine1/Spine2), so swinging it would bend her back. No sway.
-                // Knut, Bram, Blast, Tikta, Oaken: nothing hangs free of the body (Knut's mane is the top of his back). Hilde (not in the
+                case 5: // Tikta: the narrow purple cloth panel hanging in front between her legs (Rickard 2026-11-12, "på alla som det ser
+                        // bra ut på"); front only and narrow, so her seat and thighs stay put (measured on Tikta.fbx)
+                    return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.03f, Clear1 = 0.06f, Drop = 0.12f, MaxBelow = 0.25f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.6f, Damping = 0.4f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f } };
+                // Knut, Bram, Blast, Kugg, Oaken: nothing hangs free of the body (Knut's vest and mane are the top of his back, Blast's
+                // scarf is a collar, Kugg is stone and brass). Checked again on the models 2026-11-12. Hilde (not in the
                 // game yet): her long braid reaches her hips and needs a chain of bones, not one; when she comes in.
                 default: return null;
             }
@@ -115,11 +129,13 @@ namespace BAM.Art
         /// <summary>null when this hero has no cloth parts, or its model can't be read.</summary>
         internal static ClothSway For(Animator an, Renderer[] rends, int heroIndex)
         {
-            Spec[] specs = SpecsFor(heroIndex);
-            if (specs == null || an == null || !an.isHuman || rends == null) return null;
+            Spec[] specs = null;
+            if (an == null || !an.isHuman || rends == null) return null;
             SkinnedMeshRenderer smr = null;
             for (int i = 0; i < rends.Length && smr == null; i++) smr = rends[i] as SkinnedMeshRenderer;
             if (smr == null || smr.sharedMesh == null) return null;
+            specs = SpecsFor(heroIndex, smr.sharedMesh);
+            if (specs == null) return null;
             Mesh src = smr.sharedMesh;
             if (!baked.TryGetValue(src, out Baked b))
             {
@@ -160,8 +176,8 @@ namespace BAM.Art
 
         static Baked Bake(Mesh src, Transform[] bones, Animator an, Spec[] specs)
         {
-            // only the bodies HeroArtImport.ClothModel imports with Read/Write on (Fenn's Clay body is not one: its cloth is part
-            // of the leg shell, so it would bend his thighs)
+            // only the bodies HeroArtImport.ClothModel imports with Read/Write on (Clay-Fenn since 2026-11-12: only his middle
+            // panels and plume, as his side tassets are part of the leg shell and would bend his thighs)
             if (!src.isReadable)
             {
 #if UNITY_EDITOR
@@ -249,6 +265,7 @@ namespace BAM.Art
                         if (below <= 0f || Share(i, setA) < 0.8f) continue; // above the hips, or an arm hanging past them
                         if (Mathf.Abs(Vector3.Dot(v[i] - hp, right)) > side) continue;
                         if (sp.MaxBelow > 0f && below > sp.MaxBelow * H) continue;
+                        if (sp.FrontOnly && Vector3.Dot(v[i] - hp, fwd) < 0f) continue;
                         float d = Mathf.Min(Mathf.Min(SegDist(v[i], aL, bL), SegDist(v[i], bL, cL)), Mathf.Min(SegDist(v[i], aR, bR), SegDist(v[i], bR, cR))) / H;
                         float s = Smooth((d - sp.Clear0) / Mathf.Max(1e-4f, sp.Clear1 - sp.Clear0)) * Smooth(below / (sp.Drop * H));
                         if (s <= 0.005f) continue;
