@@ -748,7 +748,8 @@ namespace BAM.Game
                     // so are Hilde's kegs: the big one (drag) and the small quick one (tap)
                     // Bram's Anvil Drop: his hammer goes up high and comes down on the red circle as it lands (BRAM-04)
                     // thrown higher (2 -> 3 tiles) and with his gold ring closing in on the landing spot (Rickard 2026-10-30 "måste synas mer")
-                    if ((HeroId)e.Kind == HeroId.Bram && e.Big)
+                    // not since he fires a lightning beam as Silver (Rickard 2026-11-12: "låt inte hammaren gå i en båge i luften")
+                    if ((HeroId)e.Kind == HeroId.Bram && e.Big && !BramS.Silver)
                     {
                         LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BramHammerSpecial, BramS.DropDelay, 3f);
                         ArtKit.PlayAnvilWarn(Coords.World(e.X, e.Y), BramS.DropRadius, BramS.DropDelay);

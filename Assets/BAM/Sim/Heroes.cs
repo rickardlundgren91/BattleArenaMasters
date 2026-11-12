@@ -30,7 +30,7 @@ namespace BAM.Sim
         /// hammaren som han skjuter"): a beam, not a throw. He stands and charges BeamCharge s behind a red line (a stun cuts it), then a
         /// lightning bolt from the hammer hits everyone in the whole line AT ONCE; LineSpeed is only how fast the bolt is drawn.</summary>
         public const float BeamCharge = 0.45f;
-        public const float LineReach = 8, LineSpeed = 45, LineWidth = 0.5f, LineCoeff = 2.4f, FocusStep = 0.08f;
+        public const float LineReach = 8, LineSpeed = 45, LineWidth = 0.6f, LineCoeff = 2.15f, FocusStep = 0.08f;
         public const int FocusMax = 5;
     }
 

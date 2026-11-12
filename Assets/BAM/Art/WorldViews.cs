@@ -230,7 +230,7 @@ namespace BAM.Art
                 // keep five arrows apart from a tile out (they fly 10 degrees apart: 0.17 tiles apart a tile out, 0.7 at the end)
                 trail.time = k == ProjKind.BramBolt ? 0.35f : k == ProjKind.TyraBolt ? 0.3f : k == ProjKind.TyraVolley ? 0.09f : k == ProjKind.TowerShot ? 0.22f : 0.16f;
                 trail.minVertexDistance = 0.08f;
-                trail.widthMultiplier = k == ProjKind.BramBolt ? 0.5f : k == ProjKind.TyraBolt ? 0.44f : k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : k == ProjKind.TyraVolley ? 0.08f : 0.14f; // Tyra's bolt: twice as wide (2026-10-28)
+                trail.widthMultiplier = k == ProjKind.BramBolt ? 0.6f : k == ProjKind.TyraBolt ? 0.44f : k == ProjKind.BramHammerSpecial || k == ProjKind.TowerShot ? 0.22f : k == ProjKind.TyraVolley ? 0.08f : 0.14f; // Tyra's bolt: twice as wide (2026-10-28)
                 trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
                 if (tm != null)
                 {
