@@ -205,7 +205,7 @@ namespace BAM.Sim
             new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false,
                 SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles to where a random enemy in reach stands. If it is still there, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
                 PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
-                Health = 3, Damage = 1, Speed = 2, Difficulty = 1 },
+                Health = 3, Damage = 1, Speed = 1, Difficulty = 1 }, // speed bar 2 -> 1 at 2.4 (2026-11-12)
             new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
                 SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 75% for 1 s.",
                 PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",

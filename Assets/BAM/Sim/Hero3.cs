@@ -20,7 +20,7 @@ namespace BAM.Sim
         public const float SlamRadiusOneTap = 3.0f;
         /// <summary>The big slam's damage share and stun, above the old tap slam's 1.4 / 0.6 s so it feels mighty (Rickard 2026-11-02);
         /// balanced by charges and hp in Defs (Hard bots: 1.4 / 0.6 s with 3 charges and 300 hp won 90 %).</summary>
-        public const float SlamCoeffOneTap = 1.6f, SlamStunOneTap = 0.8f;
+        public const float SlamCoeffOneTap = 1.3f, SlamStunOneTap = 0.8f; // slam 1.6 -> 1.3 (Rickard 2026-11-12 "HAN GÖR MYCKET DMG I AOE")
         public const float BoulderReach = 5.5f, BoulderWindup = 0.25f, BoulderSpeed = 11, BoulderHitbox = 0.55f, BoulderCoeff = 1.3f;
         public const float KnockDist = 1.5f, KnockTime = 0.2f, KnockStun = 0.4f;
         /// <summary>Bowling (2026-10-30): the boulder hits at most BallPins enemies itself, and one throw at most MaxPins in all with
