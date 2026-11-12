@@ -138,9 +138,19 @@ namespace BAM.Sim
         /// <summary>Where the rush stops: Gap short of the enemy's edge, on the line from Ragn (walls cut it as for a dragged rush).</summary>
         void RagnStopShort(Unit h, Unit t, ref float x, ref float y)
         {
-            float d = SimMath.Hypot(t.X - h.X, t.Y - h.Y), stop = Math.Max(0, d - h.R - t.R - RagnS.Gap);
+            // a walking hero is met where it will be when he comes down, if it keeps walking (Rickard 2026-11-12, testers: "close to an
+            // enemy it doesn't seem to have the expected effect": one walking away was always out of reach by the landing); a step
+            // aside after the red warning still dodges, as Tyra's led bolt
+            float tx = t.X, ty = t.Y;
+            if (t.Kind == UnitKind.Hero && !t.IsClone)
+                for (int i = 0; i < 2; i++)
+                {
+                    float lt = Math.Max(RagnS.MinLeapTime, Math.Max(0, SimMath.Hypot(tx - h.X, ty - h.Y) - h.R - t.R - RagnS.Gap) / RagnS.LeapSpeed);
+                    tx = t.X + t.MoVx * lt; ty = t.Y + t.MoVy * lt;
+                }
+            float d = SimMath.Hypot(tx - h.X, ty - h.Y), stop = Math.Max(0, d - h.R - t.R - RagnS.Gap);
             if (d < 1e-4f) { x = h.X; y = h.Y; return; }
-            float ang = SimMath.Atan2(t.Y - h.Y, t.X - h.X);
+            float ang = SimMath.Atan2(ty - h.Y, tx - h.X);
             RagnLandPoint(h, ang, Math.Min(1, stop / RagnS.LeapReach), out x, out y);
         }
 
@@ -178,7 +188,10 @@ namespace BAM.Sim
             bool free = CcImmune(best);
             SpecialHit(h, best, h.StatDmg() * RagnS.LandCoeff, ProjKind.RagnLeap, true);
             if (!best.Alive || free) return;
-            float ang = bd > 0.05f ? SimMath.Atan2(best.Y - h.Y, best.X - h.X) : SimMath.Atan2(h.RagnToY - h.RagnFromY, h.RagnToX - h.RagnFromX);
+            // the shove goes the way he rushed (Rickard 2026-11-12: "träffade honom uppifrån och ner men han blev knockbackad uppåt": an
+            // enemy walking at him had passed his middle by the landing, and the push from his middle sent it back the way he came)
+            float lx = h.RagnToX - h.RagnFromX, ly = h.RagnToY - h.RagnFromY;
+            float ang = SimMath.Hypot(lx, ly) > 0.3f ? SimMath.Atan2(ly, lx) : bd > 0.05f ? SimMath.Atan2(best.Y - h.Y, best.X - h.X) : h.Facing;
             InterruptSpecial(best);
             Knock(h, best, ang, RagnS.Shove, RagnS.Stun, null, ProjKind.RagnLeap);
         }

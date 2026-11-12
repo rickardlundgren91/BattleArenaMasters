@@ -114,6 +114,11 @@ namespace BAM.Sim
                 float lead = (TeleOn ? TeleTime(h.Hero) : 0) + TyraS.Windup + d / TyraS.Speed;
                 dx += t.MoVx * lead; dy += t.MoVy * lead; d = SimMath.Hypot(dx, dy);
             }
+            else if (h.Hero == HeroId.Ragn && t.Kind == UnitKind.Hero && !t.IsClone && TeleOn)
+            {   // his leap starts after the red warning: aim where the walking hero will be then (the leap itself leads, RagnStopShort)
+                float lead = TeleTime(h.Hero);
+                dx += t.MoVx * lead; dy += t.MoVy * lead; d = SimMath.Hypot(dx, dy);
+            }
             float ang = d > 1e-4f ? SimMath.Atan2(dy, dx) : h.Facing;
             float reach = Math.Max(0.01f, h.HDef.DragReach);
             float k = SimMath.Clamp(d / reach, 0, 1); // placed forms (Bram, Fenn, Blast, Moa) land on the target's spot

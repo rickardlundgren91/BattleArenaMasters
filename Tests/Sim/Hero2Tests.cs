@@ -232,7 +232,7 @@ namespace BAM.Sim
         public static int RunHero2Tests()
         {
             FennVeilDefault = false; NightFlightOn = false; SilverOn = false; // the older checks below were written for the wolf, which stays in the code (FennS.Veil false)
-            Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Kugg(); Hero8(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); DragAimChecks(); TowerStopChecks(); TowerLockChecks(); TowerReturnChecks(); TelegraphChecks(); Review0309(); Fix0400(); Fix0400Bots(); Fix0400Client(); ItemChecks();
+            RagnWalkTable(); Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Kugg(); Hero8(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); DragAimChecks(); TowerStopChecks(); TowerLockChecks(); TowerReturnChecks(); TelegraphChecks(); Review0309(); Fix0400(); Fix0400Bots(); Fix0400Client(); ItemChecks();
             FennVeilDefault = FennS.Veil; FennVeilChecks(); NightFlightOn = RavnaS.NightFlight; NightFlightChecks(); SilverOn = BramS.Silver; SilverChecks();
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;
