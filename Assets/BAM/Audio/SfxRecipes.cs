@@ -24,7 +24,7 @@ namespace BAM.Audio
     /// </summary>
     static class SfxRecipes
     {
-        public const int Count = (int)SfxId.RavnaCaw + 1; // the last SfxId: raise it with every new one
+        public const int Count = (int)SfxId.BramBolt + 1; // the last SfxId: raise it with every new one
 
         // Priority: 1 = constant small stuff, 2 = attacks and hits, 3 = specials and deaths, 4 = feedback for the player, 5 = match moments.
         public static SfxInfo Info(SfxId id)
@@ -93,6 +93,10 @@ namespace BAM.Audio
                 case SfxId.AttackKugg: return new SfxInfo(0.7f, 3, 0.07f, 2, 0.05f);
                 case SfxId.KuggShotBig: return new SfxInfo(0.75f, 3, 0.08f, 2, 0.05f);
                 case SfxId.KuggSpark: return new SfxInfo(0.65f, 3, 0.07f, 2, 0.06f);
+                case SfxId.FennVeil: return new SfxInfo(0.8f, 2, 0.15f, 2, 0.04f);
+                case SfxId.VeilStrike: return new SfxInfo(0.9f, 2, 0.1f, 3, 0.04f);
+                case SfxId.BramCharge: return new SfxInfo(0.8f, 2, 0.15f, 2, 0.04f);
+                case SfxId.BramBolt: return new SfxInfo(0.9f, 2, 0.15f, 3, 0.04f);
                 case SfxId.KuggDeploy: return new SfxInfo(0.8f, 2, 0.2f, 3, 0.03f);
                 case SfxId.KuggPackUp: return new SfxInfo(0.7f, 2, 0.2f, 3, 0.02f);
                 case SfxId.BonkSlamWindup: return new SfxInfo(0.8f, 2, 0.2f, 3, 0.03f);

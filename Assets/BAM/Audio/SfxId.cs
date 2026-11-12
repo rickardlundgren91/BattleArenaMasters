@@ -59,5 +59,8 @@ namespace BAM.Audio
         AttackNassla, NasslaThrow, NasslaBramble,
         AttackSkrall, SkrallTrance, SkrallStrike,
         AttackRavna, RavnaFlock, RavnaCaw,
+        // Fenn's Shadow Veil (O-091): vanishing, and the Shadow Strike out of it; Bram's Hammer Line (O-096): the charge behind the
+        // red line and the throw. Rickard's own clips 2026-11-12
+        FennVeil, VeilStrike, BramCharge, BramBolt,
     }
 }

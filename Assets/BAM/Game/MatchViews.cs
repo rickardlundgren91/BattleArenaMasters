@@ -736,7 +736,8 @@ namespace BAM.Game
                     V(a)?.PlayCast(e.Big); // the form times the gesture: a slam's blow lands with its hit (BodyView.CastLead)
                     ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, Side(a.Team), e.Kind);
                     if (a == m.Player) BamAudio.Duck(0.8f);
-                    Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
+                    // Fenn's Shadow Veil sounds on its own events (FennVeil, VeilStrike), not as his old wolf cast
+                    if (!((HeroId)e.Kind == HeroId.Fenn && m.FennVeil)) Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
                     if ((HeroId)e.Kind == HeroId.Knut && e.Big) Sound(SfxId.KnutChain, a, 1f); // the chain rattles out with the anchor
                     // Tyra's tap is the Arrow Volley: a gold cone through the draw and the big bow draw (Speltest tyravolley)
                     if ((HeroId)e.Kind == HeroId.Tyra && !e.Big)
@@ -828,7 +829,14 @@ namespace BAM.Game
                     if (e.A != null && m.IsVisibleTo(e.A, Mine)) { ArtKit.PlayFx(Spectral(e.A) ? FxKind.SpectralVeil : FxKind.CloneSpawn, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneAppear, Coords.Of(e.A)); } // FENN-09
                     break;
                 case EventType.VeilStrike: // the Spectral Knight's Phantom Strike (Heroes.cs FennVeilStrike)
-                    if (e.B != null && m.IsVisibleTo(e.B, Mine)) ArtKit.PlayFx(FxKind.SpectralStrike, Coords.Of(e.B), 1f, Side(e.A != null ? e.A.Team : 0));
+                    if (e.B != null && m.IsVisibleTo(e.B, Mine))
+                    {
+                        ArtKit.PlayFx(FxKind.SpectralStrike, Coords.Of(e.B), 1f, Side(e.A != null ? e.A.Team : 0));
+                        BamAudio.PlayAt(SfxId.VeilStrike, Coords.Of(e.B), 1f);
+                    }
+                    break;
+                case EventType.FennVeil: // he vanishes where he stood (the moment everyone saw); O-091
+                    if (e.A != null) BamAudio.PlayAt(SfxId.FennVeil, Coords.Of(e.A));
                     break;
                 case EventType.VeilEnd: // the Veil ran out: he steps back out of the ghost light where this phone can see him
                     if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.SpectralVeil, Coords.Of(e.A), 0.7f, Side(e.A.Team));
@@ -1044,6 +1052,11 @@ namespace BAM.Game
         {
             if (!unitBySerial.TryGetValue(srcSerial, out UnitRec r) || r.U == null) return;
             var a = r.U;
+            if (a.Kind == UnitKind.Hero && a.Hero == HeroId.Bram && mode == ProjMode.HammerLine)
+            {
+                if (m.IsVisibleTo(a, Mine)) Sound(SfxId.BramBolt, a, 1f); // the hammer leaves his hand after the charge (O-096)
+                return;
+            }
             if (a.Kind != UnitKind.Hero || a.Hero != HeroId.Tyra) return;
             if (!m.IsVisibleTo(a, Mine)) return; // a hidden Tyra stays unheard: shooting does not reveal, only a hit does
             if (mode == ProjMode.Auto) { Sound(SfxId.AttackTyra, a, 0.8f); return; }
@@ -1097,7 +1110,7 @@ namespace BAM.Game
         {
             switch (h)
             {
-                case HeroId.Bram: return SfxId.BramHammerThrow;
+                case HeroId.Bram: return BramS.Silver ? SfxId.BramCharge : SfxId.BramHammerThrow; // Hammer Line: the charge; the throw in ReleaseSound
                 case HeroId.Fenn: return dragged ? SfxId.FennWolfThrow : SfxId.FennWolfCall;
                 case HeroId.Tyra: return SfxId.TyraDraw; // the draw creak; the twang plays at the release (ReleaseSound)
                 case HeroId.Moa: return dragged ? SfxId.MoaField : SfxId.MoaShield;
