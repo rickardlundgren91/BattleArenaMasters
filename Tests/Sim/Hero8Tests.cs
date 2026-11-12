@@ -18,7 +18,7 @@ namespace BAM.Sim
             foreach (var id in new[] { HeroId.Ragn, HeroId.Nassla, HeroId.Skrall, HeroId.Ravna })
             {
                 var info = HeroCatalog.Get(id);
-                bool inGame = id == HeroId.Ragn || id == HeroId.Nassla; // in All for everyone since 0.4.0 (Rickard 2026-11-10)
+                bool inGame = id == HeroId.Ragn || id == HeroId.Nassla || id == HeroId.Ravna; // in All for everyone since 0.4.0 (Rickard 2026-11-10), Ravna since 2026-11-12
                 if (inGame) Check(info.Id == id && !info.Preview && HeroCatalog.InGame((int)id) && Array.Exists(HeroCatalog.HeroTestList, i => i.Id == id), $"{id} is in the game, in HERO TEST too");
                 else
                 {

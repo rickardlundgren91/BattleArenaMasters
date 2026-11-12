@@ -28,7 +28,7 @@ namespace BAM.Sim
     {
         /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in, Kugg 2026-11-09; Hilde and
         /// Oaken (HeroId 8 and 9) wait in Coming for theirs.</summary>
-        public const int Count = 11;
+        public const int Count = 12;
 
         /// <summary>Is this HeroId one of the heroes in the game (All)? HeroIds are not contiguous since Kugg (10) went in before Hilde (8)
         /// and Oaken (9), so a number below Count is not enough.</summary>
@@ -83,20 +83,12 @@ namespace BAM.Sim
                 PassiveName = "Stored Impact", PassiveDesc = "After 4 s without losing health, the next hit from an enemy hero is cut by 30%, and part of it is added to his next attack. Every 16 s.",
                 Health = 3, Damage = 2, Speed = 1, Difficulty = 2 },
             // Tester Øli's ideas Skrall and Ravna (Rickard 2026-11-09 "vi bygger alla fyra", kit approved on a card; Hero8.cs). In
-            // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs); Ragn and Nässla are in All
+            // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs); Ragn, Nässla and Ravna are in All
             new HeroInfo { Id = HeroId.Skrall, Name = "Skrall", Title = "The Storm Monk", Role = "Mage", Ranged = true, Preview = true,
                 SpecialName = "Thunder Judgement", SpecialDesc = "Three lightning strikes fall on random enemies in his range, each after a short red warning. Every enemy under one is hurt; heroes are stunned for 0.3 s.",
                 PassiveName = "Trance", PassiveDesc = "Every second he stands still with no enemy in reach he gathers a step, up to 3. His next attack deals 40% more per step; with all 3 it also jumps to another enemy close by.",
                 Health = 1, Damage = 3, Speed = 1, Difficulty = 3 },
-            new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false, Preview = true,
-                // Night Flight + Restless = ABC2's Ron (Rickard 2026-11-11 "ron blir ravna"); the Crow Flock texts stay for RavnaS.NightFlight = false
-                SpecialName = RavnaS.NightFlight ? "Night Flight" : "Crow Flock", SpecialDesc = RavnaS.NightFlight
-                    ? "Turns into a flock of crows for 2.2 s that flies through walls and can be steered with the joystick. As a flock she cannot be hit; every enemy she flies through is torn once and slowed by 30% for 1.5 s."
-                    : "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
-                PassiveName = RavnaS.NightFlight ? "Restless" : "Crow's Eye", PassiveDesc = RavnaS.NightFlight
-                    ? "Running charges her special: the ring fills as she moves, not only when she hits."
-                    : "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
-                Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
+
         };
 
         /// <summary>Whether HERO TEST also lists the Preview heroes waiting in Coming (Ragn, Nässla, Skrall, Ravna). Only in the Unity
@@ -209,6 +201,16 @@ namespace BAM.Sim
                 SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 75% for 1 s.",
                 PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
                 Health = 1, Damage = 1, Speed = 1, Difficulty = 2 }, // bars from Defs' terciles (Fix0400ClientTests)
+            // Ravna (Øli's crow druid, ABC2's Ron) in the game for everyone with Tikta's body until her own model is in (Rickard 2026-11-12: "dölj inte ravna")
+            new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false,
+                // Night Flight + Restless = ABC2's Ron (Rickard 2026-11-11 "ron blir ravna"); the Crow Flock texts stay for RavnaS.NightFlight = false
+                SpecialName = RavnaS.NightFlight ? "Night Flight" : "Crow Flock", SpecialDesc = RavnaS.NightFlight
+                    ? "Turns into a flock of crows for 2.2 s that flies through walls and can be steered with the joystick. As a flock she cannot be hit; every enemy she flies through is torn once and slowed by 30% for 1.5 s."
+                    : "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
+                PassiveName = RavnaS.NightFlight ? "Restless" : "Crow's Eye", PassiveDesc = RavnaS.NightFlight
+                    ? "Running charges her special: the ring fills as she moves, not only when she hits."
+                    : "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
+                Health = 2, Damage = 3, Speed = 3, Difficulty = 2 }, // bars from Defs' terciles
         };
     }
 }
