@@ -6,7 +6,7 @@ namespace BAM.Art
 {
     /// <summary>
     /// Cloth and hair that swing after the body (tester idea 2026-11-06, thread "Add cloth and hair simulation to heroes"):
-    /// Fenn's cape and tabard, Tyra's ponytail. The Tripo/Meshy bodies are one shell on a plain Mixamo skeleton, so there are
+    /// Fenn's cape and tabard, Tyra's ponytail and front locks. The Tripo/Meshy bodies are one shell on a plain Mixamo skeleton, so there are
     /// no cape or hair bones to hang a cloth package on, and re-exporting the FBX in Blender breaks the clips. Instead, once
     /// per model, the cloth's vertices are found from the bind pose (below the hips and clear of the legs; behind the skull),
     /// a few spring bones are added under the hips or the head, and a share of those vertices' weights moves onto them. Each
@@ -17,7 +17,7 @@ namespace BAM.Art
     /// </summary>
     sealed class ClothSway
     {
-        enum Kind { Skirt, Tail, HipTail, BackFlaps }
+        enum Kind { Skirt, Tail, HipTail, BackFlaps, Fringe }
 
         /// <summary>One cloth part of one hero. Distances are fractions of the model's height in its bind pose.</summary>
         sealed class Spec
@@ -33,6 +33,11 @@ namespace BAM.Art
             public float Back0, Back1;       // Tail: distance behind the head bone where the sway starts and is full
             public float PivotUp;            // Tail: the tie point, this far above the head bone (on the Back0 plane)
             public float Above = 0.04f;      // HipTail: only what is at most this far above the hips (not the back)
+            public float Front = 0.10f;      // Fringe: only hair this far in front of the head bone (the ears sit behind it)
+            public float Side0 = 0.040f, Side1 = 0.052f; // Fringe: out to the side of the head's middle line where the locks start and
+                                             // are full (the face and temples are inside Side0)
+            public float Top = 0.11f, TopDrop = 0.03f; // Fringe: the locks hang free from Top above the head bone, full TopDrop below it
+            public float PivotFwd = 0.13f, PivotSide = 0.04f; // Fringe: the tie point of each lock (with PivotUp), at the hairline
             public float Hz = 2.4f;          // spring frequency
             public float Damping = 0.4f;     // share of critical damping (lower = more overshoot)
             public float MaxAngle = 28f;     // degrees the part may swing from its rest
@@ -60,8 +65,14 @@ namespace BAM.Art
                     };
                 case 1: // Fenn (the Original body, mesh "unamed"): the cape behind and the tabard in front, both hanging free of the legs
                     return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.055f, Clear1 = 0.11f, Drop = 0.12f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 26f, Drag = 0.05f, Flare = 0.22f } };
-                case 2: // Tyra: the ponytail
-                    return new[] { new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 35f, Drag = 0.06f } };
+                case 2: // Tyra: the ponytail, and the two front locks beside her face (Rickard 2026-11-12: "tyras lugg skulle må bra av
+                        // liite rörelse som det andra håret här bak"): a little, shorter and stiffer than the ponytail; measured on
+                        // Tyra.fbx (Blender renders 2026-11-12: the ears sit 0.08-0.10 of her height behind the locks' Front plane)
+                    return new[]
+                    {
+                        new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 35f, Drag = 0.06f },
+                        new Spec { Kind = Kind.Fringe, PivotUp = 0.12f, Hz = 3.0f, Damping = 0.4f, MaxAngle = 12f, Drag = 0.035f, Inward = 0.03f, Kick = 0.6f },
+                    };
                 // Moa: no cloth (Rickard 2026-11-09 after testing: "ta bort moas rörelser i kläder och hår för det buggar")
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
                     return new[]
@@ -383,6 +394,40 @@ namespace BAM.Art
                         OutLocal = bind[hips].MultiplyVector(back).normalized, // a spin swings it out behind, never in through the legs
                     });
                     for (int i = 0; i < n; i++) if (sw[i] > 0f) Add(i, bi, sw[i]);
+                }
+                else if (sp.Kind == Kind.Fringe)
+                {
+                    // the two front locks that hang beside the face (Tyra), one spring bone each, tied on at the hairline above the
+                    // temple; what is inside Side0 (the face), behind Front (the ears) or above Top (the scalp) stays on the head
+                    Vector3 hp = At(head);
+                    int neck = Idx(HumanBodyBones.Neck);
+                    int[] setA = neck >= 0 ? new[] { head, neck } : new[] { head };
+                    for (int sideSign = -1; sideSign <= 1; sideSign += 2)
+                    {
+                        Vector3 pivot = hp + fwd * (sp.PivotFwd * H) + up * (sp.PivotUp * H) + right * (sideSign * sp.PivotSide * H);
+                        var sw = new float[n];
+                        Vector3 sum = Vector3.zero; float ws = 0f;
+                        for (int i = 0; i < n; i++)
+                        {
+                            Vector3 d = (v[i] - hp) / H;
+                            float x = Vector3.Dot(d, right) * sideSign;
+                            if (x <= 0f || Share(i, setA) < 0.8f) continue;
+                            float s = Smooth((x - sp.Side0) / Mathf.Max(1e-4f, sp.Side1 - sp.Side0))
+                                * Smooth((sp.Top - Vector3.Dot(d, up)) / Mathf.Max(1e-4f, sp.TopDrop))
+                                * Smooth((Vector3.Dot(d, fwd) - sp.Front) / 0.012f);
+                            if (s <= 0.005f) continue;
+                            sw[i] = s;
+                            sum += (v[i] - pivot) * (s * s); ws += s * s;
+                        }
+                        if (ws < 1f) continue;
+                        int bi = bones.Length + defs.Count;
+                        defs.Add(new BoneDef
+                        {
+                            Parent = head, Pivot = bind[head].MultiplyPoint3x4(pivot), Rest = bind[head].MultiplyVector(sum / ws), Spec = sp,
+                            OutLocal = bind[head].MultiplyVector(right * sideSign).normalized, // never in across the face
+                        });
+                        for (int i = 0; i < n; i++) if (sw[i] > 0f) Add(i, bi, sw[i]);
+                    }
                 }
                 else
                 {
