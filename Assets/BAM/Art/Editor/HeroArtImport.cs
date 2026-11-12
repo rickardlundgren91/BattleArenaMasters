@@ -256,6 +256,11 @@ namespace BAM.Art.Editor
             // are skinned wholly to Head and Spine2 in Nassla.fbx (Mixamo had tied the basket to the shoulders and arms, so the hat
             // and basket broke apart when the arms came down: Rickard "hatten och korgen buggat ur helt"). Hit, death and walk are Moa's, whose body she wore. A small hunched goblin, shorter than Moa.
             new Spec { Hero = "Nassla", Model = "Nassla/Nassla", Idle = "Moa/Anim/Idle", Run = "Nassla/Anim/Run", Attack = "Nassla/Anim/Attack1", Cast = "Nassla/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.62f, Release = 0.36f },
+            // Ravna (hero 14, in the game for everyone since 2026-11-12, Tikta's body until now): Rickard's Tripo crow druid rigged in
+            // Mixamo (33 bones, index finger only, like Tyra), his clips downloaded 2026-11-12: Standing Idle, Running With Intention
+            // (in place), Stabbing (the right fist furthest forward at 0.38 of the 2.7 s clip) and Standing 2H Cast Spell 01 for Night
+            // Flight. Hit, death and walk are Tikta's, whose body she wore. The feather cloak and crow come later as their own parts.
+            new Spec { Hero = "Ravna", Model = "Ravna/Ravna", Idle = "Ravna/Anim/Idle", Run = "Ravna/Anim/Run", Attack = "Ravna/Anim/Attack1", Cast = "Ravna/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.8f, Release = 0.38f },
         };
 
         // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original

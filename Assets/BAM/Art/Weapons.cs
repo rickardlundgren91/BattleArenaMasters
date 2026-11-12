@@ -184,7 +184,7 @@ namespace BAM.Art
 
         static GearDef[] Make()
         {
-            var g = new GearDef[(int)HeroId.Oaken + 1];
+            var g = new GearDef[(int)HeroId.Ravna + 1];
             // at rest the sword raised across beside his head (Rickard's own Weapon Tuner hold 2026-10-28 20:49 CET, after a tester
             // found the upright hold beside the helmet odd on the menu stage and the lowered pick B looked worse to him in Unity), so
             // Reset Fenn gives this hold and not the bind grip across the shield. On the move the sword trails back at his side, a little
@@ -299,6 +299,9 @@ namespace BAM.Art
                     new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } },
                 },
             };
+            // Ravna's own body (2026-11-12) holds Tikta's needle daggers until Rickard's own talon dagger model is in (Rickard: "ge henne
+            // fjäderkappa kråka och dolk"); same grips, tune with the Weapon Tuner
+            g[(int)HeroId.Ravna] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } }, new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } } } }; // own copies, so tuning her never moves Tikta's
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
             // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
