@@ -254,11 +254,13 @@ namespace BAM.Sim
         }
         /// <summary>Tower aggro holds (Rickard 2026-11-02 "man ska inte kunna tappa aggro från tornet om man har fått det förrän man
         /// går ut ur range"): once a tower aims at an enemy hero it stays on that hero while the hero lives and stands in its reach,
-        /// even in grass, behind a wall, or when another hero starts a fight under it. Only leaving the reach or dying ends it.</summary>
+        /// even in grass, behind a wall, or when another hero starts a fight under it. Only leaving the reach or dying ends it, and
+        /// Fenn's Veil: nothing sees him then, the tower neither (Heroes.cs FennS.Veil), so it lets him go as if he had left its reach
+        /// and takes the next one there, his decoy when nobody else stands in it (release review 0.4.1: it went on shooting him).</summary>
         internal bool TowerLocked(Unit tw)
         {
             var k = tw.Target;
-            return k != null && k.Kind == UnitKind.Hero && k.Team != tw.Team && k.Alive && SimMath.Dist(tw, k) <= tw.Range + k.R;
+            return k != null && k.Kind == UnitKind.Hero && k.Team != tw.Team && k.Alive && !k.Has(St.Veil) && SimMath.Dist(tw, k) <= tw.Range + k.R;
         }
         /// <summary>Heroes take more from tower shots as the match clock runs: x1 until 1:30, straight up to x2 at 6:00 (LateRamp).</summary>
         internal float TowerLateMult(Unit h) => 1 + (Rules.TowerLateMax - 1) * LateRamp();

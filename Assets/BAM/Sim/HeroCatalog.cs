@@ -207,7 +207,7 @@ namespace BAM.Sim
                 PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
                 Health = 3, Damage = 1, Speed = 1, Difficulty = 1 }, // speed bar 2 -> 1 at 2.4 (2026-11-12)
             new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
-                SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 75% for 1 s.",
+                SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.", // 75 -> 50 % (NasslaS.Slow, Rickard 2026-11-12)
                 PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
                 Health = 1, Damage = 1, Speed = 1, Difficulty = 2 }, // bars from Defs' terciles (Fix0400ClientTests)
         };

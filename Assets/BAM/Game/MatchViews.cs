@@ -836,7 +836,9 @@ namespace BAM.Game
                     }
                     break;
                 case EventType.FennVeil: // he vanishes where he stood (the moment everyone saw); O-091
-                    if (e.A != null) BamAudio.PlayAt(SfxId.FennVeil, Coords.Of(e.A));
+                    // heard only where this phone saw him a moment ago: his record still holds the last step's sight (OnEvent runs
+                    // before SyncUnits), so a Fenn who veils unseen in the grass does not give his spot away (release review 0.4.1)
+                    if (e.A != null && unitBySerial.TryGetValue(e.A.Serial, out UnitRec vr) && vr.Vis > 0f) BamAudio.PlayAt(SfxId.FennVeil, Coords.Of(e.A));
                     break;
                 case EventType.VeilEnd: // the Veil ran out: he steps back out of the ghost light where this phone can see him
                     if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.SpectralVeil, Coords.Of(e.A), 0.7f, Side(e.A.Team));
