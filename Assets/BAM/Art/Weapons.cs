@@ -163,6 +163,28 @@ namespace BAM.Art
         /// height), in code only (the Weapon Tuner and WeaponTune.json leave it alone), so the weapon over the shoulder and the
         /// fist stay out of a broad body (Bram, Bonk, ANIM-25).</summary>
         public float CarryOut;
+        /// <summary>Parts worn on the body (Ravna's feather cloak and crow, Rickard 2026-11-12: "ge henne fjäderkappa kråka"), each
+        /// Rickard's own Tripo model as a Props mesh, fixed to a bone in the bind pose; a cloak swings back as the hero runs.</summary>
+        public WornDef[] Worn;
+    }
+
+    /// <summary>A part worn on the body (<see cref="GearDef.Worn"/>).</summary>
+    sealed class WornDef
+    {
+        public string Model;
+        /// <summary>The bone it rides on (falls back to the chest, then the hips).</summary>
+        public HumanBodyBones Bone;
+        /// <summary>Its height as a share of the figure's height.</summary>
+        public float Height;
+        /// <summary>Where the mesh's origin goes in the bind pose, from the hero's feet, in shares of the figure's height: x to her
+        /// right, y up, z forward. A cloak's origin is its top edge, anything else its bottom.</summary>
+        public Vector3 At;
+        /// <summary>Degrees turned about the hero's up axis.</summary>
+        public float Yaw;
+        /// <summary>Depth scale (a thick cloak pressed flatter against the back); 1 = as made.</summary>
+        public float Flat = 1f;
+        /// <summary>Degrees the part swings back about its top edge at full run (0 = rigid), with a soft spring.</summary>
+        public float Sway;
     }
 
     /// <summary>
@@ -299,9 +321,16 @@ namespace BAM.Art
                     new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } },
                 },
             };
-            // Ravna's own body (2026-11-12) holds Tikta's needle daggers until Rickard's own talon dagger model is in (Rickard: "ge henne
-            // fjäderkappa kråka och dolk"); same grips, tune with the Weapon Tuner
-            g[(int)HeroId.Ravna] = new GearDef { Weapons = new[] { new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } }, new WeaponDef { Model = "tikta_needle", Len = 0.36f, Grip = 0.14f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } } } }; // own copies, so tuning her never moves Tikta's
+            // Ravna's own body (2026-11-12) with Rickard's Tripo talon daggers, feather cloak and crow (Rickard: "ge henne fjäderkappa
+            // kråka och dolk"); the daggers held as Tikta's needles were, tune them with the Weapon Tuner
+            g[(int)HeroId.Ravna] = new GearDef { Weapons = new[] { new WeaponDef { Model = "ravna_dagger", Len = 0.3f, Grip = 0.06f, Left = true, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } }, new WeaponDef { Model = "ravna_dagger", Len = 0.3f, Grip = 0.06f, HoldUp = -70f, HoldOut = 20f, Follow = 0.4f, SwingAim = true, Run = new Hold { Up = -25f, Out = 160f } } },
+                Worn = new[]
+                {
+                    // her feather cloak hangs from behind her shoulders to her knees and swings back as she runs
+                    new WornDef { Model = "ravna_cloak", Bone = HumanBodyBones.UpperChest, Height = 0.5f, At = new Vector3(0f, 0.785f, -0.085f), Flat = 0.6f, Sway = 28f },
+                    // the crow sits on her left shoulder, looking ahead
+                    new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, Height = 0.1f, At = new Vector3(-0.09f, 0.795f, -0.01f) },
+                } }; // own copies, so tuning her never moves Tikta's
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
             // Bonk's wooden club with bone spikes (Rickard's Tripo model 2026-10-26), held low on the handle, far too big for him
@@ -498,6 +527,8 @@ namespace BAM.Art
         float liveW = 1f; // 1 alive, down to 0 over DeathLetGo after a death (the rest hold lets go)
         const float DeathLetGo = 0.25f;
         float figH;
+        // worn parts (GearDef.Worn): their transforms, rest turns and swing springs
+        WornDef[] worn; Transform[] wornT; Quaternion[] wornRest; float[] swayA, swayV; float swayClock;
         // thrown: when the weapon leaves the hand, how long it stays away, and whether a weapon that is not Thrown goes too (Throw)
         float hideIn = -1f, backIn = -1f, awayFor = AwayFor;
         bool hideHeld;
@@ -583,6 +614,7 @@ namespace BAM.Art
             for (int i = 0; i < nw; i++) h.AddWeapon(i, g.Weapons[i], an, figH, rends, op, fd);
             if (g.Shield != null) h.AddShield(g.Shield, an, figH, rends, op, fd);
             if (g.Cannon != null) h.AddCannon(g.Cannon, an, figH, rends, op, fd);
+            if (g.Worn != null) h.AddWorn(g.Worn, an, figH, rends, op, fd);
             if (rends.Count == 0) return null;
             h.Rends = rends.ToArray();
             h.Opaque = op.ToArray();
@@ -604,6 +636,51 @@ namespace BAM.Art
             r.sharedMaterial = o;
             rends.Add(r); op.Add(o); fd.Add(f);
             return r;
+        }
+
+        void AddWorn(WornDef[] ws, Animator an, float H, List<Renderer> rends, List<Material> op, List<Material> fd)
+        {
+            int n = ws.Length;
+            worn = ws; wornT = new Transform[n]; wornRest = new Quaternion[n]; swayA = new float[n]; swayV = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                WornDef w = ws[i];
+                Mesh mesh = Props.Mesh(w.Model);
+                Transform bone = an.GetBoneTransform(w.Bone);
+                if (bone == null) bone = an.GetBoneTransform(HumanBodyBones.Chest);
+                if (bone == null) bone = an.GetBoneTransform(HumanBodyBones.Hips);
+                if (mesh == null || bone == null) continue;
+                var go = new GameObject("Worn " + w.Model);
+                MakeRenderer(go, mesh, w.Model, rends, op, fd);
+                Transform t = go.transform;
+                t.SetParent(bone, false);
+                t.position = root.position + (root.right * w.At.x + root.up * w.At.y + root.forward * w.At.z) * H;
+                t.rotation = root.rotation * Quaternion.Euler(0f, w.Yaw, 0f);
+                float k = w.Height * H / Mathf.Max(1e-4f, mesh.bounds.size.y);
+                float ps = Mathf.Max(1e-6f, bone.lossyScale.x);
+                t.localScale = new Vector3(k, k, k * w.Flat) / ps;
+                wornT[i] = t; wornRest[i] = t.localRotation;
+            }
+        }
+
+        // a cloak's swing: a soft spring toward a lean that grows with running and a little with the swing of an attack, plus a
+        // slow breath at rest, about its top edge (the mesh's origin)
+        void TickWorn(float dt, float moveW, float atkW, bool dead)
+        {
+            if (wornT == null || dt <= 0f) return;
+            swayClock += dt;
+            for (int i = 0; i < wornT.Length; i++)
+            {
+                Transform t = wornT[i];
+                if (t == null) continue;
+                float max = worn[i].Sway;
+                if (max <= 0f) continue;
+                float target = dead ? 0f : max * Mathf.Clamp01(moveW) + max * 0.25f * Mathf.Clamp01(atkW) + 1.5f * Mathf.Sin(swayClock * 1.4f + i);
+                float acc = 40f * (target - swayA[i]) - 7f * swayV[i];
+                swayV[i] += acc * Mathf.Min(dt, 0.05f);
+                swayA[i] = Mathf.Clamp(swayA[i] + swayV[i] * Mathf.Min(dt, 0.05f), -max * 0.3f, max * 1.3f);
+                t.localRotation = wornRest[i] * Quaternion.AngleAxis(swayA[i], Vector3.right);
+            }
         }
 
         // as MxOwnWeapon: the fingers point along the hand, the handle leaves the fist on the thumb side, the head forward of the knuckles
@@ -925,6 +1002,7 @@ namespace BAM.Art
         /// <param name="actW">How much an attack or cast clip is playing (0..1).</param>
         public void Tick(float dt, float moveW, float actW, float atkW, bool dead)
         {
+            TickWorn(dt, moveW, atkW, dead);
             float show = 1f;
             if (hideIn >= 0f)
             {
