@@ -73,7 +73,10 @@ namespace BAM.Art
                         new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 35f, Drag = 0.06f },
                         new Spec { Kind = Kind.Fringe, PivotUp = 0.12f, Hz = 3.0f, Damping = 0.4f, MaxAngle = 12f, Drag = 0.035f, Inward = 0.03f, Kick = 0.6f },
                     };
-                // Moa: no cloth (Rickard 2026-11-09 after testing: "ta bort moas rörelser i kläder och hår för det buggar")
+                case 3: // Moa: only the narrow embroidered panel hanging in front between her legs (Rickard 2026-11-12: "moas kläder och hår
+                        // kanske kunde använda den nya funktionen"). Front only and narrow: the 9 Nov try (removed, "det buggar") took the
+                        // back skirt too, which is the same shell as her seat and the backs of her thighs (measured again on Moa.fbx)
+                    return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.07f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.3f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f } };
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
                     return new[]
                     {
