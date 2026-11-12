@@ -340,11 +340,17 @@ namespace BAM.Art
                     new WornDef { Model = "ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = HumanBodyBones.LeftUpperArm, Height = 0.1f, At = new Vector3(-0.015f, 0.04f, -0.015f) },
                 } }; // own copies, so tuning her never moves Tikta's
             // Nässla's root staff with its glowing pod and her green cloak (Rickard's Tripo parts 2026-11-12: "samma med nässla vill jag ha
-            // items", "hennes gröna kappa också"): the staff held upright as Moa's, the cloak from her shoulders under the basket
+            // items", "hennes gröna kappa också"): the staff held upright as Moa's, the cloak from her shoulders under the basket, the basket on her back
             g[(int)HeroId.Nassla] = new GearDef
             {
                 Weapons = new[] { new WeaponDef { Model = "nassla_staff", Len = 0.8f, Grip = 0.4f, Along = true, HoldUp = 82f, HoldOut = 8f, Upright = true, SwingAim = true, SwingFollow = 0.35f } },
-                Worn = new[] { new WornDef { Model = "nassla_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.3f, At = new Vector3(0f, 0.03f, -0.06f), Flat = 0.8f, Sway = 22f } },
+                Worn = new[]
+                {
+                    new WornDef { Model = "nassla_cloak", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Wide = 1.3f, At = new Vector3(0f, 0.03f, -0.06f), Flat = 0.8f, Sway = 22f },
+                    // her basket of glowing pods as its own part (Rickard 2026-11-12: "nässla borde vi nog göra korgen efteråt också"): her new
+                    // body has none, so it no longer breaks apart with her arms; on her back over the cloak, its rim below the shoulders
+                    new WornDef { Model = "nassla_basket", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm, To = HumanBodyBones.RightUpperArm, Height = 0.3f, At = new Vector3(0f, -0.22f, -0.115f) },
+                },
             };
             // the skull bomb he throws (the old game only flew it; held here so the throw reads)
             g[(int)HeroId.Blast] = new GearDef { Weapons = new[] { new WeaponDef { Model = "blast_bomb", Len = 0.22f, Grip = 0.3f, Thrown = true } } };
