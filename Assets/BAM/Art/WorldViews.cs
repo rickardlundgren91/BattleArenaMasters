@@ -65,6 +65,7 @@ namespace BAM.Art
 
         const float Height = 0.55f;
         const float AnchorLen = 0.8f; // Knut's thrown anchor, ring to flukes, in tiles (the code-made one was about 0.5)
+        const float HammerLen = 1f; // Bram's thrown hammer, handle end to head, in tiles: about as long as in his fist (Weapons.cs Len 0.7 of his 1.59-tile figure)
 
         public void Build(ProjKind k, int t)
         {
@@ -140,10 +141,31 @@ namespace BAM.Art
                 ar.sharedMaterial = am;
                 ar.shadowCastingMode = ShadowCastingMode.Off;
             }
+            // Bram's thrown Hammer Line: his own hammer (Props/bram_hammer_new), the one that leaves his fist (BodyView.ThrowOnCast), not
+            // a code-made box hammer beside the one still in his hand (hero review 2026-11-13; Rickard's rule: no code graphics where
+            // there is an asset). The handle along the look's up and the head along the flight, so it tumbles end over end as the box did
+            Mesh hammerMesh = k == ProjKind.BramBolt ? Props.Mesh("bram_hammer_new") : null;
+            if (hammerMesh != null)
+            {
+                var hg = new GameObject("Hammer");
+                var ht = hg.transform;
+                ht.SetParent(vis, false);
+                float s = HammerLen / Mathf.Max(0.01f, hammerMesh.bounds.size.y); // long in tiles
+                ht.localScale = new Vector3(s, s, s);
+                ht.localRotation = Quaternion.Euler(0f, 90f, 0f); // the model's head (along its x) along the flight
+                ht.localPosition = -(ht.localRotation * (hammerMesh.bounds.center * s)); // it spins round its middle
+                hg.AddComponent<MeshFilter>().sharedMesh = hammerMesh;
+                var hr = hg.AddComponent<MeshRenderer>();
+                var hm = ArtMaterials.Instance(ArtMaterials.Lit);
+                Texture2D htex = Props.Texture("bram_hammer_new");
+                if (htex != null) { hm.SetTexture(ArtMaterials.BaseMap, htex); hm.mainTexture = htex; }
+                hr.sharedMaterial = hm;
+                hr.shadowCastingMode = ShadowCastingMode.Off;
+            }
             visF.sharedMesh = boulder || boltPic || towerPic || kuggPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
-            if (anchorMesh != null) visR.enabled = false;
+            if (anchorMesh != null || hammerMesh != null) visR.enabled = false;
             bool glowy = k == ProjKind.BlastFire || k == ProjKind.TowerShot || k == ProjKind.TyraVolley;
             if (melee)
             {

@@ -199,7 +199,10 @@ namespace BAM.Art.Editor
             // that the hammer swings out to the side first)
             // Bram stands in Bonk's Orc Idle 1 like Knut (Rickard 2026-11-12, lobby picture: "du ser hur bram står helt konstigt"): his
             // Speltest idle leant him back with the hips pushed forward; the orc stance is upright, feet apart, the hammer arm free
-            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bonk/Anim/IdleOrc1", Run = "Bram/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Bram/Anim/Attack2", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.46f, Start = 0.12f },
+            // His Hammer Line throws the hammer straight ahead after a charge, so he casts with Knut's Throw (a right-hand overhand
+            // throw) instead of his Anvil Strike, a blow straight down that peaked a third of a second before the hammer left (hero
+            // review 2026-11-13, BodyView.CastLead)
+            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bonk/Anim/IdleOrc1", Run = "Bram/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.46f, Start = 0.12f },
             // Rickard 2026-10-28: Fenn "vänder sig bakåt och sparkar ut i luften för varje attack": his own Attack1 (Speltest's Power
             // Slash) is a jump with a whole turn (the hips turn 386 degrees and rise half a hip height). Knut's level swing after it was
             // made for an anchor hanging from the fist: Fenn's sword stood 35-60 degrees up at every blow (ANIM-21, Unity run 2), so he
@@ -288,6 +291,7 @@ namespace BAM.Art.Editor
                     if (art == null || art.Model == null || art.Model != AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + ModelOf(s) + ".fbx") || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
                         || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null
                         || (s.RunFour != null && art.RunFour == null)) { BuildAll(); return; } // Ragn's all-fours run came 2026-11-10: a HeroArt built before it lacks it
+                    if (art.Cast != Clip(s.Cast, 3)) { BuildAll(); return; } // a cast clip changed in specs (Bram's throw 2026-11-13): no Rebuild by hand needed
                 }
             };
         }

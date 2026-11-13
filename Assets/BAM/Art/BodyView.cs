@@ -784,15 +784,18 @@ namespace BAM.Art
 
         // what leaves the hand at the cast's peak: Blast's bomb (Thrown), and Knut's anchor only on the hook (the drag), for about as
         // long as he casts: his fist kept a second anchor while the chained one flew. The tapped slam keeps it in his fist (KNUT-03).
+        // Bram's hammer leaves his fist as the rules throw it, after the charge, and is away while it flies its line (hero review
+        // 2026-11-13): it stayed in his fist while a second hammer flew; the flying one is the same model now (WorldViews)
         void ThrowOnCast(float at)
         {
             if (HeroIndex == (int)HeroId.Knut) { if (castDrag) gear.Throw(at, KnutS.CastTime, true); }
+            else if (HeroIndex == (int)HeroId.Bram && BramS.Silver) gear.Throw(BramS.BeamCharge, BramS.LineReach / BramS.LineSpeed, true);
             else gear.Throw(at);
         }
 
         // seconds from the cast to its gesture's peak: the rules' wind-up for a special that lands later (the slams of Knut, Bonk and
-        // Oaken, Tyra's arrows, Bonk's boulder, Oaken's quake), so the blow never shows before the hit; a tenth of a second for one
-        // that takes effect at once
+        // Oaken, Tyra's arrows, Bonk's boulder, Oaken's quake, Bram's charged throw), so the blow never shows before the hit; a tenth
+        // of a second for one that takes effect at once
         float CastLead()
         {
             switch ((HeroId)HeroIndex)
@@ -801,6 +804,7 @@ namespace BAM.Art
                 case HeroId.Knut: return castDrag ? 0.12f : KnutS.SlamWindup;
                 case HeroId.Bonk: return castDrag ? BonkS.BoulderWindup : BonkS.SlamWindup;
                 case HeroId.Oaken: return castDrag ? OakenS.QuakeWindup : OakenS.SlamWindup;
+                case HeroId.Bram: return BramS.Silver ? BramS.BeamCharge : 0.12f; // the throw as the hammer leaves, after the charge (hero review 2026-11-13: 0.33 s early)
                 default: return 0.12f;
             }
         }
