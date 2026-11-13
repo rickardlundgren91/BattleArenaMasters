@@ -141,48 +141,15 @@ namespace BAM.Sim
             }
         }
 
-        enum Role : byte { Any, Tank, Fighter, Marksman, Mage, Support }
-        static Role RoleOf(HeroId id)
-        {
-            switch (id)
-            {
-                case HeroId.Knut: case HeroId.Bonk: case HeroId.Oaken: case HeroId.Ragn: case HeroId.Hilde: return Role.Tank;
-                case HeroId.Fenn: case HeroId.Tikta: case HeroId.Skrall: return Role.Fighter;
-                case HeroId.Tyra: case HeroId.Bram: case HeroId.Kugg: case HeroId.Ravna: return Role.Marksman;
-                case HeroId.Blast: case HeroId.Nassla: return Role.Mage;
-                case HeroId.Moa: return Role.Support;
-            }
-            return Role.Any;
-        }
-        /// <summary>Items by class (the old game, Rickard 2026-10-22): a hero rolls only items that fit its role; Resonance Core and
-        /// Steadfast Charm fit everyone.</summary>
-        static bool Fits(Role r, ItemId k)
-        {
-            if (k == ItemId.Echo || k == ItemId.Charm || k >= ItemId.Lifesteal || r == Role.Any) return true; // the four plain items fit everyone
-            switch (r)
-            {
-                case Role.Tank: case Role.Support: return k == ItemId.Thread || k == ItemId.Rally;
-                case Role.Fighter: case Role.Marksman: return k == ItemId.Fang || k == ItemId.Mark;
-                case Role.Mage: return k == ItemId.Mark;
-            }
-            return true;
-        }
-
-        /// <summary>Three items the hero does not hold, weighted by rarity; the role's items first, the whole list when the role
-        /// has fewer than three left.</summary>
+        /// <summary>Three items the hero does not hold, weighted by rarity, from all ten: every hero can be offered every item
+        /// (Rickard 2026-11-13, full review nr 113: "alla heroes ska kunna få alla items"; the old game's role filter is gone).</summary>
         void RollOffer(Unit h)
         {
-            int n = RollInto(h, true);
-            if (n < ItemS.Choices) n = RollInto(h, false);
-            h.OfferCount = n; h.BotPickAt = float.NaN;
-        }
-        int RollInto(Unit h, bool byRole)
-        {
-            var role = RoleOf(h.Hero); int pn = 0;
+            int pn = 0;
             for (int k = 1; k <= ItemCatalog.Count; k++)
             {
                 var id = (ItemId)k;
-                if (h.HasItem(id) || (byRole && !Fits(role, id))) continue;
+                if (h.HasItem(id)) continue;
                 itemPool[pn++] = id;
             }
             int n = 0;
@@ -195,7 +162,7 @@ namespace BAM.Sim
                 h.Offer[n++] = itemPool[pick];
                 itemPool[pick] = itemPool[--pn];
             }
-            return n;
+            h.OfferCount = n; h.BotPickAt = float.NaN;
         }
 
         /// <summary>The hero takes choice i of its offer (a seat's PlayerInput.ItemPick, or a bot). A queued offer comes next.</summary>
