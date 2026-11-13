@@ -111,7 +111,8 @@ namespace BAM.Online
         }
 
         /// <summary>Heroes open for every player from the start, whatever their place in the list: Kugg (Rickard 2026-11-09 "lägg in
-        /// honom som nr 2 i spelet och upplåst för alla").</summary>
+        /// honom som nr 2 i spelet och upplåst för alla"). They stand with the free heroes at the top of HeroCatalog.All, so the open
+        /// heroes are always the first cards (Rickard 2026-11-13).</summary>
         static bool AlwaysOpen(HeroId id) => id == HeroId.Kugg || id == HeroId.Ragn || id == HeroId.Nassla; // Ragn, Nässla: 0.4.0, "tillgängliga för alla" (Rickard 2026-11-10); Ravna waits again (0.4.1)
 
         // in the Unity Editor every hero is always open (Rickard 2026-10-29: "när jag kör på datorn måste jag alltid få ha alla heroes

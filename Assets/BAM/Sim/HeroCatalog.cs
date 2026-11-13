@@ -141,6 +141,10 @@ namespace BAM.Sim
 
         // In list order (hero select, unlocks): Tyra first, the beginner hero you start with and play the tutorial with (Rickard
         // 2026-11-04 after a tester's note that new players quit when they do not feel in control). HeroId keeps its numbers.
+        // The heroes open from the start come first (the three free ones and those open for everyone, Progress.AlwaysOpen), then
+        // the others in the order the account level opens them, so the open heroes are always the first cards (Rickard
+        // 2026-11-13: "lägg ragn och nässla där uppe också så alla upplåsta heroes alltid ligger längst upp"). A new hero open
+        // for everyone goes in that top block, not last.
         // Texts follow the old game's shipped heroes plus Rickard's 2026-10-25 changes (Fenn's thrown wolf and decoy clone).
         public static readonly HeroInfo[] All =
         {
@@ -174,6 +178,21 @@ namespace BAM.Sim
                     : "Tap: throws his wolf at a random enemy in his range. It hunts enemy heroes, or bites minions when no hero is near. Walls stop it.",
                 PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit; if an enemy hero's attack hits it, Fenn runs 20% faster for 1 s. Every 18 s.",
                 Difficulty = 2 },
+            // Tester Øli's Ragn and Nässla (after the old game's Bronson and Ginette) with Rickard's own bodies: in the game for everyone
+            // in 0.4.0 (Rickard 2026-11-10: "för 0.4.0 ska ragn och nässla vara tillgängliga för alla"), open from the start like Kugg,
+            // so with the open heroes at the top since 2026-11-13 (were last, under the locked ones)
+            new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false,
+                SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles to where a random enemy in reach stands. If it is still there, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
+                // the one-tap text, so the hold card ends with the drag line like every aimable hero's (hero review 2026-11-13)
+                OneTapDesc = "Tap: leaps up to 5 tiles at a random enemy in reach; a red ring shows where he lands. The enemy he lands on is hit hard, stunned for 1.25 s and shoved 4 tiles, and Ragn gets a shield of 20% of his health for 2 s.",
+                PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
+                Difficulty = 1 },
+            new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
+                SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.", // 75 -> 50 % (NasslaS.Slow, Rickard 2026-11-12)
+                // the one-tap text, so the hold card ends with the drag line like every aimable hero's (hero review 2026-11-13)
+                OneTapDesc = "Tap: throws a seed pod at a random enemy in her range. A moment later a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.",
+                PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
+                Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,
                 SpecialName = "Honey Rush", SpecialDesc = "Tap: shields the ally hero with the lowest health. Drag: a honey field that gives each ally hero in it a smaller shield. Shielded heroes run faster for a moment, and the shield blocks stuns and slows.",
                 OneTapDesc = "Tap: a honey field on a random ally hero near her, or on herself when no ally is close. Each ally hero in it gets a shield and runs faster for a moment; the shield blocks stuns and slows.",
@@ -199,20 +218,6 @@ namespace BAM.Sim
                 OneTapDesc = "Tap: slams his club into the ground with all his might: every enemy in a big circle around him takes heavy damage and is stunned for 0.8 s. Only with an enemy in the circle.",
                 PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
                 Difficulty = 1 },
-            // Tester Øli's Ragn and Nässla (after the old game's Bronson and Ginette) with Rickard's own bodies: in the game for everyone
-            // in 0.4.0 (Rickard 2026-11-10: "för 0.4.0 ska ragn och nässla vara tillgängliga för alla"), open from the start like Kugg
-            new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false,
-                SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles to where a random enemy in reach stands. If it is still there, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
-                // the one-tap text, so the hold card ends with the drag line like every aimable hero's (hero review 2026-11-13)
-                OneTapDesc = "Tap: leaps up to 5 tiles at a random enemy in reach; a red ring shows where he lands. The enemy he lands on is hit hard, stunned for 1.25 s and shoved 4 tiles, and Ragn gets a shield of 20% of his health for 2 s.",
-                PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
-                Difficulty = 1 },
-            new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
-                SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.", // 75 -> 50 % (NasslaS.Slow, Rickard 2026-11-12)
-                // the one-tap text, so the hold card ends with the drag line like every aimable hero's (hero review 2026-11-13)
-                OneTapDesc = "Tap: throws a seed pod at a random enemy in her range. A moment later a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.",
-                PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
-                Difficulty = 2 },
         };
     }
 }
