@@ -147,9 +147,9 @@ namespace BAM.Sim
                 Proj f = null; foreach (var q in m.Projs) if (q.Mode == ProjMode.HoneyField && q.Src == p) f = q;
                 Check(f != null && SimMath.Hypot(f.X - p.X, f.Y - p.Y) < 0.05f, "ONETAP Moa: alone, the field lands on herself");
                 float sh = 0; for (int i = 0; i < p.StCount; i++) if (p.Sts[i].Type == St.Shield) sh += p.Sts[i].Amount;
-                Check(Math.Abs(sh - p.MaxHp * MoaS.FieldShieldOneTap) < 1, $"ONETAP Moa: the field's shield is 10 % ({sh:0} of {p.MaxHp:0})");
+                Check(Math.Abs(sh - p.MaxHp * MoaS.FieldShieldOneTap) < 1, $"ONETAP Moa: the field's shield is {MoaS.FieldShieldOneTap * 100:0} % of her max health ({sh:0} of {p.MaxHp:0})");
                 float left = 0; for (int i = 0; i < p.StCount; i++) if (p.Sts[i].Type == St.Shield) left = Math.Max(left, p.Sts[i].T);
-                Check(Math.Abs(left - MoaS.FieldShieldTimeOneTap) < 0.05f, $"ONETAP Moa: the field's shield lasts 5 s ({left:0.00} s left right after the cast)");
+                Check(Math.Abs(left - MoaS.FieldShieldTimeOneTap) < 0.05f, $"ONETAP Moa: the field's shield lasts {MoaS.FieldShieldTimeOneTap:0} s ({left:0.00} s left right after the cast)");
 
                 m = OneTapScene(HeroId.Moa, out p, out cx, out cy);
                 Unit a = null; foreach (var h in m.Heroes) if (h.Team == p.Team && h != p) { a = h; break; }
@@ -157,6 +157,9 @@ namespace BAM.Sim
                 m.Step(TapIn());
                 f = null; foreach (var q in m.Projs) if (q.Mode == ProjMode.HoneyField && q.Src == p) f = q;
                 Check(f != null && SimMath.Hypot(f.X - a.X, f.Y - a.Y) < 0.05f, "ONETAP Moa: with an ally near, the field lands on the ally");
+                for (int k = 0; k < 6; k++) m.Step(PlayerInput.None); // the field gives its shield as it lands
+                float ash = 0; for (int i = 0; i < a.StCount; i++) if (a.Sts[i].Type == St.Shield && a.Sts[i].By == p) ash += a.Sts[i].Amount;
+                Check(a.MaxHp != p.MaxHp && Math.Abs(ash - p.MaxHp * MoaS.FieldShieldOneTap) < 1, $"ONETAP Moa: the ally's shield is {MoaS.FieldShieldOneTap * 100:0} % of MOA's max health ({ash:0}; Moa {p.MaxHp:0}, ally {a.MaxHp:0}; Rickard 2026-11-13)");
             }
 
             // bots tap their one special in real matches, on both teams

@@ -124,10 +124,12 @@ namespace BAM.Sim
     public static class MoaS
     {
         public const float Range = 5, ShieldPercent = 0.18f, Duration = 3, AreaRadius = 1.8f, AreaShieldPercent = 0.06f, AreaDuration = 3, FieldDuration = 2;
-        /// <summary>The honey field's shield with the one-tap special (Match.OneTap): 12 %, it is no longer placed over several
-        /// allies on purpose (Rickard 2026-11-01); AreaShieldPercent (6 %) is the old drag's.</summary>
-        public const float FieldShieldOneTap = 0.07f; // 10 -> 8 % (tester 2026-11-03: Moa the strongest; Rickard ok); 8 -> 7 % as it lasts 8 s (Rickard 2026-11-10)
-        // was // 12 -> 10 % (Rickard 2026-11-02 "nerfa skölden lite men inte i tid"; Hard bots Moa 61 -> 55 %)
+        /// <summary>The honey field's shield with the one-tap special (Match.OneTap): a quarter of MOA's own max health on each ally hero
+        /// in the field (Rickard 2026-11-13 "sköld 25% av moas maxhp", then "15%- dmg": her damage 15 % lower with it, Defs; after
+        /// "känns som man sköldar 3%": the 7 % of the ally's max health was 36 hp mid-match, one average hit of 37, gone after 2.2 s
+        /// and 8 % of her team's damage taken). AreaShieldPercent (6 % of the ally's) is the old drag's.</summary>
+        public const float FieldShieldOneTap = 0.25f; // of Moa's max health (MoaShield ofMoa); was 7 % of the ally's
+        // was // 12 -> 10 % (Rickard 2026-11-02 "nerfa skölden lite men inte i tid"; Hard bots Moa 61 -> 55 %); 10 -> 8 % (tester 2026-11-03: Moa the strongest; Rickard ok); 8 -> 7 % as it lasts 8 s (Rickard 2026-11-10)
         /// <summary>How long the one-tap field's shield lasts: 5 s (Rickard 2026-11-02 "minst 5"; AreaDuration 3 s is the old drag's).</summary>
         public const float FieldShieldTimeOneTap = 8; // 5 -> 8 s (Rickard 2026-11-10: "Moas sköldar ska hålla 3 sek längre, ge mindre mängd sköld")
         public const float SpeedBonus = 0.1f, SpeedDuration = 1.5f;
@@ -885,9 +887,10 @@ namespace BAM.Sim
             return true;
         }
 
-        void MoaShield(Unit moa, Unit a, float pct, float dur)
+        /// <summary>Moa's shield on a: pct of a's max health, or of Moa's own with ofMoa (the one-tap field since 2026-11-13).</summary>
+        void MoaShield(Unit moa, Unit a, float pct, float dur, bool ofMoa = false)
         {
-            float amount = a.MaxHp * pct;
+            float amount = (ofMoa ? moa.MaxHp : a.MaxHp) * pct;
             AddStatus(a, St.Shield, dur, 0, amount, moa);
             AddStatus(a, St.SpeedPct, MoaS.SpeedDuration, MoaS.SpeedBonus, 0, moa);
             Emit(EventType.Shield, moa, a, amount, 0, false, a.X, a.Y);
@@ -917,7 +920,7 @@ namespace BAM.Sim
                 var u = Units[i];
                 if (u.Kind != UnitKind.Hero || !u.Alive || u.Team != h.Team || u.IsClone || p.HasHit(u) || SimMath.Dist(u, p.X, p.Y) > MoaS.AreaRadius + u.R) continue;
                 p.AddHit(u);
-                MoaShield(h, u, OneTap ? MoaS.FieldShieldOneTap : MoaS.AreaShieldPercent, OneTap ? MoaS.FieldShieldTimeOneTap : MoaS.AreaDuration);
+                MoaShield(h, u, OneTap ? MoaS.FieldShieldOneTap : MoaS.AreaShieldPercent, OneTap ? MoaS.FieldShieldTimeOneTap : MoaS.AreaDuration, OneTap);
             }
         }
 

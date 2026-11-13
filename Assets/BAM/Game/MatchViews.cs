@@ -1427,7 +1427,9 @@ namespace BAM.Game
         static int HoneyKey(float g, float f, float q) => Cells(g, 12) | Cells(f, 12) << 5 | Cells(q, 6) << 10;
 
         /// <summary>The share left of each of Moa's shields on u: Queen's Instinct by its flag, then Honey Guard and the field's
-        /// shield told apart by what they started with (18 % and 6 % of max health). -1 where there is none.</summary>
+        /// shield told apart by what they started with (18 % and 6 % of max health). In the one-tap game every shield of hers but
+        /// Queen's is the field's: since 2026-11-13 it is a quarter of MOA's max health, as big as a Honey Guard, so the size cannot
+        /// tell them apart there (Rickard "sköld 25% av moas maxhp"). -1 where there is none.</summary>
         static void HoneyLeft(Unit u, ref float guard, ref float field, ref float queen)
         {
             float split = u.MaxHp * (MoaS.ShieldPercent + MoaS.AreaShieldPercent) * 0.5f;
@@ -1437,7 +1439,7 @@ namespace BAM.Game
                 if (st.Type != St.Shield || !(st.Amount > 0f) || !(st.T > 0f) || st.By == null || st.By.Kind != UnitKind.Hero || st.By.Hero != HeroId.Moa) continue;
                 float left = st.Amount0 > 0f ? Mathf.Clamp01(st.Amount / st.Amount0) : 1f;
                 if (st.Queen) queen = Mathf.Max(queen, left);
-                else if (st.Amount0 >= split) guard = Mathf.Max(guard, left);
+                else if (!Rules.OneTapSpecial && st.Amount0 >= split) guard = Mathf.Max(guard, left);
                 else field = Mathf.Max(field, left);
             }
         }
