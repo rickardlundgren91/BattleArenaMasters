@@ -200,6 +200,7 @@ namespace BAM.UI
             var asset = Resources.Load<TextAsset>(BamInfo.LicensesResource);
             string text = asset != null ? asset.text : "The licenses file is missing from this build.";
             if (asset == null) Debug.LogError("[BAM.UI] Resources/" + BamInfo.LicensesResource + " not found");
+            text = Reflow(text);
             var plain = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             // One uGUI Text holds at most ~16k characters (65k vertices), so long texts are split at line breaks.
@@ -217,6 +218,49 @@ namespace BAM.UI
                 if (plain != null) t.font = plain;
                 pos = end;
             }
+        }
+
+        // The license texts are hard-wrapped at ~70 characters, which on a narrow phone left stubs like "worldwide" and "and"
+        // on lines of their own (tester feedback on 0.4.1, 2026-11-13). Lines inside a paragraph are joined so the text
+        // flows to the screen width. A break stays at blank lines, ---- rulers, after a line ending in . : ! ?, after a
+        // short ALL-CAPS heading, and before a "1)" or "- " item.
+        static string Reflow(string text)
+        {
+            var lines = text.Replace("\r", "").Split('\n');
+            var sb = new System.Text.StringBuilder(text.Length);
+            sb.Append(lines[0].TrimEnd());
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string prev = lines[i - 1].Trim(), cur = lines[i].Trim();
+                if (KeepBreak(prev, cur)) sb.Append('\n').Append(lines[i].TrimEnd());
+                else sb.Append(' ').Append(cur);
+            }
+            return sb.ToString();
+        }
+
+        static bool KeepBreak(string prev, string cur)
+        {
+            if (prev.Length == 0 || cur.Length == 0) return true;
+            if (IsRuler(prev) || IsRuler(cur)) return true;
+            char last = prev[prev.Length - 1];
+            if (last == '.' || last == ':' || last == '!' || last == '?') return true;
+            if (prev.Length < 40 && !HasLower(prev)) return true;
+            if (cur.StartsWith("- ") || cur.StartsWith("* ")) return true;
+            int d = 0;
+            while (d < cur.Length && char.IsDigit(cur[d])) d++;
+            return d > 0 && d < cur.Length && cur[d] == ')';
+        }
+
+        static bool IsRuler(string s)
+        {
+            foreach (char c in s) if (c != '-' && c != '=' && c != '_' && c != ' ') return false;
+            return true;
+        }
+
+        static bool HasLower(string s)
+        {
+            foreach (char c in s) if (char.IsLower(c)) return true;
+            return false;
         }
 
         /// <summary>One modal box: title, text, two buttons side by side. Built once and refilled for each question.</summary>
