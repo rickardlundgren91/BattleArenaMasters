@@ -9,9 +9,9 @@ namespace BAM.Game
     /// <summary>
     /// The marks the old game draws by the heroes' health bars (ABC2 Hud.cs drawHero): the name over every hero
     /// (white with a dark edge), a thin crossed-out eye over a hero of the player's team while the enemy cannot see it (fading in
-    /// and out over about 0.15 s), a small pulsing diamond by another hero's bar while its special is ready
+    /// and out over about 0.15 s), a small pulsing red diamond by an enemy's bar while its special is ready
     /// (HudTelegraph.cs drawCharged), the interrupt window as a bar under the health bar (drawChannel),
-    /// The special's charge is the thin row in the 3D bar itself (HealthBar); no level badge (Rickard 2026-10-28 and again 2026-10-30,
+    /// The special's charge is the thin row in the 3D bar itself (HealthBar), on the own team only; no level badge (Rickard 2026-10-28 and again 2026-10-30,
     /// the HUD top shows the level). Placed each frame over the art's 3D bars.
     /// </summary>
     sealed partial class Hud
@@ -155,18 +155,18 @@ namespace BAM.Game
                     o.Eye.color = o.Eye.sprite == SeenEyeSprite ? new Color(SeenEye.r, SeenEye.g, SeenEye.b, o.EyeA) : new Color(1f, 1f, 1f, o.EyeA);
                 }
 
-                // another hero whose special is ready (drawCharged): a pulsing diamond by the right end of its bar, red on an
-                // enemy (it can fire now), mint on a teammate (who can follow up); none on the player's own hero
-                bool charged = !mine && who.SpecialReady;
+                // an enemy whose special is ready (drawCharged): a pulsing red diamond by the right end of its bar (it can fire now).
+                // Enemies only: an enemy's bar has no charge row (MatchViews), and a teammate's row already turns gold when ready, so
+                // the mint diamond on teammates showed it twice (review 2026-11-13, nr 9; Rickard 2026-11-13)
+                bool charged = u.Team != m.Player.Team && who.SpecialReady;
                 if (o.Diamond.enabled != charged) o.Diamond.enabled = charged;
                 if (charged)
                 {
-                    bool ally = u.Team == m.Player.Team;
                     float r = ts * 0.17f * (0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 9f) + 0.25f), side = r * 1.414f;
                     o.Diamond.rectTransform.sizeDelta = new Vector2(side, side);
                     o.Diamond.rectTransform.anchoredPosition = new Vector2(bw * ts / 2f + 8f, 0f);
-                    o.Diamond.color = ally ? new Color(0.25f, 0.95f, 0.7f, 0.95f) : new Color(1f, 0.16f, 0.2f, 0.95f);
-                    o.DiamondEdge.effectColor = ally ? new Color(0.85f, 1f, 0.93f, 0.9f) : new Color(1f, 0.85f, 0.85f, 0.9f);
+                    o.Diamond.color = new Color(1f, 0.16f, 0.2f, 0.95f);
+                    o.DiamondEdge.effectColor = new Color(1f, 0.85f, 0.85f, 0.9f);
                 }
 
                 float under = -ts * 0.17f - 4f; // under the bar and its charge row

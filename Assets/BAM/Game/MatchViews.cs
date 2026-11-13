@@ -1300,10 +1300,13 @@ namespace BAM.Game
             if (u.Kind == UnitKind.Hero)
             {
                 // MLBB bars: a notch every 100 HP and the special's charge as the row under the bar; a clone shows its owner's
-                // charge, so an enemy's decoy reads exactly like Fenn
+                // charge. Only on the own team: an enemy has no row, only the red diamond once its special is ready (HudOverhead),
+                // so nobody reads how far an enemy's special has come (Rickard 2026-11-13 "man ska inte veta exakt hur långt");
+                // its decoy has none either, so it still reads exactly like Fenn
                 if (Mathf.Abs(u.MaxHp - r.MaxHp) > 0.5f) { r.MaxHp = u.MaxHp; v.SetMaxHp(u.MaxHp); }
                 Unit who = u.IsClone && u.Owner != null ? u.Owner : u;
-                float en = who.Charge01; bool ready = who.SpecialReady;
+                bool foeRow = u.Team != Mine;
+                float en = foeRow ? -1f : who.Charge01; bool ready = !foeRow && who.SpecialReady;
                 if (Mathf.Abs(en - r.Energy) > 0.002f || ready != r.Ready) { r.Energy = en; r.Ready = ready; v.SetEnergy(en, ready); }
             }
 

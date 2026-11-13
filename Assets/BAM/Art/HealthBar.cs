@@ -12,7 +12,8 @@ namespace BAM.Art
     /// When the special is ready the row turns bright gold; just as it becomes ready a narrow white shine sweeps along it Sweeps times
     /// (every SweepEvery seconds) while a gold edge round it blinks, then the row stays a steady gold
     /// (tester 2026-11-02 "the small yellow bar could glow when a hero's ultimate is ready"; Rickard found a soft halo ugly, "glöden
-    /// e ful", so it is a crisp sweep in the bar's own flat style). Shown on every hero, enemies too, so a ready enemy special can be seen.
+    /// e ful", so it is a crisp sweep in the bar's own flat style). Shown on the player's own team only: an enemy's bar has no row, a
+    /// red diamond by it tells a ready enemy special (HudOverhead.cs; Rickard 2026-11-13).
     /// </summary>
     sealed class HealthBar
     {
