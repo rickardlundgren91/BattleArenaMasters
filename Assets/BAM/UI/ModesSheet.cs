@@ -42,7 +42,6 @@ namespace BAM.UI
         // the sheet's two cards: CLASSIC, and PRACTICE for both Training and HeroTest
         static string CardTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : "PRACTICE";
         static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial, any hero, or the new map";
-        static string ModeSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : m == Mode.HeroTest ? "Try out any hero" : m == Mode.NewMap ? "3v3 bots, new map" : "Learn the basics";
 
         // what Home's PLAY and the sheet's PLAY start (HubPlayNow)
         static void PlayMode()

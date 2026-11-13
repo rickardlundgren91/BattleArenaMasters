@@ -455,8 +455,6 @@ namespace BAM.Sim
             return true;
         }
 
-        internal void ResetPathCache() => failedAt.Clear();
-
         /// <summary>Is tile n the tower tile t or one of its eight neighbours? A diagonal neighbour's centre is 1.41 from the tower, inside
         /// the 1.1 + R wall (Rules.TowerBody) for every hero, so a path through it pressed bots against their own tower ~2.8 s a match
         /// (full review 2026-11-09 nr 88; the tile and its four sides since bug review nr 34).</summary>

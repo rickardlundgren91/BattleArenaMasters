@@ -186,14 +186,6 @@ namespace BAM.Art
             return Store(400, "Stun Stars");
         }
 
-        public static Mesh ShieldBubble()
-        {
-            if (Cached(401, out Mesh m)) return m;
-            b.Clear();
-            b.Color(Pal.ShieldFx).Sphere(Vector3.zero, 1f, 16, 10);
-            return Store(401, "Shield");
-        }
-
         /// <summary>Icy ring with frost shards at the feet (slow).</summary>
         public static Mesh SlowRing()
         {

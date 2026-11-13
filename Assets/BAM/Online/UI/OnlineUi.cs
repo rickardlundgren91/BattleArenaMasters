@@ -41,7 +41,6 @@ namespace BAM.Online.UI
         static bool SignedIn => Account.State == Account.Status.Ready || Account.State == Account.Status.NeedsName || Account.State == Account.Status.Offline && Account.Enabled;
 
         public static void OpenProfile() { Init(); OnlineMenu.Close(); OnlineMenu.Go(SignedIn ? "profile" : "golive"); }
-        public static void OpenRank() { Init(); OnlineMenu.Close(); OnlineMenu.Go("rank"); }
         public static void OpenFriends() { Init(); OnlineMenu.Close(); OnlineMenu.OpenFriends(); }
         /// <summary>Friends online now (not in a match), for the badge on Home's FRIENDS button.</summary>
         public static int FriendsOnline() { int n = 0; foreach (var f in Social.Friends) if (f.Presence == Social.Presence.Online) n++; return n; }
@@ -69,7 +68,6 @@ namespace BAM.Online.UI
             if (Account.State != Account.Status.Ready) { OnlineMenu.Go(Account.State == Account.Status.NeedsName ? "hubname" : "golive"); return; }
             BAM.Online.Mp.MpRoom.QuickMatch(); OnlineMenu.Go("mp");
         }
-        public static void OpenName() { Init(); OnlineMenu.Close(); OnlineMenu.Go(Account.State == Account.Status.Ready || Account.State == Account.Status.NeedsName ? "hubname" : "golive"); }
 
         /// <summary>The first-time question (after the tutorial): asked once, never again after Not now. True when it was shown.</summary>
         public static bool AskToGoOnline()

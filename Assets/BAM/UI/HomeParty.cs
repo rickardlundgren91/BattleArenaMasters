@@ -226,9 +226,6 @@ namespace BAM.UI
             }
         }
 
-        /// <summary>What Home's PLAY says it starts: "WITH YOUR PARTY" in a party (the old sub line), else the mode.</summary>
-        static string HomePlaySub() => CurrentParty() != null ? "WITH YOUR PARTY" : PlaySubFor(homeMode, true);
-
         /// <summary>The mode chip over PLAY, two lines: the mode in gold ("CLASSIC 3V3") and its settings muted under it ("vs bots · Hard",
         /// "With your party", "Tutorial"); the chip fits the longer line and stays narrow. And the first-win tag.</summary>
         static void SetPlaySub()

@@ -56,7 +56,6 @@ namespace BAM.UI
         public static readonly Color Bad = new Color(0.9f, 0.3f, 0.27f);
         public static readonly Color Muted = new Color(0.16f, 0.21f, 0.38f);     // #2a3560: ordinary buttons, not chosen
         public static readonly Color PanelColor = new Color(0.055f, 0.07f, 0.19f, 0.88f);
-        public static readonly Color RowColor = new Color(0.055f, 0.07f, 0.19f, 0.7f);
         public static readonly Color TextColor = new Color(0.95f, 0.96f, 1f);    // #f3f4ff
         public static readonly Color TextDim = new Color(0.6f, 0.64f, 0.84f);    // #9aa2d6
         public static readonly Color Ink = new Color(0.024f, 0.07f, 0.11f);      // #06121c: text on mint and gold

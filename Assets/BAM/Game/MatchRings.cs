@@ -52,7 +52,7 @@ namespace BAM.Game
         Vector2 blinkAt;
         Color blinkColor;
         static readonly Color RingEdge = new Color(0.03f, 0.05f, 0.1f, 0.4f);
-        static readonly Color ReadyOrange = new Color(1f, 0.54f, 0.12f), HitRed = new Color(1f, 0.2f, 0.25f);
+        static readonly Color HitRed = new Color(1f, 0.2f, 0.25f);
         bool aimOn;
         AimInfo aimInfo;
         readonly System.Collections.Generic.List<Unit> aimHits = new System.Collections.Generic.List<Unit>(8);

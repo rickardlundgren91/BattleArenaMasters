@@ -57,8 +57,6 @@ namespace BAM.Sim
             public string Short;
         }
 
-        public static readonly string[] RarityName = { "Common", "Rare", "Epic", "Legendary" };
-
         static readonly Info[] all =
         {
             null,

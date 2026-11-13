@@ -94,8 +94,6 @@ namespace BAM.Sim
         /// DamageCoeff 1.15 -> 2.6 (44 at level 1, more than the 38 before the beginner change). Bot win rates hardly move with it
         /// (3200 matches, speed 2.3: x1.15 Normal 49.0 / Hard 47.7 %, x2.6 49.8 / 49.7 %); her kills per match go 1.84 -> 2.89.
         public const float Windup = 0.1f, DamageCoeff = 2.6f, Speed = 18, Hitbox = 0.6f;
-        /// <summary>One-tap special (Rules.OneTapSpecial, 2026-11-01): how far her tap looks for the random enemy to shoot at.</summary>
-        public const float TapTarget = 7;
         /// <summary>The beginner hero (Rickard 2026-11-04: "snabba skott, special ofta", and the bolt was hard to hit): her tap aims
         /// where a running hero will be when the bolt gets there (warning + draw + flight), worked out once at the tap; nothing homes
         /// after it, so a hero who turns at the warning still gets out (OneTap.TryTapSpecial). Players and bots alike.</summary>

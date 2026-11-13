@@ -47,8 +47,6 @@ namespace BAM.Sim
         public float LastTowerHit => TowerHitAt;
         /// <summary>The current moment's special lesson is done (the tap hit something; the aimed bolt hit Knut).</summary>
         public bool BurstDone => Burst;
-        /// <summary>How long the current line has been up.</summary>
-        public float LineShown => Shown;
 
         internal float T, Moved, Lx, Ly, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1, BlinkAt = -1, PressAt = -99, HookAt = -1, WaveAt = -99;
         internal int Gained, TowerHitCount;

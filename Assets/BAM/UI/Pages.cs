@@ -11,7 +11,6 @@ namespace BAM.UI
     public static partial class Screens
     {
         const float NavH = 180f; // the old tab bar: cw(18)
-        static readonly Color PageFill = new Color(0.027f, 0.03f, 0.09f, 0.97f);
         static readonly Color Lavender = new Color(0.45f, 0.47f, 0.85f);      // choices not picked
         static readonly Color NavIdle = new Color32(0xbc, 0xc2, 0xec, 0xff);  // the tabs not shown (HubNav, ONE_PLAY)
         static readonly Color NavBg = new Color32(0x0a, 0x0d, 0x26, 0xff);
