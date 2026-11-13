@@ -1213,8 +1213,12 @@ namespace BAM.Art
                 // Follow-1 staff turned with her hand, and her 13 cm Offset slid it about her fist by 9 cm in her idle sway (Unity
                 // measuring 2026-11-13); turned with all of the hand (8998db0) it swung Bonk's club, whose aim follows a tenth of the
                 // hand, off his fist (Rickard 2026-11-13: "hans hand rör sig in och ut så han släpper vapnet")
+                // A Thrown weapon's Offset is a touch-up of its rest hold only, so it eases out with the rest hold as the throw plays and
+                // the weapon is in the fist's own grip, already in the palm: Blast's (0.09 of his height down, 0.08 forward, tuned on the
+                // bomb turned 59 degrees up at rest) carried the bomb off his fist to the inside of his forearm as he threw (tester
+                // 2026-11-13: "kommer till insidan av hans arm")
                 if (W.Offset != Vector3.zero && !inSocket)
-                    t.position += (full ? handTurn : offTurn[i]) * root.TransformDirection(W.Offset) * figH;
+                    t.position += (full ? handTurn : offTurn[i]) * root.TransformDirection(W.Offset) * (figH * (W.Thrown ? rest : 1f));
                 if (W.Fist > 0.001f && !gone) CloseHand(i, W.Fist * liveW);
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
