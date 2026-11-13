@@ -13,7 +13,7 @@ namespace BAM.Core
         public bool HeroTest;   // HERO TEST: Hero against dummies, never ends (Reset/Exit on its bar)
         public int Level;       // HERO TEST: the fixed level (1 if 0)
         public IMatchNet Net;   // an online match (BAM.Online); null = offline
-        public MapId Map;       // the arena (Runes unless PRACTICE > NEW MAP picked Grove)
+        public MapId Map;       // the arena: CLASSIC's MAP pick (BamSettings.LastMap), Runes in the tutorial, HERO TEST and online
     }
 
     /// <summary>What the result screen and analytics get when a match ends.</summary>
@@ -29,7 +29,6 @@ namespace BAM.Core
         public Difficulty Difficulty;
         public bool Tutorial;
         public bool BotsMoved;  // the bot level the player follows moved after this match (BamSettings.AfterBotMatch): the result says so
-        public bool Practice;   // PRACTICE > NEW MAP: no XP, Rating or bot-level move, so the result card shows no XP line (bug review 2026-11-04 nr 51)
         public bool Online;     // an online match (MatchSetup.Net): the card says so instead of the bots' level and hides PLAY AGAIN (full review 2026-11-09 nr 61)
         public bool Versus;     // online with a person on the other team ("vs players"); false when everyone played together against bots
         public int Humans;      // the people in the match: 1 offline, one per seat online (analytics, full review 2026-11-13 nr 110)

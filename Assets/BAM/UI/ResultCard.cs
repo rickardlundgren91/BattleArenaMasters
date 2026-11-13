@@ -332,15 +332,14 @@ namespace BAM.UI
             // online the enemy may be people, and the bots' level is the room's (full review 2026-11-09 nr 61)
             string bots = DifficultyNames[Mathf.Clamp((int)r.Difficulty, 0, DifficultyNames.Length - 1)] + " bots";
             resSub.text = (r.Tutorial ? "Tutorial" : r.Online ? "Online · " + (r.Versus ? "vs players" : bots) : bots) + " · " + length
-                + (r.BotsMoved ? " · next: " + DifficultyNames[Mathf.Clamp((int)BamSettings.LastDifficulty, 0, DifficultyNames.Length - 1)] + " bots" : "")
-                + (r.Practice ? " · practice, no XP" : "");
+                + (r.BotsMoved ? " · next: " + DifficultyNames[Mathf.Clamp((int)BamSettings.LastDifficulty, 0, DifficultyNames.Length - 1)] + " bots" : "");
 
             resTable.gameObject.SetActive(resTableMode);
             resSmall.gameObject.SetActive(!resTableMode);
             // online PLAY AGAIN only went Home (GameFlow.RestartMatch: an online match cannot restart alone); HOME does that, and the
             // room page opens by itself when the menus are back (MpRoom.WantPage), so the host can start again (nr 61)
             resAgain.gameObject.SetActive((!r.Tutorial || !r.Won) && !r.Online);
-            FillXp(r.Practice);
+            FillXp();
             string tip = r.Won || r.Quit || r.Tutorial || !resTableMode ? null : LossTip(r);
             resTip.gameObject.SetActive(tip != null);
             resTip.text = tip ?? "";
@@ -377,9 +376,9 @@ namespace BAM.UI
         // match that gives nothing (the tutorial, a match left, under 45 s) and after PRACTICE > NEW MAP, which never reaches
         // Progress: its LastGain would still be the previous match's, "LEVEL UP!" and "NEW HERO UNLOCKED" included (bug review
         // 2026-11-04 nr 51)
-        static void FillXp(bool practice)
+        static void FillXp()
         {
-            var g = OnlineHooks.LastGain != null && !practice ? OnlineHooks.LastGain() : default;
+            var g = OnlineHooks.LastGain != null ? OnlineHooks.LastGain() : default;
             bool on = g.Xp > 0;
             resXp.gameObject.SetActive(on); resLevel.gameObject.SetActive(on);
             resXpBack.gameObject.SetActive(on); resXpFill.gameObject.SetActive(on);

@@ -22,7 +22,7 @@ namespace BAM.Core
         static bool leftHanded, tutorialDone, tutorialCard, tutorialSkipped, musicOn, vibration, hitVibration, hardOpen;
         static int fps;
         static Consent consent;
-        static int lastHero, lastDifficulty, spell;
+        static int lastHero, lastDifficulty, spell, lastMap;
 
         /// <summary>Raised after any setting changed (on the main thread).</summary>
         public static event Action Changed;
@@ -123,6 +123,14 @@ namespace BAM.Core
             set { Load(); int v = value == BAM.Sim.SpellId.None ? (int)BAM.Sim.SpellId.Blink : (int)value; if (spell == v) return; spell = v; PlayerPrefs.SetInt(Key + "spell", v); Commit(); }
         }
 
+        /// <summary>The map CLASSIC plays (MAP under BOT DIFFICULTY): Runes until the player picks Grove (Rickard 2026-11-13:
+        /// "lägg in grove som en valbar match precis som den vanliga kartan").</summary>
+        public static BAM.Sim.MapId LastMap
+        {
+            get { Load(); return (BAM.Sim.MapId)lastMap; }
+            set { Load(); if (lastMap == (int)value) return; lastMap = (int)value; PlayerPrefs.SetInt(Key + "map", lastMap); Commit(); }
+        }
+
         public static BAM.Sim.Difficulty LastDifficulty
         {
             get { Load(); return OpenLevel((BAM.Sim.Difficulty)lastDifficulty); }
@@ -202,6 +210,7 @@ namespace BAM.Core
                 PlayerPrefs.Save();
             }
             hardOpen = PlayerPrefs.GetInt(Key + "hardopen", 0) == 1;
+            lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Runes), (int)BAM.Sim.MapId.Runes, (int)BAM.Sim.MapId.Grove);
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
         }
 

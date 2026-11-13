@@ -29,10 +29,10 @@ namespace BAM.UI
 
         static void StartBotMatch()
         {
-            StartMatch(new MatchSetup { Hero = (HeroId)BamSettings.LastHero, Difficulty = BamSettings.LastDifficulty, Tutorial = false });
+            StartMatch(new MatchSetup { Hero = (HeroId)BamSettings.LastHero, Difficulty = BamSettings.LastDifficulty, Tutorial = false, Map = BamSettings.LastMap });
         }
 
-        /// <summary>A bot match with the last hero and bot level, as Home's PLAY in CLASSIC: for the online queue's PLAY BOTS INSTEAD.</summary>
+        /// <summary>A bot match with the last hero, bot level and map, as Home's PLAY in CLASSIC: for the online queue's PLAY BOTS INSTEAD.</summary>
         public static void PlayBotMatch() => StartBotMatch();
 
         static void StartTutorial()

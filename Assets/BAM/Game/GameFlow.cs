@@ -235,10 +235,10 @@ namespace BAM.Game
             itemsLogged = 0; offerSince = -1f;
             if ((!setup.Tutorial || island) && !setup.HeroTest)
             {
-                // HERO TEST is practice, not a match (old: no stats); PRACTICE > NEW MAP is sent too, as mode "grove", and an online
+                // HERO TEST is practice, not a match (old: no stats); Grove (CLASSIC > MAP) is sent as mode "grove", and an online
                 // match as "online" instead of looking like one against the room's bots (full review 2026-11-13 nr 110)
                 BamAnalytics.MatchStarted(setup, Result(false));
-                if (!Practice) Flow.MatchStarted?.Invoke(); // online: "in a match" for friends
+                Flow.MatchStarted?.Invoke(); // online: "in a match" for friends
             }
             Debug.Log("[BAM.Game] match started: " + (net != null ? "online, seat " + cfg.LocalSeat + " of " + cfg.Seats.Length + ", " : "") + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + (cfg.Map != MapId.Runes ? ", map " + cfg.Map : "") + ", seed " + seed);
         }
@@ -509,7 +509,6 @@ namespace BAM.Game
                 Hero = p.Hero,
                 Difficulty = setup.Difficulty,
                 Tutorial = setup.Tutorial,
-                Practice = Practice,
                 Online = net != null,
                 Versus = versus,
                 Humans = net != null && match.Config.Seats != null ? match.Config.Seats.Length : 1,
@@ -534,7 +533,7 @@ namespace BAM.Game
         // The phone's own counts, once per match as it is decided (the tower falls), not with the result card ResultDelay later:
         // a player who paused and went Home in those 2 s lost the win for the Hard and Ultra locks and the bot level's move, while
         // the server still gave the XP (bug review 2026-11-02 nr 18, again 2026-11-04). A match left before it is decided counts
-        // nothing, as before. PRACTICE > NEW MAP counts toward neither lock (bug review 2026-11-04 nr 52).
+        // nothing, as before. Grove counts like Runes since it became CLASSIC's MAP pick (Rickard 2026-11-13).
         void Bookkeep()
         {
             if (match == null || booked) return;
@@ -542,16 +541,16 @@ namespace BAM.Game
             SaveTrace();
             var r = Result(false);
             if (!r.Tutorial) BamSettings.TutorialCard = false; // the first finished match takes the "Tutorial done" card away
-            bool counts = !r.Tutorial && !setup.HeroTest && !Practice && setup.Net == null;
+            bool counts = !r.Tutorial && !setup.HeroTest && setup.Net == null;
             if (counts) botsMoved = BamSettings.AfterBotMatch(r.Difficulty, r.Won); // Easy and Normal follow the player
             if (counts && r.Won && r.Difficulty == Difficulty.Hard) BamSettings.AddHardWin(); // 30 open Ultra
             if (counts && r.Won && r.Difficulty == Difficulty.Normal) BamSettings.AddNormalWin(); // 3 open Hard
         }
 
         // Exactly one MatchEnded per match: at the result, or as a quit when the player leaves or restarts before it.
-        // PRACTICE > NEW MAP (the second map, Grove): practice, so no bot-level move and no online XP; the analytics get it as mode
-        // "grove" since full review 2026-11-13 nr 110 (before, nothing showed whether anyone played the second map)
-        bool Practice => setup.Map != MapId.Runes && setup.Net == null;
+        // Grove (CLASSIC > MAP, Rickard 2026-11-13) counts like Runes: bot level, the Hard/Ultra locks and online XP; the analytics
+        // send it as mode "grove" (full review 2026-11-13 nr 110). Until 2026-11-13 it was PRACTICE > GROVE and counted nothing
+        // (bug review 2026-11-04 nr 51, 52).
 
         void SendEnd(bool quit)
         {
@@ -560,7 +559,6 @@ namespace BAM.Game
             if (net != null) net.MatchEnded(quit && !over);
             if (setup.HeroTest) return;
             LogEnd(quit);
-            if (Practice) return;
             Flow.MatchEnded?.Invoke(Result(quit && !over)); // online: level, XP and rating are counted on the server
         }
 

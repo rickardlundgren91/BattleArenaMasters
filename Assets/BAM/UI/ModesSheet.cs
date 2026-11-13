@@ -12,14 +12,16 @@ namespace BAM.UI
     // PLAY at the bottom, which starts the chosen mode. Home's PLAY and MODES icon follow the mode the sheet's PLAY last started (nr 129).
     // BAM's modes: CLASSIC (3v3 against bots), TRAINING (the guided match) and HERO TEST ("Try out any hero", the old mode
     // list's entry); RANKED is not in BAM. 2026-10-31 (Rickard's pick on a card): TRAINING and HERO TEST share one card, PRACTICE,
-    // which opens TUTORIAL / HERO TEST under it the way CLASSIC opens its BOT DIFFICULTY; Home still plays the one picked. Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
+    // which opens TUTORIAL / HERO TEST under it the way CLASSIC opens its BOT DIFFICULTY; Home still plays the one picked.
+    // 2026-11-13 (Rickard: "lägg in grove som en valbar match precis som den vanliga kartan"): CLASSIC has a MAP row under
+    // BOT DIFFICULTY, RUNES or GROVE (the old sheet's map pick), and Grove left PRACTICE; a party plays Runes (online is Runes only). Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
     public static partial class Screens
     {
-        enum Mode { Classic, Training, HeroTest, NewMap } // NewMap: a CLASSIC match on the second map (Grove), PRACTICE only until tested (Rickard 2026-11-04)
+        enum Mode { Classic, Training, HeroTest }
 
         static readonly Mode[] SheetModes = { Mode.Classic, Mode.Training }; // Training's card is PRACTICE (Training or HeroTest)
         static Mode lastPractice = Mode.Training;
-        static bool IsPractice(Mode m) => m == Mode.Training || m == Mode.HeroTest || m == Mode.NewMap;
+        static bool IsPractice(Mode m) => m == Mode.Training || m == Mode.HeroTest;
         static RectTransform modePracticeExpand;
         static HubChoice modePractice;
         const float PracH = 18.5f * Cw;
@@ -33,20 +35,20 @@ namespace BAM.UI
         static readonly ModeCard[] modeCards = new ModeCard[2];
         static RectTransform modeSheet, modeExpand, modeSheetPlay;
         static Image modeScrim;
-        static HubChoice modeDifficulty, modeParty;
+        static HubChoice modeDifficulty, modeParty, modeMap;
         static Text diffLabel;
         static GameObject hardLock, ultraLock; // the padlock and the progress under a locked Hard / Ultra (nr 130)
         static Text hardLockText, ultraLockText;
-        static RectTransform modePartyRow;
+        static RectTransform modePartyRow, modeMapRow;
         static Text modePlaySub;
         static ModesFx modesFx;
 
         const float OptH = 17 * Cw, OptGap = 2.4f * Cw, ExpH = 20.5f * Cw, SheetX = 4 * Cw;
 
-        static string ModeTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : m == Mode.HeroTest ? "HERO TEST" : m == Mode.NewMap ? "GROVE" : "TUTORIAL";
+        static string ModeTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : m == Mode.HeroTest ? "HERO TEST" : "TUTORIAL";
         // the sheet's two cards: CLASSIC, and PRACTICE for both Training and HeroTest
         static string CardTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : "PRACTICE";
-        static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial, any hero, or Grove";
+        static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial or any hero";
 
         // what Home's PLAY and the sheet's PLAY start (HubPlayNow)
         static void PlayMode()
@@ -54,7 +56,6 @@ namespace BAM.UI
             if (TestParty == null && OnlineHooks.PartyPlay != null && OnlineHooks.PartyPlay()) return; // a party: the leader's PLAY starts it (HomeParty.cs)
             if (homeMode == Mode.Training) StartTutorial();
             else if (homeMode == Mode.HeroTest) StartHeroTest((HeroId)BamSettings.LastHero);
-            else if (homeMode == Mode.NewMap) StartMatch(new MatchSetup { Hero = (HeroId)BamSettings.LastHero, Difficulty = BamSettings.LastDifficulty, Map = MapId.Grove });
             else StartBotMatch();
         }
 
@@ -62,11 +63,11 @@ namespace BAM.UI
         static void StartHeroTest(HeroId hero) => StartMatch(new MatchSetup { Hero = hero, HeroTest = true, Level = 1 });
 
         static PartyView Party() => CurrentParty();
-        const float PartyRowH = 17.5f * Cw;
-        static float ExpNow => ExpH + (Party() != null ? PartyRowH : 0);
+        const float PartyRowH = 17.5f * Cw; // the MAP row has the same height and place: MAP alone, PARTY in a party
+        static float ExpNow => ExpH + PartyRowH;
 
         static string PlaySubFor(Mode m, bool withDifficulty) =>
-            m == Mode.Classic ? "3V3 · VS BOTS" + (withDifficulty ? " · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant() : "") : ModeTitle(m);
+            m == Mode.Classic ? "3V3 · VS BOTS" + (BamSettings.LastMap == MapId.Grove ? " · GROVE" : "") + (withDifficulty ? " · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant() : "") : ModeTitle(m);
 
         static void BuildModes()
         {
@@ -111,7 +112,7 @@ namespace BAM.UI
             for (int i = 0; i < SheetModes.Length; i++) modeCards[i] = BuildModeCard(SheetModes[i]);
             BuildOnlineRows();
 
-            // CLASSIC's BOT DIFFICULTY (the map pick of the old sheet is left out: BAM has one arena)
+            // CLASSIC's BOT DIFFICULTY, and under it the MAP (the old sheet's map pick: Runes or Grove, 2026-11-13)
             modeExpand = UiKit.NewRect("Classic", modeSheet);
             diffLabel = Treb(modeExpand, "BOT DIFFICULTY", 2.7f, UiKit.TextDim);
             Stretched(diffLabel.rectTransform, 0, Cw + 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
@@ -151,15 +152,28 @@ namespace BAM.UI
                 RefreshModes();
             }, true);
 
+            // alone, under BOT DIFFICULTY: the MAP, RUNES (the first arena) or GROVE (the second); a party plays Runes
+            modeMapRow = UiKit.NewRect("Map", modeExpand);
+            var mapLabel = Treb(modeMapRow, "MAP", 2.7f, UiKit.TextDim);
+            Stretched(mapLabel.rectTransform, 0, 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
+            var msegs = UiKit.NewRect("Pick", modeMapRow);
+            Stretched(msegs, 0, 4.5f * Cw, 0, 12 * Cw);
+            modeMap = new HubChoice(msegs, new[] { "RUNES", "GROVE" }, i =>
+            {
+                BamSettings.LastMap = i == 1 ? MapId.Grove : MapId.Runes;
+                RefreshHome();
+                RefreshModes();
+            }, true);
+
             // PRACTICE's pick: the guided tutorial or HERO TEST
             modePracticeExpand = UiKit.NewRect("Practice", modeSheet);
             var pracLabel = Treb(modePracticeExpand, "PRACTICE", 2.7f, UiKit.TextDim);
             Stretched(pracLabel.rectTransform, 0, Cw + 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
             var prsegs = UiKit.NewRect("Pick", modePracticeExpand);
             Stretched(prsegs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
-            modePractice = new HubChoice(prsegs, new[] { "TUTORIAL", "HERO TEST", "GROVE" }, i =>
+            modePractice = new HubChoice(prsegs, new[] { "TUTORIAL", "HERO TEST" }, i =>
             {
-                sheetMode = lastPractice = i == 0 ? Mode.Training : i == 1 ? Mode.HeroTest : Mode.NewMap;
+                sheetMode = lastPractice = i == 0 ? Mode.Training : Mode.HeroTest;
                 RefreshModes();
             }, true);
 
@@ -338,6 +352,8 @@ namespace BAM.UI
             diffLabel.text = "BOT DIFFICULTY"; // a locked level is dimmed with its padlock and progress; tapping it tells how to open it (ShowHint)
             modePartyRow.gameObject.SetActive(party != null);
             if (party != null) { modeParty.Set(party.Mode); Stretched(modePartyRow, 0, ExpH, 0, PartyRowH); }
+            modeMapRow.gameObject.SetActive(party == null);
+            if (party == null) { modeMap.Set(BamSettings.LastMap == MapId.Grove ? 1 : 0); Stretched(modeMapRow, 0, ExpH, 0, PartyRowH); }
             float expH = ExpNow;
             float y = 6 * Cw + 11 * Cw;
             for (int i = 0; i < modeCards.Length; i++)
@@ -360,7 +376,7 @@ namespace BAM.UI
                 if (open && IsPractice(c.Id))
                 {
                     modePracticeExpand.gameObject.SetActive(true);
-                    modePractice.Set(sheetMode == Mode.HeroTest ? 1 : sheetMode == Mode.NewMap ? 2 : 0);
+                    modePractice.Set(sheetMode == Mode.HeroTest ? 1 : 0);
                     Stretched(modePracticeExpand, SheetX + 3 * Cw, y + OptH, SheetX + 3 * Cw, PracH);
                 }
                 y += oh + OptGap;
