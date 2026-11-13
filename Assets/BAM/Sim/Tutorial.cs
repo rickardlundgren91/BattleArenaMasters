@@ -100,6 +100,8 @@ namespace BAM.Sim
         const float TutWaveY = 9.5f, TutWaveGap = 1.5f;
         // Knut fights for real (long enough that Tyra feels it and has something to heal); Tyra never drops below 40 %
         const float TutKnutHp = 380f, TutKnutDmg = 1.6f, TutKnutPace = 0.85f, TutAfterFight = 0.8f, TutPlayerFloor = 0.4f;
+        // nor does Knut drop below 40 % before the fight moment: his hook and the BLINK come first (full review 2026-11-13 nr 111)
+        const float TutKnutFloor = 0.4f;
         const float TutHookAfter = 0.6f;  // moment 5: Knut throws his anchor this long after Tyra's aimed bolt hit him
         /// <summary>Where the guided match's Knut stops walking at Tyra and stands to swing: his reach, a little inside.</summary>
         static float TutKnutStop(Unit k, Unit p) => (k.Range + p.R) * 0.9f;
@@ -228,6 +230,14 @@ namespace BAM.Sim
             if (p.Alive && p.Hp < p.MaxHp * TutPlayerFloor) p.Hp = p.MaxHp * TutPlayerFloor;
 
             var k = tu.Guard;
+            // Knut cannot fall before his lesson either: Tyra's double damage could take his 380 before the hook, and then "Tap BLINK
+            // to dash away!" stood over an empty lane and "Now take Knut down!" never came (full review 2026-11-13 nr 111).
+            // TutUnkillable keeps one big hit from finishing him between two ticks; from the fight moment he can fall.
+            if (k != null && k.Alive)
+            {
+                k.TutUnkillable = tu.Step < Tutorial.StepFight;
+                if (k.TutUnkillable && k.Hp < k.MaxHp * TutKnutFloor) k.Hp = k.MaxHp * TutKnutFloor;
+            }
             if (k != null && k.Alive && tu.Step < Tutorial.StepThrow)
             {
                 if (k.X >= TutGuardX1) tu.GuardDir = -1; else if (k.X <= TutGuardX0) tu.GuardDir = 1;
