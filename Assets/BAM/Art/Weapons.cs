@@ -523,6 +523,8 @@ namespace BAM.Art
         public Material[] Opaque, Fade;
 
         Transform root;
+        // cloth ribbons hanging from the props (Moa's shield and staff, PropSway)
+        readonly List<PropSway> sways = new List<PropSway>();
         // weapons
         WeaponDef[] defs;
         Transform[] wT, hand, index;
@@ -808,6 +810,8 @@ namespace BAM.Art
             float mh = Mathf.Max(1e-4f, mesh.bounds.size.y);
             var go = new GameObject("Weapon " + W.Model);
             MakeRenderer(go, mesh, W.Model, rends, op, fd);
+            PropSway ps = PropSway.For(go, W.Model, root);
+            if (ps != null) sways.Add(ps);
             Transform t = go.transform;
             t.SetParent(hd, false);
             t.rotation = Quaternion.LookRotation(fingers.normalized, handle);
@@ -995,6 +999,8 @@ namespace BAM.Art
             sAnchor.SetParent(root, false);
             var go = new GameObject("Shield " + S.Model);
             MakeRenderer(go, mesh, S.Model, rends, op, fd);
+            PropSway sw = PropSway.For(go, S.Model, root);
+            if (sw != null) sways.Add(sw);
             sModel = go.transform;
             sModel.SetParent(sAnchor, false);
             sMeshH = Mathf.Max(1e-4f, mesh.bounds.size.y);
@@ -1089,6 +1095,10 @@ namespace BAM.Art
         /// <summary>The swing or cast was cut before its release (EventType.Interrupt): a weapon waiting to leave the hand stays, the
         /// cannon does not kick; one already away comes back as usual.</summary>
         public void Cancel() { hideIn = -1f; kickIn = -1f; }
+
+        /// <summary>The props' cloth ribbons, after everything has posed the body and placed the props this frame.</summary>
+        internal void TickSway(float dt, bool on) { foreach (PropSway p in sways) p.Tick(dt, on); }
+        internal void KickSway(float delay, float fwd, float up) { foreach (PropSway p in sways) p.Kick(delay, fwd, up); }
 
         /// <summary>A cannon kicks back as its shot leaves, after <paramref name="delay"/> seconds (the blow).</summary>
         public void Fire(float delay)

@@ -46,6 +46,7 @@ namespace BAM.Art
             public float Inward = 0.12f;     // Skirt: how far a part may swing in towards the legs (share of its length)
             public float Top0, Top1;         // BackFlaps: height above the hips (share of height) where the flaps hang free (Top1 = full)
             public float Low;                // BackFlaps: and above this (the seat below stays put)
+            public bool Single;              // BackFlaps: one spring for the whole flap (long hair, one piece), not one per side
             public bool FrontOnly;           // Skirt: only cloth in front of the hips (a single front panel; the seat behind stays put)
             public float Kick = 1f;          // how hard the hero's own moves push it (secondary action, Kick); 0 = never
         }
@@ -77,7 +78,14 @@ namespace BAM.Art
                 case 3: // Moa: only the narrow embroidered panel hanging in front between her legs (Rickard 2026-11-12: "moas kläder och hår
                         // kanske kunde använda den nya funktionen"). Front only and narrow: the 9 Nov try (removed, "det buggar") took the
                         // back skirt too, which is the same shell as her seat and the backs of her thighs (measured again on Moa.fbx)
-                    return new[] { new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.07f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.3f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f } };
+                    // + the lower end of her long hair (Rickard 2026-11-13: "och hennes hår"): only its bottom, from shoulder-blade height
+                    // down, behind her back and in from its edges, on one spring that lifts it out from her back and never in (rendered on
+                    // Moa.fbx at 12 degrees out: bam-work/cloth/round7/moa-har.png); a small swing, since its top is her back's surface
+                    return new[]
+                    {
+                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.07f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.3f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
+                        new Spec { Kind = Kind.BackFlaps, Single = true, Top0 = 0.254f, Top1 = 0.194f, Low = 0.054f, Back0 = 0.117f, Back1 = 0.147f, MaxSide = 0.075f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 12f, Drag = 0.04f, Flare = 0.12f, Inward = 0f, Kick = 0.6f },
+                    };
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
                     return new[]
                     {
@@ -351,8 +359,10 @@ namespace BAM.Art
                         if (ab <= sp.Low || ab >= sp.Top0 || Share(i, setA) < 0.8f) continue;
                         float bk = Vector3.Dot(v[i] - hp, back) / H;
                         float s = Smooth((sp.Top0 - ab) / Mathf.Max(1e-4f, sp.Top0 - sp.Top1)) * Smooth((bk - sp.Back0) / Mathf.Max(1e-4f, sp.Back1 - sp.Back0));
+                        float sd = Vector3.Dot(v[i] - hp, right);
+                        if (sp.MaxSide > 0f) s *= Smooth((sp.MaxSide * H - Mathf.Abs(sd)) / (0.33f * sp.MaxSide * H)); // its edges stay on the body
                         if (s <= 0.005f) continue;
-                        int k = Vector3.Dot(v[i] - hp, right) >= 0f ? 1 : 0;
+                        int k = sp.Single || sd >= 0f ? 1 : 0;
                         sw[i] = s; side[i] = k;
                         sum[k] += v[i] * s; ws[k] += s;
                     }
@@ -604,6 +614,183 @@ namespace BAM.Art
                 s.Tip = pivot + dir * L;
                 s.T.rotation = Quaternion.FromToRotation(restN, dir) * p.rotation;
             }
+        }
+    }
+
+    /// <summary>
+    /// The cloth ribbons and charms hanging from a held prop (Moa's shield and staff; Rickard 2026-11-13: "moa kan vi animera tyg på
+    /// sköld och vapen också?"). The props are plain meshes (Props, the old game's format) on a MeshRenderer, so the ribbons are bent
+    /// on the CPU: each hanging group is one damped pendulum as in ClothSway, and its vertices turn about the group's tie point by
+    /// their share. A few hundred vertices a frame on a copy of the mesh per view; the prop's own placement (Weapons, WeaponTune.json)
+    /// is untouched. The groups are measured on the meshes (bam-work/cloth/round7/), in the mesh's own space: bottom at y = 0,
+    /// fractions of its height.
+    /// </summary>
+    sealed class PropSway
+    {
+        readonly Transform t, body;
+        readonly Mesh mesh;
+        readonly Vector3[] baseV, outV;
+        readonly int[] grp;
+        readonly float[] wt;
+        readonly Vector3[] pivotL, restL;
+        readonly Vector3[] tip, vel, lastPivot, lastTarget;
+        readonly bool[] live;
+        readonly float hz, damping, maxAngle, drag;
+        bool wasOn = true;
+        struct Push { public float At, Fwd, Up; }
+        readonly Push[] pushes = new Push[4];
+        int pushN;
+
+        static float Smooth(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+
+        /// <summary>null when this prop has no hanging cloth, or its mesh can't be read.</summary>
+        internal static PropSway For(GameObject go, string model, Transform body)
+        {
+            var mf = go.GetComponent<MeshFilter>();
+            Mesh src = mf != null ? mf.sharedMesh : null;
+            if (src == null || !src.isReadable) return null;
+            if (model != "moa_shield" && model != "moa_staff") return null;
+            Vector3[] v = src.vertices;
+            float H = Mathf.Max(1e-4f, src.bounds.size.y);
+            int n = v.Length;
+            var w = new float[n];
+            var g = new int[n];
+            int groups;
+            if (model == "moa_shield")
+            {
+                // three ribbons (and the charms on them) below the round shield (centre 0.63 up, radius 0.33): what lies beyond 0.92 of
+                // the rim and below the centre, full 0.12 further out; left, middle and right each on its own spring
+                groups = 3;
+                var c = new Vector2(0f, 0.63f * H);
+                for (int i = 0; i < n; i++)
+                {
+                    if (v[i].y >= c.y) continue;
+                    float d = Vector2.Distance(new Vector2(v[i].x, v[i].y), c);
+                    w[i] = Smooth((d - 0.92f * 0.33f * H) / (0.12f * H));
+                    g[i] = v[i].x < -0.13f * H ? 0 : v[i].x > 0.13f * H ? 2 : 1;
+                }
+            }
+            else
+            {
+                // the ribbon bundle tied below the crest on the shaft's right side (x > 0), from 0.71 of its height down to 0.2
+                groups = 1;
+                for (int i = 0; i < n; i++)
+                {
+                    float y = v[i].y / H;
+                    if (y >= 0.72f) continue;
+                    w[i] = Smooth((v[i].x / H + 0.01f) / 0.02f) * Smooth((0.71f - y) / 0.06f) * Smooth((y - 0.2f) / 0.03f);
+                }
+            }
+            var sum = new Vector3[groups]; var ws = new float[groups];
+            for (int i = 0; i < n; i++) if (w[i] > 0.005f) { sum[g[i]] += v[i] * w[i]; ws[g[i]] += w[i]; }
+            var pivot = new Vector3[groups]; var rest = new Vector3[groups];
+            int any = 0;
+            for (int k = 0; k < groups; k++)
+            {
+                if (ws[k] < 1f) { ws[k] = 0f; continue; }
+                any++;
+                Vector3 mid = sum[k] / ws[k];
+                if (model == "moa_shield")
+                {
+                    // tied on at the rim, towards the group's middle
+                    Vector2 c = new Vector2(0f, 0.63f * H), dir = (new Vector2(mid.x, mid.y) - c).normalized;
+                    Vector2 at = c + dir * (0.92f * 0.33f * H);
+                    pivot[k] = new Vector3(at.x, at.y, mid.z);
+                }
+                else pivot[k] = new Vector3(mid.x, 0.71f * H, mid.z);
+                rest[k] = mid - pivot[k];
+            }
+            if (any == 0) return null;
+            for (int i = 0; i < n; i++) if (w[i] > 0.005f && ws[g[i]] == 0f) w[i] = 0f;
+            Mesh m = Object.Instantiate(src);
+            m.name = src.name + " (cloth)";
+            m.MarkDynamic();
+            mf.sharedMesh = m;
+            return new PropSway(go.transform, body, m, v, g, w, pivot, rest, model == "moa_shield" ? 2.3f : 2.5f, 0.38f, model == "moa_shield" ? 28f : 30f, 0.05f);
+        }
+
+        PropSway(Transform t, Transform body, Mesh m, Vector3[] v, int[] g, float[] w, Vector3[] pivot, Vector3[] rest, float hz, float damping, float maxAngle, float drag)
+        {
+            this.t = t; this.body = body; mesh = m; baseV = v; outV = (Vector3[])v.Clone(); grp = g; wt = w;
+            pivotL = pivot; restL = rest; this.hz = hz; this.damping = damping; this.maxAngle = maxAngle; this.drag = drag;
+            int k = pivot.Length;
+            tip = new Vector3[k]; vel = new Vector3[k]; lastPivot = new Vector3[k]; lastTarget = new Vector3[k]; live = new bool[k];
+        }
+
+        /// <summary>As ClothSway.Kick: the hero's own move pushes the ribbons.</summary>
+        internal void Kick(float delay, float fwd, float up)
+        {
+            if (!AnimFix.ClothKicks) return;
+            if (pushN == pushes.Length) { for (int i = 1; i < pushN; i++) pushes[i - 1] = pushes[i]; pushN--; }
+            pushes[pushN++] = new Push { At = Mathf.Max(0f, delay), Fwd = fwd, Up = up };
+        }
+
+        internal void Tick(float dt, bool on)
+        {
+            if (t == null) return;
+            if (!on)
+            {
+                if (wasOn) { wasOn = false; mesh.vertices = baseV; for (int k = 0; k < live.Length; k++) live[k] = false; }
+                pushN = 0;
+                return;
+            }
+            wasOn = true;
+            if (dt <= 0f) return;
+            Vector3 push = Vector3.zero;
+            for (int i = 0; i < pushN;)
+            {
+                pushes[i].At -= dt;
+                if (pushes[i].At > 0f) { i++; continue; }
+                push += body.forward * pushes[i].Fwd + Vector3.up * pushes[i].Up;
+                pushes[i] = pushes[--pushN];
+            }
+            int steps = Mathf.Clamp(Mathf.CeilToInt(dt * 90f), 1, 6);
+            float h = dt / steps, wq = 2f * Mathf.PI * hz, kq = wq * wq, cq = 2f * damping * wq;
+            Quaternion inv = Quaternion.Inverse(t.rotation);
+            var turn = new Quaternion[pivotL.Length];
+            for (int k = 0; k < pivotL.Length; k++)
+            {
+                turn[k] = Quaternion.identity;
+                Vector3 rest = t.TransformVector(restL[k]);
+                float L = rest.magnitude;
+                if (!(L > 1e-5f)) continue;
+                Vector3 restN = rest / L;
+                Vector3 pivot = t.TransformPoint(pivotL[k]);
+                Vector3 target = pivot + rest;
+                if (!live[k] || (pivot - lastPivot[k]).sqrMagnitude > 4f * L * L) // first frame, a respawn or a Blink: at rest
+                {
+                    live[k] = true; tip[k] = target; vel[k] = Vector3.zero; lastPivot[k] = pivot; lastTarget[k] = target;
+                    continue;
+                }
+                Vector3 pv = (pivot - lastPivot[k]) / dt;
+                Vector3 trail = -pv * drag;
+                if (trail.sqrMagnitude > 0.16f * L * L) trail = trail.normalized * (0.4f * L);
+                target += trail;
+                vel[k] += push * (L * wq * 0.6f);
+                for (int i = 1; i <= steps; i++)
+                {
+                    Vector3 tg = Vector3.Lerp(lastTarget[k], target, (float)i / steps);
+                    vel[k] += ((tg - tip[k]) * kq - vel[k] * cq) * h;
+                    tip[k] += vel[k] * h;
+                }
+                lastTarget[k] = target; lastPivot[k] = pivot;
+                Vector3 dir = tip[k] - pivot;
+                dir = dir.sqrMagnitude < 1e-10f ? restN : dir.normalized;
+                float ang = Vector3.Angle(restN, dir);
+                if (ang > maxAngle) dir = Vector3.Slerp(restN, dir, maxAngle / ang);
+                tip[k] = pivot + dir * L;
+                turn[k] = inv * Quaternion.FromToRotation(restN, dir) * t.rotation; // the same turn in the mesh's own space
+            }
+            for (int i = 0; i < baseV.Length; i++)
+            {
+                float w = wt[i];
+                if (w <= 0f) continue;
+                int k = grp[i];
+                Vector3 b = baseV[i], p = pivotL[k];
+                Vector3 moved = p + turn[k] * (b - p);
+                outV[i] = b + (moved - b) * w;
+            }
+            mesh.vertices = outV;
         }
     }
 }

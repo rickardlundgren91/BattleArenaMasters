@@ -715,7 +715,7 @@ namespace BAM.Art
                 if (AnimFix.BlowTiming && !Phased(HeroIndex)) BlowSegment(len);
             }
             // secondary action (Cajsa 2026-11-11): the coil tugs the cloth back a little, the blow throws it on past the body
-            if (cloth != null) { cloth.Kick(0f, -0.2f, 0f); cloth.Kick(atkSeg ? atkHitAt : windup, 0.6f, 0.15f); }
+            ClothKick(0f, -0.2f, 0f); ClothKick(atkSeg ? atkHitAt : windup, 0.6f, 0.15f);
             if (gear != null)
             {
                 // a bomb leaves the hand as the shot leaves it; Tikta's needle leaves the fist she throws with for a moment (TIKTA-06)
@@ -759,6 +759,9 @@ namespace BAM.Art
         // (aimYaw) and stays in her archer's stance between shots (Stance)
         bool Bow => IsHero && bowHero && AnimFix.BlowTiming;
 
+        // the hero's own move pushes the body's cloth and the props' ribbons alike (secondary action)
+        void ClothKick(float delay, float fwd, float up) { cloth?.Kick(delay, fwd, up); gear?.KickSway(delay, fwd, up); }
+
         public override void PlayCast() => PlayCast(false);
 
         public override void PlayCast(bool drag)
@@ -776,7 +779,7 @@ namespace BAM.Art
                 clips[CCast].SetTime(c0); clips[CCast].SetTime(c0); upCast.SetTime(c0); upCast.SetTime(c0);
             }
             if (gear != null) ThrowOnCast(clips != null ? castBlowAt : castLen * 0.35f);
-            cloth?.Kick(clips != null ? castBlowAt : castLen * 0.35f, 0.8f, 0.3f); // a special's peak throws the cloth harder than a swing
+            ClothKick(clips != null ? castBlowAt : castLen * 0.35f, 0.8f, 0.3f); // a special's peak throws the cloth harder than a swing
         }
 
         // what leaves the hand at the cast's peak: Blast's bomb (Thrown), and Knut's anchor only on the hook (the drag), for about as
@@ -838,7 +841,7 @@ namespace BAM.Art
             }
             hitLen = big ? 0.25f : 0.14f;
             recoil = big ? 1f : 0.6f;
-            cloth?.Kick(0f, big ? -0.8f : -0.35f, big ? 0.25f : 0.1f); // the flinch jolts the cloth back
+            ClothKick(0f, big ? -0.8f : -0.35f, big ? 0.25f : 0.1f); // the flinch jolts the cloth back
             flashColor = big ? new Color(1f, 0.55f, 0.35f) : new Color(1f, 0.45f, 0.4f); // a short red blink on every hit (MLBB analysis 7)
         }
 
@@ -1153,6 +1156,7 @@ namespace BAM.Art
             {
                 if (!clothTried) { clothTried = true; cloth = ClothSway.For(anim, rends, HeroIndex); }
                 cloth?.Tick(dt, AnimFix.Cloth);
+                gear?.TickSway(dt, AnimFix.Cloth); // the cloth on the held props (Moa's shield and staff)
             }
 
             // the old game's dust puffs behind running heroes (View3DWorld.SyncAmbience); none while see-through or hidden, so it never gives a hider away
