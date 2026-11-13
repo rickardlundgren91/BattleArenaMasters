@@ -1390,8 +1390,8 @@ namespace BAM.Game
 
         /// <summary>The share left of each of Moa's shields on u: Queen's Instinct by its flag, then Honey Guard and the field's
         /// shield told apart by what they started with (18 % and 6 % of max health). In the one-tap game every shield of hers but
-        /// Queen's is the field's: since 2026-11-13 it is a quarter of MOA's max health, as big as a Honey Guard, so the size cannot
-        /// tell them apart there (Rickard "sköld 25% av moas maxhp"). -1 where there is none.</summary>
+        /// Queen's is the field's: since 2026-11-13 it is 15 % of MOA's max health, above the split on most allies, so the size cannot
+        /// tell them apart there (Rickard "sköld 25% av moas maxhp", then 15 %). -1 where there is none.</summary>
         static void HoneyLeft(Unit u, ref float guard, ref float field, ref float queen)
         {
             float split = u.MaxHp * (MoaS.ShieldPercent + MoaS.AreaShieldPercent) * 0.5f;

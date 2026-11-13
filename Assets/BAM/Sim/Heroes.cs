@@ -121,14 +121,16 @@ namespace BAM.Sim
     public static class MoaS
     {
         public const float Range = 5, ShieldPercent = 0.18f, Duration = 3, AreaRadius = 1.8f, AreaShieldPercent = 0.06f, AreaDuration = 3, FieldDuration = 2;
-        /// <summary>The honey field's shield with the one-tap special (Match.OneTap): a quarter of MOA's own max health on each ally hero
-        /// in the field (Rickard 2026-11-13 "sköld 25% av moas maxhp", then "15%- dmg": her damage 15 % lower with it, Defs; after
-        /// "känns som man sköldar 3%": the 7 % of the ally's max health was 36 hp mid-match, one average hit of 37, gone after 2.2 s
-        /// and 8 % of her team's damage taken). AreaShieldPercent (6 % of the ally's) is the old drag's.</summary>
-        public const float FieldShieldOneTap = 0.25f; // of Moa's max health (MoaShield ofMoa); was 7 % of the ally's
+        /// <summary>The honey field's shield with the one-tap special (Match.OneTap): 15 % of MOA's own max health on each ally hero in
+        /// the field, about 70 hp mid-match, two average hits (Rickard 2026-11-13 "sköld 25% av moas maxhp", then "15%- dmg": her damage
+        /// 15 % lower with it, Defs; after "känns som man sköldar 3%": the 7 % of the ally's max health was 36 hp mid-match, one average
+        /// hit of 37, gone after 2.2 s and 8 % of her team's damage taken). 25 % made her win 72 % against Hard bots (53 % before), so
+        /// Rickard took 15 % (55 %). AreaShieldPercent (6 % of the ally's) is the old drag's.</summary>
+        public const float FieldShieldOneTap = 0.15f; // of Moa's max health (MoaShield ofMoa); 7 % of the ally's -> 25 % -> 15 % of Moa's (2026-11-13)
         // was // 12 -> 10 % (Rickard 2026-11-02 "nerfa skölden lite men inte i tid"; Hard bots Moa 61 -> 55 %); 10 -> 8 % (tester 2026-11-03: Moa the strongest; Rickard ok); 8 -> 7 % as it lasts 8 s (Rickard 2026-11-10)
-        /// <summary>How long the one-tap field's shield lasts: 5 s (Rickard 2026-11-02 "minst 5"; AreaDuration 3 s is the old drag's).</summary>
-        public const float FieldShieldTimeOneTap = 8; // 5 -> 8 s (Rickard 2026-11-10: "Moas sköldar ska hålla 3 sek längre, ge mindre mängd sköld")
+        /// <summary>How long the one-tap field's shield lasts: 7 s (Rickard 2026-11-13 "Den ska hålla 4 sekunder", then "Ok 7 sek", with
+        /// the bigger shield; AreaDuration 3 s is the old drag's).</summary>
+        public const float FieldShieldTimeOneTap = 7; // 5 s (Rickard 2026-11-02 "minst 5") -> 8 s (2026-11-10 "Moas sköldar ska hålla 3 sek längre, ge mindre mängd sköld") -> 7 s (2026-11-13)
         public const float SpeedBonus = 0.1f, SpeedDuration = 1.5f;
         public const float QueenRange = 4, QueenThreshold = 0.25f, QueenShieldPercent = 0.07f, QueenDuration = 5, QueenCooldown = 22;
     }
