@@ -92,7 +92,9 @@ namespace BAM.Art
                         // egentligen också ska röra sig"): the whole width of the panel (to 0.05 out, its gold edges too) on ONE spring, picked
                         // by lying in front of her thighs (0.045-0.053 in front of the hips) instead of by distance to the leg bones, which
                         // left its edges on the thighs and split the middle over three springs (measured on Moa.fbx)
-                        new Spec { Kind = Kind.Skirt, Single = true, Front0 = 0.045f, Front1 = 0.053f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.056f, SideFade = 0.008f, FrontOnly = true, Hz = 2.0f, Damping = 0.3f, MaxAngle = 30f, Drag = 0.08f, Flare = 0.3f, Inward = 0.06f, Flutter = 0.35f, Kick = 1.5f },
+                        // REVERTED 2026-11-13 (Rickard: "moas mitt tyg är buggat nu mer än innan ... ha som det va för ett tag sen"): back to the 12 Nov
+                        // panel (round 6); the whole-width try above (Single, Front0/1, Flutter) is unused for now
+                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.07f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.3f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
                         new Spec { Kind = Kind.BackFlaps, Single = true, Top0 = 0.254f, Top1 = 0.194f, Low = 0.054f, Back0 = 0.117f, Back1 = 0.147f, MaxSide = 0.075f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 12f, Drag = 0.04f, Flare = 0.12f, Inward = 0f, Kick = 0.6f },
                     };
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
