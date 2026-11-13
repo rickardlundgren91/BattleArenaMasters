@@ -102,7 +102,11 @@ namespace BAM.Sim
                     if (d >= min) continue;
                     float nx = (u.X - tw.X) / (d != 0 ? d : 1), ny = (u.Y - tw.Y) / (d != 0 ? d : 1), side = u.X >= tw.X ? 1 : -1;
                     if (u.IsMinionLike && Math.Abs(u.X - tw.X) < 0.08f) side = u.Serial % 2 == 0 ? 1 : -1; // straight behind a tower: one fixed side (the wolf too, as the old "minion")
-                    nx += -ny * side * 0.6f * (t == 0 ? 1 : -1); // mirrored for the top tower (bug review nr 11: it pushed in, not round)
+                    // the side part points away from the tower's middle line, in front of the tower and behind it. In front it is the same
+                    // push as before (bug review nr 11: it pushed in, not round); behind the tower the old sign pointed back at the line,
+                    // so a hero walking straight out of its base (the player's seat, a revive and a Recall are 4 tiles straight behind it)
+                    // stood stuck there for good with the stick within about 8 degrees of straight up (review 2026-11-13, nr 1)
+                    nx += Math.Abs(ny) * side * 0.6f;
                     float m = SimMath.Hypot(nx, ny); if (m == 0) m = 1;
                     float px = u.X + nx / m * (min - d + 0.01f), py = u.Y + ny / m * (min - d + 0.01f);
                     if (Map.Free(px, py, u.R)) { u.X = px; u.Y = py; }
