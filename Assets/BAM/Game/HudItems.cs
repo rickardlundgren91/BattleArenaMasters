@@ -17,8 +17,7 @@ namespace BAM.Game
     /// every control. They open by themselves only while the player is dead or calm behind our own tower; anywhere else a pulsing
     /// ITEM button by the SPECIAL waits (where the next item will sit) and opens them, and a hit takes them back to the button
     /// (review 2026-11-13 nr 2: at 1:20 and 2:56 they came up in the middle of tower fights and lay over RESPAWN IN). The items
-    /// held sit as two small icons beside the SPECIAL on the screen's inner side, dark while they cool down, Resonance Core with
-    /// its Echoes; a finger held on one shows what it does, as on the SPECIAL (HudHold.cs; Rickard 2026-11-13). Pure display and
+    /// held sit as two small icons beside the SPECIAL on the screen's inner side, dark while they cool down; a finger held on one shows what it does, as on the SPECIAL (HudHold.cs; Rickard 2026-11-13). Pure display and
     /// input: the pick goes to the rules through PlayerInput.ItemPick.
     /// </summary>
     sealed partial class Hud
@@ -373,44 +372,22 @@ namespace BAM.Game
                 heldRing[i].rectTransform.sizeDelta = Vector2.one * (2f * 1.12f * r + 8f); // just outside the icon (the SPECIAL's: 1.12 radii + 8)
                 float cd = ItemCooldown(it.Id), left = it.ReadyAt - m.Time;
                 heldCd[i].fillAmount = cd > 0 && left > 0 ? Mathf.Clamp01(left / cd) : 0f;
-                int echoes = it.Id == ItemId.Echo ? it.Stacks : 0;
-                heldCount[i].text = echoes > 0 ? EchoText[Mathf.Min(echoes, EchoText.Length - 1)] : "";
             }
         }
-        static readonly string[] EchoText = { "", "1", "2" };
 
         // ---------- the marks by the health bars (the old HudItemsV2.cs), kept few and plain so they read on a phone ----------
-        //   Resonance Core: one cyan diamond per stored Echo left on the bar, for every hero holding it
         //   Quarry Mark: its icon over a marked enemy while the mark lasts (everyone sees it: it tells the team whom to hit)
         //   Thicket Fang: its icon over the holder while its next hero hit is armed (own team only: the enemy should not know)
-        static readonly Color EchoCyan = Hex(0x8fe9ff);
 
         void BuildItemMarks(Overhead o)
         {
             var mk = UiKit.NewRect("ItemMark", o.Root);
             mk.anchorMin = mk.anchorMax = mk.pivot = new Vector2(0.5f, 0.5f);
             o.ItemMark = mk.gameObject.AddComponent<Image>(); o.ItemMark.raycastTarget = false; o.ItemMark.preserveAspect = true; o.ItemMark.enabled = false;
-            for (int k = 0; k < o.Echo.Length; k++)
-            {
-                var d = UiKit.NewRect("Echo" + k, o.Root);
-                d.anchorMin = d.anchorMax = d.pivot = new Vector2(0.5f, 0.5f);
-                d.localRotation = Quaternion.Euler(0f, 0f, 45f);
-                var img = o.Echo[k] = d.gameObject.AddComponent<Image>(); img.raycastTarget = false; img.color = EchoCyan; img.enabled = false;
-                var edge = img.gameObject.AddComponent<Outline>(); edge.effectColor = new Color(0.04f, 0.12f, 0.24f, 0.9f); edge.effectDistance = new Vector2(1.5f, -1.5f);
-            }
         }
 
         void ItemMarksFrame(Overhead o, Unit u, float ts, float bw)
         {
-            int echoes = u.IsClone ? 0 : u.Echoes;
-            for (int k = 0; k < o.Echo.Length; k++)
-            {
-                bool on = k < echoes; if (o.Echo[k].enabled != on) o.Echo[k].enabled = on;
-                if (!on) continue;
-                float side = ts * 0.12f;
-                o.Echo[k].rectTransform.sizeDelta = new Vector2(side, side);
-                o.Echo[k].rectTransform.anchoredPosition = new Vector2(-bw * ts / 2f - 8f - k * side * 1.6f, 0f);
-            }
             bool marked = false;
             for (int s = 0; s < u.StatusCount; s++) { var st = u.GetStatus(s); if (st.Type == St.QuarryMark && st.T > 0f) { marked = true; break; } }
             bool fang = !marked && !u.IsClone && u.Team == m.Player.Team && u.FangArmed(m.Time);

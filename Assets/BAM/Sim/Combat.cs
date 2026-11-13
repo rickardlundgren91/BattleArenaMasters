@@ -547,7 +547,7 @@ namespace BAM.Sim
             if (t.IsClone) return; // Fenn's decoy gives no charge and no on-hit passives (old phantomHit)
             if (dealt <= 0 && t.Has(St.Invulnerable)) return; // nor does a hit on respawn protection (precision CHAINMAP-06; a shield still charges)
             if (h.Hero == HeroId.Tikta) TiktaTryMark(h, t, dealt);
-            ItemsOnAutoHit(h, t); // Resonance Core, Quarry Mark, Thicket Fang (Items.cs)
+            ItemsOnAutoHit(h, t); // Quarry Mark, Thicket Fang (Items.cs)
             if (!h.KuggRooted) h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1); // Kugg gathers no charge while anchored (ROI17's stocks)
             // a killing blow puts nothing on the corpse: Knut's slow sat on a dead hero through the wait (statuses do not tick while
             // dead) and came back with him (full review 2026-11-09 nr 72). The charge and the hero's own passives are still his.

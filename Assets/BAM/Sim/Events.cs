@@ -45,7 +45,7 @@ namespace BAM.Sim
         TranceStep,    // Skrall A's Trance gathered one more step: V = the steps he has now (1-3); Big = the full three
         FlockEnd,      // Ravna A is herself again at X/Y after her Crow Flock
         ItemPicked,    // hero A took item Kind (ItemId) from its offer (Items.cs)
-        ItemProc,      // item Kind (ItemId) worked on A: V = Resonance Core's Echoes now (0 = spent), Quarry Mark 0 = marked, 1 = spent
+        ItemProc,      // item Kind (ItemId) worked on A: Quarry Mark 0 = marked, 1 = spent
         FennVeil,      // Fenn A vanished (his Veil): V = seconds; his decoy comes with its own CloneSpawn
         VeilStrike,    // Fenn A attacked B out of his Veil: he is seen again, this hit is the Shadow Strike (Big)
         VeilEnd,       // Fenn A's Veil ran out without an attack: he is seen again at X/Y

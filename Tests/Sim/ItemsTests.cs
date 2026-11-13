@@ -91,15 +91,6 @@ namespace BAM.Sim
             Check(Math.Abs(hp0 - e.Hp - 12) < 1e-3f && e.Find(St.QuarryMark) < 0, $"another ally's hit does +20 % and spends the mark ({hp0 - e.Hp:0.0})");
             a.ItemCount = 0; e.Hp = e.MaxHp;
 
-            // Resonance Core: 4 hits = 1 Echo, max 2; the special spends them
-            Give(a, ItemId.Echo);
-            for (int k = 0; k < 12; k++) m.ItemsOnAutoHit(a, e);
-            Check(a.Echoes == 2, $"Resonance Core: 12 hits store 2 Echoes (max) ({a.Echoes})");
-            m.ItemsOnCast(a);
-            float sh = a.ShieldAmount;
-            Check(a.Echoes == 0 && Math.Abs(sh - a.MaxHp * 0.08f) < 0.01f && a.Find(St.SpeedPct) >= 0, $"the special spends them for an 8 % shield and speed ({sh:0.0})");
-            a.ClearStatuses(); a.ItemCount = 0;
-
             // Thicket Fang: out of a bush arms the next hit: +25 % and a slow
             Give(a, ItemId.Fang);
             a.Items[0].Was = true; // stood in grass last tick

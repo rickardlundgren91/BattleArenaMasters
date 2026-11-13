@@ -70,12 +70,6 @@ namespace BAM.Game
         {
             switch (id)
             {
-                case 1: // Resonance Core: a crystal with two sound arcs
-                {
-                    float d = Poly(x, y, Crystal);
-                    float arcs = Math.Max(Math.Abs(Len(x, y) - 0.6f) - 0.055f, Math.Max(Math.Abs(y) - 0.26f, 0.42f - Math.Abs(x)));
-                    return Math.Min(d, arcs);
-                }
                 case 2: // Quarry Mark: a crosshair
                 {
                     float ring = Math.Abs(Len(x, y) - 0.4f) - 0.065f;
@@ -148,7 +142,6 @@ namespace BAM.Game
             return 9f;
         }
 
-        static readonly float[] Crystal = { 0f, 0.62f, 0.3f, 0.12f, 0f, -0.62f, -0.3f, 0.12f };
         static readonly float[] Shield = { -0.46f, 0.5f, 0.46f, 0.5f, 0.46f, 0.02f, 0f, -0.62f, -0.46f, 0.02f };
         static readonly float[] Flag = { -0.34f, 0.56f, 0.52f, 0.4f, 0.3f, 0.24f, 0.52f, 0.08f, -0.34f, 0.0f };
         static readonly float[] Gem = { 0f, 0.17f, 0.13f, 0f, 0f, -0.17f, -0.13f, 0f };

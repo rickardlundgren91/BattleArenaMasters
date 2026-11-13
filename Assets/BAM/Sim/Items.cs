@@ -4,14 +4,16 @@ namespace BAM.Sim
 {
     /// <summary>The match items (Rickard 2026-11-11, thread "Lägg in sex items i BAM"): Simon's Items V2 from the old game
     /// (Speltest SimItemsV2.cs, XYZ main cb45566), the six Rickard kept. Sole Target Sigil and Siege Banner are left out.</summary>
-    public enum ItemId : byte { None = 0, Echo = 1, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10 }
+    /// 1 was Resonance Core, removed from the game 2026-11-13 (Rickard: "inte rätt item för spelet. ta bort"); the number stays free
+    /// so the other items keep their ids on the wire and in match traces.
+    public enum ItemId : byte { None = 0, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10 }
 
     /// <summary>One item a hero holds and its state. Times are match times (ReadyAt: the item works again from then).</summary>
     public struct ItemSlot
     {
         public ItemId Id;
         public float ReadyAt;
-        /// <summary>Resonance Core: Echoes stored and hits towards the next. Thicket Fang: armed until Until; Was = stood in grass
+        /// <summary>Thicket Fang: armed until Until; Was = stood in grass
         /// last tick. Steadfast Charm: its speed comes at Until; At = when it last shortened a control.</summary>
         public int Stacks, Hits;
         public float Until, At;
@@ -29,9 +31,6 @@ namespace BAM.Sim
         /// <summary>The odds per rarity (common, rare, epic, legendary), from the old game's itemData.rarityOdds.</summary>
         public static readonly float[] RarityOdds = { 55, 25, 15, 5 };
 
-        // Resonance Core (epic)
-        public const int EchoHits = 4, EchoMax = 2;
-        public const float EchoShield = 0.04f, EchoShieldTime = 1.25f, EchoSpeed = 0.08f, EchoSpeedTime = 1.25f;
         // Quarry Mark (rare)
         public const float MarkTime = 1.5f, MarkBonus = 0.20f, MarkCd = 4;
         // Thicket Fang (rare)
@@ -60,8 +59,7 @@ namespace BAM.Sim
         static readonly Info[] all =
         {
             null,
-            new Info { Id = ItemId.Echo, Short = $"Hits on heroes charge your SPECIAL with a shield and speed", Name = "Resonance Core", Rarity = 2, Icon = "item_v2_resonance_core",
-                Text = $"Every {ItemS.EchoHits} hits on heroes build an Echo (max {ItemS.EchoMax}). Your next SPECIAL spends them: a {P(ItemS.EchoShield)} max HP shield and +{P(ItemS.EchoSpeed)} move speed for {ItemS.EchoSpeedTime}s per Echo" },
+            null, // 1: Resonance Core, removed 2026-11-13
             new Info { Id = ItemId.Mark, Short = $"Mark a hero: the next ally hit deals +{P(ItemS.MarkBonus)}", Name = "Quarry Mark", Rarity = 1, Icon = "item_v2_hunters_mark",
                 Text = $"Your attack marks an enemy hero for {ItemS.MarkTime}s. The next hit on it from another ally deals +{P(ItemS.MarkBonus)} damage (cd {ItemS.MarkCd}s)" },
             new Info { Id = ItemId.Fang, Short = $"Leave a bush: your next hit deals +{P(ItemS.FangBonus)} and slows", Name = "Thicket Fang", Rarity = 1, Icon = "item_v2_thicket_fang",
@@ -104,8 +102,6 @@ namespace BAM.Sim
 
         public bool HasItem(ItemId id) { for (int i = 0; i < ItemCount; i++) if (Items[i].Id == id) return true; return false; }
         internal int ItemIndex(ItemId id) { for (int i = 0; i < ItemCount; i++) if (Items[i].Id == id) return i; return -1; }
-        /// <summary>Resonance Core's stored Echoes (0 without the item): the HUD draws them over the health bar.</summary>
-        public int Echoes { get { int i = ItemIndex(ItemId.Echo); return i >= 0 ? Items[i].Stacks : 0; } }
         /// <summary>Thicket Fang is armed (the HUD shows it to the holder's team).</summary>
         public bool FangArmed(float now) { int i = ItemIndex(ItemId.Fang); return i >= 0 && Items[i].Until > now; }
     }
@@ -141,7 +137,7 @@ namespace BAM.Sim
             }
         }
 
-        /// <summary>Three items the hero does not hold, weighted by rarity, from all ten: every hero can be offered every item
+        /// <summary>Three items the hero does not hold, weighted by rarity, from all nine: every hero can be offered every item
         /// (Rickard 2026-11-13, full review nr 113: "alla heroes ska kunna få alla items"; the old game's role filter is gone).</summary>
         void RollOffer(Unit h)
         {
@@ -149,7 +145,7 @@ namespace BAM.Sim
             for (int k = 1; k <= ItemCatalog.Count; k++)
             {
                 var id = (ItemId)k;
-                if (h.HasItem(id)) continue;
+                if (ItemCatalog.Get(id) == null || h.HasItem(id)) continue; // a removed item's free number
                 itemPool[pn++] = id;
             }
             int n = 0;
@@ -216,13 +212,12 @@ namespace BAM.Sim
             }
         }
 
-        /// <summary>Death: no Echo, armed fang, bush memory or waiting Steadfast speed carries over; cooldowns keep running.</summary>
+        /// <summary>Death: no armed fang, bush memory or waiting Steadfast speed carries over; cooldowns keep running.</summary>
         void ItemsOnDeath(Unit h)
         {
             for (int k = 0; k < h.ItemCount; k++)
             {
                 ref var it = ref h.Items[k];
-                if (it.Id == ItemId.Echo) { it.Stacks = 0; it.Hits = 0; }
                 if (it.Id == ItemId.Fang) { it.Until = 0; it.Was = false; }
                 if (it.Id == ItemId.Charm) it.Until = 0;
             }
@@ -248,16 +243,10 @@ namespace BAM.Sim
             return f >= 0 && s.Items[f].Until > Time ? 1 + ItemS.FangBonus : 1;
         }
 
-        /// <summary>After a hero's auto attack landed on an enemy hero (OnHeroHit): Echoes, the mark, the fang's slow.</summary>
+        /// <summary>After a hero's auto attack landed on an enemy hero (OnHeroHit): the mark, the fang's slow.</summary>
         void ItemsOnAutoHit(Unit s, Unit t)
         {
             if (!RealHero(s) || !RealHero(t) || s.Team == t.Team || s.ItemCount == 0) return;
-            int e = s.ItemIndex(ItemId.Echo);
-            if (e >= 0 && s.Items[e].Stacks < ItemS.EchoMax)
-            {
-                ref var it = ref s.Items[e];
-                if (++it.Hits >= ItemS.EchoHits) { it.Hits = 0; it.Stacks++; ItemProc(s, ItemId.Echo, it.Stacks); }
-            }
             int m = s.ItemIndex(ItemId.Mark);
             if (m >= 0 && Time >= s.Items[m].ReadyAt && t.Alive && t.Find(St.QuarryMark) < 0) // a target already marked keeps that mark
             {
@@ -353,16 +342,6 @@ namespace BAM.Sim
         {
             if (taken <= 0 || !RealHero(att) || !att.Alive || att.ItemCount == 0 || att.Team == tgt.Team || tgt.IsClone) return;
             if (att.HasItem(ItemId.Lifesteal)) Heal(att, taken * ItemS.Lifesteal, att);
-        }
-
-        // ---------- the special (Heroes.cs, after a cast that went off) ----------
-        void ItemsOnCast(Unit h)
-        {
-            int e = h.ItemIndex(ItemId.Echo); if (e < 0 || h.Items[e].Stacks <= 0) return;
-            int n = h.Items[e].Stacks; h.Items[e].Stacks = 0; h.Items[e].Hits = 0;
-            ItemShield(h, ItemId.Echo, ItemS.EchoShieldTime, h.MaxHp * ItemS.EchoShield * n);
-            AddStatus(h, St.SpeedPct, ItemS.EchoSpeedTime, ItemS.EchoSpeed * n);
-            ItemProc(h, ItemId.Echo, 0);
         }
 
         // ---------- control (Combat.AddStatus, AddSlowOnce) ----------

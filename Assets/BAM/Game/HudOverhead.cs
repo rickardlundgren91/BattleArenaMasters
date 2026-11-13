@@ -24,7 +24,7 @@ namespace BAM.Game
             public RectTransform Root;
             public Text Name;
             public Image Eye, Diamond, ChanBack, ChanFill;
-            public Image ItemMark; public readonly Image[] Echo = new Image[ItemS.EchoMax]; // HudItems.cs
+            public Image ItemMark; // HudItems.cs
             public Outline NameEdge, DiamondEdge;   // kept from the build, so no GetComponent every frame
             public float EyeA;
             // name tags pushed apart where they collide (video review 2026-11-03: "MTyraFenn" when three stood together):

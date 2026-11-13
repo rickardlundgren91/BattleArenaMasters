@@ -235,7 +235,6 @@ namespace BAM.Sim
             int other = Teams.Other(h.Team);
             if (IsVisibleTo(h, other)) h.CastSeen[other] = Time; // the bots' memory of a spent special
             Emit(EventType.Cast, h, castTgt, 0, (byte)h.Hero, drag, castX, castY);
-            ItemsOnCast(h); // Resonance Core spends its Echoes (Items.cs)
             return true;
         }
 
