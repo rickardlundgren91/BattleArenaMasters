@@ -30,6 +30,7 @@ namespace BAM.UI
         static Text homeHeroName; // "BONK · FIGHTER" under the hero's ring (BuildHeroName); hidden in a party, where the name tags take its place
         static int homeModeShown = -1;
         static GameObject homeTutCard;
+        static Text homeTutTitle, homeTutNext;
 
         const float Cw = 10.8f;                 // cw(1) at the design width
         const float HeroH = 70 * Cw;            // the old heroH: min(cw(70), room under the top bar), always cw(70) on a phone
@@ -69,6 +70,11 @@ namespace BAM.UI
                 ModeIcon(homeModeIcon, homeMode, homeModeIconSize);
             }
             homeTutCard.SetActive(BamSettings.TutorialCard);
+            if (BamSettings.TutorialCard) // done or skipped (full review 2026-11-13 nr 112)
+            {
+                homeTutTitle.text = BamSettings.TutorialSkipped ? "Tutorial skipped" : "Tutorial done";
+                homeTutNext.text = BamSettings.TutorialSkipped ? "Play it any time in Settings > How to play" : "Next: your first match";
+            }
             homeFx.Layout();
         }
 
@@ -574,6 +580,8 @@ namespace BAM.UI
                 next.font = UiKit.BodyFont;
                 next.fontStyle = FontStyle.Bold;
                 At(next, 540 - 4 * Cw, h * (1 - 0.72f), 1000, 5 * Cw);
+                homeTutTitle = title;
+                homeTutNext = next;
                 var b = card.gameObject.AddComponent<Button>();
                 b.targetGraphic = card;
                 b.transition = Selectable.Transition.None;

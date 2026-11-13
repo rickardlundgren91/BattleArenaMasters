@@ -86,7 +86,7 @@ namespace BAM.Game
         public void SkipTutorial()
         {
             if (!inMatch || !setup.Tutorial) return;
-            TutorialFinished();
+            TutorialFinished(true);
             SendEnd(true); // in the analytics a skip is a quit
             Teardown();
             Screens.ShowMainMenu();
@@ -96,17 +96,19 @@ namespace BAM.Game
         public void FinishTutorial()
         {
             if (!inMatch || !TutorialEnd) return;
-            TutorialFinished();
+            TutorialFinished(false);
             SendEnd(false);
             Teardown();
             Screens.ShowMainMenu();
         }
 
         // The first time only (the old NewPlayer.FinishTutorial and FirstPicks): the card on Home, and the first match is Tyra
-        // against Easy bots unless the player has already picked something.
-        static void TutorialFinished()
+        // against Easy bots unless the player has already picked something. skipped: Skip or Pause > Home before the tower fell, so
+        // the card says "Tutorial skipped" and where to play it, not "Tutorial done" (full review 2026-11-13 nr 112).
+        static void TutorialFinished(bool skipped)
         {
             if (BamSettings.TutorialDone) return;
+            BamSettings.TutorialSkipped = skipped;
             BamSettings.TutorialDone = true;
             if (!BamSettings.PickedBefore)
             {
@@ -175,7 +177,7 @@ namespace BAM.Game
         {
             // leaving the guided match (Pause > Home) counts as a skip, as the Skip button does: Boot started it again at every
             // launch until it was played to the end (full review 2026-11-09 nr 60)
-            if (match != null && setup.Tutorial) TutorialFinished();
+            if (match != null && setup.Tutorial) TutorialFinished(!TutorialEnd); // after TOWER DESTROYED! it was played to the end
             SendEnd(true);
             Teardown();
             Screens.ShowMainMenu();
@@ -319,7 +321,7 @@ namespace BAM.Game
                         over = true; overAt = Time.unscaledTime; acc = 0f;
                         LogEnd(false);
                         Bookkeep();
-                        if (TutorialEnd) TutorialFinished(); // done as the tower falls: leaving its end screen by Pause or a kill still counts
+                        if (TutorialEnd) TutorialFinished(false); // done as the tower falls: leaving its end screen by Pause or a kill still counts
                         break;
                     }
                 }

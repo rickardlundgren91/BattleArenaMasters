@@ -19,7 +19,7 @@ namespace BAM.Core
         static bool loaded;
         static float sfxVolume;
         static GraphicsQuality graphics;
-        static bool leftHanded, tutorialDone, tutorialCard, musicOn, vibration, hitVibration, hardOpen;
+        static bool leftHanded, tutorialDone, tutorialCard, tutorialSkipped, musicOn, vibration, hitVibration, hardOpen;
         static int fps;
         static Consent consent;
         static int lastHero, lastDifficulty, spell;
@@ -94,7 +94,15 @@ namespace BAM.Core
         public static bool TutorialCard
         {
             get { Load(); return tutorialCard; }
-            set { Load(); if (tutorialCard == value) return; tutorialCard = value; PlayerPrefs.SetInt(Key + "tutcard", value ? 1 : 0); Commit(); }
+            set { Load(); if (tutorialCard == value) return; tutorialCard = value; PlayerPrefs.SetInt(Key + "tutcard", value ? (tutorialSkipped ? 2 : 1) : 0); Commit(); }
+        }
+
+        /// <summary>The card on Home is for a skipped tutorial: "Tutorial skipped · Play it any time in Settings > How to play" in place
+        /// of "Tutorial done" (full review 2026-11-13 nr 112). Kept in the same key as TutorialCard: 1 done, 2 skipped.</summary>
+        public static bool TutorialSkipped
+        {
+            get { Load(); return tutorialSkipped; }
+            set { Load(); if (tutorialSkipped == value) return; tutorialSkipped = value; if (tutorialCard) { PlayerPrefs.SetInt(Key + "tutcard", value ? 2 : 1); Commit(); } }
         }
 
         /// <summary>The player has picked a hero or a bot difficulty before (the tutorial then leaves the picks alone).</summary>
@@ -180,7 +188,9 @@ namespace BAM.Core
             fps = PlayerPrefs.GetInt(Key + "fps", 60) <= 30 ? 30 : 60;
             consent = (Consent)PlayerPrefs.GetInt(Key + "consent", 0);
             tutorialDone = PlayerPrefs.GetInt(Key + "tut", 0) == 1;
-            tutorialCard = PlayerPrefs.GetInt(Key + "tutcard", 0) == 1;
+            int tutCard = PlayerPrefs.GetInt(Key + "tutcard", 0);
+            tutorialCard = tutCard == 1 || tutCard == 2;
+            tutorialSkipped = tutCard == 2;
             lastHero = (int)BAM.Sim.HeroCatalog.CleanMenu(PlayerPrefs.GetInt(Key + "hero", (int)BAM.Sim.HeroId.Tyra)); // keeps an editor preview hero (Ragn, Nässla)
             lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, (int)BAM.Sim.Difficulty.Ultra);
             // Hard's lock came 2026-11-04: a phone that already had Hard or Ultra picked, or a win against Hard, keeps Hard open.
