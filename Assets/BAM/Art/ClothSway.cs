@@ -636,6 +636,10 @@ namespace BAM.Art
         readonly Vector3[] tip, vel, lastPivot, lastTarget;
         readonly bool[] live;
         readonly float hz, damping, maxAngle, drag;
+        float kickGain = 1f;
+        Vector3 lastBody, runDir, lastFwd;
+        float runSpeed, runPeak, bodyYaw;
+        bool bodyLive;
         bool wasOn = true;
         struct Push { public float At, Fwd, Up; }
         readonly Push[] pushes = new Push[4];
@@ -708,7 +712,9 @@ namespace BAM.Art
             m.name = src.name + " (cloth)";
             m.MarkDynamic();
             mf.sharedMesh = m;
-            return new PropSway(go.transform, body, m, v, g, w, pivot, rest, model == "moa_shield" ? 2.3f : 2.5f, 0.38f, model == "moa_shield" ? 28f : 30f, 0.05f);
+            // the shield's ribbons (Rickard 2026-11-13 after testing: "moas sköld gör nästan ingenting nu"): softer, less damped and trailing
+            // further than the body's cloth, pushed twice as hard, so they swing clearly when she runs, stops, turns and strikes
+            return new PropSway(go.transform, body, m, v, g, w, pivot, rest, 1.7f, 0.22f, 45f, 0.14f) { kickGain = 2f };
         }
 
         PropSway(Transform t, Transform body, Mesh m, Vector3[] v, int[] g, float[] w, Vector3[] pivot, Vector3[] rest, float hz, float damping, float maxAngle, float drag)
@@ -733,12 +739,30 @@ namespace BAM.Art
             if (!on)
             {
                 if (wasOn) { wasOn = false; mesh.vertices = baseV; for (int k = 0; k < live.Length; k++) live[k] = false; }
-                pushN = 0;
+                pushN = 0; bodyLive = false;
                 return;
             }
             wasOn = true;
             if (dt <= 0f) return;
             Vector3 push = Vector3.zero;
+            {
+                // as ClothSway: a hard stop after a run throws the ribbons on past the shield; a fast turn swings them out
+                Vector3 bp = body.position, d = bp - lastBody; d.y = 0f;
+                if (!bodyLive) { bodyLive = true; d = Vector3.zero; lastFwd = body.forward; }
+                lastBody = bp;
+                float spd = d.magnitude / dt;
+                if (spd < 12f)
+                {
+                    if (spd > 0.5f) runDir = d / (spd * dt);
+                    runSpeed = Mathf.Lerp(runSpeed, spd, 1f - Mathf.Exp(-dt * 20f));
+                    runPeak = Mathf.Max(runPeak * Mathf.Exp(-dt * 4f), runSpeed);
+                    if (AnimFix.ClothKicks && runSpeed < 0.3f && runPeak > 1.5f) { push += runDir * (0.5f * Mathf.Clamp01(runPeak / 3f)); runPeak = 0f; }
+                }
+                else runPeak = 0f;
+                float yaw = Vector3.SignedAngle(lastFwd, body.forward, Vector3.up);
+                lastFwd = body.forward;
+                if (AnimFix.ClothKicks && Mathf.Abs(yaw) / dt > 240f) push += body.right * (-Mathf.Sign(yaw) * 0.25f * Mathf.Clamp01(Mathf.Abs(yaw) / dt / 720f));
+            }
             for (int i = 0; i < pushN;)
             {
                 pushes[i].At -= dt;
@@ -768,7 +792,7 @@ namespace BAM.Art
                 Vector3 trail = -pv * drag;
                 if (trail.sqrMagnitude > 0.16f * L * L) trail = trail.normalized * (0.4f * L);
                 target += trail;
-                vel[k] += push * (L * wq * 0.6f);
+                vel[k] += push * (kickGain * L * wq * 0.6f);
                 for (int i = 1; i <= steps; i++)
                 {
                     Vector3 tg = Vector3.Lerp(lastTarget[k], target, (float)i / steps);
