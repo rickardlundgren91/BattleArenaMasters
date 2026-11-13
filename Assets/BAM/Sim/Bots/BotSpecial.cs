@@ -245,7 +245,7 @@ namespace BAM.Sim
                     {
                         if (FoeHeroes(h, TiktaS.Reach).Count > 0) return false; // the tap storm reaches someone: that is better
                         var hs = FoeHeroes(h, TiktaS.LineReach - 0.3f); Unit t = null;
-                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (LineFree(e, 0.2f) && (t == null || e.Hp < t.Hp)) t = e; }
+                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (LineFree(e, 0.2f, TiktaS.NeedlesPassMinions) && (t == null || e.Hp < t.Hp)) t = e; }
                         if (t == null) return false;
                         M.LeadAim(h, t, Match.Flight.Linear, 0, TiktaS.Speed, out float ax, out float ay);
                         ang = AngTo(ax, ay); return true;

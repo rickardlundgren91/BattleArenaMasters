@@ -4,12 +4,15 @@ namespace BAM.Sim
     public sealed partial class Match
     {
         /// <summary>The hero review of 2026-11-13 (bam-work/review/hjaltar-2026-11-13/, Rickard "ja" to Ragn's ring and text, then
-        /// "fixa alla punkter"). Run with the live forms (Fenn's Veil, Bram's Hammer Line).</summary>
+        /// "fixa alla punkter"). Run with the live forms (Fenn's Veil, Bram's Hammer Line). Bram's Focus as a rhythm: SilverTests.</summary>
         public static void HeroReview1113()
         {
             RagnRingStays();
             FennStrikeChecks();
             KuggChecks();
+            TiktaPastMinions();
+            Check(HeroCatalog.Get(HeroId.Nassla).SpecialText.EndsWith(HeroInfo.DragLine), "NASSLA text: the hold card says a drag aims the thicket");
+            Check(HeroCatalog.Get(HeroId.Blast).SpecialText.Contains("1 s after the tap") && Math.Abs(TeleTime(HeroId.Blast) + BlastS.Delay - 1f) < 1e-4f, "BLAST text: the bomb explodes 1 s after the tap (warning + fuse)");
         }
 
         /// <summary>Ragn's red ring lies on his landing spot for the whole leap, not only for the 0.3 s warning before it.</summary>
@@ -69,7 +72,7 @@ namespace BAM.Sim
             Check(m.DragAimNow(f), "FENN drag: veiled, SPECIAL drags for the strike");
             Check(HeroCatalog.Get(HeroId.Fenn).SpecialText.Contains("drag to pick"), "FENN text: the hold card says a drag picks whom he strikes");
         }
-    
+
         /// <summary>Kugg stays anchored till his special is done (Rickard 2026-11-13: Blink and Recall wait while he is rooted, the pack-up
         /// too; a Recall he was channelling ends as he anchors), and his bot never anchors with an enemy hero within 3.5 tiles.</summary>
         static void KuggChecks()
@@ -99,6 +102,29 @@ namespace BAM.Sim
             Check(b.SpecialWanted(false), "KUGG bot: with 4 stocks and an enemy hero 5 tiles off he anchors (as before)");
             Place(ty, x, y - 3);
             Check(!b.SpecialWanted(false), "KUGG bot: with an enemy hero 3 tiles off he does not (BotTables.KuggAnchorClear)");
+        }
+
+        /// <summary>Tikta's needles fly past minions to the enemy hero behind them, as Tyra's bolt and Knut's hook (TiktaS.NeedlesPassMinions);
+        /// a minion alone in reach still lights the button, and the needles thrown at it then hurt nobody.</summary>
+        static void TiktaPastMinions()
+        {
+            Check(PassesMinions(HeroId.Tikta), "TIKTA: her needles pass minions (OneTap.PassesMinions)");
+            var m = OneTapScene(HeroId.Tikta, out var p, out float cx, out float cy);
+            var mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, p.X + 0.9f, p.Y); m.AddStatus(mn, St.Stun, 999);
+            Check(m.TapHasTarget(p), "TIKTA: a minion alone in reach lights the button");
+            var e = m.Heroes.Find(h => h.Team != p.Team); Place(e, p.X + 1.8f, p.Y); m.AddStatus(e, St.Stun, 999);
+            var aim = m.AimFor(p, 0, 1);
+            var marks = m.AimTargets(p, aim, new System.Collections.Generic.List<Unit>());
+            Check(marks.Count == 1 && marks[0] == e, "TIKTA: the aim preview marks the hero behind the minion, not the minion");
+            float mh = mn.Hp, eh = e.Hp; int heroHits = 0;
+            Check(m.TryCastSpecial(p, 0, 1), "TIKTA: a drag at the minion with the hero behind it");
+            for (int k = 0; k < 90; k++) { m.Step(PlayerInput.None); foreach (var ev in m.Events) if (ev.Type == EventType.Hit && ev.B == e && ev.Dmg == DmgKind.Special) heroHits++; }
+            Check(mn.Hp == mh && e.Hp < eh && heroHits == TiktaS.Count, $"TIKTA: all {TiktaS.Count} needles pass the minion ({mh:0} -> {mn.Hp:0}) and hit the hero behind ({heroHits} hits)");
+            // only the minion on the line: the needles fly through it to the end of her ring and hurt nobody
+            m = OneTapScene(HeroId.Tikta, out p, out cx, out cy);
+            mn = m.NewMinion(MinionKind.Melee, 1 - p.Team, p.X + 0.9f, p.Y); m.AddStatus(mn, St.Stun, 999); mh = mn.Hp;
+            m.Step(TapIn()); for (int k = 0; k < 90; k++) m.Step(PlayerInput.None);
+            Check(mn.Hp == mh && !p.SpecialReady, "TIKTA: a tap at a lone minion spends the charge and the needles pass it unhurt");
         }
     }
 }

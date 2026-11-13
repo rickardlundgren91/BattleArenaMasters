@@ -252,24 +252,25 @@ namespace BAM.Sim
         float TtkAt(Unit h) => TtkAt(h, h.X, h.Y);
 
         /// <summary>About how many auto attacks' worth of damage the hero's special puts on one hero at once, from the hero numbers
-        /// (Tikta's four needles at 1.2, Blast's bomb with its burn, Bram's hammer with a bounce...). Moa's shields hurt nobody.</summary>
+        /// themselves, so it follows their balance (hero review 2026-11-13: the table still had Bram's old hammer at 1.5, Tyra's bolt at
+        /// 1.3 and Fenn's wolf at 1.2, about half of today's 3.2, 2.6 and 2.2, so bots did not respect them). Moa's shields hurt nobody.</summary>
         static float SpecialBurst(HeroId id)
         {
             switch (id)
             {
-                case HeroId.Tikta: return 4.8f;
-                case HeroId.Bonk: return 1.7f;
-                case HeroId.Blast: return 1.6f;
+                case HeroId.Tikta: return TiktaS.Count * TiktaS.DamageCoeff; // all four needles
+                case HeroId.Bonk: return Rules.OneTapSpecial ? BonkS.SlamCoeffOneTap : 1.7f; // the big Ground Slam
+                case HeroId.Blast: return BlastS.DamageCoeff * (1 + BlastS.BurnPercent); // the bomb with its burn
                 case HeroId.Oaken: return 1.6f;
-                case HeroId.Bram: return 1.5f;
-                case HeroId.Tyra: return 1.3f;
+                case HeroId.Bram: return Match.SilverOn ? BramS.LineCoeff : 1.5f; // the Hammer Line (the old anvil with a bounce)
+                case HeroId.Tyra: return Rules.OneTapSpecial ? TyraS.DamageCoeff : 1.3f; // her bolt (the old volley)
                 case HeroId.Knut: return 1.3f;
-                case HeroId.Fenn: return 1.2f;
+                case HeroId.Fenn: return FennS.Veil ? 1 + FennS.StrikeBonus : 1.2f; // the Phantom Strike (the old wolf)
                 case HeroId.Hilde: return 1.2f;
                 case HeroId.Kugg: return 1.0f; // his Anchor is many shots over time, not one burst
-                case HeroId.Ragn: return 1.6f;   // the landing hit (Hero8.cs)
+                case HeroId.Ragn: return RagnS.LandCoeff; // the landing hit (Hero8.cs)
                 case HeroId.Skrall: return 1.5f; // two of three strikes on one hero, about
-                case HeroId.Nassla: return 1.2f; // the thicket's poison over 3 s
+                case HeroId.Nassla: return NasslaS.PoisonCoeff; // the thicket's poison over 3 s
                 case HeroId.Ravna: return 1.0f;  // the flock tears once
                 default: return 0;
             }

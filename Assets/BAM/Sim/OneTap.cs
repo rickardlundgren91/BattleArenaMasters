@@ -64,10 +64,10 @@ namespace BAM.Sim
             return l;
         }
 
-        /// <summary>Does h's special fly past minions to the heroes behind (Knut's hook, Tyra's bolt)? Their tap still rolls among ALL
+        /// <summary>Does h's special fly past minions to the heroes behind (Knut's hook, Tyra's bolt, Tikta's needles)? Their tap still rolls among ALL
         /// enemies in reach, minions too, as every tap (Rickard 2026-11-03: "man ska inte få för mycket hjälp sådär, att det är random
         /// attack på dom inom range är viktigt för spelet ... focus"): the player picks the odds by how many targets stand in the ring.</summary>
-        public static bool PassesMinions(HeroId id) => id == HeroId.Knut ? KnutS.HookPassesMinions : id == HeroId.Tyra && TyraS.BoltPassesMinions;
+        public static bool PassesMinions(HeroId id) => id == HeroId.Knut ? KnutS.HookPassesMinions : id == HeroId.Tyra ? TyraS.BoltPassesMinions : id == HeroId.Tikta && TiktaS.NeedlesPassMinions;
 
         /// <summary>Would a tap of h's special fire now (target-wise; the charge is SpecialReady)? Moa always can: herself.
         /// The HUD greys the button when this is false.</summary>

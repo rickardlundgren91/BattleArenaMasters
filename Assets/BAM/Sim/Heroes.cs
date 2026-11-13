@@ -173,6 +173,10 @@ namespace BAM.Sim
         public const float PoisonPerSecond = 0.1f, PoisonDuration = 2;
         /// <summary>She keeps walking in her tapped special's 0.3 s warning instead of standing (Telegraph.cs).</summary>
         public const bool WalksInWarning = true;
+        /// <summary>Her needles fly past minions and Fenn's wolf and stop only in the first enemy hero (a decoy too), as Tyra's bolt and
+        /// Knut's hook (hero review 2026-11-13, Rickard "fixa alla punkter"): the minions in front of a wave caught them, and her tap
+        /// hit a hero 34 % of the time. Her tap still rolls among all enemies in reach, minions too (OneTap.PassesMinions).</summary>
+        public const bool NeedlesPassMinions = true;
     }
 
     /// <summary>Blast, Supernova. Tap: a strip of fire for 2 s at a random enemy in reach that hurts enemies in it every 0.5 s.
@@ -1096,13 +1100,14 @@ namespace BAM.Sim
         }
 
         /// <summary>A dragged needle, swept (Tikta 2.0): the whole path flown this tick, up to the reach, is tested, so a big tick
-        /// never carries it past an enemy; the first enemy along it is hit if no wall stands between, else it stops at the wall.</summary>
+        /// never carries it past an enemy; the first enemy along it is hit if no wall stands between, else it stops at the wall. Since
+        /// the hero review of 2026-11-13 it flies past minions to the first enemy hero (TiktaS.NeedlesPassMinions).</summary>
         void NeedleLineUpdate(Proj p, float dt)
         {
             if (p.D == 0 && p.Src != null && p.Src.Alive) { p.X = p.Src.X; p.Y = p.Src.Y; } // leaves from where she is now, as her warning (TIKTA-01)
             float ox = p.X, oy = p.Y, step = p.Speed * dt, len = Math.Max(0, Math.Min(step, NeedleReach - p.D));
             float tc = TowerReach(ox, oy, p.Ang, len, TiktaS.LineHitbox); // a base (either team's) stops it as a wall (TowerReach)
-            var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, tc, TiktaS.LineHitbox, out float at); // nobody behind the base
+            var u = SweptHit(p.Src, p.Team, ox, oy, p.Ang, tc, TiktaS.LineHitbox, out float at, null, PassesMinions(HeroId.Tikta)); // nobody behind the base; past minions
             if (u != null)
             {
                 float hx = ox + SimMath.Cos(p.Ang) * at, hy = oy + SimMath.Sin(p.Ang) * at;

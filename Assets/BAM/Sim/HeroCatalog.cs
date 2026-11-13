@@ -186,12 +186,12 @@ namespace BAM.Sim
                 Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tikta, Name = "Tikta", Title = "The Needle Wing", Role = "Assassin", Ranged = false,
                 SpecialName = "Needle Storm", SpecialDesc = "Fires four poison needles at random nearby enemies, minions too. Drag to fire them all in one straight line.",
-                OneTapDesc = "Tap: four poison needles in a straight line at a random enemy in reach; each needle stops in the first enemy it hits.",
+                OneTapDesc = "Tap: four poison needles in a straight line at a random enemy in reach. They fly past minions; each needle stops in the first enemy hero it hits.", // past minions since the hero review 2026-11-13
                 PassiveName = "Deathmark", PassiveDesc = "A normal attack that hurts an enemy hero marks it for 3 s (one mark at a time). The first Needle Storm needle that hits the marked hero deals 50% of her attack damage more.",
                 Difficulty = 3 },
             new HeroInfo { Id = HeroId.Blast, Name = "Blast", Title = "The Pyromaniac", Role = "Mage", Ranged = true,
                 SpecialName = "Supernova", SpecialDesc = "Tap: a strip of fire toward a random enemy that burns enemies standing in it for 2 s. Drag: throws a bomb where you aim that explodes after 0.5 s.",
-                OneTapDesc = "Tap: throws a bomb at a random enemy in reach that explodes after 0.5 s.",
+                OneTapDesc = "Tap: throws a bomb at a random enemy in reach; it explodes 1 s after the tap.", // 0.5 s red ring + 0.5 s fuse (hero review 2026-11-13: the text said 0.5 s)
                 PassiveName = "Ignite", PassiveDesc = "Hits set the target on fire: 15% more over 2 s. Chain Reaction (9 s cooldown): Supernova on a hero already burning from Blast blasts again where that hero stood 0.25 s later, hitting only the other enemies within 1 tile for 50% of his attack.",
                 Difficulty = 2 },
             new HeroInfo { Id = HeroId.Bonk, Name = "Bonk", Title = "The Caveman", Role = "Fighter", Ranged = false,
@@ -209,6 +209,8 @@ namespace BAM.Sim
                 Difficulty = 1 },
             new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
                 SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.", // 75 -> 50 % (NasslaS.Slow, Rickard 2026-11-12)
+                // the one-tap text, so the hold card ends with the drag line like every aimable hero's (hero review 2026-11-13)
+                OneTapDesc = "Tap: throws a seed pod at a random enemy in her range. A moment later a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.",
                 PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
                 Difficulty = 2 },
         };
