@@ -60,6 +60,11 @@ namespace BAM.Sim
             }
         }
 
+        /// <summary>h's spell would take him off a spot he must keep: an anchored Kugg stays put until his special is done, the pack-up
+        /// too, so Blink and Recall wait (Rickard 2026-11-13: "han ska vara förankrad tills special är klar ändå"; before, a Blink moved the
+        /// whole turret with its shots). The HUD greys the button then.</summary>
+        public bool SpellLocked(Unit h) => h != null && h.KuggRooted && (h.Spell == SpellId.Blink || h.Spell == SpellId.Recall);
+
         /// <summary>Casts h's battle spell. ang = where a blink goes (NaN = the way the hero faces), k 0..1 of its full distance.
         /// False when nothing happened (cooldown, stunned, busy casting, nowhere to go).</summary>
         public bool CastSpell(Unit h, float ang = float.NaN, float k = 1)
@@ -68,7 +73,7 @@ namespace BAM.Sim
             // without St.Casting since 0.3.9, and a Blink there would move her needles' start (review 0.3.9 nr 59)
             // Nor in a jump pad's flight (Grove: a Blink in the air left the hero beside its landing spot), nor while Tikta's dragged
             // needles still leave her hand (a Blink moved their start off the red line; full review 2026-11-09 nr 78, 64)
-            if (!SpellReady(h) || h.IsClone || h.Has(St.Stun) || h.Has(St.Casting) || h.TeleAt >= 0 || (h.KnockPad && h.KnockT > 0) || NeedleInHand(h)) return false;
+            if (!SpellReady(h) || h.IsClone || h.Has(St.Stun) || h.Has(St.Casting) || h.TeleAt >= 0 || (h.KnockPad && h.KnockT > 0) || NeedleInHand(h) || SpellLocked(h)) return false;
             float fx = h.X, fy = h.Y;
             switch (h.Spell)
             {

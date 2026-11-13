@@ -45,6 +45,10 @@ namespace BAM.Sim
         /// <summary>Stocks a Kugg bot waits for before it anchors (he may from 2, Hero7.cs KuggS.MinShots): with 2 he stood rooted ~3.4 s for
         /// two shots, 16 times a match, and won 15 % (full review 2026-11-09 nr 69).</summary>
         internal const int KuggAnchorStocks = 4;
+        /// <summary>Kugg's bot never anchors with an enemy hero this close (any side, through walls too): rooted with one already on him,
+        /// 52 % of his deaths came while anchored and 27 % within 3.5 s after; with this rule Hard 28 -> 38 %, deaths 2.55 -> 1.77 a match,
+        /// his numbers untouched (hero review 2026-11-13, Rickard "fixa alla punkter").</summary>
+        internal const float KuggAnchorClear = 3.5f;
         internal static bool Tank(HeroId id) => id == HeroId.Knut || id == HeroId.Oaken; // Oaken: Tank in the old HERO_ROLE
 
         // the old bot constants

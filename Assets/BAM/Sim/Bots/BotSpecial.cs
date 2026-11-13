@@ -65,7 +65,8 @@ namespace BAM.Sim
                 // enemy hero within 7 tiles or 4 enemies in reach, never to escape. The bot waits for KuggAnchorStocks (he may anchor from
                 // 2, but two shots never pay for ~3.4 s rooted: 16 anchors a match, 85 % with 2 stocks, win 15 %) and never anchors while
                 // retreating or in danger, where "never to escape" had let him (full review 2026-11-09 nr 69)
-                if (h.Hero == HeroId.Kugg) return !retreat && !danger && h.Charge >= BotTables.KuggAnchorStocks && HpR(h) >= 0.6f && (Foes(7, true, true, l) > 0 || h.Charge >= h.HDef.MaxCharge && Foes(r, false, true, l) >= 4); // a minion wave only with all 6 stocks
+                // ... and never with an enemy hero already on him (BotTables.KuggAnchorClear, hero review 2026-11-13)
+                if (h.Hero == HeroId.Kugg) return !retreat && !danger && h.Charge >= BotTables.KuggAnchorStocks && HpR(h) >= 0.6f && Foes(BotTables.KuggAnchorClear, true, false, l) == 0 && (Foes(7, true, true, l) > 0 || h.Charge >= h.HDef.MaxCharge && Foes(r, false, true, l) >= 4); // a minion wave only with all 6 stocks
                 // Knut's hook and Tyra's bolt fly past minions (Match.PassesMinions): a minion pack is no reason to throw them
                 return SureShot(FoeList(r, true, true), dz) || (!Match.PassesMinions(h.Hero) && Foes(r, false, true, l) >= 3);
             }

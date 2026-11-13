@@ -45,6 +45,7 @@ namespace BAM.Sim
         {
             if (h.KuggRooted) return false;
             h.KuggShots = Math.Max(KuggS.MinShots, Math.Min(KuggS.Shots, (int)h.Charge)); h.KuggUntil = Time + KuggS.MaxTime; h.KuggRooted = true; h.KuggPackEnd = -1;
+            SpellBreak(h); // a Recall he was channelling ends: he stays anchored till the special is done (Spells.SpellLocked, Rickard 2026-11-13)
             AddStatus(h, St.Casting, KuggS.DeployTime); AddStatus(h, St.Disarm, KuggS.DeployTime);
             h.AtkTimer = h.AttackCd; // the first anchored shot goes as soon as the spikes are in
             return true;

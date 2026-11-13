@@ -128,7 +128,7 @@ namespace BAM.Game
 
         void SpellDown(Vector2 at)
         {
-            if (!SpellShown) return;
+            if (!SpellShown || m.SpellLocked(m.Player)) return; // an anchored Kugg's Blink or Recall waits (Spells.SpellLocked)
             if (m.Player.Spell != SpellId.Blink) { SpellPress(); return; }
             spellAiming = true; spellMoved = false; spellOverCancel = false; spellFrom = spellFinger = at; // Blink: tap = the way you move, drag = aim
         }
@@ -222,13 +222,14 @@ namespace BAM.Game
             bool chan = Match.SpellChanneling(p);
             float left = m.SpellLeft(p), cd = SpellDefs.Cooldown(p.Spell);
             // a cooldown under a second (Recall's 0.1 s) is not worth a countdown: the button simply stays lit
-            bool ready = p.Alive && (m.SpellReady(p) || cd < 1f);
+            bool locked = m.SpellLocked(p); // an anchored Kugg's Blink or Recall waits till his special is done (Spells.cs)
+            bool ready = p.Alive && !locked && (m.SpellReady(p) || cd < 1f);
             float frac = chan ? Mathf.Clamp01((m.Time - p.SpellChanStart) / SpellDefs.RecallChannel) : ready ? 1f : Mathf.Clamp01(1f - left / Mathf.Max(0.01f, cd));
             Color col = SpellColor(p.Spell);
             spellArc.fillAmount = frac;
             spellArc.color = ready || chan ? col : SpellIdle;
             spellGlyph.color = ready || chan ? col : new Color(SpellGlyphIdle.r, SpellGlyphIdle.g, SpellGlyphIdle.b, 0.5f);
-            bool secs = !ready && !chan && p.Alive;
+            bool secs = !ready && !chan && p.Alive && !locked;
             if (spellSecs.enabled != secs) spellSecs.enabled = secs;
             if (secs)
             {

@@ -9,6 +9,7 @@ namespace BAM.Sim
         {
             RagnRingStays();
             FennStrikeChecks();
+            KuggChecks();
         }
 
         /// <summary>Ragn's red ring lies on his landing spot for the whole leap, not only for the 0.3 s warning before it.</summary>
@@ -67,6 +68,37 @@ namespace BAM.Sim
             f.AddRaw(St.Veil, 2, 0, 0, f, false);
             Check(m.DragAimNow(f), "FENN drag: veiled, SPECIAL drags for the strike");
             Check(HeroCatalog.Get(HeroId.Fenn).SpecialText.Contains("drag to pick"), "FENN text: the hold card says a drag picks whom he strikes");
+        }
+    
+        /// <summary>Kugg stays anchored till his special is done (Rickard 2026-11-13: Blink and Recall wait while he is rooted, the pack-up
+        /// too; a Recall he was channelling ends as he anchors), and his bot never anchors with an enemy hero within 3.5 tiles.</summary>
+        static void KuggChecks()
+        {
+            var m = OneTapScene(HeroId.Kugg, out var k, out _, out _);
+            var e = m.Heroes.Find(h => h.Team != k.Team); Place(e, k.X + 3f, k.Y); m.AddStatus(e, St.Stun, 999);
+            k.Charge = 4; k.Spell = SpellId.Recall; k.SpellAt = 0;
+            Check(m.CastSpell(k) && k.SpellChanEnd >= 0, "KUGG lock: a Recall channel starts");
+            Check(m.TryTapSpecial(k) && k.KuggRooted && k.SpellChanEnd < 0, "KUGG lock: anchoring ends the Recall he was channelling");
+            for (int i = 0; i < 60; i++) m.Step(PlayerInput.None); // past the deploy's Casting
+            Check(k.KuggRooted && !k.Has(St.Casting), "KUGG lock: still rooted after the deploy");
+            k.SpellAt = 0; float x0 = k.X, y0 = k.Y;
+            Check(m.SpellLocked(k) && !m.CastSpell(k) && k.SpellChanEnd < 0, "KUGG lock: an anchored Kugg cannot start a Recall");
+            k.Spell = SpellId.Blink;
+            Check(m.SpellLocked(k) && !m.CastSpell(k, 0, 1) && k.X == x0 && k.Y == y0 && k.KuggRooted, "KUGG lock: nor Blink away with his turret");
+            k.Spell = SpellId.Shield;
+            Check(!m.SpellLocked(k) && m.CastSpell(k), "KUGG lock: a Shield still works while anchored");
+            k.Spell = SpellId.Blink; k.SpellAt = 0;
+            for (int i = 0; i < 1200 && k.KuggRooted; i++) m.Step(PlayerInput.None); // the shots, the pack-up
+            Check(!k.KuggRooted && !m.SpellLocked(k) && m.CastSpell(k, 0, 1), "KUGG lock: walking again, he can Blink");
+
+            // the bot never anchors with an enemy hero right on him
+            var mb = MakeBots(HeroId.Kugg, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Tyra, HeroId.Bram, HeroId.Blast }, Difficulty.Hard, 7);
+            var kb = mb.Player; var b = kb.Bot; var ty = mb.Foe(HeroId.Tyra);
+            float x = 7.5f, y = 17.5f;
+            Place(kb, x, y); Place(ty, x, y - 5); kb.Charge = 4;
+            Check(b.SpecialWanted(false), "KUGG bot: with 4 stocks and an enemy hero 5 tiles off he anchors (as before)");
+            Place(ty, x, y - 3);
+            Check(!b.SpecialWanted(false), "KUGG bot: with an enemy hero 3 tiles off he does not (BotTables.KuggAnchorClear)");
         }
     }
 }
