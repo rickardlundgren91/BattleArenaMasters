@@ -553,7 +553,12 @@ namespace BAM.UI
             a.Desc.lineSpacing = 1.1f;
             Stretched(a.Desc.rectTransform, tx, 11.4f * Cw - 2 * Cw, 3 * Cw, 40 * Cw);
             a.Desc.supportRichText = true;
+            // UiKit.Fill and the labels catch no touches, so the card needs its own invisible hit area, or a tap on it
+            // or on "more" did nothing (tester feedback on 0.4.1, 2026-11-13)
+            var hit = a.Rect.gameObject.AddComponent<Image>();
+            hit.color = Color.clear;
             var b = a.Rect.gameObject.AddComponent<Button>(); // the card is the button: "more" opens the whole text, a second tap closes it
+            b.targetGraphic = hit;
             b.transition = Selectable.Transition.None;
             b.navigation = new Navigation { mode = Navigation.Mode.None };
             b.onClick.AddListener(() =>
