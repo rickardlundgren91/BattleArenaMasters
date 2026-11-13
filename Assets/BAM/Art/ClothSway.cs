@@ -649,7 +649,9 @@ namespace BAM.Art
             var mf = go.GetComponent<MeshFilter>();
             Mesh src = mf != null ? mf.sharedMesh : null;
             if (src == null || !src.isReadable) return null;
-            if (model != "moa_shield" && model != "moa_staff") return null;
+            // Moa's staff: none (Rickard 2026-11-13 after testing: "ta bort textil animation på staven det blev buggat"); its branch below stays
+            // for reference but is never reached
+            if (model != "moa_shield") return null;
             Vector3[] v = src.vertices;
             float H = Mathf.Max(1e-4f, src.bounds.size.y);
             int n = v.Length;
