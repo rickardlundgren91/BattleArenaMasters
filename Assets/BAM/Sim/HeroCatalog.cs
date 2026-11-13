@@ -203,6 +203,8 @@ namespace BAM.Sim
             // in 0.4.0 (Rickard 2026-11-10: "för 0.4.0 ska ragn och nässla vara tillgängliga för alla"), open from the start like Kugg
             new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false,
                 SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles to where a random enemy in reach stands. If it is still there, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
+                // the one-tap text, so the hold card ends with the drag line like every aimable hero's (hero review 2026-11-13)
+                OneTapDesc = "Tap: leaps up to 5 tiles at a random enemy in reach; a red ring shows where he lands. The enemy he lands on is hit hard, stunned for 1.25 s and shoved 4 tiles, and Ragn gets a shield of 20% of his health for 2 s.",
                 PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
                 Difficulty = 1 },
             new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,

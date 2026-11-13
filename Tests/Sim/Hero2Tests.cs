@@ -237,6 +237,7 @@ namespace BAM.Sim
             FennVeilDefault = FennS.Veil; FennVeilChecks(); NightFlightOn = RavnaS.NightFlight; NightFlightChecks(); SilverOn = BramS.Silver; SilverChecks(); Review0410(); Review1113();
             TraceReplayChecks(); // full review 2026-11-13 nr 124 (TraceReplayTests.cs)
             Review1113Items(); // full review 2026-11-13 nr 113 (Review1113ItemsTests.cs)
+            FennVeilDefault = FennS.Veil; FennVeilChecks(); NightFlightOn = RavnaS.NightFlight; NightFlightChecks(); SilverOn = BramS.Silver; SilverChecks(); Review0410(); Review1113(); HeroReview1113();
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;
         }

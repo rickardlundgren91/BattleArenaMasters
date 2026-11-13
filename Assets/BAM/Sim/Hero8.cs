@@ -116,6 +116,9 @@ namespace BAM.Sim
             if (d > 1e-3f) h.Facing = SimMath.Atan2(y - h.Y, x - h.X);
             h.AimT = Time + t + 0.2f;
             AddStatus(h, St.Casting, t); AddStatus(h, St.Disarm, t);
+            // the red ring stays on the landing spot until he comes down (the warning's own ring is gone after 0.3 s, before he lands),
+            // so a good player can still step out of it (hero review 2026-11-13, Rickard "ja"); it ends with him if he dies in the air
+            WarnCircle(h, x, y, RagnS.LandRadius, t + Rules.Tick); // one tick more: the shots' clock runs before his leap's
             castX = x; castY = y;
             return true;
         }
