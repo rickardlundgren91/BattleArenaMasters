@@ -14,7 +14,10 @@ namespace BAM.Game
     /// städa upp det ui": the first panel sat low over the joystick and the SPECIAL with tiny text). Each card has the item's own
     /// icon (drawn in code, ItemIconArt), its name, its rarity and one short line; a tap anywhere on a card takes it, no SELECT
     /// button. The match does not stop: the cards wait until the player picks (keys 1-3 in the editor), and they keep clear of
-    /// every control. The items held sit as two small icons left of the SPECIAL, dark while they cool down, Resonance Core with
+    /// every control. They open by themselves only while the player is dead or calm behind our own tower; anywhere else a pulsing
+    /// ITEM button by the SPECIAL waits (where the next item will sit) and opens them, and a hit takes them back to the button
+    /// (review 2026-11-13 nr 2: at 1:20 and 2:56 they came up in the middle of tower fights and lay over RESPAWN IN). The items
+    /// held sit as two small icons beside the SPECIAL on the screen's inner side, dark while they cool down, Resonance Core with
     /// its Echoes. Pure display and input: the pick goes to the rules through PlayerInput.ItemPick.
     /// </summary>
     sealed partial class Hud
@@ -33,6 +36,14 @@ namespace BAM.Game
         int offerShownCount = -1, offerPressed = -1;
         float offerShownAt = -99f, offerLaidW = -1f;
         byte itemPickQueued;
+
+        // the ITEM button and when the cards are open: by themselves (dead, or calm behind our tower) or by a tap on the button,
+        // which holds until a hit
+        RectTransform offerBtn;
+        Image offerBtnGlow;
+        Text offerBtnLabel;
+        bool offerOpen, offerByTap;
+        float offerBtnAt = -99f, offerHurtSeen = -99f;
 
         readonly RectTransform[] heldRoot = new RectTransform[Unit.MaxItems];
         readonly Image[] heldIcon = new Image[Unit.MaxItems], heldCd = new Image[Unit.MaxItems];
@@ -91,7 +102,26 @@ namespace BAM.Game
             }
             offerRoot.gameObject.SetActive(false);
 
-            // the items held: small round icons left of the SPECIAL
+            // the ITEM button: a dark round plate with a gold edge and ITEM in gold over a breathing gold glow; the whole 0.11 W
+            // square takes the finger (7.6 mm, as the other small match buttons)
+            offerBtn = UiKit.NewRect("ItemButton", safe);
+            offerBtn.anchorMin = offerBtn.anchorMax = offerBtn.pivot = new Vector2(0.5f, 0.5f);
+            var hit = UiKit.Fill(offerBtn, Color.clear); hit.raycastTarget = true;
+            offerBtnGlow = UiKit.Fill(offerBtn, Color.clear, UiKit.Circle);
+            UiKit.Stretch(offerBtnGlow.rectTransform, -4f, -4f, -4f, -4f);
+            var plate = UiKit.Fill(offerBtn, CardGlass, UiKit.Circle);
+            UiKit.Stretch(plate.rectTransform, 6f, 6f, 6f, 6f);
+            var ring = UiKit.Fill(offerBtn, UiKit.Trim, UiKit.CircleRing);
+            UiKit.Stretch(ring.rectTransform, 6f, 6f, 6f, 6f);
+            offerBtnLabel = UiKit.Label(offerBtn, "ITEM", 26, TextAnchor.MiddleCenter, UiKit.Gold);
+            offerBtnLabel.fontStyle = FontStyle.Bold; offerBtnLabel.raycastTarget = false;
+            offerBtnLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+            UiKit.AddOutline(offerBtnLabel, 2); UiKit.Stretch(offerBtnLabel.rectTransform);
+            var press = offerBtn.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
+            press.Up = _ => OfferButtonTapped();
+            offerBtn.gameObject.SetActive(false);
+
+            // the items held: small round icons beside the SPECIAL
             for (int i = 0; i < Unit.MaxItems; i++)
             {
                 var r = heldRoot[i] = UiKit.NewRect("Item" + i, safe);
@@ -112,6 +142,8 @@ namespace BAM.Game
         void BeginItems()
         {
             itemPickQueued = 0; offerShownCount = -1; offerShownAt = -99f; offerPressed = -1; offerLaidW = -1f;
+            offerOpen = offerByTap = false; offerBtnAt = -99f; offerHurtSeen = float.MaxValue; // the first frame takes the hurt time as seen
+            if (offerBtn != null) offerBtn.gameObject.SetActive(false);
             for (int i = 0; i < Unit.MaxItems; i++) { heldShown[i] = ItemId.None; heldPulse[i] = -99f; }
             if (offerRoot != null) offerRoot.gameObject.SetActive(false);
             for (int i = 0; i < Unit.MaxItems; i++) if (heldRoot[i] != null) heldRoot[i].gameObject.SetActive(false);
@@ -126,22 +158,86 @@ namespace BAM.Game
             BamAudio.Play(SfxId.UiTap, 1f);
         }
 
+        void OfferButtonTapped()
+        {
+            var p = m.Player;
+            if (p == null || p.OfferCount == 0 || itemPickQueued != 0) return;
+            offerOpen = true; offerByTap = true;
+            BamAudio.Play(SfxId.UiTap, 1f);
+        }
+
         byte TakeItemPick() { var b = itemPickQueued; itemPickQueued = 0; return b; }
 
         void ItemsFrame(bool hidden)
         {
             var p = m.Player;
             bool live = !hidden && p != null && m.ItemsOn && m.State == MatchState.Play;
+            // a hit on the player since the last frame (LastHurt is stamped on every hit, a shield's too), seen every frame so an
+            // old hit never counts when a choice comes
+            bool hurt = false;
+            if (p != null) { hurt = p.LastHurt > offerHurtSeen; offerHurtSeen = p.LastHurt; }
+            bool waiting = live && p.OfferCount > 0 && itemPickQueued == 0;
+            bool cards = waiting && OfferOpen(p, hurt);
+            if (p == null || p.OfferCount == 0) { offerOpen = offerByTap = false; } // the next choice starts by the rules again (a pause keeps a tap's opening)
             var kb = Keyboard.current;
-            if (live && kb != null && p.OfferCount > 0)
+            if (cards && kb != null)
             {
                 if (kb.digit1Key.wasPressedThisFrame) OfferTapped(0);
                 else if (kb.digit2Key.wasPressedThisFrame) OfferTapped(1);
                 else if (kb.digit3Key.wasPressedThisFrame) OfferTapped(2);
             }
-            OfferFrame(live && p.OfferCount > 0 && itemPickQueued == 0);
+            OfferFrame(cards);
+            OfferButtonFrame(waiting && !cards);
             HeldFrame(live);
         }
+
+        // Dead: open (the 10-20 s with nothing else to do are the best time to choose). Hit: back to the button. Otherwise a tap's
+        // opening holds, and without one the cards are open exactly while the player is behind our own tower and out of combat
+        // (no hit taken or dealt for 3 s, Unit.InCombat), so a respawn opens them and walking out to the lane closes them.
+        bool OfferOpen(Unit p, bool hurt)
+        {
+            if (!p.Alive) { offerOpen = true; offerByTap = false; }
+            else if (hurt) { offerOpen = false; offerByTap = false; }
+            else if (!offerByTap) offerOpen = BehindOwnTower(p) && !p.InCombat(m.Time);
+            return offerOpen;
+        }
+
+        // behind our own tower, seen from the enemy's: more than half a tile on the base side of its middle (where the heroes spawn,
+        // respawn and Recall, 4 tiles back)
+        bool BehindOwnTower(Unit p)
+        {
+            Unit own = m.Towers[p.Team], foe = m.Towers[Teams.Other(p.Team)];
+            if (own == null || foe == null) return false;
+            return (p.Y - own.Y) * Mathf.Sign(foe.Y - own.Y) < -0.5f;
+        }
+
+        void OfferButtonFrame(bool show)
+        {
+            if (offerBtn.gameObject.activeSelf != show)
+            {
+                offerBtn.gameObject.SetActive(show);
+                if (show) offerBtnAt = Time.unscaledTime; // no SetAsLastSibling: the score sheet, opened later, stays over it
+            }
+            if (!show) return;
+            var p = m.Player;
+            float W = SafeW, rb = W * 0.055f, ri = W * 0.042f;
+            Vector3 c = SpecialCentre();
+            // in the next item's place: level with the SPECIAL's middle while no item is held, in the lower slot under the first one
+            float y = p.ItemCount == 0 ? c.y : c.y - 1.15f * ri;
+            offerBtn.localPosition = new Vector3(c.x + InnerSide * (SpecialButton.Radius + W * 0.03f + rb), y, 0f);
+            offerBtn.sizeDelta = new Vector2(2f * rb, 2f * rb);
+            offerBtnLabel.fontSize = Mathf.RoundToInt(W * 0.028f);
+            // it pops in over 0.25 s, then breathes (a little bigger and a brighter glow about once a second)
+            float t = Time.unscaledTime - offerBtnAt, wave = 0.5f + 0.5f * Mathf.Sin(t * 5.5f);
+            offerBtn.localScale = Vector3.one * ((0.6f + 0.4f * Ease(Mathf.Clamp01(t / 0.25f))) * (1f + 0.07f * wave));
+            offerBtnGlow.color = new Color(1f, 0.78f, 0.28f, 0.2f + 0.35f * wave);
+        }
+
+        // the SPECIAL's middle in the safe area's local space
+        Vector3 SpecialCentre() => safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
+
+        // the side of the SPECIAL towards the screen's middle: left for the right hand, right for the left hand
+        float InnerSide => leftHanded ? 1f : -1f;
 
         void OfferFrame(bool show)
         {
@@ -225,7 +321,7 @@ namespace BAM.Game
                     if (ev[k].Type == EventType.ItemProc && ev[k].A == p)
                         for (int i = 0; i < p.ItemCount; i++) if ((byte)p.Items[i].Id == ev[k].Kind) heldPulse[i] = Time.unscaledTime;
             float W = SafeW, r = W * 0.042f;
-            Vector3 c = safe.InverseTransformPoint(specialRoot.TransformPoint(specialRoot.rect.center));
+            Vector3 c = SpecialCentre();
             for (int i = 0; i < Unit.MaxItems; i++)
             {
                 bool show = live && i < p.ItemCount;
@@ -233,8 +329,9 @@ namespace BAM.Game
                 if (!show) continue;
                 var it = p.Items[i];
                 if (heldShown[i] != it.Id) { heldShown[i] = it.Id; heldIcon[i].sprite = ItemSprite(it.Id); }
-                // left of the SPECIAL, one above the other
-                heldRoot[i].localPosition = new Vector3(c.x - SpecialButton.Radius - W * 0.03f - r, c.y + (i == 0 ? 1.15f : -1.15f) * r, 0f);
+                // beside the SPECIAL on the screen's inner side, one above the other (always left of it until 2026-11-13, which put
+                // them half off the screen's left edge for the left hand, whose SPECIAL sits bottom left)
+                heldRoot[i].localPosition = new Vector3(c.x + InnerSide * (SpecialButton.Radius + W * 0.03f + r), c.y + (i == 0 ? 1.15f : -1.15f) * r, 0f);
                 float pulse = Mathf.Clamp01(1f - (Time.unscaledTime - heldPulse[i]) / 0.35f);
                 heldRoot[i].sizeDelta = new Vector2(2f * r, 2f * r);
                 heldRoot[i].localScale = Vector3.one * (1f + 0.25f * pulse);
