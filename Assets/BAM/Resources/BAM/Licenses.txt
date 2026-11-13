@@ -7,6 +7,8 @@ made for Battle Arena Masters. All rights reserved.
 Hero, tower, wolf, wall and bush models: Rickard Lundgren, made with Tripo AI and Meshy AI.
 Minion character, character rigging and animations: Mixamo (Adobe).
 Arena and training island textures: Rickard Lundgren.
+Some sound effects (Ragn and Nässla) are mixed from CC0 (public domain) packs by
+artisticdude, rubberduck, qubodup, CaveboyTup, Kenney and IgnasD. Thank you!
 
 Made with Unity.
 

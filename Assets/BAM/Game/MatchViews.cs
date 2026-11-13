@@ -739,6 +739,8 @@ namespace BAM.Game
                     // Fenn's Shadow Veil sounds on its own events (FennVeil, VeilStrike), not as his old wolf cast
                     if (!((HeroId)e.Kind == HeroId.Fenn && m.FennVeil)) Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
                     if ((HeroId)e.Kind == HeroId.Knut && e.Big) Sound(SfxId.KnutChain, a, 1f); // the chain rattles out with the anchor
+                    // Nässla's thicket rustles up where it lands, beside her throw at her hand (free CC0 mix, Rickard 2026-11-13)
+                    if ((HeroId)e.Kind == HeroId.Nassla) BamAudio.PlayAt(SfxId.NasslaBramble, Coords.World(e.X, e.Y), 0.9f);
                     // Tyra's tap is the Arrow Volley: a gold cone through the draw and the big bow draw (Speltest tyravolley)
                     if ((HeroId)e.Kind == HeroId.Tyra && !e.Big)
                     {

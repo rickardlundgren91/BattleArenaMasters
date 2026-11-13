@@ -27,6 +27,12 @@ own arena/tutorial textures; each such file gets a row under "Imported from the 
 | Lilita One font | `Assets/BAM/UI/Resources/BAM/Fonts/LilitaOne.ttf` (all UI text; the old code-drawn icons used it) | Juan Montoreano, 2011, Reserved Font Name "Lilita" | SIL Open Font License 1.1 (`Assets/BAM/Fonts/OFL-LilitaOne.txt`, from Google Fonts) | Ship the copyright notice and license with the game (done in `Licenses.txt`). Do not sell the font by itself. Do not modify the font file and keep the name "Lilita" (we use it unmodified). Using it in images such as the icon is allowed. |
 | Unity engine and packages (URP, Input System, uGUI, TextMeshPro) | Engine and `Packages/manifest.json` | Unity Technologies | Unity Terms of Service / Unity Companion License | Unity Personal is free under USD 200k revenue and funding in the last 12 months. No in-game notice needed; the splash screen is optional in Unity 6. |
 | Unity Analytics SDK (`com.unity.services.analytics`) | Package | Unity Technologies | Unity Terms of Service, Unity Gaming Services terms | Runs only after consent. Disclosed in the privacy policy and Data safety. |
+| AttackRagn | Audio/Resources/BAM/Sfx/AttackRagn.mp3 | Mix av oss av: artisticdude "Swishes Sound Pack" (swish-9), rubberduck "80 CC0 RPG SFX" (blade_02), qubodup "Dog snarl, grunt, grumble" (dog-snarl) | CC0 1.0 | None |
+| RagnLeap | Audio/Resources/BAM/Sfx/RagnLeap.mp3 | Mix av oss av: CaveboyTup "Wolf Monster Sound" (wolf_monster_6), artisticdude "Swishes Sound Pack" (swish-7, halv fart), rubberduck "80 CC0 RPG SFX" (chain_01) | CC0 1.0 | None |
+| RagnLand | Audio/Resources/BAM/Sfx/RagnLand.mp3 | Mix av oss av: Kenney "Impact Sounds" (impactPunch_heavy_000, impactMining_001), rubberduck "80 CC0 RPG SFX" (chain_02), IgnasD "Ice breaking/shattering" (LedasLuzta2) | CC0 1.0 | None |
+| AttackNassla | Audio/Resources/BAM/Sfx/AttackNassla.mp3 | Mix av oss av: artisticdude "Swishes Sound Pack" (swish-12), artisticdude "RPG Sound Pack" (NPC/slime/slime1) | CC0 1.0 | None |
+| NasslaThrow | Audio/Resources/BAM/Sfx/NasslaThrow.mp3 | Mix av oss av: artisticdude "RPG Sound Pack" (battle/swing2, inventory/beads) | CC0 1.0 | None |
+| NasslaBramble | Audio/Resources/BAM/Sfx/NasslaBramble.mp3 | Mix av oss av: rubberduck "80 CC0 RPG SFX" (wood_05, wood_01, creature_slime_01), Kenney "RPG Audio" (creak1), qubodup "20 rustles (dry leaves)" (rustle05) | CC0 1.0 | None |
 
 ## Imported from the old game
 
