@@ -50,13 +50,65 @@ namespace BAM.UI
         {
             if (BamSettings.AnalyticsConsent != Consent.Unknown) { done?.Invoke(); return; }
             Init();
+            var art = ConsentArt(out var logoLayer);
             // Both answers look the same and are the same size (Google Play: declining must be as easy as accepting).
             dialog.Show(ConsentText.Title, ConsentText.Body,
-                ConsentText.No, () => { BamSettings.AnalyticsConsent = Consent.Denied; done?.Invoke(); },
-                ConsentText.Yes, () => { BamSettings.AnalyticsConsent = Consent.Granted; done?.Invoke(); },
+                ConsentText.No, () => { DropConsentArt(art, logoLayer); BamSettings.AnalyticsConsent = Consent.Denied; done?.Invoke(); },
+                ConsentText.Yes, () => { DropConsentArt(art, logoLayer); BamSettings.AnalyticsConsent = Consent.Granted; done?.Invoke(); },
                 UiKit.Primary, UiKit.Primary, null,
                 string.IsNullOrEmpty(BamInfo.PrivacyPolicyUrl) ? null : "Privacy policy",
                 () => Application.OpenURL(BamInfo.PrivacyPolicyUrl));
+        }
+
+        // full review 2026-11-13 nr 126: the first thing a new player sees was the consent box on a bare dark-blue screen. Now
+        // Home's painting lies under the dialog's dark veil and Rickard's logo (the app icon, Resources/BAM/Menu/bam_logo)
+        // stands bright above the box. Built for the question only and destroyed with the answer.
+        static GameObject ConsentArt(out GameObject logoLayer)
+        {
+            logoLayer = null;
+            var layer = dialog.Root;
+            var art = UiKit.NewRect("ConsentArt", layer);
+            var go = art.gameObject;
+            UiKit.Stretch(art);
+            art.SetSiblingIndex(0); // under the veil (now child 1), so the painting is dimmed and the box stays readable
+
+            var bg = Picture("home_bg", true);
+            if (bg != null)
+            {
+                var paint = UiKit.NewRect("Painting", art);
+                paint.anchorMin = paint.anchorMax = paint.pivot = new Vector2(0.5f, 0.5f);
+                var raw = paint.gameObject.AddComponent<RawImage>();
+                raw.texture = bg;
+                raw.raycastTarget = false;
+                var fit = paint.gameObject.AddComponent<AspectRatioFitter>();
+                fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent; // fills the screen, cut at the sides
+                fit.aspectRatio = (float)bg.width / bg.height;
+            }
+
+            var logo = Picture("bam_logo", true);
+            if (logo != null)
+            {
+                // over the veil: a layer of its own right after it (art 0, veil 1), under the box's safe area
+                var top = UiKit.NewRect("ConsentLogo", layer);
+                UiKit.Stretch(top);
+                top.SetSiblingIndex(2);
+                var safe = UiKit.SafeArea(top);
+                var pic = UiKit.NewRect("Icon", safe);
+                pic.anchorMin = pic.anchorMax = pic.pivot = new Vector2(0.5f, 1);
+                pic.anchoredPosition = new Vector2(0, -90);
+                pic.sizeDelta = new Vector2(400, 400);
+                var raw = pic.gameObject.AddComponent<RawImage>();
+                raw.texture = logo;
+                raw.raycastTarget = false;
+                logoLayer = top.gameObject;
+            }
+            return go;
+        }
+
+        static void DropConsentArt(GameObject art, GameObject logoLayer)
+        {
+            if (art != null) UnityEngine.Object.Destroy(art);
+            if (logoLayer != null) UnityEngine.Object.Destroy(logoLayer);
         }
 
         public static void ShowMainMenu()

@@ -228,6 +228,8 @@ namespace BAM.UI
             Action onLeft, onRight, onLink;
             public Action Back { get; private set; }
             public bool Open => go.activeSelf;
+            /// <summary>The dialog's full-screen layer: child 0 is its dark veil, then the safe area with the box.</summary>
+            public RectTransform Root => (RectTransform)go.transform;
 
             public Dialog(RectTransform parent)
             {

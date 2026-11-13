@@ -121,6 +121,7 @@ Copied byte-identical from Rickard's old project `Speltest/Assets/ABC2/Resources
 | `home_bg.jpg` (was `home_bg_soft.jpg`) | Home background painting | Old game Home | Rickard ("bilden är min egen", 2026-10-25) | Rickard's own | None |
 | `portrait_<hero>.png` (8) | Hero portraits on the Heroes cards and the Home top bar | Old game `profile_<hero>.png` (Fenn, Knut); Bram, Tyra, Moa, Tikta, Blast and Bonk rendered by us in Blender from the models the game uses, in their idle pose (2026-10-28, bam-work/art/portraits-2026-10-28) | Renders of Rickard's own hero models | Rickard's own (he confirmed 2026-10-25 15:07) | None |
 | `menu_btn_orange.png` | The orange PLAY button face on Home | Old game `AbcUI/menu_btn_orange.png` (PlayButton) | Rickard's own UI art from the old project | Rickard's own | None |
+| `bam_logo.png` | Rickard's logo above the first-start consent box (full review 2026-11-13 nr 126) | `Docs/play/branding/bam-logo.png`, scaled to 512 px with the white corners made transparent (2026-11-13) | Rickard's logo | Rickard's own (see the BAM logo row above) | None |
 | `special_<hero>.png`, `passive_<hero>.png` (14) | Ability icons on the Heroes page | Old game `ui_abilities_<hero>_*.png` | Rickard / the old project | Rickard's own (he confirmed 2026-10-25 15:14) | None |
 
 ### Match HUD pictures (match thread, 2026-10-26)
