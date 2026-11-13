@@ -23,6 +23,7 @@ namespace BAM.Sim
                 else if (s.Type == St.SlowPct || s.Type == St.SpeedPct) pct += s.V;
             }
             if (u.Hero == HeroId.Ragn && RagnRunning(u)) pct += RagnS.RunBonus; // Wolf Run (Hero8.cs)
+            pct += ItemSpeedPct(u); // Swift Boots (Items.cs)
             return SimMath.Clamp((u.BaseSpeed + flat) * (1 + pct), 0.5f, 6);
         }
 

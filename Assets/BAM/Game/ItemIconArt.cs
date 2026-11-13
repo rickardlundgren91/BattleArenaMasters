@@ -138,6 +138,17 @@ namespace BAM.Game
                     float pommel = Len(sx, sy + 0.68f) - 0.09f;
                     return Math.Min(Math.Min(blade, guard), Math.Min(grip, pommel));
                 }
+                case 11: // Swift Boots: a boot with a small wing at the ankle
+                {
+                    float shaft = Box(x + 0.08f, y - 0.1f, 0.19f, 0.34f) - 0.05f;
+                    float foot = Cap(x, y, -0.06f, -0.38f, 0.4f, -0.38f, 0.17f);
+                    float cuff = Box(x + 0.08f, y - 0.5f, 0.26f, 0.07f) - 0.03f;
+                    float d = Math.Min(Math.Min(shaft, foot), cuff);
+                    d = Math.Max(d, -Box(x - 0.16f, y + 0.47f, 0.5f, 0.03f)); // the sole's seam
+                    for (int k = 0; k < 3; k++) // three feathers fanning back from the ankle
+                        d = Math.Min(d, Taper(x, y, -0.62f, 0.4f - k * 0.2f, -0.16f, 0.08f - k * 0.03f, 0.03f, 0.075f));
+                    return d;
+                }
             }
             return 9f;
         }

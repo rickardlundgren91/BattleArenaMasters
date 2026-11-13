@@ -6,7 +6,7 @@ namespace BAM.Sim
     /// (Speltest SimItemsV2.cs, XYZ main cb45566), the six Rickard kept. Sole Target Sigil and Siege Banner are left out.</summary>
     /// 1 was Resonance Core, removed from the game 2026-11-13 (Rickard: "inte rätt item för spelet. ta bort"); the number stays free
     /// so the other items keep their ids on the wire and in match traces.
-    public enum ItemId : byte { None = 0, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10 }
+    public enum ItemId : byte { None = 0, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10, Boots = 11 }
 
     /// <summary>One item a hero holds and its state. Times are match times (ReadyAt: the item works again from then).</summary>
     public struct ItemSlot
@@ -44,6 +44,8 @@ namespace BAM.Sim
         // the four plain items (Rickard 2026-11-11: "10% lifesteal, 15% minion dmg, 10% tower dmg, 5% hero dmg"; the old game's
         // Parascythe, Minion Skewer, Crushing Spanner and Heroes Bane, with Rickard's numbers)
         public const float Lifesteal = 0.10f, MinionDmg = 0.15f, TowerDmg = 0.10f, HeroDmg = 0.05f;
+        // Swift Boots (common; Rickard 2026-11-13: "item boots 10% movementspeed")
+        public const float BootsSpeed = 0.10f;
     }
 
     /// <summary>Names, rarity, icon and text of the items (HUD and menus; the rules read only Rarity).</summary>
@@ -78,10 +80,12 @@ namespace BAM.Sim
                 Text = $"+{P(ItemS.TowerDmg)} damage to towers" },
             new Info { Id = ItemId.HeroDmg, Short = $"+{P(ItemS.HeroDmg)} damage to heroes", Name = "Heroes Bane", Rarity = 2, Icon = "item_dagger",
                 Text = $"+{P(ItemS.HeroDmg)} damage to heroes" },
+            new Info { Id = ItemId.Boots, Short = $"+{P(ItemS.BootsSpeed)} move speed", Name = "Swift Boots", Rarity = 0, Icon = "item_boots",
+                Text = $"+{P(ItemS.BootsSpeed)} move speed, all match long" },
         };
         static string P(float v) => Math.Round(v * 100) + "%";
 
-        public const int Count = 10;
+        public const int Count = 11;
         public static Info Get(ItemId id) => id > ItemId.None && (int)id <= Count ? all[(int)id] : null;
         public static int Rarity(ItemId id) { var i = Get(id); return i != null ? i.Rarity : 0; }
     }
@@ -137,7 +141,16 @@ namespace BAM.Sim
             }
         }
 
-        /// <summary>Three items the hero does not hold, weighted by rarity, from all nine: every hero can be offered every item
+        /// <summary>Swift Boots: +10 % to the holder's percent speed changes (Movement.SpeedOf, BotSense.SpeedOf). Fenn's decoy walks
+        /// with its owner's boots, so it cannot be told apart by its pace.</summary>
+        internal static float ItemSpeedPct(Unit u)
+        {
+            if (u.Kind != UnitKind.Hero) return 0;
+            var h = u.IsClone && u.Owner != null ? u.Owner : u;
+            return h.ItemCount > 0 && h.HasItem(ItemId.Boots) ? ItemS.BootsSpeed : 0;
+        }
+
+        /// <summary>Three items the hero does not hold, weighted by rarity, from all ten: every hero can be offered every item
         /// (Rickard 2026-11-13, full review nr 113: "alla heroes ska kunna få alla items"; the old game's role filter is gone).</summary>
         void RollOffer(Unit h)
         {

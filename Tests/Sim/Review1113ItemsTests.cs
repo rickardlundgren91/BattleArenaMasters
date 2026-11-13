@@ -21,7 +21,7 @@ namespace BAM.Sim
                     h.OfferCount = 0;
                 }
                 int n = 0, all = 0; for (int k = 1; k <= ItemCatalog.Count; k++) { if (seen[k]) n++; if (ItemCatalog.Get((ItemId)k) != null) all++; }
-                Check(ok3 && n == all && all == 9 && !seen[1], $"nr 113: {id} can be offered all {all} items, never the removed Resonance Core ({n} seen in 400 offers)");
+                Check(ok3 && n == all && all == 10 && !seen[1], $"nr 113: {id} can be offered all {all} items, never the removed Resonance Core ({n} seen in 400 offers)");
             }
         }
     }

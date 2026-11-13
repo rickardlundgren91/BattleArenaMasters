@@ -14,7 +14,7 @@ namespace BAM.Online.Mp
         // Dropped (full review 2026-11-09 nr 71): host to the one guest whose seat it gave to a bot (too far behind, too slow to load),
         // so that guest plays on with bots at once. A new message id: it goes out with the protocol bump of this fix round (59)
         /// <summary>Phones with another protocol never meet (bump it whenever a message or the rules' input changes).</summary>
-        public const int Protocol = 60; // history: Docs/PROTOCOL.md
+        public const int Protocol = 61; // history: Docs/PROTOCOL.md
     }
 
     static class MpQueue

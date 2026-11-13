@@ -80,6 +80,16 @@ namespace BAM.Sim
             Check(Math.Abs(a.Sts[s4].T - 1f) < 1e-4f, "an ally's control is not shortened");
             a.ClearStatuses(); a.ItemCount = 0;
 
+            // Swift Boots: +10 % move speed, for the bots' reading too; nothing for an ally without them
+            a.ClearStatuses(); ally.ClearStatuses(); float sp0 = m.SpeedOf(a);
+            Give(a, ItemId.Boots);
+            Check(Math.Abs(m.SpeedOf(a) - sp0 * 1.1f) < 1e-4f, $"Swift Boots: +10 % move speed ({sp0:0.00} -> {m.SpeedOf(a):0.00})");
+            Check(Math.Abs(BotBrain.SpeedOf(a) - m.SpeedOf(a)) < 1e-4f, "the bots read the same speed");
+            m.AddStatus(a, St.SpeedPct, 1f, 0.12f);
+            Check(Math.Abs(m.SpeedOf(a) - sp0 * 1.22f) < 1e-4f, "Swift Boots adds to other speed changes");
+            Check(Math.Abs(m.SpeedOf(ally) - ally.BaseSpeed) < 1e-4f, "an ally without boots walks at its base speed");
+            a.ClearStatuses(); a.ItemCount = 0;
+
             // Quarry Mark: Tyra marks, her ally's special does +20 %
             Give(a, ItemId.Mark);
             m.ItemsOnAutoHit(a, e);
