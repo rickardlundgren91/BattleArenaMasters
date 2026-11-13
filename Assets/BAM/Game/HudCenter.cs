@@ -2,6 +2,7 @@ using BAM.Sim;
 using BAM.UI;
 using UnityEngine;
 using UnityEngine.UI;
+using EventType = BAM.Sim.EventType;
 
 namespace BAM.Game
 {
@@ -9,7 +10,8 @@ namespace BAM.Game
     /// The middle of the screen as the old game draws it with the Glass HUD (ABC2 Hud.cs drawHUD, HudGlass.cs): "Match starts in"
     /// with the seconds on a glass banner during the countdown, the one-line start banner DESTROY THE ENEMY TOWER (gold and
     /// orange on slim glass) for 2.5 s after it, while dead a dim screen with RESPAWN IN, the seconds and who did it (small, at
-    /// the top left under our portraits since review 2026-11-13 nr 6; the old game had it over the middle of the fight), and
+    /// the top left under our portraits since review 2026-11-13 nr 6; the old game had it over the middle of the fight; since full
+    /// review 2026-11-13 nr 122 the killer's round portrait beside it and a line on what did it: "Special: Supernova"), and
     /// VICTORY or DEFEAT until the result comes up. Also the pause button on a small round glass plate at the right edge, where
     /// the old game had its glass tool button.
     /// </summary>
@@ -21,7 +23,9 @@ namespace BAM.Game
 
         RectTransform countBanner, startBanner, pauseRoot;
         CanvasGroup startGroup;
-        Text countTitle, countNum, startText, centerText, respawnText, defeatedText;
+        Text countTitle, countNum, startText, centerText, respawnText, defeatedText, defeatedHow;
+        FeedSide deathPic; // the killer's round portrait, as the kill feed's (HudKillFeed.cs)
+        float deathX, deathTextX, deathNameY, deathHowY, deathPicY, deathD, deathW;
         Image dim;
         int shownCount, shownRespawn, respawnNumSize = 72;
         const string RespawnLead = "RESPAWN IN <size="; // the seconds ride on the same line, bigger and on the same baseline
@@ -43,7 +47,7 @@ namespace BAM.Game
         {
             dim.enabled = on;
             respawnText.gameObject.SetActive(on);
-            if (!on) defeatedText.gameObject.SetActive(false);
+            if (!on) { defeatedText.gameObject.SetActive(false); defeatedHow.gameObject.SetActive(false); deathPic.Root.gameObject.SetActive(false); }
         }
 
         void Center()
@@ -87,9 +91,9 @@ namespace BAM.Game
             if (respawnText.gameObject.activeSelf != waiting)
             {
                 SetRespawn(waiting);
-                bool by = waiting && killedBy != null && (killedBy.IsHero || killedBy.Kind == UnitKind.Wolf || killedBy.Kind == UnitKind.Tower);
+                bool by = waiting && killedBy != null && (killedBy.IsHero || killedBy.Kind == UnitKind.Tower || killedBy.Kind == UnitKind.Minion);
                 defeatedText.gameObject.SetActive(by);
-                if (by) defeatedText.text = "Defeated by " + KillerName(killedBy);
+                if (by) ShowKiller();
             }
             if (waiting)
             {
@@ -100,14 +104,64 @@ namespace BAM.Game
 
         static void BamAudioCountdown() => BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.Countdown);
 
-        // "Defeated by Bram", "Defeated by Fenn's wolf", "Defeated by the tower" (the old hitByName · hitByKind said "Bram · Hero",
-        // too long for the corner it now sits in, review 2026-11-13 nr 6)
+        // "Defeated by Bram", "Defeated by the tower", "Defeated by minions" (the old hitByName · hitByKind said "Bram · Hero", too
+        // long for the corner it now sits in, review 2026-11-13 nr 6; Fenn's wolf went with full review nr 116)
         static string KillerName(Unit k)
         {
-            var who = k.Kind == UnitKind.Wolf && k.Owner != null ? k.Owner : k.IsClone && k.Owner != null ? k.Owner : k;
+            var who = k.IsClone && k.Owner != null ? k.Owner : k;
             if (who.Kind == UnitKind.Tower) return "the tower";
-            if (k.Kind == UnitKind.Wolf && k.Owner == null) return "a wolf";
-            return HeroCatalog.Get(who.Hero).Name + (k.Kind == UnitKind.Wolf ? "'s wolf" : "");
+            if (who.Kind == UnitKind.Minion) return "minions";
+            return HeroCatalog.Get(who.Hero).Name;
+        }
+
+        /// <summary>What took the player's last health (full review 2026-11-13 nr 122): the Damage event on it just before its Death
+        /// in the same tick ("Special: Supernova", "Attack", "Passive: Ignite", "Tower shot"); null when nothing fits. A dead hero's
+        /// special that still lands (his bomb, his poison) is Passive damage in the rules: it reads as his special here.</summary>
+        static string KillHow(System.Collections.Generic.List<SimEvent> ev, int deathAt, Unit victim, Unit killer)
+        {
+            if (killer == null) return null;
+            if (killer.Kind == UnitKind.Tower) return "Tower shot";
+            if (!killer.IsHero) return null;
+            var who = killer.IsClone && killer.Owner != null ? killer.Owner : killer;
+            var info = HeroCatalog.Get(who.Hero);
+            for (int j = deathAt - 1; j >= 0; j--)
+            {
+                var d = ev[j];
+                if (d.Type != EventType.Damage || d.B != victim) continue;
+                switch (d.Dmg)
+                {
+                    case DmgKind.Auto: return "Attack";
+                    case DmgKind.Special: return "Special: " + info.SpecialTitle;
+                    default: return who.Alive && info.PassiveName != null ? "Passive: " + info.PassiveName : "Special: " + info.SpecialTitle;
+                }
+            }
+            return null;
+        }
+
+        // the killer's portrait (a hero only) and the two lines beside it, or the lines alone from the left edge
+        void ShowKiller()
+        {
+            var who = killedBy.IsClone && killedBy.Owner != null ? killedBy.Owner : killedBy;
+            bool pic = who.IsRealHero;
+            defeatedText.text = "Defeated by " + KillerName(killedBy);
+            defeatedHow.text = killedHow ?? "";
+            defeatedHow.gameObject.SetActive(!string.IsNullOrEmpty(killedHow));
+            SetFeedSide(deathPic, pic ? who : null);
+            PlaceKiller(pic);
+        }
+
+        void PlaceKiller(bool pic)
+        {
+            if (deathD <= 0f) return;
+            float x = pic ? deathTextX : deathX, w = deathW - (x - deathX);
+            LineLeft(defeatedText, deathD * 0.39f, x, deathNameY, w);
+            LineLeft(defeatedHow, deathD * 0.32f, x, deathHowY, w);
+            if (!pic) return;
+            var rt = deathPic.Root;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(deathD, deathD);
+            rt.anchoredPosition = new Vector2(deathX + deathD / 2f, -deathPicY);
         }
 
         // ---------------------------------------------------------------- layout and building
@@ -135,12 +189,16 @@ namespace BAM.Game
             // respawn (review 2026-11-13 nr 6): it sat over the middle of the fight (RESPAWN IN at 0.36 H, seconds 0.14 W tall at
             // 0.44 H, who did it at 0.5 H, the old game's places) and is now small at the top left, from the first portrait's edge,
             // as far under the strip as the kill feed, which keeps the middle (0.378-0.622 W): RESPAWN IN with the seconds bigger
-            // on one line (to 0.33 W), who did it under it (to 0.33 W for "Defeated by Fenn's wolf")
+            // on one line (to 0.33 W), who did it under it; since nr 122 the killer's portrait (0.074 W) at the left with "Defeated by
+            // Blast" and what did it ("Special: Supernova", smaller) beside it, the lines from the left edge when no hero did it
             float rx = W * 0.032f, rTop = Mathf.Max(4f, H * 0.01f) + W * 0.088f + H * 0.014f;
             respawnNumSize = Mathf.Max(12, Mathf.RoundToInt(W * 0.075f));
             shownRespawn = -1; // the seconds' size is in the text: write it again
             LineLeft(respawnText, W * 0.036f, rx, rTop + W * 0.045f, W * 0.34f);
-            LineLeft(defeatedText, W * 0.029f, rx, rTop + W * 0.11f, W * 0.34f);
+            deathD = W * 0.074f; deathX = rx; deathTextX = rx + deathD + W * 0.016f; deathW = W * 0.4f;
+            deathPicY = rTop + W * 0.125f; deathNameY = deathPicY - W * 0.017f; deathHowY = deathPicY + W * 0.02f;
+            if (defeatedText.gameObject.activeSelf) PlaceKiller(deathPic.Root.gameObject.activeSelf);
+            else PlaceKiller(false);
             Line(centerText, W * 0.115f, -H * 0.22f, W);
             // the glass tool (score tab, or pause in the guided match): the old glass tool's place under the strip at the right edge
             float r = W * 0.034f, pad = W * 0.01f, gb = Mathf.Max(4f, H * 0.01f) + (W * 0.064f + W * 0.024f) + Mathf.Max(7f, W * 0.02f) * 1.6f;
@@ -205,6 +263,10 @@ namespace BAM.Game
             respawnText = InkLabel(safe, "", Color.white, 4);
             respawnText.supportRichText = true;
             defeatedText = InkLabel(safe, "", Color.white, 3);
+            defeatedHow = InkLabel(safe, "", new Color(201f / 255f, 205f / 255f, 238f / 255f), 3);
+            defeatedHow.gameObject.SetActive(false);
+            deathPic = FeedPortrait(safe);
+            deathPic.Root.gameObject.SetActive(false);
         }
 
         // the old small()/big(): white with a thick dark navy edge

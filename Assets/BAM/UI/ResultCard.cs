@@ -47,6 +47,8 @@ namespace BAM.UI
         static CanvasGroup resFade;
         // the account XP under the table or the small card (online builds; Speltest HudV3 drawResult's Progression lines)
         static Text resXp, resLevel, resUnlock;
+        // one tip after a defeat, from how the match went (full review 2026-11-13 nr 122), between the card and PLAY AGAIN
+        static Text resTip;
         static Image resXpBack, resXpFill;
         static float resXpPart;
         static bool resTableMode, resWon;
@@ -240,6 +242,10 @@ namespace BAM.UI
             resXpFill = Pic(resCard, "XpFill", UiKit.Rounded, ResXpFill);
             resLevel = ResText(resCard, false, ResSub, TextAnchor.MiddleCenter);
             resUnlock = ResText(resCard, false, ResLevelUp, TextAnchor.MiddleCenter);
+            resTip = ResText(resBody, false, ResSilverText, TextAnchor.MiddleCenter);
+            resTip.horizontalOverflow = HorizontalWrapMode.Wrap; // one line that shrinks to fit, as the XP line (LayoutResult)
+            resTip.verticalOverflow = VerticalWrapMode.Truncate;
+            resTip.resizeTextForBestFit = true;
 
             resAgain = ResButton("PLAY AGAIN", true, RestartMatch, out resAgainShadow, out resAgainText, out resAgainShine);
             resHome = ResButton("HOME", false, GoToMenu, out resHomeShadow, out resHomeText, out resHomeEdge);
@@ -335,6 +341,9 @@ namespace BAM.UI
             // room page opens by itself when the menus are back (MpRoom.WantPage), so the host can start again (nr 61)
             resAgain.gameObject.SetActive((!r.Tutorial || !r.Won) && !r.Online);
             FillXp(r.Practice);
+            string tip = r.Won || r.Quit || r.Tutorial || !resTableMode ? null : LossTip(r);
+            resTip.gameObject.SetActive(tip != null);
+            resTip.text = tip ?? "";
             if (resTableMode) FillScores(m);
             else
             {
@@ -349,6 +358,19 @@ namespace BAM.UI
                 resBigValue[2].text = assists.ToString();
             }
             LayoutResult();
+        }
+
+        /// <summary>The one tip after a defeat (full review 2026-11-13 nr 122; the big mobile MOBAs do the same): the mistake the
+        /// match counted most (MatchResult.TowerDeaths, ReadyDeaths, Deaths), else a general one. Public for the editor's checks.</summary>
+        public static string LossTip(MatchResult r)
+        {
+            if (r.TowerDeaths >= 2) return "You died " + r.TowerDeaths + " times at the enemy tower: go in behind your minions";
+            if (r.ReadyDeaths >= 2) return "You died " + r.ReadyDeaths + " times with your special ready: use it sooner";
+            if (r.Deaths >= 4) return "Back off when your health is low and come back full";
+            if (r.TowerDeaths == 1) return "The enemy tower got you: go in behind your minions, it shoots them first";
+            if (r.ReadyDeaths == 1) return "You died with your special ready: use it before the fight turns";
+            if (r.Deaths == 0) return "No deaths: now push the enemy tower with your minions";
+            return "Hit the enemy tower when your minions are under it: it shoots them first";
         }
 
         // "+160 XP · +20 Rating  (first win today)", the level bar, "LEVEL UP! Level 4 · 40 / 200 XP"; hidden offline or for a
@@ -417,7 +439,8 @@ namespace BAM.UI
             float W = resBody.rect.width, H = resBody.rect.height;
             if (W <= 0 || H <= 0) return;
             bool sc = resTableMode;
-            float cw0 = W * 0.86f, cx0 = (W - cw0) / 2, top = sc ? H * 0.1f : H * 0.2f, ch = sc ? H * 0.62f : H * 0.5f;
+            bool tip = resTip.gameObject.activeSelf;
+            float cw0 = W * 0.86f, cx0 = (W - cw0) / 2, top = ResCardTop(H), ch = sc ? H * 0.62f : H * 0.5f;
             TopLeft(resCard, cx0, top, cw0, ch);
             float cr = W * 0.04f;
             Radius(resCardBack, cr);
@@ -432,6 +455,13 @@ namespace BAM.UI
 
             float ly = sc ? LayoutScores(W, H, cw0) + H * 0.035f : LayoutSmall(W, H, cw0);
             LayoutXp(W, H, cw0, ly);
+            if (tip)
+            {
+                Size(resTip, W * 0.032f);
+                resTip.resizeTextMaxSize = resTip.fontSize;
+                resTip.resizeTextMinSize = Mathf.Max(1, Mathf.RoundToInt(resTip.fontSize * 0.6f));
+                Centre(resTip.rectTransform, W / 2, top + ch + H * 0.0175f, W * 0.86f, resTip.fontSize * 1.5f);
+            }
 
             LayoutButton(resAgain, resAgainShadow, resAgainText, W * 0.1f, H * 0.74f, W * 0.8f, H * 0.065f);
             resAgainShine.rectTransform.anchorMin = new Vector2(0, 1); resAgainShine.rectTransform.anchorMax = new Vector2(1, 1);
@@ -447,6 +477,9 @@ namespace BAM.UI
             UiKit.Stretch(resHomeEdge.rectTransform);
             RingRadius(resHomeEdge, hr);
         }
+
+        // the card's top: a defeat's tip lifts the score card 0.03 H, so the tip fits between it and PLAY AGAIN (nr 122)
+        static float ResCardTop(float H) => resTableMode ? (resTip != null && resTip.gameObject.activeSelf ? H * 0.07f : H * 0.1f) : H * 0.2f;
 
         static void LayoutXp(float W, float H, float w, float ly)
         {
@@ -598,7 +631,7 @@ namespace BAM.UI
                 Arm(resAgainGroup, ready, a);
                 Arm(resHomeGroup, ready, a);
                 var p = resCard.anchoredPosition;
-                float H = resBody.rect.height, top = (resTableMode ? H * 0.1f : H * 0.2f) + (1 - k) * H * 0.03f;
+                float H = resBody.rect.height, top = ResCardTop(H) + (1 - k) * H * 0.03f;
                 if (Mathf.Abs(p.y + top) > 0.01f) { p.y = -top; resCard.anchoredPosition = p; }
             }
 

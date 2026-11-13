@@ -65,8 +65,9 @@ namespace BAM.Game
         const float LayoutSettle = 3f;
         int lastTutStep;
         float lastDenied, shakeUntil, bannerUntil, gainAt, lastCharge;
-        // who killed the player last ("Defeated by" under the respawn countdown)
+        // who killed the player last and with what ("Defeated by" and the line under it, beside the respawn countdown; nr 122)
         Unit killedBy;
+        string killedHow;
         const float BannerTime = 2.5f, GainTime = 0.35f; // the old bannerT and CombatFeel.PULSE_T
         MatchState lastState;
         bool hintShown;
@@ -97,7 +98,7 @@ namespace BAM.Game
             lastTutStep = -1;
             lastDenied = m.SpecialDeniedAt; shakeUntil = bannerUntil = 0f;
             shownShots = -1;
-            gainAt = -99f; lastCharge = 0f; killedBy = null;
+            gainAt = -99f; lastCharge = 0f; killedBy = null; killedHow = null;
             readyAt = -99f; wasReady = false; wasFull = true; // no pop for a charge the hero already had when the match starts
             if (specialFlash != null) { specialFlash.enabled = false; specialRoot.localScale = Vector3.one; }
             lastState = m.State;

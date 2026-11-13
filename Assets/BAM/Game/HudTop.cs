@@ -132,7 +132,7 @@ namespace BAM.Game
                 var e = ev[i];
                 if (e.Type == EventType.Damage) { if (MatchViews.IsTick(ev, i)) OnTick(e); else OnDamage(e); }
                 else if (e.Type == EventType.Heal) OnHeal(e);
-                else if (e.Type == EventType.Death && e.B != null && e.B.IsRealHero) OnHeroDeath(e);
+                else if (e.Type == EventType.Death && e.B != null && e.B.IsRealHero) OnHeroDeath(e, ev, i);
                 else if (e.Type == EventType.SpellCast || e.Type == EventType.SpellCancel) OnSpellEvent(e); // HudSpell.cs
             }
         }
@@ -282,10 +282,10 @@ namespace BAM.Game
             t.Label.gameObject.SetActive(true);
         }
 
-        void OnHeroDeath(SimEvent e)
+        void OnHeroDeath(SimEvent e, System.Collections.Generic.List<SimEvent> ev, int at)
         {
             var victim = e.B;
-            if (victim == m.Player) killedBy = e.A;
+            if (victim == m.Player) { killedBy = e.A; killedHow = KillHow(ev, at, victim, e.A); } // HudCenter.cs
             OnKillFeed(e); // HudKillFeed.cs
         }
         string Colored(Unit u)
