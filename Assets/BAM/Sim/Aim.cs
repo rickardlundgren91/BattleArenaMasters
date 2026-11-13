@@ -29,6 +29,9 @@ namespace BAM.Sim
 
     public sealed partial class Match
     {
+        /// <summary>The mark a dragged Shadow Strike puts on the aimed spot (veiled Fenn): a pointer, not an area.</summary>
+        public const float StrikeMarkRadius = 0.35f;
+
         /// <summary>The shape h's drag would cover now, aimed at ang (map space) with length share k (as TryCastSpecial gets them).</summary>
         public AimInfo AimFor(Unit h, float ang, float k)
         {
@@ -53,6 +56,11 @@ namespace BAM.Sim
                 case HeroId.Nassla: LandPoint(h, ang, k, NasslaS.Reach, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = NasslaS.Radius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
                 case HeroId.Ragn: RagnLandPoint(h, ang, k, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = RagnS.LandRadius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
                 case HeroId.Ravna: Line(ref a, FlockReach(h, ang), NightFlightOn ? RavnaS.FlightRadius : RavnaS.HitRadius, false); break; // the flock tears through everyone on its way
+                case HeroId.Fenn when FennVeil && h.VeilStrikeReady:
+                    // the Shadow Strike by hand: a small mark on the aimed spot in his reach; the enemy nearest it is struck (AimTargets)
+                    StrikeAimPoint(h, ang, k, out a.CX, out a.CY);
+                    a.Shape = AimShape.Circle; a.Radius = StrikeMarkRadius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y);
+                    break;
                 case HeroId.Fenn:
                 {
                     // as CastFenn: the aimed point, then cut where a wall stops the flying wolf (it leaves from Fenn's spot)
@@ -87,6 +95,12 @@ namespace BAM.Sim
         {
             buf.Clear();
             if (a.Shape == AimShape.None) return buf;
+            if (h.Hero == HeroId.Fenn && FennVeil && h.VeilStrikeReady)
+            {   // the dragged Shadow Strike: the one enemy it would hit (FennStrikeNow)
+                var t = StrikeTargetAt(h, a.CX, a.CY);
+                if (t != null) buf.Add(t);
+                return buf;
+            }
             float ca = SimMath.Cos(a.Ang), sa = SimMath.Sin(a.Ang), ex = a.X + ca * a.Length, ey = a.Y + sa * a.Length;
             Unit first = null; float firstAt = float.MaxValue;
             for (int i = 0; i < Units.Count; i++)

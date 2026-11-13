@@ -22,6 +22,10 @@ namespace BAM.Sim
         /// got stuck on the old drag step, 2026-11-01).</summary>
         public bool DragAimOn => OneTap && DragAim && Tut == null;
 
+        /// <summary>Can a drag aim h's special now (the HUD lets the SPECIAL button drag)? CanDragAim, plus veiled Fenn's Shadow Strike:
+        /// the Veil itself has nothing to aim, the strike out of it has (hero review 2026-11-13).</summary>
+        public bool DragAimNow(Unit h) => h != null && (CanDragAim(h.Hero) || FennVeil && h.VeilStrikeReady);
+
         /// <summary>Has h's special anything to aim? Bonk's Ground Slam lands round him and Kugg's turret where he stands: tap only.</summary>
         public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg && id != HeroId.Skrall && !(id == HeroId.Fenn && FennS.Veil) && !(id == HeroId.Ravna && RavnaS.NightFlight); // Fenn's Veil is cast where he stands (Heroes.cs) // Skrall's three strikes pick their own enemies (Hero8.cs)
 
@@ -163,6 +167,9 @@ namespace BAM.Sim
         /// chooses where it goes. Bonk and Kugg have nothing to aim, so their drag is a tap. False (nothing spent) when it cannot fire now.</summary>
         public bool TryAimSpecial(Unit h, float ang, float k)
         {
+            // veiled Fenn's drag picks whom his Shadow Strike hits: the enemy nearest the aimed spot (Heroes.cs FennStrikeNow); no warning,
+            // as the tapped strike (hero review 2026-11-13)
+            if (FennVeil && h.VeilStrikeReady && !float.IsNaN(ang)) return TryCastSpecial(h, ang, DragShare(h.Hero, k));
             if (float.IsNaN(ang) || !(CanDragAim(h.Hero) || h.Hero == HeroId.Fenn && !FennVeil)) return TryTapSpecial(h); // a test's wolf Fenn still aims
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
             k = DragShare(h.Hero, k);

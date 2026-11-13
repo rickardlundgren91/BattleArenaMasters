@@ -217,6 +217,11 @@ namespace BAM.Game
         void OnAimed(Vector2 offset)
         {
             if (m == null || !m.Player.Alive) return;
+            if (m.Player.VeilStrikeReady)
+            {   // veiled Fenn: the drag picks whom the Shadow Strike hits, the enemy nearest the aimed spot (hero review 2026-11-13)
+                if (m.VeilStrikeHasTarget(m.Player)) Queue(Coords.ScreenAngle(offset), AimK(offset)); else Denied();
+                return;
+            }
             if (!m.Player.SpecialReady) { Denied(); return; }
             Queue(Coords.ScreenAngle(offset), AimK(offset));
         }
@@ -340,7 +345,7 @@ namespace BAM.Game
             bool ready = p.Alive && p.SpecialReady && (!m.OneTap || m.TapHasTarget(p)) || p.Alive && m.VeilStrikeHasTarget(p); // veiled Fenn: lit with an enemy to strike
             // one tap + drag aim (tester Ski 2026-11-07): a tap rolls the random target, a drag aims by hand; not in the guided match
             // (it teaches the tap only) and not for Bonk's slam or Kugg's turret, which have nothing to aim (Match.CanDragAim)
-            if (m.OneTap) special.NoDrag = !(m.DragAimOn && Match.CanDragAim(p.Hero));
+            if (m.OneTap) special.NoDrag = !(m.DragAimOn && m.DragAimNow(p)); // veiled Fenn's strike drags too (Match.DragAimNow)
             // the Glass HUD's button (Hud.cs 739-749, HudGlass.drawGlassSpecialRim): a dark disc, brown when ready, an orange
             // charge ring, and when ready an orange ring breathing just outside it (sin 3.5 t)
             specialFill.color = ready ? GlassOrangeHi : GlassOrange;
@@ -489,7 +494,7 @@ namespace BAM.Game
             rings.SetAim(false, default);
             if (hidden || !p.Alive || m.State != MatchState.Play || !special.Dragging) return;
             Vector3 hero = views.DrawnAt(p);
-            bool ready = p.SpecialReady, cancel = special.OverCancel;
+            bool ready = p.SpecialReady || m.VeilStrikeHasTarget(p), cancel = special.OverCancel; // veiled Fenn: his strike, not the charge
             float dt = Time.unscaledDeltaTime;
             Vector2 o = special.Offset;
             // what the rules would do if let go now (Sim Aim.cs: wall cuts, the map edge, Fenn's flight; Precision AIM-01..06, BRAM-02),

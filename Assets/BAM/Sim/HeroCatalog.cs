@@ -170,7 +170,7 @@ namespace BAM.Sim
                 // assassin", same evening); the wolf texts stay for FennS.Veil = false
                 SpecialName = FennS.Veil ? "Spectral Veil" : "Call of the Pack", SpecialDesc = FennS.Veil ? "The knight fades into a ghost: leaves a decoy behind and turns invisible for 3.5 s, running 35% faster. He does not attack by himself while invisible: press SPECIAL again to strike an enemy in range with a Phantom Strike (120% more damage, slows by 35%)"
                     : "Calls a wolf that picks the nearest enemy and bites it for 4 s, then guards Fenn. Drag to throw it up to 6 tiles: it hunts an enemy hero, or bites minions when no hero is near. Walls stop it.",
-                OneTapDesc = FennS.Veil ? "Tap: leaves a decoy and turns invisible for 3.5 s, 35% faster, to escape or sneak up. Tap again near an enemy for a Phantom Strike: 120% more damage and a slow"
+                OneTapDesc = FennS.Veil ? "Tap: leaves a decoy and turns invisible for 3.5 s, 35% faster, to escape or sneak up. Tap again for a Phantom Strike on a random enemy in reach, or drag to pick who: 120% more damage and a slow." // the drag since the hero review 2026-11-13
                     : "Tap: throws his wolf at a random enemy in his range. It hunts enemy heroes, or bites minions when no hero is near. Walls stop it.",
                 PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit; if an enemy hero's attack hits it, Fenn runs 20% faster for 1 s. Every 18 s.",
                 Difficulty = 2 },

@@ -196,7 +196,7 @@ namespace BAM.Sim
         /// False (and nothing spent) when it cannot fire now: no charge, stunned, or a tap with nobody in reach.</summary>
         internal bool TryCastSpecial(Unit h, float aimAngle, float aimK)
         {
-            if (FennVeil && h.VeilStrikeReady) return FennStrikeNow(h); // SPECIAL again while veiled: the Shadow Strike
+            if (FennVeil && h.VeilStrikeReady) return FennStrikeNow(h, aimAngle, aimK); // SPECIAL again while veiled: the Shadow Strike (a drag picks whom)
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play) return false;
             h.AimAng = aimAngle; h.AimK = SimMath.Clamp(float.IsNaN(aimK) ? 0 : aimK, 0, 1);
             bool drag = !float.IsNaN(aimAngle);
@@ -454,18 +454,50 @@ namespace BAM.Sim
             return true;
         }
 
-        /// <summary>Is there an enemy in Fenn's reach for the Shadow Strike (the HUD lights SPECIAL while he is veiled)?</summary>
-        public bool VeilStrikeHasTarget(Unit h) => h != null && h.VeilStrikeReady && EnemiesInRange(h, h.Range, Pick.Any, true, spBuf).Count > 0;
+        /// <summary>Is there an enemy in Fenn's reach for the Shadow Strike (the HUD lights SPECIAL while he is veiled)? Heroes and
+        /// minions, never a tower, as every special's tap (hero review 2026-11-13: with only the enemy base in reach SPECIAL lit and the
+        /// strike went into the tower)</summary>
+        public bool VeilStrikeHasTarget(Unit h) => h != null && h.VeilStrikeReady && EnemiesInRange(h, h.Range, Pick.HeroOrMinion, true, spBuf).Count > 0;
 
-        /// <summary>SPECIAL while veiled: the Shadow Strike now, at a random enemy in his reach (TARGETING RULE); false with nobody there.</summary>
-        bool FennStrikeNow(Unit h)
+        /// <summary>SPECIAL while veiled: the Shadow Strike now. A tap (ang NaN) strikes a random enemy hero or minion in his reach
+        /// (TARGETING RULE); a drag strikes the one nearest the spot it aims at (StrikeAimPoint), so a player can pick, as a veiled bot
+        /// does (hero review 2026-11-13, Rickard "fixa alla punkter"). False with nobody in reach.</summary>
+        bool FennStrikeNow(Unit h, float ang = float.NaN, float k = 0)
         {
             if (!h.Alive || h.Has(St.Stun) || h.Has(St.Disarm) || State != MatchState.Play) return false;
-            var l = EnemiesInRange(h, h.Range, Pick.Any, true, spBuf);
-            if (l.Count == 0) return false;
-            var t = PickRandom(l);
+            Unit t;
+            if (float.IsNaN(ang))
+            {
+                var l = EnemiesInRange(h, h.Range, Pick.HeroOrMinion, true, spBuf);
+                if (l.Count == 0) return false;
+                t = PickRandom(l);
+            }
+            else
+            {
+                StrikeAimPoint(h, ang, k, out float x, out float y);
+                t = StrikeTargetAt(h, x, y);
+                if (t == null) return false;
+            }
             AutoAttack(h, t); h.AtkTimer = 0; h.Target = t; h.TargetT = Time; // AutoAttack ends the Veil (FennVeilStrike)
             return true;
+        }
+
+        /// <summary>The spot a dragged Shadow Strike aims at: share k of the reach Fenn's drag has (FennS.ThrowReach), which the
+        /// one-tap game's DragShare caps at his own reach (Range), so a full drag points at the edge of his white ring.</summary>
+        public void StrikeAimPoint(Unit h, float ang, float k, out float x, out float y) => AimPoint(h, ang, k, FennS.ThrowReach, out x, out y, 0);
+
+        /// <summary>Whom a dragged Shadow Strike hits: of the enemy heroes and minions in his reach that his team sees with a clear
+        /// line (never a tower), the one nearest the aimed spot; null when nobody is in reach.</summary>
+        public Unit StrikeTargetAt(Unit h, float x, float y)
+        {
+            var l = EnemiesInRange(h, h.Range, Pick.HeroOrMinion, true, spBuf);
+            Unit best = null; float bd = float.MaxValue;
+            for (int i = 0; i < l.Count; i++)
+            {
+                float d = SimMath.Hypot(l[i].X - x, l[i].Y - y) - l[i].R;
+                if (d < bd) { bd = d; best = l[i]; }
+            }
+            return best;
         }
 
         /// <summary>Fenn attacks: if his Veil is on, it ends and this attack is the Shadow Strike (true).</summary>
