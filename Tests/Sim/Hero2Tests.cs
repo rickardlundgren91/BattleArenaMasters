@@ -234,10 +234,9 @@ namespace BAM.Sim
             TowerExitChecks(); // first, with every hero as it ships (klutter review 2026-11-13 nr 1, TowerExitTests.cs)
             FennVeilDefault = false; NightFlightOn = false; SilverOn = false; // the older checks below were written for the wolf, which stays in the code (FennS.Veil false)
             RagnWalkTable(); RavnaRunTable(); Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Kugg(); Hero8(); Signals(); FennWolf(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); DragAimChecks(); TowerStopChecks(); TowerLockChecks(); TowerReturnChecks(); TelegraphChecks(); Review0309(); Fix0400(); Fix0400Bots(); Fix0400Client(); ItemChecks();
-            FennVeilDefault = FennS.Veil; FennVeilChecks(); NightFlightOn = RavnaS.NightFlight; NightFlightChecks(); SilverOn = BramS.Silver; SilverChecks(); Review0410(); Review1113();
+            FennVeilDefault = FennS.Veil; FennVeilChecks(); NightFlightOn = RavnaS.NightFlight; NightFlightChecks(); SilverOn = BramS.Silver; SilverChecks(); Review0410(); Review1113(); HeroReview1113();
             TraceReplayChecks(); // full review 2026-11-13 nr 124 (TraceReplayTests.cs)
             Review1113Items(); // full review 2026-11-13 nr 113 (Review1113ItemsTests.cs)
-            FennVeilDefault = FennS.Veil; FennVeilChecks(); NightFlightOn = RavnaS.NightFlight; NightFlightChecks(); SilverOn = BramS.Silver; SilverChecks(); Review0410(); Review1113(); HeroReview1113();
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;
         }
