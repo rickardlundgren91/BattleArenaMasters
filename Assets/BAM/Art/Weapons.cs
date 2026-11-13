@@ -567,6 +567,7 @@ namespace BAM.Art
         int[] laxSign, votes;
         int[] runSign, runVotes; // the same for WeaponDef.Run
         Quaternion[] handRef;
+        Quaternion[] offTurn; // the turn the weapon's aim took from the hand this frame, for its Offset (see there)
         Vector4[] refSum;
         Vector3[] restGrip, gripSum; // an Along weapon's grip in its hand's own space in the idle (HoldAngle holds it there)
         int restN;
@@ -1157,8 +1158,11 @@ namespace BAM.Art
                 float rest = (1f - Mathf.Clamp01(actW)) * liveW;
                 float rw = W.Run.On ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(moveW)) * liveW : 0f;
                 if (W.SwingAim) rw *= rest; // a SwingAim weapon swings from its rest aim, not its run hold (Tikta's needles point back in the run)
+                if (offTurn == null || offTurn.Length != wT.Length) offTurn = new Quaternion[wT.Length];
+                Quaternion handTurn = HandTurn(i);
+                offTurn[i] = handTurn; // in the fist's own grip, the weapon turns with the hand
                 if (W.HoldUp == 0f || gone) { t.localPosition = bindP[i]; t.localRotation = bindR[i]; }
-                else if (OnMenu && W.Menu.On) HoldAngle(i, W, rest, W.MenuSign, W.Menu.Up, W.Menu.Out); // a tapped swing plays the fist's grip
+                else if (OnMenu && W.Menu.On) { HoldAngle(i, W, rest, W.MenuSign, W.Menu.Up, W.Menu.Out); offTurn[i] = Quaternion.Slerp(handTurn, Quaternion.identity, rest); } // a tapped swing plays the fist's grip
                 else if (AnimFix.FixedGrip)
                 {
                     // the rest hold, and the run's eased in as the hero moves (Tyra's bow at her side)
@@ -1173,7 +1177,7 @@ namespace BAM.Art
                         t.position += Vector3.Lerp(ga, gb, rw) - t.TransformPoint(gripL[i]);
                     }
                 }
-                else HoldAngle(i, W, rest, 0);
+                else { HoldAngle(i, W, rest, 0); offTurn[i] = Quaternion.Slerp(handTurn, Quaternion.identity, rest); }
                 // Rickard's Turn is tuned on the rest hold, so with FixedGrip it goes as the rest aim goes: through a swing the weapon
                 // is in the fist's own grip (Fenn's -33/55 left his blade end-on to the match camera at the blow, 2026-10-28); a
                 // SwingAim weapon keeps its rest aim and its Turn, a weapon without a rest aim and a dead hero's keep the Turn whole;
@@ -1203,13 +1207,14 @@ namespace BAM.Art
                 // (2026-11-01) only for a weapon with the anatomical grip (Tyra): Knut's and Fenn's socket is a grip point only, and
                 // Rickard moves their weapon on top of it with his Offset ("då antar jag att jag bara flyttar den")
                 bool inSocket = AnimFix.PalmSocket && hasSock[i] && hasAnat[i] && (AnimFix.GripLock || full);
-                // the Offset goes with the fist: tuned on the idle in the hero's own axes, it is turned with the hand's turn from its
-                // idle (handRef), so at rest it is the same shift Rickard tuned, and as the arm moves the weapon stays where he put it
-                // in the hand. Added in the hero's axes (until 2026-11-13) it stood still while the hand turned round it, and Nässla's
-                // 13 cm Offset slid the staff about her fist by up to 9 cm in her idle sway alone (Unity measuring 2026-11-13; Rickard:
-                // "vapnet rör sig inte ihop med handen, den flyter iväg")
+                // the Offset turns as the weapon's aim turned with the hand this frame (offTurn: all of the hand's turn from its idle
+                // for Follow 1 or the fist's own grip, a tenth of it for Bonk's Follow 0.1), so at rest it is the shift Rickard tuned and
+                // the weapon keeps its place against the fist. In the hero's axes (until 2026-11-13) it stood still while Nässla's
+                // Follow-1 staff turned with her hand, and her 13 cm Offset slid it about her fist by 9 cm in her idle sway (Unity
+                // measuring 2026-11-13); turned with all of the hand (8998db0) it swung Bonk's club, whose aim follows a tenth of the
+                // hand, off his fist (Rickard 2026-11-13: "hans hand rör sig in och ut så han släpper vapnet")
                 if (W.Offset != Vector3.zero && !inSocket)
-                    t.position += (rested && !sampling ? hand[i].rotation * Quaternion.Inverse(handRef[i]) * W.Offset : root.TransformDirection(W.Offset)) * figH;
+                    t.position += (full ? handTurn : offTurn[i]) * root.TransformDirection(W.Offset) * figH;
                 if (W.Fist > 0.001f && !gone) CloseHand(i, W.Fist * liveW);
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
@@ -1710,8 +1715,10 @@ namespace BAM.Art
             HoldAngle(i, W, 1f, rested ? sign : 0, h.Up, h.Out);
             Quaternion rR = t.rotation;
             float follow = keep ? Mathf.Lerp(W.SwingFollow, W.Follow, rest) : W.Follow;
-            if (rested) rR = Share(hand[i].rotation * Quaternion.Inverse(root.rotation * handRef[i]), follow) * rR;
+            Quaternion sh = rested ? Share(hand[i].rotation * Quaternion.Inverse(root.rotation * handRef[i]), follow) : Quaternion.identity;
+            rR = sh * rR;
             float w = keep ? 1f : rest;
+            if (offTurn != null && i < offTurn.Length) offTurn[i] = Quaternion.Slerp(HandTurn(i), sh, w);
             Vector3 g = Vector3.Lerp(gB, t.TransformPoint(gl), w);
             t.rotation = Quaternion.Slerp(rB, rR, w);
             t.position += g - t.TransformPoint(gl);
@@ -1721,6 +1728,9 @@ namespace BAM.Art
         // turn, where the shortest way goes over to the other side. Followed along the way it went (until 2026-10-28) the turn could
         // wind past half a circle and stay there: Tikta's fists turn up to 175 degrees from her guard in her run and swing, and her
         // needles swung over and pointed at her face (Rickard's video 2026-10-28, "buggade vapen som snurrar")
+        // the hand's turn from its idle, in the world (none before the idle is measured)
+        Quaternion HandTurn(int i) => rested && !sampling && handRef != null ? hand[i].rotation * Quaternion.Inverse(root.rotation * handRef[i]) : Quaternion.identity;
+
         static Quaternion Share(Quaternion q, float f)
         {
             if (f <= 0f) return Quaternion.identity;
