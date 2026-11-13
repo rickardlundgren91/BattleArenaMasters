@@ -168,6 +168,7 @@ namespace BAM.Game
             CancelSpellTouch();
             if (heartButton != null) heartButton.Release();
             ReleaseSignalButtons();
+            ReleaseItemTouches(); // the item cards, the ITEM button and the items held (HudItems.cs)
             holding = false; wheelPick = -1;
         }
 

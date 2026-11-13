@@ -10,6 +10,10 @@ namespace BAM.Game
     /// passiv"): keep a finger on the SPECIAL button for 0.4 s and a thin white ring fills round it, then a small see-through card
     /// in the top right corner says what the special does, the hero's passive and how it charges. Letting go after the card has
     /// shown casts nothing (Rickard 2026-10-26); a short tap casts as always, a drag aims and shows no card. Not in the tutorial.
+    /// The items held read the same way (Rickard 2026-11-13: "man måste kunna hålla inne på items för att se vad dom gör när man
+    /// valt dom"): a finger on one of the icons beside the SPECIAL fills the same ring round it, then the same card tells the
+    /// item's rarity, name and whole rule, edged in its rarity's colour as on the item choice. The SPECIAL's card wins when both
+    /// are held.
     /// </summary>
     sealed partial class Hud
     {
@@ -19,11 +23,12 @@ namespace BAM.Game
 
         RectTransform holdCard;
         CanvasGroup holdLook;
-        Image holdRing;
+        Image holdRing, holdEdge;
         Text holdTag, holdName, holdDesc, holdName2, holdDesc2, holdFoot;
         float holdLaidW = -1f;
-        HeroId holdLaidHero = (HeroId)255;
-        bool holdLaidReady;
+        // what the card says now: the hero and whether its special is ready (SPECIAL), or HoldItemKey + the item
+        int holdLaidKey = -1;
+        const int HoldItemKey = 1000;
 
         void BuildHold()
         {
@@ -46,9 +51,9 @@ namespace BAM.Game
             holdLook.blocksRaycasts = false; holdLook.interactable = false;
             var back = UiKit.Fill(holdCard, HoldBack, UiKit.Rounded);
             back.raycastTarget = false;
-            var edge = UiKit.Fill(holdCard, HoldGold, UiKit.Ring); // the gold edge (UiKit.Ring: the same corner as Rounded)
-            edge.type = Image.Type.Sliced;
-            edge.raycastTarget = false;
+            holdEdge = UiKit.Fill(holdCard, HoldGold, UiKit.Ring); // the gold edge (UiKit.Ring: the same corner as Rounded); an item's in its rarity's colour
+            holdEdge.type = Image.Type.Sliced;
+            holdEdge.raycastTarget = false;
             holdTag = HoldText(UiKit.Font, HoldGold);
             holdName = HoldText(UiKit.Font, Color.white);
             holdDesc = HoldText(UiKit.BodyFont, HoldDesc);
@@ -80,11 +85,23 @@ namespace BAM.Game
             if (holdRing.enabled != ring) holdRing.enabled = ring;
             if (ring) holdRing.fillAmount = Mathf.Clamp01(el / HoldTime);
             bool card = on && el >= HoldTime;
-            if (holdCard.gameObject.activeSelf != card) holdCard.gameObject.SetActive(card);
-            if (!card) return;
-            float k = Mathf.Clamp01((el - HoldTime) / HoldFade);
+            // a finger on an item held (HudItems.cs): the same ring round its icon, then the same card about the item, while the
+            // SPECIAL's card is not up
+            int slot = !hidden && !card && p != null ? HeldPressed() : -1;
+            float ie = slot >= 0 ? Time.unscaledTime - heldPressAt : 0f;
+            for (int i = 0; i < Unit.MaxItems; i++)
+            {
+                bool r = i == slot && ie < HoldTime;
+                if (heldRing[i].enabled != r) heldRing[i].enabled = r;
+                if (r) heldRing[i].fillAmount = Mathf.Clamp01(ie / HoldTime);
+            }
+            bool item = slot >= 0 && ie >= HoldTime;
+            if (holdCard.gameObject.activeSelf != (card || item)) holdCard.gameObject.SetActive(card || item);
+            if (!card && !item) return;
+            float k = Mathf.Clamp01(((card ? el : ie) - HoldTime) / HoldFade);
             holdLook.alpha = k;
-            LayoutHold(p);
+            if (card) LayoutHold(p);
+            else LayoutItemHold(p.Items[slot].Id);
             float H = safe.rect.height;
             holdCard.anchoredPosition = new Vector2(holdCard.anchoredPosition.x, -(H * 0.095f - (1f - k) * H * 0.01f));
         }
@@ -94,9 +111,11 @@ namespace BAM.Game
         {
             float W = safe.rect.width;
             bool ready = p.Alive && p.SpecialReady;
-            if (Mathf.Abs(W - holdLaidW) < 0.5f && p.Hero == holdLaidHero && ready == holdLaidReady) return;
-            holdLaidW = W; holdLaidHero = p.Hero; holdLaidReady = ready;
+            int key = (int)p.Hero * 2 + (ready ? 1 : 0);
+            if (Mathf.Abs(W - holdLaidW) < 0.5f && key == holdLaidKey) return;
+            holdLaidW = W; holdLaidKey = key;
             var info = HeroCatalog.Get(p.Hero);
+            HoldLook(HoldGold, true);
             float pad = W * 0.025f, cw = W * 0.6f, tw = cw - pad * 2f;
             int nf = Mathf.RoundToInt(W * 0.038f), df = Mathf.RoundToInt(W * 0.029f), tf = Mathf.RoundToInt(W * 0.024f);
             float lh = df * 1.25f;
@@ -120,6 +139,36 @@ namespace BAM.Game
             holdCard.anchoredPosition = new Vector2(W * 0.97f - cw, holdCard.anchoredPosition.y);
         }
 
+        // an item held: its rarity, its name and its whole rule with every number (ItemCatalog Text; the choice shows only Short),
+        // the same sizes as the SPECIAL's card
+        void LayoutItemHold(ItemId id)
+        {
+            float W = safe.rect.width;
+            int key = HoldItemKey + (int)id;
+            if (Mathf.Abs(W - holdLaidW) < 0.5f && key == holdLaidKey) return;
+            var info = ItemCatalog.Get(id);
+            if (info == null) return;
+            holdLaidW = W; holdLaidKey = key;
+            float pad = W * 0.025f, cw = W * 0.6f, tw = cw - pad * 2f;
+            int nf = Mathf.RoundToInt(W * 0.038f), df = Mathf.RoundToInt(W * 0.029f), tf = Mathf.RoundToInt(W * 0.024f);
+            HoldLook(RarityEdge[info.Rarity], false);
+
+            float y = pad;
+            y = Put(holdTag, RarityWord[info.Rarity] + " ITEM", tf, pad, y, tw) + tf * 0.4f;
+            y = Put(holdName, info.Name, nf, pad, y, tw) + nf * 0.2f;
+            y = Put(holdDesc, info.Text, df, pad, y, tw, df * 1.25f) + pad * 0.8f;
+
+            holdCard.sizeDelta = new Vector2(cw, y);
+            holdCard.anchoredPosition = new Vector2(W * 0.97f - cw, holdCard.anchoredPosition.y);
+        }
+
+        // the card's edge and top line in the SPECIAL's gold or the item's rarity colour; the passive and the charge only for the SPECIAL
+        void HoldLook(Color c, bool forSpecial)
+        {
+            holdEdge.color = c; holdTag.color = c;
+            holdName2.enabled = holdDesc2.enabled = holdFoot.enabled = forSpecial;
+        }
+
         // one block of text at (x, y) from the card's top, wrapped to w; returns the y under it
         static float Put(Text t, string text, int size, float x, float y, float w, float lineHeight = 0f)
         {
@@ -134,28 +183,27 @@ namespace BAM.Game
             return y + h;
         }
 
-        static Sprite holdRingSprite;
+        static Sprite holdRingSprite, itemRingSprite;
 
         // a thin ring across the whole sprite (radial fill runs round it)
-        static Sprite HoldRingSprite
+        static Sprite HoldRingSprite => holdRingSprite != null ? holdRingSprite : (holdRingSprite = RingSprite("BAM.Hud.HoldRing", 3.5f));
+        // the same round an item's icon, about a third of the SPECIAL's size: three times as thick in the sprite, so about as wide
+        static Sprite ItemRingSprite => itemRingSprite != null ? itemRingSprite : (itemRingSprite = RingSprite("BAM.Hud.ItemRing", 10f));
+
+        static Sprite RingSprite(string name, float w)
         {
-            get
-            {
-                if (holdRingSprite != null) return holdRingSprite;
-                const int n = 256;
-                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "BAM.Hud.HoldRing", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-                var px = new Color32[n * n];
-                float h = n / 2f, w = 3.5f;
-                for (int y = 0; y < n; y++)
-                    for (int x = 0; x < n; x++)
-                    {
-                        float d = new Vector2(x + 0.5f - h, y + 0.5f - h).magnitude, a = Mathf.Clamp01(w / 2f + 0.5f - Mathf.Abs(d - (h - w)));
-                        px[y * n + x] = new Color32(255, 255, 255, (byte)(255f * a));
-                    }
-                tex.SetPixels32(px); tex.Apply(false, true);
-                holdRingSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-                return holdRingSprite;
-            }
+            const int n = 256;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = name, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[n * n];
+            float h = n / 2f;
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float d = new Vector2(x + 0.5f - h, y + 0.5f - h).magnitude, a = Mathf.Clamp01(w / 2f + 0.5f - Mathf.Abs(d - (h - w)));
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)(255f * a));
+                }
+            tex.SetPixels32(px); tex.Apply(false, true);
+            return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
         }
     }
 }

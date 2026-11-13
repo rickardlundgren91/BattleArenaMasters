@@ -18,7 +18,8 @@ namespace BAM.Game
     /// ITEM button by the SPECIAL waits (where the next item will sit) and opens them, and a hit takes them back to the button
     /// (review 2026-11-13 nr 2: at 1:20 and 2:56 they came up in the middle of tower fights and lay over RESPAWN IN). The items
     /// held sit as two small icons beside the SPECIAL on the screen's inner side, dark while they cool down, Resonance Core with
-    /// its Echoes. Pure display and input: the pick goes to the rules through PlayerInput.ItemPick.
+    /// its Echoes; a finger held on one shows what it does, as on the SPECIAL (HudHold.cs; Rickard 2026-11-13). Pure display and
+    /// input: the pick goes to the rules through PlayerInput.ItemPick.
     /// </summary>
     sealed partial class Hud
     {
@@ -30,6 +31,7 @@ namespace BAM.Game
         RectTransform offerRoot, offerTitleRt;
         readonly RectTransform[] offerCard = new RectTransform[ItemS.Choices];
         readonly Image[] offerEdge = new Image[ItemS.Choices], offerGlow = new Image[ItemS.Choices], offerIcon = new Image[ItemS.Choices];
+        readonly EmoteButton[] offerTap = new EmoteButton[ItemS.Choices];
         readonly Text[] offerName = new Text[ItemS.Choices], offerRarity = new Text[ItemS.Choices], offerText = new Text[ItemS.Choices];
         Text offerTitle;
         readonly ItemId[] offerShown = new ItemId[ItemS.Choices];
@@ -40,13 +42,18 @@ namespace BAM.Game
         // the ITEM button and when the cards are open: by themselves (dead, or calm behind our tower) or by a tap on the button,
         // which holds until a hit
         RectTransform offerBtn;
+        EmoteButton offerBtnTap;
         Image offerBtnGlow;
         Text offerBtnLabel;
         bool offerOpen, offerByTap;
         float offerBtnAt = -99f, offerHurtSeen = -99f;
 
         readonly RectTransform[] heldRoot = new RectTransform[Unit.MaxItems];
-        readonly Image[] heldIcon = new Image[Unit.MaxItems], heldCd = new Image[Unit.MaxItems];
+        readonly Image[] heldIcon = new Image[Unit.MaxItems], heldCd = new Image[Unit.MaxItems], heldRing = new Image[Unit.MaxItems];
+        readonly EmoteButton[] heldTap = new EmoteButton[Unit.MaxItems];
+        // the item icon a finger is on (-1: none) and since when: held HoldTime, it shows the item's card (HudHold.cs)
+        int heldPress = -1;
+        float heldPressAt;
         readonly Text[] heldCount = new Text[Unit.MaxItems];
         readonly ItemId[] heldShown = new ItemId[Unit.MaxItems];
         readonly float[] heldPulse = new float[Unit.MaxItems];
@@ -83,7 +90,7 @@ namespace BAM.Game
                 var card = offerCard[i] = UiKit.NewRect("Card" + i, offerRoot);
                 card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
                 var bg = UiKit.Fill(card, CardGlass, UiKit.Rounded); bg.type = Image.Type.Sliced; bg.raycastTarget = true; // the whole card takes the tap
-                var tap = card.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
+                var tap = offerTap[i] = card.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
                 tap.Down = _ => offerPressed = idx;
                 tap.Up = _ => { offerPressed = -1; OfferTapped(idx); };
                 var glow = offerGlow[i] = UiKit.Fill(card, Color.white, UiKit.Rounded); glow.type = Image.Type.Sliced; glow.raycastTarget = false;
@@ -117,21 +124,35 @@ namespace BAM.Game
             offerBtnLabel.fontStyle = FontStyle.Bold; offerBtnLabel.raycastTarget = false;
             offerBtnLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
             UiKit.AddOutline(offerBtnLabel, 2); UiKit.Stretch(offerBtnLabel.rectTransform);
-            var press = offerBtn.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
+            var press = offerBtnTap = offerBtn.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
             press.Up = _ => OfferButtonTapped();
             offerBtn.gameObject.SetActive(false);
 
-            // the items held: small round icons beside the SPECIAL
+            // the items held: small round icons beside the SPECIAL; a finger held on one reads it (HudHold.cs)
             for (int i = 0; i < Unit.MaxItems; i++)
             {
+                int idx = i;
                 var r = heldRoot[i] = UiKit.NewRect("Item" + i, safe);
                 r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+                // the finger's square: the icon and 4 units round it (2.2 icon radii), clear of the other icon and of the SPECIAL's
+                // round touch area (the icon sits 0.03 W outside it)
+                var area = UiKit.Fill(r, Color.clear); area.raycastTarget = true;
+                UiKit.Stretch(area.rectTransform, -4f, -4f, -4f, -4f);
+                var tap = heldTap[i] = r.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
+                tap.Down = _ => { heldPress = idx; heldPressAt = Time.unscaledTime; };
+                tap.Up = _ => { if (heldPress == idx) heldPress = -1; };
                 var ic = heldIcon[i] = UiKit.Fill(r, Color.white); ic.raycastTarget = false; ic.preserveAspect = true;
                 var cd = heldCd[i] = UiKit.Fill(r, new Color(0f, 0f, 0f, 0.6f), UiKit.Circle);
                 cd.raycastTarget = false; cd.type = Image.Type.Filled; cd.fillMethod = Image.FillMethod.Radial360;
                 cd.fillOrigin = (int)Image.Origin360.Top; cd.fillClockwise = false;
                 var n = heldCount[i] = UiKit.Label(r, "", 30, TextAnchor.LowerRight, Hex(0xbff3ff));
                 n.raycastTarget = false; UiKit.AddOutline(n, 2);
+                // the ring that fills round the icon while the finger stays, as round the SPECIAL (sized in HeldFrame)
+                var fill = heldRing[i] = UiKit.Fill(r, new Color(1f, 1f, 1f, 0.85f), ItemRingSprite);
+                fill.type = Image.Type.Filled; fill.fillMethod = Image.FillMethod.Radial360;
+                fill.fillOrigin = (int)Image.Origin360.Top; fill.fillClockwise = true;
+                fill.rectTransform.anchorMin = fill.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+                fill.enabled = false;
                 r.gameObject.SetActive(false);
             }
         }
@@ -145,6 +166,7 @@ namespace BAM.Game
             offerOpen = offerByTap = false; offerBtnAt = -99f; offerHurtSeen = float.MaxValue; // the first frame takes the hurt time as seen
             if (offerBtn != null) offerBtn.gameObject.SetActive(false);
             for (int i = 0; i < Unit.MaxItems; i++) { heldShown[i] = ItemId.None; heldPulse[i] = -99f; }
+            ReleaseItemTouches();
             if (offerRoot != null) offerRoot.gameObject.SetActive(false);
             for (int i = 0; i < Unit.MaxItems; i++) if (heldRoot[i] != null) heldRoot[i].gameObject.SetActive(false);
         }
@@ -167,6 +189,19 @@ namespace BAM.Game
         }
 
         byte TakeItemPick() { var b = itemPickQueued; itemPickQueued = 0; return b; }
+
+        // the item icon a finger holds (-1: none), only while it shows: a hidden icon never gets its finger's Up (EmoteButton.OnDisable)
+        int HeldPressed() => heldPress >= 0 && heldRoot[heldPress].gameObject.activeSelf ? heldPress : -1;
+
+        /// <summary>The fingers were lost (Hud.CancelTouches) or a match begins: the item cards, the ITEM button and the icons forget
+        /// theirs, so none stays pressed (a stale finger would block every later press while the control shows).</summary>
+        void ReleaseItemTouches()
+        {
+            heldPress = -1; offerPressed = -1;
+            for (int i = 0; i < Unit.MaxItems; i++) if (heldTap[i] != null) heldTap[i].Release();
+            for (int i = 0; i < ItemS.Choices; i++) if (offerTap[i] != null) offerTap[i].Release();
+            if (offerBtnTap != null) offerBtnTap.Release();
+        }
 
         void ItemsFrame(bool hidden)
         {
@@ -326,7 +361,7 @@ namespace BAM.Game
             {
                 bool show = live && i < p.ItemCount;
                 if (heldRoot[i].gameObject.activeSelf != show) heldRoot[i].gameObject.SetActive(show);
-                if (!show) continue;
+                if (!show) { if (heldPress == i) heldPress = -1; continue; }
                 var it = p.Items[i];
                 if (heldShown[i] != it.Id) { heldShown[i] = it.Id; heldIcon[i].sprite = ItemSprite(it.Id); }
                 // beside the SPECIAL on the screen's inner side, one above the other (always left of it until 2026-11-13, which put
@@ -335,6 +370,7 @@ namespace BAM.Game
                 float pulse = Mathf.Clamp01(1f - (Time.unscaledTime - heldPulse[i]) / 0.35f);
                 heldRoot[i].sizeDelta = new Vector2(2f * r, 2f * r);
                 heldRoot[i].localScale = Vector3.one * (1f + 0.25f * pulse);
+                heldRing[i].rectTransform.sizeDelta = Vector2.one * (2f * 1.12f * r + 8f); // just outside the icon (the SPECIAL's: 1.12 radii + 8)
                 float cd = ItemCooldown(it.Id), left = it.ReadyAt - m.Time;
                 heldCd[i].fillAmount = cd > 0 && left > 0 ? Mathf.Clamp01(left / cd) : 0f;
                 int echoes = it.Id == ItemId.Echo ? it.Stacks : 0;
