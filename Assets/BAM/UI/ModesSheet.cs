@@ -35,6 +35,8 @@ namespace BAM.UI
         static Image modeScrim;
         static HubChoice modeDifficulty, modeParty;
         static Text diffLabel;
+        static GameObject hardLock, ultraLock; // the padlock and the progress under a locked Hard / Ultra (nr 130)
+        static Text hardLockText, ultraLockText;
         static RectTransform modePartyRow;
         static Text modePlaySub;
         static ModesFx modesFx;
@@ -122,7 +124,7 @@ namespace BAM.UI
                     ShowMenuHint("Hard opens after " + BamSettings.NormalWinsForHard + " wins against Normal (" + Mathf.Min(BamSettings.NormalWins, BamSettings.NormalWinsForHard) + "/" + BamSettings.NormalWinsForHard + ")");
                     RefreshModes(); return;
                 }
-                if (i == (int)Difficulty.Ultra && !BamSettings.UltraOpen) // locked: says why only when tapped, the label stays short (Rickard 2026-10-31)
+                if (i == (int)Difficulty.Ultra && !BamSettings.UltraOpen) // locked: a padlock and "12/30" under it; the tap tells the rest (nr 130)
                 {
                     ShowMenuHint("Ultra opens after " + BamSettings.UltraWins + " wins against Hard (" + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins + ")");
                     RefreshModes(); return;
@@ -134,6 +136,8 @@ namespace BAM.UI
                 RefreshHome();
                 RefreshModes();
             }, true);
+            hardLock = SegLock(modeDifficulty, (int)Difficulty.Hard, out hardLockText);
+            ultraLock = SegLock(modeDifficulty, (int)Difficulty.Ultra, out ultraLockText);
 
             // in a party, under it: TOGETHER (the party against bots) or AGAINST EACH OTHER, the leader's pick as the bots
             modePartyRow = UiKit.NewRect("Party", modeExpand);
@@ -163,6 +167,37 @@ namespace BAM.UI
 
             modesFx = modes.AddComponent<ModesFx>();
             modes.SetActive(false);
+        }
+
+        // full review 2026-11-13 nr 130: a locked difficulty shows a small padlock and how far there is to go ("2/3" wins
+        // against Normal under Hard, "12/30" wins against Hard under Ultra), so the goal shows without a tap; the name moves
+        // up to make room. Built hidden; ShowSegLock turns it on while the level is locked.
+        static GameObject SegLock(HubChoice choice, int i, out Text count)
+        {
+            var row = UiKit.NewRect("Lock", choice.CellAt(i));
+            row.anchorMin = new Vector2(0, 0);
+            row.anchorMax = new Vector2(1, 0);
+            row.pivot = new Vector2(0.5f, 0);
+            row.anchoredPosition = new Vector2(0, 0.7f * Cw);
+            row.sizeDelta = new Vector2(0, 3 * Cw);
+            float s = 0.7f * Cw;
+            var pad = Padlock(row, s, UiKit.TextDim);
+            pad.anchorMin = pad.anchorMax = new Vector2(0.5f, 0.5f);
+            pad.anchoredPosition = new Vector2(-2.3f * Cw, 0.15f * s);
+            count = UiKit.Label(row, "", Mathf.RoundToInt(2.6f * Cw), TextAnchor.MiddleLeft, UiKit.TextDim);
+            count.horizontalOverflow = HorizontalWrapMode.Overflow;
+            count.raycastTarget = false;
+            Mid(count.rectTransform, 0.5f, 0.5f, 1.6f * Cw, 0, 5 * Cw, 3 * Cw);
+            row.gameObject.SetActive(false);
+            return row.gameObject;
+        }
+
+        static void ShowSegLock(HubChoice choice, int i, GameObject lockRow, Text count, bool locked, int have, int need)
+        {
+            lockRow.SetActive(locked);
+            if (locked) count.text = Mathf.Min(have, need) + "/" + need;
+            // the name over the padlock while locked, in the middle once open
+            choice.LabelAt(i).rectTransform.offsetMin = new Vector2(0, locked ? 3.2f * Cw : 0);
         }
 
         static ModeCard BuildModeCard(Mode m)
@@ -296,9 +331,11 @@ namespace BAM.UI
             bool ultraOpen = BamSettings.UltraOpen;
             modeDifficulty.Dim((int)Difficulty.Hard, !BamSettings.HardOpen); // Hard opens after 3 wins against Normal (Rickard 2026-11-04)
             modeDifficulty.Dim((int)Difficulty.Ultra, !ultraOpen);
+            ShowSegLock(modeDifficulty, (int)Difficulty.Hard, hardLock, hardLockText, !BamSettings.HardOpen, BamSettings.NormalWins, BamSettings.NormalWinsForHard);
+            ShowSegLock(modeDifficulty, (int)Difficulty.Ultra, ultraLock, ultraLockText, !ultraOpen, BamSettings.HardWins, BamSettings.UltraWins);
             modeDifficulty.Set((int)(party != null ? party.Bots : BamSettings.LastDifficulty));
             // Ultra opens after 30 wins against Hard bots (Rickard 2026-10-31)
-            diffLabel.text = "BOT DIFFICULTY"; // a locked Ultra is dimmed; tapping it tells how to open it (ShowHint)
+            diffLabel.text = "BOT DIFFICULTY"; // a locked level is dimmed with its padlock and progress; tapping it tells how to open it (ShowHint)
             modePartyRow.gameObject.SetActive(party != null);
             if (party != null) { modeParty.Set(party.Mode); Stretched(modePartyRow, 0, ExpH, 0, PartyRowH); }
             float expH = ExpNow;

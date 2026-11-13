@@ -874,6 +874,10 @@ namespace BAM.UI
 
             /// <summary>A locked choice: its label is faded (Set still draws it).</summary>
             public void Dim(int i, bool dim) => dims[i] = dim;
+
+            /// <summary>One segment and its label, for what a sheet adds on top (the mode sheet's padlock and "2/3", nr 130).</summary>
+            public RectTransform CellAt(int i) => (RectTransform)fills[i].transform;
+            public Text LabelAt(int i) => labels[i];
         }
 
         // ---- shared pieces ----
