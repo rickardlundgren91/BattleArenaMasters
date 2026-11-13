@@ -48,6 +48,8 @@ namespace BAM.Art
             public float Low;                // BackFlaps: and above this (the seat below stays put)
             public float Front0, Front1;     // Skirt: when set, the sway share comes from how far in front of the hips the cloth is
                                              // (a panel lying over the thighs), not from its distance to the legs
+            public float Flutter;            // a flap on the run: it waves to the sides and out with the stride (share of its length at
+                                             // full run), so a panel that can't swing back into the legs still moves while running
             public float SideFade;           // Skirt: a soft edge from MaxSide - SideFade to MaxSide instead of a hard cut
             public bool Single;              // BackFlaps, Skirt: one spring for the whole flap (long hair, one piece), not one per side
             public bool FrontOnly;           // Skirt: only cloth in front of the hips (a single front panel; the seat behind stays put)
@@ -90,7 +92,7 @@ namespace BAM.Art
                         // egentligen också ska röra sig"): the whole width of the panel (to 0.05 out, its gold edges too) on ONE spring, picked
                         // by lying in front of her thighs (0.045-0.053 in front of the hips) instead of by distance to the leg bones, which
                         // left its edges on the thighs and split the middle over three springs (measured on Moa.fbx)
-                        new Spec { Kind = Kind.Skirt, Single = true, Front0 = 0.045f, Front1 = 0.053f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.056f, SideFade = 0.008f, FrontOnly = true, Hz = 2.3f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
+                        new Spec { Kind = Kind.Skirt, Single = true, Front0 = 0.045f, Front1 = 0.053f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.056f, SideFade = 0.008f, FrontOnly = true, Hz = 2.0f, Damping = 0.3f, MaxAngle = 30f, Drag = 0.08f, Flare = 0.3f, Inward = 0.06f, Flutter = 0.35f, Kick = 1.5f },
                         new Spec { Kind = Kind.BackFlaps, Single = true, Top0 = 0.254f, Top1 = 0.194f, Low = 0.054f, Back0 = 0.117f, Back1 = 0.147f, MaxSide = 0.075f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 12f, Drag = 0.04f, Flare = 0.12f, Inward = 0f, Kick = 0.6f },
                     };
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
@@ -152,6 +154,7 @@ namespace BAM.Art
         readonly Spring[] springs;
         readonly Transform body;   // the model root: its yaw speed drives the flare
         Vector3 lastFwd;
+        float clock; // seconds, for Flutter
         bool wasOn = true;
 
         // secondary action (Kick): pushes waiting to land, in the body's own frame (forward, up), and the run that a hard stop ends
@@ -335,10 +338,18 @@ namespace BAM.Art
                         Vector3 rest = sum[k] / wsum[k];
                         if (rest.sqrMagnitude < 1e-8f) continue;
                         Vector3 outM = rest - up * Vector3.Dot(rest, up);
+                        Vector3 pv = pivotL;
+                        if (sp.Single)
+                        {
+                            // one panel: tied on at the belt straight above its middle, so it swings like a flag from its top edge
+                            // (about the hips' centre the whole panel only tilted a little: Rickard 2026-11-13 "fladdrar inte alls nu")
+                            pv = bind[hips].MultiplyPoint3x4(hp + outM);
+                            rest -= outM;
+                        }
                         boneOf[k] = bones.Length + defs.Count;
                         defs.Add(new BoneDef
                         {
-                            Parent = hips, Pivot = pivotL, Rest = bind[hips].MultiplyVector(rest), Spec = sp,
+                            Parent = hips, Pivot = pv, Rest = bind[hips].MultiplyVector(rest), Spec = sp,
                             OutLocal = outM.sqrMagnitude > 1e-8f ? bind[hips].MultiplyVector(outM.normalized).normalized : Vector3.zero,
                         });
                     }
@@ -579,6 +590,7 @@ namespace BAM.Art
                 PushAll(fwd * pushes[i].Fwd + Vector3.up * pushes[i].Up);
                 pushes[i] = pushes[--pushN];
             }
+            clock += dt;
             float yawRate = Mathf.Abs(Vector3.SignedAngle(lastFwd, fwd, Vector3.up)) / dt; // degrees per second
             lastFwd = fwd;
             float spin = Mathf.Clamp01((yawRate - 90f) / 540f);
@@ -608,6 +620,11 @@ namespace BAM.Art
                 Vector3 trail = -vel * sp.Drag;
                 if (trail.sqrMagnitude > 0.16f * L * L) trail = trail.normalized * (0.4f * L);
                 target += trail + outW * (sp.Flare * spin * L);
+                if (sp.Flutter > 0f)
+                {
+                    float run = Mathf.Clamp01(new Vector2(vel.x, vel.z).magnitude / 3f);
+                    target += (body.right * Mathf.Sin(clock * 8.5f) + fwd * (0.6f * Mathf.Abs(Mathf.Sin(clock * 8.5f + 1f)))) * (sp.Flutter * L * run);
+                }
                 float w = 2f * Mathf.PI * sp.Hz, k = w * w, c = 2f * sp.Damping * w;
                 for (int i = 1; i <= steps; i++)
                 {
