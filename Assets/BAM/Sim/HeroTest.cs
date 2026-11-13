@@ -6,9 +6,9 @@ namespace BAM.Sim
     /// HERO TEST (old herotest.js / SimLoop.startHeroTest; Rickard's "träningsområde", 2026-10-26): try any hero against
     /// dummies. The player in its own half of the arena, an enemy dummy hero (Bram) 4 tiles up that never walks but hits back,
     /// a friendly dummy beside it kept hurt (to test heals and shields), five practice minions that stand still or walk between
-    /// two spots and come back 3 s after dying, towers that cannot be hurt and never shoot, no waves, no stars, a fixed level,
-    /// heroes back 3 s after death. Never ends: the HUD's Reset and Exit leave it. The old layout, mirrored to BAM's map
-    /// (the enemy is up the screen here).
+    /// two spots and come back 3 s after dying, towers that cannot be hurt and never shoot, no waves, no stars, a fixed level
+    /// (with the player's item choices up to it, HtOffers), heroes back 3 s after death. Never ends: the HUD's Reset and Exit
+    /// leave it. The old layout, mirrored to BAM's map (the enemy is up the screen here).
     /// </summary>
     public sealed partial class Match
     {
@@ -51,6 +51,21 @@ namespace BAM.Sim
             };
             for (int i = 0; i < htSlots.Length; i++) HtSpawn(htSlots[i]);
             AssignSpells();
+            HtOffers();
+        }
+
+        // the player's item choices for the level set with Lv (one from 6, a second queued behind it from 12), as a match that had
+        // climbed to that level would have given them; the level never changes here, so ItemLevelUp never runs
+        void HtOffers()
+        {
+            var p = Player;
+            if (!ItemsOn || p == null) return;
+            foreach (int l in ItemS.OfferLevels)
+            {
+                if (l > Level) continue;
+                if (p.OfferCount > 0) p.OfferQueued++;
+                else RollOffer(p);
+            }
         }
 
         void HtSpawn(HtSlot s)

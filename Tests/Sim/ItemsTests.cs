@@ -49,9 +49,20 @@ namespace BAM.Sim
             Check(qp.OfferCount == 3 && qp.OfferQueued == 1, "an unpicked offer queues the next");
             pick = PlayerInput.None; pick.ItemPick = 1; q.Step(in pick);
             Check(qp.ItemCount == 1 && qp.OfferCount == 3 && qp.OfferQueued == 0, "after the pick the queued offer shows");
-            // no items in HERO TEST
+            // HERO TEST (Rickard 2026-11-13): the player's choices for the level set, the dummies none; the guided match none
             var ht = Create(new MatchConfig { PlayerHero = HeroId.Tyra, HeroTest = true, HeroTestLevel = 12, Seed = 3 });
-            Check(!ht.ItemsOn, "HERO TEST has no items");
+            Check(ht.ItemsOn && ht.Player.OfferCount == 3 && ht.Player.OfferQueued == 1, $"HERO TEST at Lv 12: an offer and a second queued ({ht.Player.OfferCount}, {ht.Player.OfferQueued})");
+            Check(ht.HtFoe.OfferCount == 0 && ht.HtAlly.OfferCount == 0, "HERO TEST: the dummies get no offer");
+            pick = PlayerInput.None; pick.ItemPick = 2; ht.Step(in pick);
+            Check(ht.Player.ItemCount == 1 && ht.Player.OfferCount == 3 && ht.Player.OfferQueued == 0, "HERO TEST: after the pick the queued offer shows");
+            var ht7 = Create(new MatchConfig { PlayerHero = HeroId.Ragn, HeroTest = true, HeroTestLevel = 7, Seed = 4 });
+            Check(ht7.Player.OfferCount == 3 && ht7.Player.OfferQueued == 0, "HERO TEST at Lv 7: one offer");
+            for (int k = 0; k < 60 * 10; k++) ht7.Step(in none);
+            Check(ht7.Player.OfferCount == 3 && ht7.Player.ItemCount == 0, "HERO TEST: the offer waits for the player (no bot picks it)");
+            var ht5 = Create(new MatchConfig { PlayerHero = HeroId.Ragn, HeroTest = true, HeroTestLevel = 5, Seed = 4 });
+            Check(ht5.Player.OfferCount == 0, "HERO TEST at Lv 5: no offer yet");
+            var tut = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Tutorial = true, Seed = 3 });
+            Check(!tut.ItemsOn, "the guided match has no items");
 
             // ---------- the rules ----------
             m = ItemMatch(31); var a = m.Player; var ally = m.HeroOf(a.Team, a); var e = m.HeroOf(1 - a.Team);

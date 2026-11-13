@@ -119,8 +119,10 @@ namespace BAM.Sim
         internal readonly float[] RallyReadyAt = { -99, -99 };
         readonly ItemId[] itemPool = new ItemId[ItemCatalog.Count];
 
-        /// <summary>No items in the guided match and in HERO TEST.</summary>
-        public bool ItemsOn => Tut == null && !Config.HeroTest;
+        /// <summary>No items in the guided match. HERO TEST has them since 2026-11-13 (Rickard tried the ITEM button there at Lv 7:
+        /// "blev inte erbjuden item"): its level never changes, so the player gets the offers of the levels up to the one set at the
+        /// start (HeroTest.cs HtOffers), the dummies none.</summary>
+        public bool ItemsOn => Tut == null;
 
         static bool RealHero(Unit u) => u != null && u.Kind == UnitKind.Hero && !u.IsClone && u.HeroIndex >= 0;
 
