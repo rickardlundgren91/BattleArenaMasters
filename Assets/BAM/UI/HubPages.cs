@@ -286,7 +286,11 @@ namespace BAM.UI
         static readonly AbilityCard[] heroAbilities = new AbilityCard[2];
         static float[] heroMax;
 
-        sealed class AbilityCard { public RectTransform Rect; public LayoutElement Size; public Image Icon; public Text Kind, Name, Desc; }
+        static readonly Image[] heroDots = new Image[3];
+        static Text heroDifficulty;
+
+        /// <summary>Full holds the whole text; Open shows it, closed shows one line ending in "more" (full review 2026-11-13 nr 128).</summary>
+        sealed class AbilityCard { public RectTransform Rect; public LayoutElement Size; public Image Icon; public Text Kind, Name, Desc; public string Full; public bool Open; }
 
         static void BuildHeroPage()
         {
@@ -347,7 +351,7 @@ namespace BAM.UI
             // the name and title on the left, the role on the right
             var nameRow = UiKit.NewRect("Name", content);
             heroNameSize = nameRow.gameObject.AddComponent<LayoutElement>();
-            heroNameSize.preferredHeight = 11 * Cw;
+            heroNameSize.preferredHeight = 12.5f * Cw;
             heroName = UiKit.Label(nameRow, "", Mathf.RoundToInt(6.4f * Cw), TextAnchor.MiddleLeft, Color.white);
             heroName.horizontalOverflow = HorizontalWrapMode.Overflow;
             var nsh = heroName.gameObject.AddComponent<Shadow>();
@@ -361,6 +365,25 @@ namespace BAM.UI
             heroRolePill.anchorMin = heroRolePill.anchorMax = heroRolePill.pivot = new Vector2(1, 1);
             heroRoleText = Treb(heroRolePill, "", 2.9f, UiKit.Primary);
             heroRoleText.rectTransform.anchorMin = heroRoleText.rectTransform.anchorMax = heroRoleText.rectTransform.pivot = new Vector2(0, 0.5f);
+            // Difficulty as three dots under the role, Rickard's own 1..3 from HeroCatalog (full review 2026-11-13 nr 118 + 128);
+            // Tyra, the tutorial's hero, says "Good first hero" in place of the word
+            for (int i = 0; i < 3; i++)
+            {
+                heroDots[i] = Pic(nameRow, "Dot", UiKit.Circle, UiKit.Primary);
+                var dr = heroDots[i].rectTransform;
+                dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(1, 1);
+                dr.sizeDelta = new Vector2(1.6f * Cw, 1.6f * Cw);
+                dr.anchoredPosition = new Vector2(-(2 - i) * 2.4f * Cw, -10.1f * Cw);
+            }
+            heroDifficulty = Treb(nameRow, "", 2.5f, UiKit.TextDim);
+            heroDifficulty.alignment = TextAnchor.MiddleRight;
+            var hdr = heroDifficulty.rectTransform;
+            hdr.anchorMin = hdr.anchorMax = hdr.pivot = new Vector2(1, 1);
+            hdr.sizeDelta = new Vector2(30 * Cw, 4 * Cw);
+            hdr.anchoredPosition = new Vector2(-3 * 2.4f * Cw - 0.6f * Cw, -8.9f * Cw);
+
+            // what the hero does comes before the numbers: special and passive one line each, tap for the whole text (nr 128)
+            for (int k = 0; k < 2; k++) heroAbilities[k] = BuildAbilityCard(content, k == 0);
 
             // stats: label | bar | value, the bars against the best in the roster
             var stats = UiKit.NewRect("Stats", content);
@@ -398,8 +421,7 @@ namespace BAM.UI
                 heroValues[i] = val;
             }
 
-            BuildSpellCard(content); // battle spell (MenuSpell.cs), between the stats and the abilities as in the old page
-            for (int k = 0; k < 2; k++) heroAbilities[k] = BuildAbilityCard(content, k == 0);
+            BuildSpellCard(content); // battle spell (MenuSpell.cs), after the stats since the abilities moved up (full review 2026-11-13 nr 128)
 
             // SELECT: fixed at the bottom of the sheet over a dark fade (StickySelect)
             var fadeRt = UiKit.NewRect("SelectFade", panel);
@@ -531,6 +553,17 @@ namespace BAM.UI
             a.Desc.font = UiKit.BodyFont;
             a.Desc.lineSpacing = 1.1f;
             Stretched(a.Desc.rectTransform, tx, 11.4f * Cw - 2 * Cw, 3 * Cw, 40 * Cw);
+            a.Desc.supportRichText = true;
+            var b = a.Rect.gameObject.AddComponent<Button>(); // the card is the button: "more" opens the whole text, a second tap closes it
+            b.transition = Selectable.Transition.None;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.onClick.AddListener(() =>
+            {
+                BamAudio.Play(SfxId.UiTap);
+                a.Open = !a.Open;
+                ShowAbilityText(a);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);
+            });
             return a;
         }
 
@@ -563,7 +596,7 @@ namespace BAM.UI
             {
                 Num(def.Hp) + "  +" + Num(def.HpGrowth) + "/lvl", Num(def.Dmg) + "  +" + Num(def.DmgGrowth) + "/lvl", Num(def.Cd) + " s",
                 Num(Round1(def.Dmg / Mathf.Max(0.1f, def.Cd))), Num(def.Range) + " tiles", Num(def.Speed) + " tiles/s",
-                def.MaxCharge + " hits · " + Num(Round1(def.MaxCharge * def.Cd)) + " s",
+                SpecialHits(info.Id, def) + " hits · " + Num(Round1(FirstCharge(info.Id, def) * def.Cd)) + " s",
             };
             for (int i = 0; i < StatRows; i++)
             {
@@ -583,10 +616,15 @@ namespace BAM.UI
             heroRoleIcon = UiKit.NewRect("RoleIcon", heroRolePill);
             Mid(heroRoleIcon, 0, 0.5f, 3.2f * Cw, 0, 0, 0);
             RoleIcon(heroRoleIcon, info.Role, 1.5f * Cw, UiKit.Primary);
+            bool firstHero = info.Id == HeroId.Tyra;
+            heroDifficulty.text = firstHero ? "GOOD FIRST HERO" : "DIFFICULTY";
+            heroDifficulty.color = firstHero ? UiKit.Primary : UiKit.TextDim;
+            int diff = Mathf.Clamp(info.Difficulty, 1, 3);
+            for (int i = 0; i < 3; i++) heroDots[i].color = i < diff ? (Color)UiKit.Primary : new Color(1, 1, 1, 0.16f);
 
             string lower = Lower(info.Id);
             RefreshSpellCard();
-            FillAbility(heroAbilities[0], "SPECIAL · " + def.MaxCharge + " hits to charge", info.SpecialTitle, info.SpecialText, HeroCatalog.SpecialIcon(info.Id));
+            FillAbility(heroAbilities[0], "SPECIAL · " + SpecialHits(info.Id, def) + " hits to charge", info.SpecialTitle, info.SpecialText, HeroCatalog.SpecialIcon(info.Id));
             FillAbility(heroAbilities[1], "PASSIVE", info.PassiveName, info.PassiveDesc, "passive_" + lower);
 
             heroSelectedTag.SetActive(chosen);
@@ -619,14 +657,52 @@ namespace BAM.UI
         {
             a.Kind.text = kind;
             a.Name.text = name;
-            a.Desc.text = desc;
+            a.Full = desc ?? "";
+            a.Open = false; // every hero opens on the short lines
             a.Icon.sprite = IconSprite(icon);
             a.Icon.enabled = a.Icon.sprite != null;
-            float w = heroContent.rect.width - (3 * Cw + 10.5f * Cw + 2.5f * Cw) - 3 * Cw;
-            var settingsFor = a.Desc.GetGenerationSettings(new Vector2(Mathf.Max(100, w), 0));
-            float dh = a.Desc.cachedTextGeneratorForLayout.GetPreferredHeight(desc, settingsFor) / a.Desc.pixelsPerUnit;
+            ShowAbilityText(a);
+        }
+
+        const string MoreTag = "<color=#3ee6b0>more</color>";
+
+        // Closed: the first sentence cut to one line, then "… more" (or the whole text when it fits on one line). Open: the whole text.
+        static void ShowAbilityText(AbilityCard a)
+        {
+            float w = Mathf.Max(100, heroContent.rect.width - (3 * Cw + 10.5f * Cw + 2.5f * Cw) - 3 * Cw);
+            var wrap = a.Desc.GetGenerationSettings(new Vector2(w, 0));
+            var line = wrap;
+            line.horizontalOverflow = HorizontalWrapMode.Overflow;
+            line.richText = false;
+            var gen = a.Desc.cachedTextGeneratorForLayout;
+            float px = a.Desc.pixelsPerUnit;
+            string full = a.Full;
+            bool fits = gen.GetPreferredWidth(full, line) / px <= w;
+            string shown = full;
+            if (!a.Open && !fits)
+            {
+                string cut = full;
+                int dot = cut.IndexOf(". ", System.StringComparison.Ordinal);
+                if (dot > 0) cut = cut.Substring(0, dot + 1);
+                const string tail = "… more";
+                while (cut.Length > 0 && gen.GetPreferredWidth(cut + tail, line) / px > w)
+                {
+                    int sp = cut.LastIndexOf(' ');
+                    cut = sp > 0 ? cut.Substring(0, sp) : "";
+                }
+                cut = cut.TrimEnd(' ', ',', ':', ';');
+                shown = (cut.EndsWith(".") ? cut + " " : cut + "… ") + MoreTag;
+            }
+            a.Desc.text = shown;
+            float dh = gen.GetPreferredHeight(shown, wrap) / px;
             a.Size.preferredHeight = Mathf.Max(10.5f * Cw + 4 * Cw, 10.2f * Cw + dh + 1.6f * Cw);
         }
+
+        // Kugg anchors from KuggS.MinShots loaded shots up to his full MaxCharge, so his page says "2–6" (full review 2026-11-13 nr 128)
+        static string SpecialHits(HeroId id, HeroDef d) => id == HeroId.Kugg ? KuggS.MinShots + "–" + d.MaxCharge : d.MaxCharge.ToString();
+
+        // The hits before the special can first be used (Unit.SpecialReady): Kugg's MinShots, everyone else's MaxCharge
+        static int FirstCharge(HeroId id, HeroDef d) => id == HeroId.Kugg ? KuggS.MinShots : d.MaxCharge;
 
         // What each stat bar measures, longer = better: faster attacks and a quicker special give longer bars.
         // The special fills one charge per hit (Combat.OnHeroHit), so hits x attack time is the fastest it can be ready.
