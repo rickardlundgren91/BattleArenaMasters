@@ -517,8 +517,6 @@ namespace BAM.Game
             {
                 Vector3 c = hero + (Coords.World(a.CX, a.CY) - Coords.World(p.X, p.Y));
                 aimLook.Range(hero, m.DragRing(p.Hero), ready, cancel);
-                // Fenn's wolf turns onto a hero anywhere along its flight: its path, faint (AIM-05)
-                if (a.PathHalf > 0f) aimLook.Line(hero, dir, a.Length, a.PathHalf, 0f, 0f, ready, cancel, 0f, 0.4f);
                 aimLook.Circle(hero, c, a.Radius, ready, cancel, dt);
                 // Hilde's keg pushes the heroes it hits the way she aims (HILDE-02, old View3DBreachCharge)
                 if (a.PushLength > 0f) aimLook.Line(c, dir, a.Radius + a.PushLength, 0.12f, 0.12f, 0f, ready, cancel, 0f, 0.85f);

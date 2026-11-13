@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace BAM.Art
 {
-    enum RigKind : byte { Humanoid, Wolf, Cart, Tower, Target }
+    enum RigKind : byte { Humanoid, Cart, Tower, Target } // Wolf gone with Fenn's wolf (full review 2026-11-13 nr 116)
 
     enum AttackStyle : byte { Swing, Throw, Bow, Cast, Flick, Cannon, Bite, Pulse, None }
 
@@ -29,8 +29,6 @@ namespace BAM.Art
         /// <summary>Rickard's Meshy model (Props), hung on bone PropBone; null = only the code mesh.</summary>
         public Mesh PropMesh;
         public Texture2D PropTex;
-        /// <summary>Fenn's wolf: Rickard's rigged Meshy wolf with its walk (Resources/BAMArt/Wolf, as old Speltest's KovaForms/Wolf).</summary>
-        public GameObject RigModel;
         public int PropBone;
         public Vector3 PropOffset, PropEuler;
         public float PropScale = 1f;
@@ -161,29 +159,6 @@ namespace BAM.Art
             d = BuildTarget();
             d.Mesh = b.ToSkinnedMesh("Target", d.Pivots);
             d.BarWidth = 0.8f;
-            cache[k] = d;
-            return d;
-        }
-
-        public static RigDef Wolf(int team)
-        {
-            int k = Key(3, 0, team);
-            if (cache.TryGetValue(k, out RigDef d)) return d;
-            b.Clear();
-            // the rigged wolf that runs with its own walk, as old Speltest (View3DWolf.cs); the still mesh only without it
-            GameObject rig = Resources.Load<GameObject>("BAMArt/Wolf/Wolf");
-            Mesh wolfProp = rig != null ? null : Props.Mesh("fenn_wolf");
-            d = BuildWolf(team, wolfProp != null || rig != null);
-            if (rig != null) { d.RigModel = rig; d.Height = 1.6f; d.Radius = 0.55f; }
-            if (wolfProp != null)
-            {
-                // the Meshy wolf faces -z; scaled 1.05 as old Speltest (View3D.cs): about 2 tiles nose to tail, 1.6 high
-                d.PropMesh = wolfProp; d.PropTex = Props.Texture("fenn_wolf"); d.PropBone = WolfBody;
-                d.PropEuler = new Vector3(0f, 180f, 0f); d.PropScale = 1.05f;
-                d.Height = 1.6f; d.Radius = 0.55f;
-            }
-            d.Mesh = b.ToSkinnedMesh("Wolf t" + team, d.Pivots);
-            d.BarWidth = 0.6f;
             cache[k] = d;
             return d;
         }
@@ -566,7 +541,7 @@ namespace BAM.Art
             return Human(h, AttackStyle.Throw, 0.95f, 0.32f, true);
         }
 
-        // ---------------------------------------------------------------- minions, tower, wolf
+        // ---------------------------------------------------------------- minions, tower
 
         static RigDef MeleeMinion(int team)
         {
@@ -721,55 +696,5 @@ namespace BAM.Art
             return new RigDef { Pivots = piv, Parents = new[] { -1, TargetPost }, Kind = RigKind.Target, Attack = AttackStyle.None, Height = 1.3f, Radius = 0.45f };
         }
 
-        public const int WolfBody = 0, WolfHead = 1, WolfFL = 2, WolfFR = 3, WolfBL = 4, WolfBR = 5, WolfTail = 6;
-
-        static RigDef BuildWolf(int team, bool propBody = false)
-        {
-            var piv = new[]
-            {
-                new Vector3(0f, 0.36f, 0f), new Vector3(0f, 0.44f, 0.2f), new Vector3(-0.08f, 0.32f, 0.15f), new Vector3(0.08f, 0.32f, 0.15f),
-                new Vector3(-0.08f, 0.32f, -0.16f), new Vector3(0.08f, 0.32f, -0.16f), new Vector3(0f, 0.42f, -0.22f),
-            };
-            if (propBody)
-            {
-                // Rickard's wolf mesh is the body. The code's ghostly glow disc under it read as "någon blå pöl" (tester Benny via
-                // Rickard 2026-10-28: "skall vara bara en full spectral varg"): only a speck stays, so the skinned mesh is not empty
-                b.Bone = WolfBody;
-                b.Color(Pal.Ghost).Disc(new Vector3(0f, 0.03f, 0f), 0.001f, 3);
-                return new RigDef
-                {
-                    Pivots = piv, Parents = new[] { -1, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody }, Kind = RigKind.Wolf,
-                    Attack = AttackStyle.Bite, Height = 0.7f, Radius = 0.3f, Ghost = true,
-                };
-            }
-            b.Bone = WolfBody;
-            b.Color(Pal.Ghost).Sphere(new Vector3(0f, 0.38f, -0.02f), new Vector3(0.12f, 0.12f, 0.24f), 10, 6);
-            b.Sphere(new Vector3(0f, 0.41f, 0.12f), new Vector3(0.13f, 0.14f, 0.13f), 10, 6); // chest ruff
-            b.Color(Pal.GhostDark).Sphere(new Vector3(0f, 0.47f, -0.02f), new Vector3(0.07f, 0.04f, 0.2f), 8, 4); // back stripe
-            b.Bone = WolfHead;
-            Vector3 hc = piv[WolfHead] + new Vector3(0f, 0.06f, 0.07f);
-            b.Color(Pal.Ghost).Sphere(hc, new Vector3(0.1f, 0.09f, 0.1f), 10, 6);
-            b.Box(hc + new Vector3(0f, -0.03f, 0.11f), new Vector3(0.08f, 0.07f, 0.14f)); // snout
-            b.Color(Pal.GhostDark).Sphere(hc + new Vector3(0f, -0.01f, 0.18f), 0.025f, 6, 4);
-            b.Color(Pal.GhostDark).At(hc + new Vector3(-0.06f, 0.07f, -0.02f), new Vector3(-10f, 0f, 15f)).Cylinder(Vector3.zero, 0.04f, 0f, 0.1f, 6);
-            b.At(hc + new Vector3(0.06f, 0.07f, -0.02f), new Vector3(-10f, 0f, -15f)).Cylinder(Vector3.zero, 0.04f, 0f, 0.1f, 6);
-            b.Reset();
-            b.Color(Pal.TeamLight(team)).Sphere(hc + new Vector3(-0.045f, 0.02f, 0.08f), 0.022f, 6, 4); // glowing eyes in the team's colour
-            b.Sphere(hc + new Vector3(0.045f, 0.02f, 0.08f), 0.022f, 6, 4);
-            for (int i = 0; i < 4; i++)
-            {
-                b.Bone = WolfFL + i;
-                Vector3 top = piv[b.Bone];
-                b.Color(Pal.Ghost).Limb(top, new Vector3(top.x, 0.04f, top.z + 0.02f), 0.04f, 0.03f, 6);
-            }
-            b.Bone = WolfTail;
-            b.Color(Pal.GhostDark).At(piv[WolfTail], new Vector3(-120f, 0f, 0f)).Cylinder(Vector3.zero, 0.05f, 0.0f, 0.24f, 7);
-            b.Reset();
-            return new RigDef
-            {
-                Pivots = piv, Parents = new[] { -1, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody, WolfBody }, Kind = RigKind.Wolf,
-                Attack = AttackStyle.Bite, Height = 0.7f, Radius = 0.3f, Ghost = true,
-            };
-        }
     }
 }

@@ -9,7 +9,6 @@ namespace BAM.Sim
         static void Review0410()
         {
             if (!FennS.Veil) return;
-            bool was = FennVeilDefault; FennVeilDefault = true;
             var m = Create(new MatchConfig { PlayerHero = HeroId.Fenn, Allies = new[] { HeroId.Moa, HeroId.Tyra }, Enemies = new[] { HeroId.Bram, HeroId.Knut, HeroId.Tikta }, Seed = 7 });
             foreach (var u in m.Units) { if (u.Kind == UnitKind.Minion) u.Alive = false; u.ClearStatuses(); }
             m.State = MatchState.Play; m.Time = 10; m.WaveT = 1e9f; m.Events.Clear();
@@ -41,7 +40,6 @@ namespace BAM.Sim
             for (int k = 0; k < (int)((FennS.VeilTime + 0.5f) / Rules.Tick) && f.Has(St.Veil); k++) m.Step(PlayerInput.None);
             for (int k = 0; k < 60; k++) m.Step(PlayerInput.None);
             Check(!f.Has(St.Veil) && tw.Target == f, "REVIEW 0.4.1: seen again, he is the tower's target again");
-            FennVeilDefault = was;
         }
     }
 }

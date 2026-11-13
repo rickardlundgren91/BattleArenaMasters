@@ -24,10 +24,10 @@ namespace BAM.Sim
 
         /// <summary>Can a drag aim h's special now (the HUD lets the SPECIAL button drag)? CanDragAim, plus veiled Fenn's Shadow Strike:
         /// the Veil itself has nothing to aim, the strike out of it has (hero review 2026-11-13).</summary>
-        public bool DragAimNow(Unit h) => h != null && (CanDragAim(h.Hero) || FennVeil && h.VeilStrikeReady);
+        public bool DragAimNow(Unit h) => h != null && (CanDragAim(h.Hero) || h.VeilStrikeReady);
 
         /// <summary>Has h's special anything to aim? Bonk's Ground Slam lands round him and Kugg's turret where he stands: tap only.</summary>
-        public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg && id != HeroId.Skrall && !(id == HeroId.Fenn && FennS.Veil) && !(id == HeroId.Ravna && RavnaS.NightFlight); // Fenn's Veil is cast where he stands (Heroes.cs) // Skrall's three strikes pick their own enemies (Hero8.cs)
+        public static bool CanDragAim(HeroId id) => id != HeroId.Bonk && id != HeroId.Kugg && id != HeroId.Skrall && id != HeroId.Fenn && !(id == HeroId.Ravna && RavnaS.NightFlight); // Fenn's Veil is cast where he stands (Heroes.cs) // Skrall's three strikes pick their own enemies (Hero8.cs)
 
         /// <summary>The share of the form's reach (TryCastSpecial's k) a drag with share k aims at: a placed form (Bram's anvil, Blast's bomb,
         /// Fenn's thrown wolf, Moa's field) lands at most at the white ring (TapReach), as far as a tap can put it, so the drag gives
@@ -52,13 +52,13 @@ namespace BAM.Sim
         float NeedleReach => OneTap ? TapReach(HeroId.Tikta) : TiktaS.LineReach;
 
         /// <summary>The enemies a tap of h's special could pick now (heroes and minions in reach, seen, clear line). A straight
-        /// shot (Tyra's bolt, Tikta's needles, Knut's hook) or Fenn's thrown wolf never picks one behind a base (either team's), which would
+        /// shot (Tyra's bolt, Tikta's needles, Knut's hook) never picks one behind a base (either team's), which would
         /// stop it (TowerReach), so the tap is not wasted on the tower and the button stays grey with only such targets.</summary>
         List<Unit> TapTargets(Unit h)
         {
             var l = EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
             float half = h.Hero == HeroId.Tyra ? TyraS.Hitbox : h.Hero == HeroId.Tikta ? TiktaS.LineHitbox : h.Hero == HeroId.Knut ? KnutS.HookRadius
-                : h.Hero == HeroId.Fenn ? Defs.Wolf.Radius : h.Hero == HeroId.Ravna ? RavnaS.HitRadius : -1;
+                : h.Hero == HeroId.Ravna ? RavnaS.HitRadius : -1;
             if (half < 0) return l;
             for (int i = l.Count - 1; i >= 0; i--) if (TowerInWay(h, l[i], half)) l.RemoveAt(i);
             return l;
@@ -75,7 +75,7 @@ namespace BAM.Sim
         {
             if (h == null || !h.Alive || h.Kind != UnitKind.Hero) return false;
             if (h.Hero == HeroId.Moa) return true;
-            if (h.Hero == HeroId.Fenn && FennVeil) return true; // the Veil needs nobody in reach: it is an escape too
+            if (h.Hero == HeroId.Fenn) return true; // the Veil needs nobody in reach: it is an escape too
             if (h.Hero == HeroId.Ravna && NightFlightOn) return true; // Night Flight goes the way she runs: nobody needed in reach
             if (h.Hero == HeroId.Kugg && h.KuggRooted) return false;
             return TapTargets(h).Count > 0;
@@ -99,11 +99,11 @@ namespace BAM.Sim
         /// no random roll) when it cannot fire now.</summary>
         public bool TryTapSpecial(Unit h)
         {
-            if (FennVeil && h.VeilStrikeReady) return TryCastSpecial(h, float.NaN, 0); // the Shadow Strike (Heroes.cs FennStrikeNow)
+            if (h.VeilStrikeReady) return TryCastSpecial(h, float.NaN, 0); // the Shadow Strike (Heroes.cs FennStrikeNow)
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
             Unit t;
             if (h.Hero == HeroId.Moa) t = TapAlly(h) ?? h;
-            else if (h.Hero == HeroId.Fenn && FennVeil) return TryCastSpecial(h, float.NaN, 0); // the Veil where he stands: no aim, no warning (it hurts nobody)
+            else if (h.Hero == HeroId.Fenn) return TryCastSpecial(h, float.NaN, 0); // the Veil where he stands: no aim, no warning (it hurts nobody)
             else if (h.Hero == HeroId.Ravna && NightFlightOn) return TryCastSpecial(h, RavnaRunAng(h), 1); // the flock sets off the way she runs, at once: no target, no aim, no warning (Rickard 2026-11-12, as ABC2's Ron)
             else
             {
@@ -169,8 +169,8 @@ namespace BAM.Sim
         {
             // veiled Fenn's drag picks whom his Shadow Strike hits: the enemy nearest the aimed spot (Heroes.cs FennStrikeNow); no warning,
             // as the tapped strike (hero review 2026-11-13)
-            if (FennVeil && h.VeilStrikeReady && !float.IsNaN(ang)) return TryCastSpecial(h, ang, DragShare(h.Hero, k));
-            if (float.IsNaN(ang) || !(CanDragAim(h.Hero) || h.Hero == HeroId.Fenn && !FennVeil)) return TryTapSpecial(h); // a test's wolf Fenn still aims
+            if (h.VeilStrikeReady && !float.IsNaN(ang)) return TryCastSpecial(h, ang, DragShare(h.Hero, k));
+            if (float.IsNaN(ang) || !CanDragAim(h.Hero)) return TryTapSpecial(h);
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play || Telegraphing(h)) return false;
             k = DragShare(h.Hero, k);
             if (TeleOn) return TeleTime(h.Hero) > 0 ? StartTelegraph(h, null, ang, k) : CastWithFlash(h, null, ang, k);

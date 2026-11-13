@@ -9,7 +9,6 @@ namespace BAM.Sim
         static void FennVeilChecks()
         {
             var m = Make(HeroId.Fenn, new[] { HeroId.Tyra, HeroId.Moa }, new[] { HeroId.Bram, HeroId.Knut, HeroId.Tikta });
-            Check(m.FennVeil == FennS.Veil, "VEIL: a new match plays Fenn's Veil when FennS.Veil is on");
             if (!FennS.Veil) return;
             var f = m.Player; var a = m.Foe(HeroId.Bram); var c = m.Foe(HeroId.Knut); var far = m.Foe(HeroId.Tikta);
             float x = 7.5f, y = 20;

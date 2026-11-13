@@ -118,7 +118,7 @@ namespace BAM.Sim
                     b.MaxCharge = 7; Heroes[(int)HeroId.Bram].MaxCharge = 6; Heroes[(int)HeroId.Tikta].MaxCharge = 8;
                     // Fenn's thrown wolf no longer turns onto a hero (it lands on the warned spot): his special comes one hit sooner
                     // instead, 5 instead of 6, so the bite and root stay as strong (Rickard 2026-11-02, his rule: never weaken the effect)
-                    Heroes[(int)HeroId.Fenn].MaxCharge = FennS.Veil ? FennS.VeilCharge : 5;
+                    Heroes[(int)HeroId.Fenn].MaxCharge = FennS.VeilCharge; // the Veil since 2026-11-11 (the wolf, gone 2026-11-13, took 5)
                 }
             }
         }
@@ -136,8 +136,6 @@ namespace BAM.Sim
         public static UnitDef Minion(MinionKind k) => Minions[(int)k];
 
         public static readonly UnitDef Tower = U(UnitKind.Tower, MinionKind.Melee, 0.55f, 0, 1400, 25, 0.75f, 4.25f, 0, 10, 0, ProjKind.TowerShot);
-        /// <summary>Fenn's wolf: health and bite are set from Fenn at each summon.</summary>
-        public static readonly UnitDef Wolf = U(UnitKind.Wolf, MinionKind.Melee, 0.2f, 2.5f, 100, 10, 1.2f, 1.2f, 0.175f, 0, 0.1666f, ProjKind.WolfBite);
 
         /// <summary>The team stars (1-3 after hero kills): +health, +damage, -attack cooldown.</summary>
         public static readonly float[] StarHp = { 0, 0.03f, 0.06f, 0.09f };
@@ -198,8 +196,6 @@ namespace BAM.Sim
         /// OneTapSpecial; false = the special goes at the tap, as protocol 40. Same for players and bots.</summary>
         public static readonly bool SpecialTelegraph = true;
         public const float TelegraphTime = 0.3f;
-        /// <summary>Fenn's wolf hits a tower for half (tester 2026-11-03 via Discord: the wolf alone wears a tower down; Rickard ok).</summary>
-        public const float WolfVsTower = 0.5f;
         /// <summary>Blast's bomb lands on the target's feet with a 1.5-tile blast and a 0.5 s fuse: with 0.3 s it still always hit, so it
         /// warns 0.5 s and a hero that runs at the flash gets out (Rickard 2026-11-02).</summary>
         public const float TelegraphTimeBlast = 0.5f;

@@ -26,19 +26,20 @@ namespace BAM.Sim
             Check(!CanDragAim(HeroId.Bonk) && !CanDragAim(HeroId.Kugg) && CanDragAim(HeroId.Tyra) && CanDragAim(HeroId.Moa), "DRAG: Bonk and Kugg are tap only, the rest can aim");
             foreach (var hero in OneTapHeroes)
             {
+                if (hero == HeroId.Fenn) continue; // his Veil has its own checks (FennVeilTests.cs); these were his old wolf's (gone, full review 2026-11-13 nr 116)
                 // nobody near: a tap keeps the charge, a drag up the map fires anyway the way it points
                 var m = OneTapScene(hero, out var p, out float cx, out float cy);
                 Check(m.DragAimOn, $"DRAG {hero}: drag aim on in a normal match");
                 float up = SimMath.PI / 2; // +y on the map
                 bool cast = CastOf(m, p, DragIn(up, 1), 2, out float ax, out float ay);
-                if (!CanDragAim(hero) && !(hero == HeroId.Fenn && !m.FennVeil)) // the wolf Fenn of the older checks still aims (FennVeilTests.cs has the Veil)
+                if (!CanDragAim(hero))
                 {
                     Check(!cast && p.SpecialReady, $"DRAG {hero}: nothing to aim, so a drag is a tap: nobody near, no cast, the charge stays");
                     continue;
                 }
                 Check(cast && !p.SpecialReady, $"DRAG {hero}: a drag fires with nobody in reach (cast {cast}, ready {p.SpecialReady})");
                 if (!cast) continue;
-                if (hero == HeroId.Moa || hero == HeroId.Bram || hero == HeroId.Blast || hero == HeroId.Fenn)
+                if (hero == HeroId.Moa || hero == HeroId.Bram || hero == HeroId.Blast)
                 {   // a placed form lands at most at the white ring, never further than a tap can put it (DragShare)
                     float d = SimMath.Hypot(ax - p.X, ay - p.Y);
                     Check(d <= TapReach(hero) + 0.05f && d > 0.5f && ay > p.Y + 0.5f, $"DRAG {hero}: a full drag lands up the map at the white ring at most ({d:0.00} tiles, ring {TapReach(hero):0.00})");

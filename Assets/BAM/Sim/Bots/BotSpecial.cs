@@ -48,7 +48,7 @@ namespace BAM.Sim
             {   // one tap at a random enemy in reach (OneTap.cs): wanted with an enemy hero in that reach, or a minion pack of 3+ to
                 // clear; the same rule on both teams and every level (the levels differ in how fast and how often, not in the brain)
                 float r = Match.TapReach(h.Hero);
-                if (h.Hero == HeroId.Fenn && M.FennVeil)
+                if (h.Hero == HeroId.Fenn)
                 {   // Shadow Veil (Heroes.cs): vanish next to an enemy hero to strike it (Omega's old AI went in on a hero), or to get away
                     // when hurt and chased; the brain then walks in and swings, or keeps running, as it would anyway
                     if (h.Has(St.Veil)) return false;
@@ -99,7 +99,7 @@ namespace BAM.Sim
                         if (Foes(4, true, los, l) > 0) return true;
                         var tw = TowerOf(Teams.Other(h.Team)); if (tw == null || !tw.Alive || Dist(h, tw) > h.Range + tw.R + 1) return false;
                         for (int i = 0; i < us.Count; i++) { var u = us[i]; if (u.Alive && u.IsMinionLike && u.Team == h.Team && Dist(u, tw) < tw.UDef.Range + 1) return false; }
-                        return true; // the wolf tanks the tower for him
+                        return true; // OneTap off (tests only): the old wolf's rule, kept as it was (the wolf itself is gone since 2026-11-13, nr 116)
                     }
                 case HeroId.Moa:
                     {
@@ -217,20 +217,7 @@ namespace BAM.Sim
                         if (best == null) return false;
                         ang = AngTo(best.X, best.Y); k = SimMath.Clamp(Dist(h, best) / range, 0, 1); return true;
                     }
-                case HeroId.Fenn:
-                    {   if (M.FennVeil) return false; // Shadow Veil has nothing to aim (SpecialWanted taps it)
-                        // the thrown wolf homes on an enemy hero but walls stop it (Rickard 2026-10-25), so throw it at the lowest
-                        // enemy hero within the throw that has no wall in between and that the wolf's real flight gets near
-                        float reach = FennS.ThrowReach; var hs = FoeHeroes(h, reach - 0.3f); Unit t = null;
-                        for (int i = 0; i < hs.Count; i++)
-                        {
-                            var e = hs[i]; float d = Dist(h, e);
-                            if (M.Map.ShotBlocked(h.X, h.Y, e.X, e.Y) || M.WolfReach(h.X, h.Y, AngTo(e.X, e.Y), d) < d - FennS.HomeRadius - e.R) continue;
-                            if (t == null || e.Hp < t.Hp) t = e;
-                        }
-                        if (t == null) return false;
-                        ang = AngTo(t.X, t.Y); k = SimMath.Clamp(Dist(h, t) / reach, 0, 1); return true;
-                    }
+                case HeroId.Fenn: return false; // Shadow Veil has nothing to aim (SpecialWanted taps it)
                 case HeroId.Bram:
                     {   if (Match.SilverOn) return false; // the Hammer Line is tapped at a random enemy (SpecialWanted)
                         // Anvil Drop on an enemy hero in reach with another enemy hero next to it, so the stun lands on two (XYZ SimBotDrag.cs)

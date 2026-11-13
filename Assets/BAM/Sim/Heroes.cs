@@ -40,19 +40,16 @@ namespace BAM.Sim
         public const int FocusMax = 8;
     }
 
-    /// <summary>Fenn, Call of the Pack. Tap: a wolf that follows him and bites enemies near him. Drag: the wolf is thrown up to
-    /// 6 tiles, homes in on an enemy hero it passes and pounces (a bite and a short root), then hunts on. Walls stop the wolf:
-    /// it walks round them, a throw ends at the first one and it bites only with a clear line (Rickard 2026-10-25, after it won
-    /// 90 % going through them); it still passes through bodies. Passive (the clone): when an enemy hero hits Fenn, a copy of
+    /// <summary>Fenn, the Spectral Knight: his special is the Veil (below). His old wolf (Call of the Pack) was taken out of the game
+    /// 2026-11-13 (full review nr 116, Rickard "fixa allt"); UnitKind.Wolf, WolfMode, Unit's Wolf fields, the events and the sound ids
+    /// stay so nothing is renumbered (traces, the wire, SimCopy.g.cs). Passive (the clone): when an enemy hero hits Fenn, a copy of
     /// him with his health and level appears for 3 s, runs at the nearest enemy and swings at it, but it is a decoy: it deals no
     /// damage and is gone at the first hit it takes (Rickard 2026-10-25; the old illusion's full fight made Fenn win 83 % against
     /// Hard bots, the decoy 62 %, the old game's Fenn 61 %). At most once per 18 s.</summary>
     public static class FennS
     {
-        /// <summary>The thrown wolf turns onto an enemy hero within HomeRadius of its flight: as wide as the red warning over
-        /// its path (the old rush's warning was PounceRadius wide too).</summary>
-        public const float ThrowReach = 6, ThrowSpeed = 11, HomeRadius = 1, PounceRadius = 1, RootDuration = 0.8f;
-        public const float HpPercent = 0.3f, Duration = 4, DamageCoeff = 0.4f, Leash = 6, Sight = 3.5f, FollowGap = 1.2f;
+        /// <summary>The old wolf throw's reach and landing circle: still Fenn's special range and radius in his HeroDef (Defs.cs).</summary>
+        public const float ThrowReach = 6, PounceRadius = 1;
         public const float CloneCooldown = 18, CloneLife = 3, CloneSight = 5;
         /// <summary>Shadow Escape (Fenn 2.0, Simon's Skuggflykt, XYZ #607/#609): an enemy hero's auto attack hitting his decoy speeds
         /// Fenn up 20 % for 1 s (the decoy is gone at that hit, so once per decoy).</summary>
@@ -63,7 +60,7 @@ namespace BAM.Sim
         /// End) special Ignus Fatuus replaces the wolf. A tap anywhere (nothing to aim, nobody needed in reach): his decoy appears
         /// where he stands and Fenn turns invisible to the enemy for VeilTime s (nothing sees him: not grass sight, a hit or a tower;
         /// Match.IsVisibleTo) and runs VeilSpeed faster. His first auto attack ends it: the Shadow Strike hits StrikeBonus harder and
-        /// slows by StrikeSlow for StrikeSlowTime s. ABC2 numbers: 4 s, +1 tile/s on a 2.0 hero, up to +75 %. false = the wolf.</summary>
+        /// slows by StrikeSlow for StrikeSlowTime s. ABC2 numbers: 4 s, +1 tile/s on a 2.0 hero, up to +75 %. Always true since the wolf is gone (2026-11-13).</summary>
         public const bool Veil = true;
         public const float VeilTime = 3.5f, VeilSpeed = 0.35f, StrikeBonus = 1.2f, StrikeSlow = 0.35f, StrikeSlowTime = 1.25f; // BAM's own numbers (Rickard: "kör likadant men inte exakta siffror")
         /// <summary>Proj.Ticks on Fenn's auto attack that is the Shadow Strike (the slow lands with the hit).</summary>
@@ -206,7 +203,7 @@ namespace BAM.Sim
         /// False (and nothing spent) when it cannot fire now: no charge, stunned, or a tap with nobody in reach.</summary>
         internal bool TryCastSpecial(Unit h, float aimAngle, float aimK)
         {
-            if (FennVeil && h.VeilStrikeReady) return FennStrikeNow(h, aimAngle, aimK); // SPECIAL again while veiled: the Shadow Strike (a drag picks whom)
+            if (h.VeilStrikeReady) return FennStrikeNow(h, aimAngle, aimK); // SPECIAL again while veiled: the Shadow Strike (a drag picks whom)
             if (!h.Alive || h.Kind != UnitKind.Hero || h.IsClone || !h.SpecialReady || h.Has(St.Stun) || State != MatchState.Play) return false;
             h.AimAng = aimAngle; h.AimK = SimMath.Clamp(float.IsNaN(aimK) ? 0 : aimK, 0, 1);
             bool drag = !float.IsNaN(aimAngle);
@@ -216,7 +213,7 @@ namespace BAM.Sim
             switch (h.Hero)
             {
                 case HeroId.Bram: used = CastBram(h, dmg); break;
-                case HeroId.Fenn: used = CastFenn(h); break;
+                case HeroId.Fenn: used = CastFennVeil(h); break;
                 case HeroId.Tyra: used = CastTyra(h, dmg); break;
                 case HeroId.Moa: used = CastMoa(h); break;
                 case HeroId.Knut: used = CastKnut(h, dmg); break;
@@ -275,18 +272,18 @@ namespace BAM.Sim
         static bool Hurtable(Unit h, Unit u) => u.Alive && u.Team != h.Team && u.Kind != UnitKind.Tower && !u.Has(St.Untargetable);
 
         // ---------- red warnings (the old SimTelegraph): pictures for players, read by the bots to dodge ----------
-        /// <summary>A warning strip from src's spot the way ang points, len long and half wide; tied: it goes when the move it
-        /// belongs to ends (Fenn's thrown wolf).</summary>
-        Proj WarnLine(Unit src, float ang, float len, float half, float dur, bool tied = false)
+        /// <summary>A warning strip from src's spot the way ang points, len long and half wide. (Proj.Tied was for Fenn's thrown
+        /// wolf, gone since 2026-11-13; the field stays for SimCopy.g.cs.)</summary>
+        Proj WarnLine(Unit src, float ang, float len, float half, float dur)
         {
             var p = NewProj(ProjMode.WarnLine, src, src.X, src.Y);
-            p.Ang = ang; p.D = len; p.Radius = half; p.Dur = Math.Max(0.15f, dur); p.Tied = tied;
+            p.Ang = ang; p.D = len; p.Radius = half; p.Dur = Math.Max(0.15f, dur);
             return p;
         }
-        Proj WarnCircle(Unit src, float x, float y, float r, float dur, bool tied = false)
+        Proj WarnCircle(Unit src, float x, float y, float r, float dur)
         {
             var p = NewProj(ProjMode.WarnCircle, src, x, y);
-            p.Radius = r; p.Dur = Math.Max(0.15f, dur); p.Tied = tied;
+            p.Radius = r; p.Dur = Math.Max(0.15f, dur);
             return p;
         }
         /// <summary>Ties warning w to its shot or drop: w then ends when that does, not when the caster dies.</summary>
@@ -310,7 +307,7 @@ namespace BAM.Sim
                 if (p.T >= p.Dur || p.Of.Serial != p.OfSerial || p.Of.Done) { p.Done = true; return; }
                 if (p.Of.Mode == ProjMode.Hook && !p.Of.Out) { p.Done = true; return; } // Knut's line goes as the anchor turns back or catches (nr 102)
             }
-            else if (p.T >= p.Dur || s == null || !s.Alive || (p.Tied && !(s.Kind == UnitKind.Wolf && s.Wolf == WolfMode.Fly))) { p.Done = true; return; }
+            else if (p.T >= p.Dur || s == null || !s.Alive) { p.Done = true; return; }
             if (s == null) return;
             // Tikta's drag: her needles still in the hand leave from where she is then, so the strip moves with her (TIKTA-01)
             if (p.Mode == ProjMode.WarnLine && s.Kind == UnitKind.Hero && s.Hero == HeroId.Tikta && NeedleInHand(s)) { p.X = s.X; p.Y = s.Y; }
@@ -449,11 +446,6 @@ namespace BAM.Sim
         }
 
         // ---------- Fenn ----------
-        /// <summary>Fenn casts Shadow Veil (FennS.Veil). A property, not a field, so SimCopy.g.cs (online) stays as it is.</summary>
-        public bool FennVeil => FennVeilDefault;
-        /// <summary>Tests/Sim runs its older checks with the wolf (false), FennVeilTests.cs with the Veil.</summary>
-        internal static bool FennVeilDefault = FennS.Veil;
-
         /// <summary>Veil (FennS.Veil): the decoy where he stands, then Fenn vanishes and runs faster. Always fires (an escape too).</summary>
         bool CastFennVeil(Unit h)
         {
@@ -528,182 +520,6 @@ namespace BAM.Sim
             for (int i = u.StCount - 1; i >= 0; i--) if (u.Sts[i].Type == St.SpeedPct && u.Sts[i].V == FennS.VeilSpeed && u.Sts[i].By == u) u.RemoveAt(i);
         }
 
-        bool CastFenn(Unit h)
-        {
-            if (FennVeil) return CastFennVeil(h);
-            // one wolf at a time: a new one replaces the old
-            for (int i = 0; i < Units.Count; i++)
-            {
-                var o = Units[i];
-                if (o.Alive && o.Kind == UnitKind.Wolf && o.Owner == h) { o.Alive = false; o.Hp = 0; o.DeadT = 0.6f; Emit(EventType.Death, null, o); }
-            }
-            bool drag = Aimed(h, out float aa, out float ak);
-            float a = h.Facing + SimMath.PI / 2, wx = h.X + SimMath.Cos(a) * 0.6f, wy = h.Y + SimMath.Sin(a) * 0.6f;
-            if (drag || !Map.Free(wx, wy, Defs.Wolf.Radius)) { wx = h.X; wy = h.Y; }
-            var w = NewUnit(UnitKind.Wolf, h.Team, wx, wy);
-            w.UDef = Defs.Wolf; w.R = Defs.Wolf.Radius; w.Owner = h; w.LifeT = FennS.Duration;
-            w.MaxHp = h.MaxHp * FennS.HpPercent; w.Hp = w.MaxHp; w.DmgOverride = h.StatDmg() * FennS.DamageCoeff; w.Facing = h.Facing;
-            w.Wolf = WolfMode.Follow;
-            AddStatus(h, St.Casting, 0.25f);
-            castX = wx; castY = wy;
-            if (drag)
-            {
-                AimPoint(h, aa, ak, FennS.ThrowReach, out float gx, out float gy);
-                // the throw ends where a wall would stop the wolf, so the red circle shows where it really lands
-                float ga = SimMath.Atan2(gy - wy, gx - wx), gd = WolfReach(wx, wy, ga, SimMath.Hypot(gx - wx, gy - wy));
-                gx = wx + SimMath.Cos(ga) * gd; gy = wy + SimMath.Sin(ga) * gd;
-                h.Facing = aa; w.Facing = aa; w.Wolf = WolfMode.Fly; w.WolfGx = gx; w.WolfGy = gy; w.WolfOx = wx; w.WolfOy = wy;
-                // red warning over the whole flight (it can turn onto a hero anywhere along it) and the landing spot
-                WarnLine(w, ga, gd, TeleOn ? Defs.Wolf.Radius : FennS.HomeRadius, gd / FennS.ThrowSpeed + 0.05f, true); // a warned throw homes on nobody: a thin line
-                WarnCircle(w, gx, gy, FennS.PounceRadius, gd / FennS.ThrowSpeed + 0.05f, true);
-                castX = gx; castY = gy;
-            }
-            else PackHunt(w); // the tap: the wolf picks its first prey at once (Fenn 2.0, Hero5.cs)
-            Emit(EventType.WolfSummon, w, h, 0, 0, drag, wx, wy);
-            return true;
-        }
-
-        /// <summary>The wolf's brain once it is on the ground (a thrown wolf flies in WolfFly first, stunned or not): after a pounce
-        /// it hunts its prey, else any enemy near it; a called wolf bites the nearest enemy near Fenn, else stays at his side. It
-        /// walks round walls on a path, as the old aiWolf.</summary>
-        void AiWolf(Unit w, float dt)
-        {
-            var o = w.Owner;
-            w.AiT -= dt;
-            Unit t = null;
-            if (w.Wolf == WolfMode.Free)
-            {
-                var prey = w.WolfPrey;
-                if (prey != null && prey.Alive && !prey.Has(St.Untargetable) && IsVisibleTo(prey, w.Team)) t = prey;
-                else
-                {
-                    w.WolfPrey = null;
-                    t = Nearest(EnemiesInRange(w, FennS.Sight, Pick.Heroes, false, aiBuf), w.X, w.Y);
-                    if (t == null) t = Nearest(EnemiesInRange(w, FennS.Sight, Pick.Any, false, aiBuf), w.X, w.Y);
-                    if (t == null) w.Wolf = WolfMode.Follow; // nothing left to hunt: back to Fenn
-                }
-            }
-            if (w.Wolf == WolfMode.Follow)
-            {
-                var prey = w.WolfPrey; // Pack Hunt's first prey (Hero5.cs), held while it is valid
-                if (prey != null && prey.Alive && !prey.Has(St.Untargetable) && IsVisibleTo(prey, w.Team) && SimMath.Dist(o, prey) <= FennS.Leash) t = prey;
-                else
-                {
-                    w.WolfPrey = null; // then the called wolf's old rule: the nearest enemy near it, within the leash
-                    t = Nearest(EnemiesInRange(w, FennS.Sight, Pick.Any, false, aiBuf), w.X, w.Y);
-                    if (t != null && SimMath.Dist(o, t) > FennS.Leash) t = null;
-                }
-            }
-            // its bite needs a clear line, so a target behind a wall is walked round to
-            if (t != null) { if (SimMath.Dist(w, t) > w.Range + t.R || !Map.LosClear(w, t)) { WolfWalk(w, t.X, t.Y, dt); return; } }
-            else if (SimMath.Dist(w, o) > FennS.FollowGap) { WolfWalk(w, o.X, o.Y, dt); return; }
-            w.AiT = 0; w.Path.Clear(); // standing: the next goal gets a fresh path
-        }
-
-        /// <summary>One step towards (gx, gy) along a path round the walls, made again every 0.3 s (the old aiWolf); straight at
-        /// the goal when there is no path.</summary>
-        void WolfWalk(Unit w, float gx, float gy, float dt)
-        {
-            if (w.AiT <= 0) { w.AiT = 0.3f; Map.FindPath(w.X, w.Y, gx, gy, Time, w.Path); }
-            if (w.Path.Has)
-            {
-                float nx = w.Path.X[w.Path.Index], ny = w.Path.Y[w.Path.Index];
-                if (SimMath.Hypot(nx - w.X, ny - w.Y) < 0.25f) w.Path.Index++;
-                else MoveUnit(w, nx - w.X, ny - w.Y, dt);
-                return;
-            }
-            MoveUnit(w, gx - w.X, gy - w.Y, dt);
-        }
-
-        void WolfFly(Unit w, float dt)
-        {
-            var prey = w.WolfPrey;
-            // a warned throw (Telegraph.cs) homes on nobody: it lands on the locked spot and pounces there (WolfPounce)
-            if (TeleOn) prey = w.WolfPrey = null;
-            // it lets go of a prey that died, vanished or left the red strip (a dash or blink), and flies on to the red circle
-            else if (prey != null && (!prey.Alive || prey.Has(St.Untargetable) || !InWolfStrip(w, prey))) prey = w.WolfPrey = null;
-            if (prey == null && !TeleOn)
-            {
-                float bd = float.MaxValue;
-                for (int i = 0; i < Units.Count; i++)
-                {
-                    var u = Units[i];
-                    if (!u.Alive || u.Team == w.Team || u.Kind != UnitKind.Hero || u.Has(St.Untargetable) || !IsVisibleTo(u, w.Team)) continue;
-                    float d = SimMath.Dist(w, u) - u.R;
-                    if (d <= FennS.HomeRadius && d < bd && InWolfStrip(w, u) && Map.LosClear(w, u)) { bd = d; prey = u; }
-                }
-                w.WolfPrey = prey;
-            }
-            float gx = prey != null ? prey.X : w.WolfGx, gy = prey != null ? prey.Y : w.WolfGy;
-            float dist = SimMath.Hypot(gx - w.X, gy - w.Y), stop = prey != null ? w.R + prey.R + 0.1f : 0, step = FennS.ThrowSpeed * dt;
-            if (dist > 1e-4f) w.Facing = SimMath.Atan2(gy - w.Y, gx - w.X);
-            bool last = dist - stop <= step;
-            float k = last ? (dist > 1e-4f ? Math.Max(0, dist - stop) / dist : 0) : step / dist;
-            float nx = w.X + (gx - w.X) * k, ny = w.Y + (gy - w.Y) * k;
-            // never past the 6-tile throw (Rickard 2026-10-25): at the edge it lands where it is
-            float ox = nx - w.WolfOx, oy = ny - w.WolfOy, od = SimMath.Hypot(ox, oy);
-            if (od > FennS.ThrowReach) { nx = w.WolfOx + ox * (FennS.ThrowReach / od); ny = w.WolfOy + oy * (FennS.ThrowReach / od); last = true; }
-            bool wall = !Map.Free(nx, ny, w.R) || TowerAt(nx, ny, w.R); // a wall or a base stops the flight: it lands where it is (the old rush, wall = true)
-            if (!wall) { w.X = nx; w.Y = ny; w.WalkT += dist * k; w.MovedAt = Time; }
-            if (last || wall) WolfPounce(w, prey);
-        }
-
-        /// <summary>Is u inside the thrown wolf's red strip: from where it left to where it lands, HomeRadius + u's radius to the side
-        /// (so it never turns onto a hero behind Fenn or off to the side of what the warning showed).</summary>
-        bool InWolfStrip(Unit w, Unit u)
-        {
-            float lx = w.WolfGx - w.WolfOx, ly = w.WolfGy - w.WolfOy, len = SimMath.Hypot(lx, ly);
-            float ux = u.X - w.WolfOx, uy = u.Y - w.WolfOy;
-            if (len < 1e-4f) return SimMath.Hypot(ux, uy) <= FennS.HomeRadius + u.R; // a throw stopped at once: the landing circle
-            float along = (ux * lx + uy * ly) / len, side = Math.Abs(ux * ly - uy * lx) / len;
-            return along >= -u.R && along <= len + FennS.HomeRadius + u.R && side <= FennS.HomeRadius + u.R;
-        }
-
-        /// <summary>How far the thrown wolf flies from (x, y) along ang (map space) before a wall stops it, at most want: the
-        /// steps it really flies (the old rushStop), so the aim preview and the red circle can show where it lands.</summary>
-        public float WolfReach(float x, float y, float ang, float want)
-        {
-            float c = SimMath.Cos(ang), s = SimMath.Sin(ang), step = FennS.ThrowSpeed * Rules.Tick, d = 0;
-            while (d < want - 1e-4f)
-            {
-                float nd = Math.Min(want, d + step);
-                if (!Map.Free(x + c * nd, y + s * nd, Defs.Wolf.Radius) || TowerAt(x + c * nd, y + s * nd, Defs.Wolf.Radius)) break; // a wall or a base
-                d = nd;
-            }
-            return d;
-        }
-
-        /// <summary>The thrown wolf lands: a bite from Fenn on its prey (else the enemy next to it, heroes first) and a short root.
-        /// A landing on nothing shows no bite.</summary>
-        void WolfPounce(Unit w, Unit prey)
-        {
-            var best = prey != null && prey.Alive && SimMath.Dist(w, prey) - prey.R <= FennS.PounceRadius && Map.LosClear(w, prey) ? prey : PounceTarget(w.Team, w.X, w.Y, FennS.PounceRadius);
-            w.Wolf = WolfMode.Free;
-            w.WolfPrey = best != null && best.Kind == UnitKind.Hero ? best : null;
-            Emit(EventType.WolfPounce, w, best, FennS.PounceRadius, 0, false, w.X, w.Y);
-            if (best == null) return;
-            SpecialHit(w.Owner, best, w.DmgOverride, ProjKind.WolfBite, true);
-            Emit(EventType.AttackStart, w, best, 0, (byte)ProjKind.WolfBite, true); // the bite itself shows on the wolf
-            if (best.Alive) AddStatus(best, St.Root, FennS.RootDuration, 0, 0, w);
-        }
-
-        /// <summary>The enemy (not a tower) within radius of the spot, measured to its edge, with no wall in between: a hero before
-        /// anything else, then the nearest. The aim preview rings the same one.</summary>
-        public Unit PounceTarget(int team, float x, float y, float radius)
-        {
-            Unit best = null; float bd = 99;
-            for (int i = 0; i < Units.Count; i++)
-            {
-                var u = Units[i];
-                if (!u.Alive || u.Team == team || u.Kind == UnitKind.Tower || u.Has(St.Untargetable)) continue;
-                float d = SimMath.Hypot(u.X - x, u.Y - y) - u.R;
-                if (d > radius || !Map.LosClear(x, y, u.X, u.Y)) continue;
-                bool uh = u.Kind == UnitKind.Hero;
-                bool better = best == null || (uh != (best.Kind == UnitKind.Hero) ? uh : d < bd);
-                if (better) { best = u; bd = d; }
-            }
-            return best;
-        }
 
         // Fenn's clone (the old Omega/Thief illusion): set up inside the damage, made at the end of the tick
         void CloneOnHurt(Unit tgt, Unit src, DmgKind kind, DmgFlags flags)

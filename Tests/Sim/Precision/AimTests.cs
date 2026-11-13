@@ -37,7 +37,7 @@ namespace BAM.Sim
             var pred = new List<Unit>();
             foreach (var hero in AimHeroes)
             {
-                if (hero == HeroId.Fenn && FennVeilDefault) continue; // Shadow Veil has nothing to aim (Heroes.cs)
+                if (hero == HeroId.Fenn) continue; // Shadow Veil has nothing to aim (Heroes.cs; his old wolf is gone, nr 116)
                 int bad = 0;
                 for (int sc = 0; sc < 120; sc++)
                 {
@@ -74,11 +74,7 @@ namespace BAM.Sim
                     var seen = new HashSet<Unit>(); foreach (var u in targets) if (m.IsVisibleTo(u, s.Team)) seen.Add(u);
                     var ev = m.PRun(150, PDrag(ang, k), PlayerInput.None);
                     var got = new HashSet<Unit>();
-                    if (hero == HeroId.Fenn)
-                    {   // the wolf's first bite (later it hunts on its own)
-                        foreach (var e in ev) if (e.Type == EventType.Hit && e.A == s && e.Kind == (byte)ProjKind.WolfBite) { got.Add(e.B); break; }
-                    }
-                    else foreach (var u in targets) if (allies ? u.Has(St.Shield) : u.Hp < u.MaxHp) got.Add(u);
+                    foreach (var u in targets) if (allies ? u.Has(St.Shield) : u.Hp < u.MaxHp) got.Add(u);
                     var want = new HashSet<Unit>(); foreach (var u in pred) want.Add(u);
                     got.IntersectWith(seen); want.IntersectWith(seen);
                     scenes++;

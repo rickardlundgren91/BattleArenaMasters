@@ -42,6 +42,7 @@ namespace BAM.Sim
             sb.AppendLine("hero    | dist | speed | warning | still | away 0 s | away 0.25 s | across 0.25 s");
             foreach (var hero in OneTapHeroes)
             {
+                if (hero == HeroId.Fenn) continue; // his Veil has its own checks (FennVeilTests.cs); these were his old wolf's (gone, full review 2026-11-13 nr 116)
                 if (hero == HeroId.Moa) continue;
                 foreach (bool tele in new[] { false, true })
                 {
@@ -61,6 +62,7 @@ namespace BAM.Sim
             if (Environment.GetEnvironmentVariable("BAM_TELEGRAPH_TABLE") == "1") Console.Write(TelegraphTable());
             foreach (var hero in OneTapHeroes)
             {
+                if (hero == HeroId.Fenn) continue; // his Veil has its own checks (FennVeilTests.cs); these were his old wolf's (gone, full review 2026-11-13 nr 116)
                 int ticks = (int)Math.Round(TeleTime(hero) / Rules.Tick);
                 var m = OneTapScene(hero, out var p, out float cx, out float cy);
                 m.Telegraph = true;
@@ -114,19 +116,6 @@ namespace BAM.Sim
                 Check(cut && !castAfter && p.SpecialReady && !Telegraphing(p) && !warnLeft, $"TELE {hero}: a stun in the warning cuts it, no cast, the charge stays (cut {cut}, cast {castAfter}, warning left {warnLeft})");
             }
 
-            // nothing homes: Fenn's wolf lands on the locked spot, an enemy that stepped 1.2 tiles aside is not bitten
-            {
-                var m = OneTapScene(HeroId.Fenn, out var p, out _, out _);
-                m.Telegraph = true;
-                Unit e = null; foreach (var h in m.Heroes) if (h.Team != p.Team) { e = h; break; }
-                Place(e, p.X + 2.7f, p.Y); m.AddStatus(e, St.Stun, 999);
-                m.Step(TapIn());
-                for (int k = 0; k < 10; k++) m.Step(PlayerInput.None);
-                Place(e, e.X - 1.0f, e.Y + 1.25f); m.AddStatus(e, St.Stun, 999); // inside the old homing strip, outside the landing circle
-                bool bit = false; float lx = 0, ly = 0;
-                for (int k = 0; k < 60; k++) { m.Step(PlayerInput.None); foreach (var ev in m.Events) { if (ev.Type == EventType.WolfPounce) { lx = ev.X; ly = ev.Y; } if (ev.Type == EventType.Hit && ev.B == e && ev.Dmg == DmgKind.Special) bit = true; } }
-                Check(!bit && Math.Abs(lx - p.TeleX) < 0.05f && Math.Abs(ly - p.TeleY) < 0.05f, $"TELE Fenn: the wolf lands on the locked spot and homes on nobody (bit {bit}, landed {Math.Abs(lx - p.TeleX):0.00}/{Math.Abs(ly - p.TeleY):0.00} off)");
-            }
             // Tikta walks in her warning: she moves, the red line moves with her, and the needles leave from where she is at the cast,
             // along the direction locked at the tap
             if (TiktaS.WalksInWarning)
@@ -164,10 +153,10 @@ namespace BAM.Sim
                 Check(cast && !hit && !p.SpecialReady, $"TELE Bonk: the warned slam goes off even when the enemy ran out (cast {cast}, hit {hit})");
             }
             // the point of it: a player who runs away at the flash gets out of the ones that land on a spot or fly a fixed reach,
-            // where without the warning they were sure hits (Knut's hook, Tikta's needles, Fenn's wolf, Blast's bomb with its 0.5 s); from Bram's anvil even
+            // where without the warning they were sure hits (Knut's hook, Tikta's needles, Blast's bomb with its 0.5 s); from Bram's anvil even
             // 0.25 s after it (a quick human). Knut's long hook (7 tiles, Franco's since 2026-11-03) is dodged sideways, as Franco's:
             // nobody outruns it straight back. The full table: BAM_TELEGRAPH_TABLE=1
-            foreach (var (hero, react, flee) in new[] { (HeroId.Knut, 0f, Flee.Side), (HeroId.Tikta, 0f, Flee.Away), (HeroId.Fenn, 0f, Flee.Away), (HeroId.Blast, 0f, Flee.Away), (HeroId.Bram, 0.25f, Flee.Away) })
+            foreach (var (hero, react, flee) in new[] { (HeroId.Knut, 0f, Flee.Side), (HeroId.Tikta, 0f, Flee.Away), (HeroId.Blast, 0f, Flee.Away), (HeroId.Bram, 0.25f, Flee.Away) })
             {
                 float before = TeleRun(hero, false, flee, react, out _), after = TeleRun(hero, true, flee, react, out _);
                 Check(!float.IsNaN(before) && float.IsNaN(after), $"TELE {hero}: running {(flee == Flee.Side ? "aside" : "away")} {react} s after the tap got hit before ({before:0.00} s), now gets away ({after:0.00})");

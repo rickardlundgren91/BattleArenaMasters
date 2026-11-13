@@ -57,6 +57,7 @@ namespace BAM.Sim
             RecallTapCheck();
             foreach (var hero in OneTapHeroes)
             {
+                if (hero == HeroId.Fenn) continue; // his Veil has its own checks (FennVeilTests.cs); these were his old wolf's (gone, full review 2026-11-13 nr 116)
                 if (hero == HeroId.Moa) continue;
                 // nobody in reach: grey, the tap does nothing, the charge stays
                 var m = OneTapScene(hero, out var p, out float cx, out float cy);

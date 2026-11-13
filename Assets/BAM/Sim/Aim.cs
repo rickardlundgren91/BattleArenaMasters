@@ -21,8 +21,6 @@ namespace BAM.Sim
         public bool Los;
         /// <summary>Moa's field: it covers ally heroes, not enemies.</summary>
         public bool Allies;
-        /// <summary>Fenn's thrown wolf: it turns onto an enemy hero within PathHalf of its whole flight (0 = none).</summary>
-        public float PathHalf;
         /// <summary>Hilde's keg pushes the heroes it hits PushLength tiles along Ang (0 = no push).</summary>
         public float PushLength;
     }
@@ -56,22 +54,11 @@ namespace BAM.Sim
                 case HeroId.Nassla: LandPoint(h, ang, k, NasslaS.Reach, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = NasslaS.Radius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
                 case HeroId.Ragn: RagnLandPoint(h, ang, k, out a.CX, out a.CY); a.Shape = AimShape.Circle; a.Radius = RagnS.LandRadius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y); a.Los = true; break;
                 case HeroId.Ravna: Line(ref a, FlockReach(h, ang), NightFlightOn ? RavnaS.FlightRadius : RavnaS.HitRadius, false); break; // the flock tears through everyone on its way
-                case HeroId.Fenn when FennVeil && h.VeilStrikeReady:
+                case HeroId.Fenn when h.VeilStrikeReady:
                     // the Shadow Strike by hand: a small mark on the aimed spot in his reach; the enemy nearest it is struck (AimTargets)
                     StrikeAimPoint(h, ang, k, out a.CX, out a.CY);
                     a.Shape = AimShape.Circle; a.Radius = StrikeMarkRadius; a.Length = SimMath.Hypot(a.CX - h.X, a.CY - h.Y);
                     break;
-                case HeroId.Fenn:
-                {
-                    // as CastFenn: the aimed point, then cut where a wall stops the flying wolf (it leaves from Fenn's spot)
-                    AimPoint(h, ang, k, FennS.ThrowReach, out float gx, out float gy);
-                    float ga = SimMath.Atan2(gy - h.Y, gx - h.X), gd = WolfReach(h.X, h.Y, ga, SimMath.Hypot(gx - h.X, gy - h.Y));
-                    a.Shape = AimShape.Circle; a.Ang = ga; a.Length = gd; a.CX = h.X + SimMath.Cos(ga) * gd; a.CY = h.Y + SimMath.Sin(ga) * gd;
-                    // a warned throw homes on nobody (Telegraph.cs, WolfFly): no mark along the flight then, only the landing bite's
-                    // (full review 2026-11-09 nr 100)
-                    a.Radius = FennS.PounceRadius; a.PathHalf = TeleOn ? 0 : FennS.HomeRadius; a.Los = true;
-                    break;
-                }
                 default: a.Shape = AimShape.None; break;
             }
             return a;
@@ -90,12 +77,12 @@ namespace BAM.Sim
 
         /// <summary>The units team-of-h can see that a would hit if let go now (Moa: the allies it shields), by the rules' tests: inside
         /// the shape counting their own radius, only the first along a line that stops in it, only with a clear line where the rules
-        /// want one. Fenn: the first enemy hero met along the flight, else the one the landing bites. Fills and returns buf.</summary>
+        /// want one. Fenn: the one enemy his dragged Shadow Strike would hit. Fills and returns buf.</summary>
         public List<Unit> AimTargets(Unit h, in AimInfo a, List<Unit> buf)
         {
             buf.Clear();
             if (a.Shape == AimShape.None) return buf;
-            if (h.Hero == HeroId.Fenn && FennVeil && h.VeilStrikeReady)
+            if (h.Hero == HeroId.Fenn && h.VeilStrikeReady)
             {   // the dragged Shadow Strike: the one enemy it would hit (FennStrikeNow)
                 var t = StrikeTargetAt(h, a.CX, a.CY);
                 if (t != null) buf.Add(t);
@@ -110,7 +97,7 @@ namespace BAM.Sim
                 if (a.Allies) { if (u.Team == h.Team && u.Kind == UnitKind.Hero && !u.IsClone && SimMath.Dist(u, a.CX, a.CY) <= a.Radius + u.R) buf.Add(u); continue; }
                 if (u.Team == h.Team) continue;
                 if (PassesMinions(h.Hero) && u.Kind != UnitKind.Hero) continue; // the hook and the bolt fly past minions
-                if (h.Hero == HeroId.Fenn) continue; // the wolf: after this loop
+                if (h.Hero == HeroId.Fenn) continue; // the Veil marks nobody (his old wolf, gone 2026-11-13, was marked after this loop)
                 if (a.Shape == AimShape.Circle)
                 {
                     if (SimMath.Dist(u, a.CX, a.CY) <= a.Radius + u.R && (!a.Los || Map.LosClear(a.CX, a.CY, u.X, u.Y))) buf.Add(u);
@@ -125,38 +112,8 @@ namespace BAM.Sim
                 float c = Contact(u, a.X, a.Y, ca, sa, a.Half);
                 if (c < firstAt) { firstAt = c; first = u; }
             }
-            if (a.PathHalf > 0) first = WolfPrey(h, a);
-            if (h.Hero == HeroId.Fenn && first == null) { first = PounceTarget(h.Team, a.CX, a.CY, a.Radius); if (first != null && !IsVisibleTo(first, h.Team)) first = null; } // the landing bite (WolfPounce)
             if (first != null) buf.Add(first);
             return buf;
-        }
-
-        /// <summary>The enemy hero the thrown wolf would turn onto, as WolfFly picks it: at each tick's spot of its flight, the
-        /// nearest (to its edge) hero within HomeRadius with a clear line, that this team can see; null when none.</summary>
-        Unit WolfPrey(Unit h, in AimInfo a)
-        {
-            float ca = SimMath.Cos(a.Ang), sa = SimMath.Sin(a.Ang), step = FennS.ThrowSpeed * Rules.Tick;
-            for (float d = 0; ; d = Math.Min(a.Length, d + step))
-            {
-                float wx = a.X + ca * d, wy = a.Y + sa * d, bd = float.MaxValue; Unit prey = null;
-                for (int i = 0; i < Units.Count; i++)
-                {
-                    var u = Units[i];
-                    if (!u.Alive || u.Team == h.Team || u.Kind != UnitKind.Hero || u.Has(St.Untargetable) || !IsVisibleTo(u, h.Team)) continue;
-                    float e = SimMath.Hypot(u.X - wx, u.Y - wy) - u.R;
-                    if (e <= a.PathHalf && e < bd && InStrip(a, u) && Map.LosClear(wx, wy, u.X, u.Y)) { bd = e; prey = u; }
-                }
-                if (prey != null || d >= a.Length) return prey;
-            }
-        }
-
-        // as InWolfStrip (Fenn 2.0): only a hero inside the red strip from where the wolf leaves to where it lands
-        static bool InStrip(in AimInfo a, Unit u)
-        {
-            float ux = u.X - a.X, uy = u.Y - a.Y;
-            if (a.Length < 1e-4f) return SimMath.Hypot(ux, uy) <= a.PathHalf + u.R;
-            float ca = SimMath.Cos(a.Ang), sa = SimMath.Sin(a.Ang), along = ux * ca + uy * sa, side = Math.Abs(ux * sa - uy * ca);
-            return along >= -u.R && along <= a.Length + a.PathHalf + u.R && side <= a.PathHalf + u.R;
         }
 
         // how far along the line its front first touches u (a body of half width half)

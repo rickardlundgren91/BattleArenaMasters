@@ -49,8 +49,6 @@ namespace BAM.Audio
 
                 case SfxId.BramHammerThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);
                 case SfxId.BramHammerBounce: return new SfxInfo(0.85f, 3, 0.08f, 3, 0.05f);
-                case SfxId.FennWolfCall: return new SfxInfo(0.85f, 2, 0.3f, 3, 0.02f);
-                case SfxId.FennWolfThrow: return new SfxInfo(0.85f, 2, 0.2f, 3, 0.03f);
                 case SfxId.TyraDraw: return new SfxInfo(0.7f, 2, 0.2f, 3, 0f);
                 case SfxId.TyraRelease: return new SfxInfo(0.9f, 2, 0.15f, 3, 0.03f);
                 case SfxId.MoaShield: return new SfxInfo(0.8f, 2, 0.15f, 3, 0.03f);
@@ -66,7 +64,6 @@ namespace BAM.Audio
                 case SfxId.HitHeavy: return new SfxInfo(0.75f, 3, 0.08f, 2, 0.06f);
                 case SfxId.ShieldBlock: return new SfxInfo(0.7f, 2, 0.1f, 3, 0.05f);
                 case SfxId.Stunned: return new SfxInfo(0.65f, 2, 0.3f, 3, 0.04f);
-                case SfxId.WolfBite: return new SfxInfo(0.7f, 2, 0.12f, 2, 0.07f);
                 case SfxId.CloneAppear: return new SfxInfo(0.7f, 1, 0.3f, 3, 0f);
                 case SfxId.CloneVanish: return new SfxInfo(0.6f, 1, 0.3f, 3, 0f);
 
@@ -235,18 +232,6 @@ namespace BAM.Audio
                     s.Fm(1500, 1450, 2.76f, 1.5f, 0.18f, 0.12f, 0.002f, 0.001f);
                     s.Noise(Filt.Band, 2400, 900, 1.2f, 0.05f, 0.45f, 0, 0.0005f);
                     break;
-                case SfxId.FennWolfCall: // a short ghostly howl, "aoooo", with a spectral shimmer
-                    s.Tone(Wave.Tri, 330, 560, 0.25f, 0.4f, 0, 0.05f, 0.15f, 5.5f, 0.012f);
-                    s.Tone(Wave.Tri, 560, 470, 0.45f, 0.4f, 0.2f, 0.03f, 0.15f, 5.5f, 0.018f);
-                    s.Tone(Wave.Sine, 1120, 940, 0.55f, 0.1f, 0.12f, 0.08f, 0.1f, 5.7f, 0.02f);
-                    s.Tone(Wave.Sine, 565, 474, 0.5f, 0.12f, 0.18f, 0.08f, 0.1f, 4.9f, 0.02f); // a slightly detuned twin: the ghostly beat
-                    s.Noise(Filt.Band, 900, 1500, 2f, 0.55f, 0.12f, 0, 0.1f);
-                    break;
-                case SfxId.FennWolfThrow: // a rising whoosh with a quick snarl
-                    s.Noise(Filt.Band, 600, 3000, 1.5f, 0.28f, 0.8f, 0, 0.03f);
-                    s.Tone(Wave.Saw, 120, 150, 0.22f, 0.22f, 0.02f, 0.01f, 0.05f, 0, 0, 30f, 0.7f);
-                    s.Tone(Wave.Tri, 240, 300, 0.2f, 0.2f, 0.02f, 0.01f, 0.05f, 0, 0, 30f, 0.7f);
-                    break;
                 case SfxId.TyraDraw: // the bowstring stretching: a rising creak
                     s.Tone(Wave.Tri, 170, 420, 0.38f, 0.3f, 0, 0.12f, 0.15f, 0, 0, 35f, 0.4f);
                     s.Noise(Filt.Band, 1200, 2600, 3f, 0.38f, 0.2f, 0, 0.15f, 0.1f, 35f, 0.6f);
@@ -337,12 +322,6 @@ namespace BAM.Audio
                         s.Tone(Wave.Sine, f * 1.3f, f, 0.05f, 0.25f, t + 0.06f, 0.004f);
                     }
                     s.Tone(Wave.Tri, 620, 520, 0.08f, 0.2f, 0, 0.001f);
-                    break;
-                case SfxId.WolfBite: // a snap of jaws with a short growl
-                    s.Noise(Filt.Band, 1900, 1200, 1.4f, 0.03f, 0.8f, 0, 0.0005f);
-                    s.Noise(Filt.Band, 1600, 1000, 1.4f, 0.035f, 0.7f, 0.05f, 0.0005f);
-                    s.Tone(Wave.Saw, 150, 120, 0.12f, 0.2f, 0, 0.005f, 0.02f, 0, 0, 32f, 0.7f);
-                    s.Tone(Wave.Tri, 330, 200, 0.06f, 0.3f, 0.05f, 0.001f);
                     break;
                 case SfxId.CloneAppear: // a shimmering whoosh upwards
                     s.Noise(Filt.Band, 700, 4000, 3f, 0.28f, 0.4f, 0, 0.05f);

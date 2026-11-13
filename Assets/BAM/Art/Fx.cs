@@ -320,7 +320,7 @@ namespace BAM.Art
             "tx_fx_tyra_release", "tx_fx_tyra_charge", "tx_fx_blast_explosion", "tx_fx_tikta_poison", "tx_fx_knut_splash", "tx_fx_moa_honey",
             "tx_fx_blast_scorch",
             // his set of 2026-10-31 (thread "ultgra"): Tyra's arrow hit, the tower's hit on you, heal, kill, the wolf coming and landing
-            "tx_fx_tyra_hit", "tx_fx_tower_hit", "tx_fx_heal", "tx_fx_kill", "tx_fx_fenn_summon", "tx_fx_fenn_land",
+            "tx_fx_tyra_hit", "tx_fx_tower_hit", "tx_fx_heal", "tx_fx_kill", "tx_fx_fenn_land",
             // his hits of 2026-11-02 (O-033): Knut, Bram, Tikta
             "tx_fx_knut_hit", "tx_fx_bram_hit", "tx_fx_tikta_hit",
             // Tyra's feather trail (O-058, 2026-11-04): a white feather on black, lying on the ground along her bolt's path
@@ -1244,22 +1244,6 @@ namespace BAM.Art
                     Crack(p, 0.4f, 0.7f);
                     Ring(p, 0.2f * size, 0.8f * size, (Color)heroMain[(int)HeroId.Bram], 0.22f);
                     break;
-                case FxKind.WolfSummon:
-                {
-                    // Fenn's own two colours (silver-cyan, purple) and the recipe's white flash as the wolf appears
-                    Color32 m = heroMain[(int)HeroId.Fenn], a = heroAccent[(int)HeroId.Fenn];
-                    Flash(mid, 0.2f * size, 0.8f * size, new Color(1f, 1f, 1f, 0.9f), 0.08f);
-                    Pillar(p, 1.2f * size, 2.4f * size, (Color)m, 0.6f);
-                    Swirl(p, 1.2f * size, (Color)m, 0.6f);
-                    // his howling spirit wolf head (2026-10-31) standing where the wolf comes; the WoW whirl only without it
-                    if (!PicUpright("tx_fx_fenn_summon", p + Vector3.up * (0.9f * size), (Color)m, 2.0f * size, 0.45f))
-                        Pic("tx_wow_warrior_whirl", p, (Color)a, 2.6f * size, 0.6f);
-                    Wisps(p + Vector3.up * 0.3f, 6, a, 0.7f * size, 1.2f, 0.8f, 1f, 0.3f);
-                    Glow(p + Vector3.up * 0.3f, 12, m, 0.25f * size, 1.6f, 0.7f, 0.8f, 0.3f);
-                    Stars(p + Vector3.up * 0.6f, 4, a, 0.3f * size, 1.2f, 0.6f, 1f, 0.4f);
-                    Ring(p, 0.2f * size, 1.2f * size, (Color)m, 0.45f);
-                    break;
-                }
                 case FxKind.SpectralVeil:
                 {
                     Color g = Pal.Get(Pal.Ghost);

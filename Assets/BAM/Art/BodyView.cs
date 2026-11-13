@@ -162,7 +162,7 @@ namespace BAM.Art
         bool flashLit;                             // the emission is not black (a flash is showing or just ended)
         // Fenn the Spectral Knight (Rickard 2026-11-11 "fenn spectral knight, assassin", "gör effekter på hans modell"): his own
         // Clay-Fenn model in a soft pale-blue ghost light, ghost wisps rising off him, and a ghost tint when he is half seen (Veil)
-        bool Spectral => HeroIndex == (int)HeroId.Fenn && def.Kind != RigKind.Wolf && !dead;
+        bool Spectral => HeroIndex == (int)HeroId.Fenn && !dead;
         static readonly Color SpectralGlow = new Color(0.09f, 0.2f, 0.3f), SpectralFade = new Color(0.7f, 0.9f, 1f);
         static readonly Color32 SpectralWisp = new Color32(170, 230, 255, 170);
         float wispT;
@@ -221,7 +221,6 @@ namespace BAM.Art
             fadeMats = new[] { fade };
             ghostMats = d.Ghost ? new[] { opaque } : new Material[0];
             if (d.PropMesh != null) AddProp(d);
-            if (d.RigModel != null) AddWolfRig(d);
         }
 
         // Rickard's Meshy model on one bone, with its own texture on our materials (flash, fade and ghost work as on the rest)
@@ -246,7 +245,6 @@ namespace BAM.Art
                 r.receiveShadows = false;
                 ghostMats = new[] { opaque, o };
                 ghostTint = new Color(0.62f, 1f, 0.96f, 1f);
-                if (d.Kind == RigKind.Wolf) wolfNose = 1f; // the still Meshy wolf, about 2 tiles nose to tail
             }
             else
             {
@@ -262,78 +260,6 @@ namespace BAM.Art
             rends = new[] { rends[0], r };
             opaqueSets = new[] { opaqueSets[0], new[] { o } };
             fadeSets = new[] { fadeSets[0], new[] { f } };
-        }
-
-        AnimationClipPlayable wolfWalk;
-        float wolfNose = 0.45f;                       // how far its nose is ahead of the 0.2-tile disc it stands on (tiles; the code wolf)
-        float leapK = -1f, leapLen, leapY, wolfTilt;  // the throw (SetLeap): progress 0..1, below 0 on the ground
-        float room = 9f, pull;                        // free ground ahead (SetRoom) and how far the body draws back from a wall
-
-        // Fenn's wolf as old Speltest draws it (View3DWolf.cs): Rickard's rigged Meshy wolf on the body bone, turned so hips to head
-        // points forward, about 2 tiles nose to tail, see-through turquoise like the rest of the ghost, its walk played as it runs
-        void AddWolfRig(RigDef d)
-        {
-            Transform holder = bones[Models.WolfBody];
-            var go = Instantiate(d.RigModel, holder, false);
-            go.name = "SpectralWolf";
-            Transform t = go.transform;
-            t.localPosition = Vector3.zero; t.localRotation = Quaternion.identity; t.localScale = Vector3.one;
-            Transform hips = null, head = null;
-            foreach (Transform tr in go.GetComponentsInChildren<Transform>(true)) { if (tr.name == "Hips") hips = tr; else if (tr.name == "head") head = tr; }
-            if (hips != null && head != null)
-            {
-                Vector3 dd = t.InverseTransformPoint(head.position) - t.InverseTransformPoint(hips.position);
-                if (dd.x * dd.x + dd.z * dd.z > 1e-8f) t.localRotation = Quaternion.Euler(0f, -Mathf.Atan2(dd.x, dd.z) * Mathf.Rad2Deg, 0f);
-            }
-            // size and ground from the bones (a skinned mesh's own bounds are not reliable before it has drawn)
-            Bounds kb = default; bool any = false;
-            foreach (Transform tr in go.GetComponentsInChildren<Transform>(true))
-                if (tr != t && tr.GetComponent<Renderer>() == null) { Vector3 p = holder.InverseTransformPoint(tr.position); if (!any) { kb = new Bounds(p, Vector3.zero); any = true; } else kb.Encapsulate(p); }
-            if (any && kb.size.z > 1e-4f)
-            {
-                float s = 2.0f / (kb.size.z * 1.12f);
-                t.localScale = new Vector3(s, s, s);
-                t.localPosition = new Vector3(-kb.center.x * s, -d.Pivots[Models.WolfBody].y - kb.min.y * s + 0.03f, -kb.center.z * s);
-                wolfNose = (kb.max.z - kb.center.z + kb.size.z * 0.06f) * s; // the head bones' end plus the mesh past them (the 1.12)
-            }
-            Texture2D tex = Resources.Load<Texture2D>("BAMArt/Wolf/Wolf_Tex");
-            Material o = ArtMaterials.Instance(ArtMaterials.UnlitFade);
-            if (tex != null) { o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex; }
-            Renderer[] rs = go.GetComponentsInChildren<Renderer>(true);
-            var r2 = new Renderer[rends.Length + rs.Length];
-            var o2 = new Material[rends.Length + rs.Length][];
-            var f2 = new Material[rends.Length + rs.Length][];
-            for (int i = 0; i < rends.Length; i++) { r2[i] = rends[i]; o2[i] = opaqueSets[i]; f2[i] = fadeSets[i]; }
-            for (int i = 0; i < rs.Length; i++)
-            {
-                Renderer r = rs[i];
-                var ms = new Material[Mathf.Max(1, r.sharedMaterials.Length)];
-                for (int j = 0; j < ms.Length; j++) ms[j] = o;
-                r.sharedMaterials = ms;
-                r.shadowCastingMode = ShadowCastingMode.Off;
-                r.receiveShadows = false;
-                if (r is SkinnedMeshRenderer sk) FixedBounds(sk);
-                r2[rends.Length + i] = r; o2[rends.Length + i] = ms; f2[rends.Length + i] = ms;
-            }
-            rends = r2; opaqueSets = o2; fadeSets = f2;
-            ghostMats = new[] { ghostMats.Length > 0 ? ghostMats[0] : opaque, o };
-            ghostTint = new Color(0.55f, 1f, 0.95f, 1f);
-
-            AnimationClip clip = null;
-            foreach (AnimationClip c in Resources.LoadAll<AnimationClip>("BAMArt/Wolf/Wolf")) if (!c.name.StartsWith("__preview__")) { clip = c; break; }
-            if (clip == null) return;
-            Animator an = go.GetComponent<Animator>();
-            if (an == null) an = go.AddComponent<Animator>();
-            an.runtimeAnimatorController = null;
-            an.applyRootMotion = false;
-            an.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            graph = PlayableGraph.Create("BAM spectral wolf");
-            graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-            var output = AnimationPlayableOutput.Create(graph, "Anim", an);
-            wolfWalk = AnimationClipPlayable.Create(graph, clip);
-            wolfWalk.SetSpeed(0.0);
-            output.SetSourcePlayable(wolfWalk);
-            graph.Play();
         }
 
         // PERF-03: a skinned body no longer works out its bounds from its bones every frame (updateWhenOffscreen), on or off screen.
@@ -644,7 +570,7 @@ namespace BAM.Art
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
             Probe.Reset();
             FormReset();
-            leapK = -1f; leapY = wolfTilt = pull = 0f; room = 9f; atkCut = castCut = -1f;
+            atkCut = castCut = -1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;
             model.localScale = Vector3.one;
@@ -667,10 +593,6 @@ namespace BAM.Art
         // ---------------------------------------------------------------- UnitView
 
         public override void SetMoving(bool isMoving, float speed) { moving = isMoving; speed01 = Mathf.Clamp(speed, 0f, 2f); }
-
-        public override void SetLeap(float progress, float length) { leapK = progress; leapLen = length; }
-
-        public override void SetRoom(float ahead) { room = ahead; }
 
         public override void Interrupt(bool swing)
         {
@@ -1141,7 +1063,6 @@ namespace BAM.Art
                 switch (def.Kind)
                 {
                     case RigKind.Humanoid: PoseHumanoid(dt); break;
-                    case RigKind.Wolf: PoseWolf(dt); break;
                     case RigKind.Cart: PoseCart(dt); break;
                     case RigKind.Target: PoseTarget(dt); break;
                     default: PoseTower(dt); break;
@@ -1175,21 +1096,6 @@ namespace BAM.Art
             }
 
             if (!dead && renderersOn && vis >= 0.99f) SpellLooks(dt);
-            // Fenn's wolf leaves a ghostly trail of wisps as it runs (MLBB analysis 4, Fenn)
-            // as old Speltest's SpectralWolf: turquoise wisps burn off its back and trail behind (more on the run), white-turquoise sparks rise
-            if (def.Kind == RigKind.Wolf && !dead && renderersOn && vis >= 0.99f)
-            {
-                dustT -= dt;
-                if (dustT <= 0f)
-                {
-                    float rate = 22f + 30f * moveW;
-                    dustT = (ArtKit.High ? 1f : 2f) / rate;
-                    Vector3 f = transform.forward, p = transform.position + f * Random.Range(-0.5f, 0.3f) + new Vector3(Random.Range(-0.2f, 0.2f), Random.Range(0.35f, 1.1f), Random.Range(-0.2f, 0.2f));
-                    Fx.Wisps(p, 1, new Color32(89, 255, 235, 200), Random.Range(0.3f, 0.5f), 0.3f, Random.Range(0.45f, 0.9f), 0.7f, 0.05f);
-                    if (Random.value < 10f / rate) Fx.Sparks(transform.position + new Vector3(0f, Random.Range(0.2f, 0.9f), 0f), 2, new Color32(220, 255, 250, 255), 0.07f, 0.5f, 0.7f, 1.3f, 0.35f);
-                }
-            }
-
             if (marks != null && marks.Any)
             {
                 marks.Visible = renderersOn && vis > 0.01f && !dead;
@@ -2209,48 +2115,6 @@ namespace BAM.Art
             bones[Hb.LegR].localRotation = Quaternion.Euler(legR, 0f, 0f);
             bones[Hb.Prop].localRotation = Quaternion.Euler(propX, 0f, 0f);
             bones[Hb.Extra].localRotation = Quaternion.Euler(moveW * 10f + Mathf.Sin(idleT * 18f) * 4f, 0f, 0f);
-        }
-
-        void PoseWolf(float dt)
-        {
-            // the throw (FENN-07): it leaps over the flight instead of running it at 4x its walk, the walk held on its widest stride
-            // (0.4 of the clip: a front paw far forward, a hind paw far back), nose up at the take-off and down at the landing; the
-            // arc's top grows with the throw (0.45 tile over 6 tiles) and it is down when the rules land it
-            bool leap = leapK >= 0f;
-            float top = Mathf.Clamp(leapLen * 0.08f, 0.1f, 0.45f);
-            leapY = leap ? Mathf.Lerp(leapY, 4f * top * leapK * (1f - leapK), 1f - Mathf.Exp(-30f * dt)) : Mathf.MoveTowards(leapY, 0f, 6f * dt);
-            float tilt = leap ? Mathf.Clamp(-Mathf.Atan(4f * top * (1f - 2f * leapK) / Mathf.Max(1f, leapLen)) * Mathf.Rad2Deg * 1.5f, -25f, 25f) : 0f;
-            wolfTilt = Mathf.Lerp(wolfTilt, tilt, 1f - Mathf.Exp(-20f * dt));
-            if (wolfWalk.IsValid())
-            {
-                if (leap) { wolfWalk.SetSpeed(0.0); wolfWalk.SetTime(wolfWalk.GetAnimationClip().length * 0.4f); }
-                else wolfWalk.SetSpeed(moveW * (1.1f + speed01 * 0.3f) * ArtKit.Slow); // the walk runs as it moves and holds when it stands
-            }
-            float s = leap ? 55f : Mathf.Sin(phase * 1.2f) * 40f * moveW; // the code wolf's legs: stretched out front and back in the leap
-            float idle = Mathf.Sin(idleT * 3f + seed);
-            float lunge = 0f, headX = idle * 3f * (1f - moveW);
-            if (atkT >= 0f)
-            {
-                atkT += dt;
-                float u = Mathf.Clamp01(atkT / windup), r = Mathf.Clamp01((atkT - windup) / 0.25f);
-                lunge = atkT < windup ? -0.08f * Smooth(u) : Mathf.Lerp(0.18f, 0f, Smooth(r));
-                headX = atkT < windup ? -20f * u : Mathf.Lerp(25f, 0f, r);
-                if (r >= 1f) atkT = -1f;
-            }
-            if (castT >= 0f) { castT += dt; headX = -35f * Mathf.Sin(Mathf.Clamp01(castT / 0.5f) * Mathf.PI); if (castT > 0.5f) castT = -1f; }
-            // FENN-06: its nose is about a tile ahead of the 0.2-tile disc it stands on, so a wall right in front of it would swallow
-            // its head; the body draws back until the nose meets the wall (at once when a wall comes, slowly back when it goes)
-            float want = Mathf.Max(0f, wolfNose + Mathf.Max(0f, lunge) - 0.05f - room);
-            pull = want > pull ? want : Mathf.MoveTowards(pull, want, 1.5f * dt);
-            float stride = leap ? 0f : moveW;
-            bones[Models.WolfBody].localPosition = def.Pivots[Models.WolfBody] + new Vector3(0f, Mathf.Abs(Mathf.Cos(phase * 1.2f)) * 0.04f * stride + 0.04f + leapY, lunge - pull);
-            bones[Models.WolfBody].localRotation = Quaternion.Euler(Mathf.Sin(phase * 1.2f) * 4f * stride - recoil * 10f + wolfTilt, 0f, 0f);
-            bones[Models.WolfHead].localRotation = Quaternion.Euler(headX, 0f, 0f);
-            bones[Models.WolfFL].localRotation = Quaternion.Euler(-s, 0f, 0f);
-            bones[Models.WolfBR].localRotation = Quaternion.Euler(leap ? s : -s, 0f, 0f);
-            bones[Models.WolfFR].localRotation = Quaternion.Euler(leap ? -s : s, 0f, 0f);
-            bones[Models.WolfBL].localRotation = Quaternion.Euler(s, 0f, 0f);
-            bones[Models.WolfTail].localRotation = Quaternion.Euler(0f, Mathf.Sin(idleT * 9f) * 25f, 0f);
         }
 
         void PoseCart(float dt)

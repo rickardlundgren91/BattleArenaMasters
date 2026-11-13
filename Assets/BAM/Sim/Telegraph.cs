@@ -43,7 +43,7 @@ namespace BAM.Sim
         public static bool Telegraphing(Unit h) => h != null && h.TeleAt >= 0;
 
         /// <summary>The forms that land on a spot (the spot is locked); the rest fly along a line (the direction is locked).</summary>
-        static bool PlacedForm(HeroId id) => id == HeroId.Bram && !SilverOn || id == HeroId.Blast || id == HeroId.Fenn || id == HeroId.Moa || id == HeroId.Ragn || id == HeroId.Nassla;
+        static bool PlacedForm(HeroId id) => id == HeroId.Bram && !SilverOn || id == HeroId.Blast || id == HeroId.Moa || id == HeroId.Ragn || id == HeroId.Nassla;
 
         /// <summary>The tap's start: the aim (ang, k as TryCastSpecial takes them; ang NaN for Bonk's slam round him) is locked, the
         /// warning shows, the cast follows in TeleTime. tgt is the picked target (only for the event).</summary>
@@ -71,16 +71,6 @@ namespace BAM.Sim
                     WarnCircle(h, h.TeleX, h.TeleY, BlastS.Radius, tt);
                     ex = h.TeleX; ey = h.TeleY;
                     break;
-                case HeroId.Fenn:
-                {   // where the thrown wolf lands: as CastFenn works it out (a wall or a base ends the throw)
-                    AimPoint(h, ang, k, FennS.ThrowReach, out float gx, out float gy);
-                    float ga = SimMath.Atan2(gy - h.Y, gx - h.X), gd = WolfReach(h.X, h.Y, ga, SimMath.Hypot(gx - h.X, gy - h.Y));
-                    h.TeleX = h.X + SimMath.Cos(ga) * gd; h.TeleY = h.Y + SimMath.Sin(ga) * gd;
-                    WarnLine(h, ga, gd, Defs.Wolf.Radius, tt);
-                    WarnCircle(h, h.TeleX, h.TeleY, FennS.PounceRadius, tt);
-                    ex = h.TeleX; ey = h.TeleY;
-                    break;
-                }
                 case HeroId.Tyra:
                 {
                     float len = BoltReach(h, ang);
@@ -154,7 +144,7 @@ namespace BAM.Sim
             {   // the locked spot, from wherever a push left the hero (it stands still in the warning)
                 float dx = h.TeleX - h.X, dy = h.TeleY - h.Y, d = SimMath.Hypot(dx, dy);
                 float reach = h.Hero == HeroId.Bram ? BramS.Reach : h.Hero == HeroId.Blast ? BlastS.Reach : h.Hero == HeroId.Moa ? MoaS.Range
-                    : h.Hero == HeroId.Ragn ? RagnS.LeapReach : h.Hero == HeroId.Nassla ? NasslaS.Reach : FennS.ThrowReach;
+                    : h.Hero == HeroId.Ragn ? RagnS.LeapReach : NasslaS.Reach;
                 if (d > 1e-4f) ang = SimMath.Atan2(dy, dx);
                 k = SimMath.Clamp(d / reach, 0, 1);
             }

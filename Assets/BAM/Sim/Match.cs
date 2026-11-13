@@ -392,11 +392,6 @@ namespace BAM.Sim
                     u.LifeT -= dt;
                     if (u.LifeT <= 0 || !u.Owner.Alive) { EndClone(u); continue; }
                 }
-                if (u.Kind == UnitKind.Wolf)
-                {
-                    u.LifeT -= dt;
-                    if (u.LifeT <= 0 || !u.Owner.Alive) { u.Alive = false; u.Hp = 0; u.DeadT = 0.6f; Emit(EventType.Death, null, u); continue; }
-                }
                 if (u.Kind == UnitKind.Hero)
                 {
                     if (!u.IsClone) { ItemsTick(u); TelegraphTick(u); UpdateSpecial(u, dt); SpellTick(u); if (u.Hero == HeroId.Kugg) KuggTick(u, dt); else if (u.Hero >= HeroId.Ragn) Hero8Tick(u, dt); }
@@ -415,11 +410,6 @@ namespace BAM.Sim
                     if (!u.IsClone) TrackMotion(u, dt);
                 }
                 else if (u.Kind == UnitKind.Minion) { if (CanAct(u)) AiMinion(u, dt); }
-                else if (u.Kind == UnitKind.Wolf)
-                {
-                    if (u.Wolf == WolfMode.Fly) WolfFly(u, dt); // a thrown wolf lands even when stunned in the air (the old forced rush)
-                    else if (CanAct(u)) AiWolf(u, dt);
-                }
                 else if (u.Kind == UnitKind.Tower)
                 {
                     if (!u.InCombat(Time) && u.Hp < u.MaxHp * Rules.TowerRegenBelow)

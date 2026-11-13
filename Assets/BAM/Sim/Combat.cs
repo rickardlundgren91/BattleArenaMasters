@@ -118,7 +118,6 @@ namespace BAM.Sim
                 amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark, Minion Skewer, Crushing Spanner, Heroes Bane (Items.cs)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
-                if (tgt.Kind == UnitKind.Tower && src != null && src.Kind == UnitKind.Wolf) amount *= Rules.WolfVsTower; // half (tester 2026-11-03 via Discord, Rickard ok)
                 if (Tut != null) TutSawHit(src, tgt, kind); // the guided match's special lessons (Tutorial.cs)
                 if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy))
                 {
@@ -320,7 +319,6 @@ namespace BAM.Sim
                 else if (Time - u.TowerShotT >= Rules.TowerRampReset) { u.TowerFocus = null; u.TowerStreak = 0; }
             }
             else if (u.Kind == UnitKind.Minion) tgt = u.MbTgt != null && targets.Contains(u.MbTgt) ? u.MbTgt : Nearest(targets, u.X, u.Y);
-            else if (u.Kind == UnitKind.Wolf) tgt = u.WolfPrey != null && targets.Contains(u.WolfPrey) ? u.WolfPrey : Nearest(targets, u.X, u.Y);
             else if (u.VeilStrikeReady) { for (int i = targets.Count - 1; i >= 0; i--) if (targets[i].Kind != UnitKind.Hero) targets.RemoveAt(i); tgt = targets.Count > 0 ? PickRandom(targets) : null; } // a veiled bot Fenn strikes only a hero
             else tgt = targets.Count > 0 ? PickRandom(targets) : null; // D1: a hero's auto attack picks a random target in range
             if (tgt != null)

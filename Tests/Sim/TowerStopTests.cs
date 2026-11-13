@@ -2,11 +2,11 @@ using System;
 
 namespace BAM.Sim
 {
-    // Both bases stop every hero's straight special and Fenn's thrown wolf (Match.TowerReach; tester 2026-11-02, Rickard
+    // Both bases stop every hero's straight special (Match.TowerReach; Fenn's thrown wolf too until it was taken out, nr 116; tester 2026-11-02, Rickard
     // "alla heroes ska stanna mot basen, inte orättvist", own tower too: "ja"): it used to stop only Tyra's bolt at the enemy tower.
     public sealed partial class Match
     {
-        static readonly HeroId[] TowerStopHeroes = { HeroId.Tyra, HeroId.Tikta, HeroId.Knut, HeroId.Bonk, HeroId.Fenn };
+        static readonly HeroId[] TowerStopHeroes = { HeroId.Tyra, HeroId.Tikta, HeroId.Knut, HeroId.Bonk };
 
         /// <summary>The hero just below the enemy tower, an enemy hero just above it on the same line (hidden behind the base), every
         /// other hero parked stunned at the bottom edge, no minions.</summary>
@@ -44,21 +44,16 @@ namespace BAM.Sim
                 m.OneTap = false;
                 float ang = SimMath.Atan2(e.Y - p.Y, e.X - p.X);
                 var drag = PlayerInput.None; drag.Special = true; drag.AimAngle = ang; drag.AimK = 1;
-                bool blocked = false, landed = false; float ly = 0; int hits = 0;
+                bool blocked = false; int hits = 0;
                 for (int k = 0; k < 120; k++)
                 {
                     m.Step(k == 0 ? drag : PlayerInput.None);
                     foreach (var ev in m.Events) { if (ev.Type == EventType.Blocked && ev.A == p) blocked = true; if (ev.Type == EventType.Hit && ev.A == p && ev.B == e && ev.Dmg != DmgKind.Auto) hits++; }
-                    foreach (var ev in m.Events) if (ev.Type == EventType.WolfPounce && !landed && ev.A != null && ev.A.Owner == p) { landed = true; ly = ev.Y; }
                 }
                 Check(hits == 0, $"BASE {hero}: the enemy behind the enemy tower takes no hit from the special ({hits} hits)");
-                if (hero == HeroId.Fenn)
-                    Check(landed && Math.Abs(ly - tw.Y) >= tw.R + Defs.Wolf.Radius - 0.05f && Math.Sign(ly - tw.Y) == Math.Sign(p.Y - tw.Y),
-                        $"BASE Fenn: the thrown wolf lands on the base's near side ({(landed ? ly - tw.Y : 0):0.00} from its middle)");
-                else Check(blocked, $"BASE {hero}: the special puffs out on the enemy tower");
+                Check(blocked, $"BASE {hero}: the special puffs out on the enemy tower");
 
                 // the own tower stops its team's shots too (Rickard 2026-11-02 "ja"): the same line through the player's own base misses
-                if (hero == HeroId.Fenn) continue;
                 m = TowerScene(hero, out p, out e, out tw);
                 m.OneTap = false;
                 var own = m.Towers[p.Team];

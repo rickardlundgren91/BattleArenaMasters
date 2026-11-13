@@ -300,7 +300,6 @@ namespace BAM.Game
                     if (!u.IsClone) BamAudio.Preload(SfxId.HeroDeath, HeroVoice(u.Hero)); // its own death sound is ready before it dies
                     break;
                 case UnitKind.Tower: v = ArtKit.CreateTower(Side(u.Team)); break;
-                case UnitKind.Wolf: v = ArtKit.CreateWolf(Side(u.Team)); break;
                 default: v = u == TutDummy ? ArtKit.CreateTarget() : ArtKit.CreateMinion(u.Minion, Side(u.Team)); break; // the guided match's practice target is a board
             }
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
@@ -664,8 +663,8 @@ namespace BAM.Game
                     else if (e.Shot != 0) ArtKit.PlayFx(fx, at, hs, 0, HeroOf(e.A)); // the shot was seen flying: its end too, in no team's colour
                     SfxId id = kind == ProjKind.BramHammerSpecial ? SfxId.BramHammerBounce
                         : seen && b != null && e.V <= 0f && (b.Flags & StatusFlags.Shielded) != 0 ? SfxId.ShieldBlock
-                        // as in Speltest's sound mix v2: the plain hit thumps only when a hero's (or the wolf's) blow lands on you
-                        : b == m.Player && e.A != null && (e.A.Kind == UnitKind.Hero || e.A.Kind == UnitKind.Wolf) ? (e.Big ? SfxId.HitHeavy : SfxId.HitLight)
+                        // as in Speltest's sound mix v2: the plain hit thumps only when a hero's blow lands on you
+                        : b == m.Player && e.A != null && e.A.Kind == UnitKind.Hero ? (e.Big ? SfxId.HitHeavy : SfxId.HitLight)
                         // a tower's shot landing on you gets its own heavy impact (Rickard 2026-10-30), silent until his clip exists
                         : b == m.Player && e.A != null && e.A.Kind == UnitKind.Tower ? SfxId.TowerImpact
                         : SfxId.None;
@@ -736,8 +735,8 @@ namespace BAM.Game
                     V(a)?.PlayCast(e.Big); // the form times the gesture: a slam's blow lands with its hit (BodyView.CastLead)
                     ArtKit.PlayFx(FxKind.Cast, Coords.Of(a), 1f, Side(a.Team), e.Kind);
                     if (a == m.Player) BamAudio.Duck(0.8f);
-                    // Fenn's Shadow Veil sounds on its own events (FennVeil, VeilStrike), not as his old wolf cast
-                    if (!((HeroId)e.Kind == HeroId.Fenn && m.FennVeil)) Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
+                    // Fenn's Shadow Veil sounds on its own events (FennVeil, VeilStrike)
+                    if ((HeroId)e.Kind != HeroId.Fenn) Sound(CastSound((HeroId)e.Kind, e.Big), a, 1f);
                     if ((HeroId)e.Kind == HeroId.Knut && e.Big) Sound(SfxId.KnutChain, a, 1f); // the chain rattles out with the anchor
                     // Nässla's thicket: roots growing fast where it lands, beside her throw at her hand (free CC0 mix "Rot1", Rickard 2026-11-13)
                     if ((HeroId)e.Kind == HeroId.Nassla) BamAudio.PlayAt(SfxId.NasslaBramble, Coords.World(e.X, e.Y), 0.9f);
@@ -847,15 +846,6 @@ namespace BAM.Game
                     break;
                 case EventType.CloneEnd:
                     if (e.A != null && unitBySerial.TryGetValue(e.A.Serial, out UnitRec cv) && cv.Vis > 0f) { ArtKit.PlayFx(FxKind.CloneEnd, Coords.Of(e.A), 1f, Side(e.A.Team)); BamAudio.PlayAt(SfxId.CloneVanish, Coords.Of(e.A)); } // FENN-09
-                    break;
-                case EventType.WolfSummon:
-                    if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.WolfSummon, Coords.Of(e.A), 1f, Side(e.A.Team));
-                    break;
-                case EventType.WolfPounce:
-                    // the bite sounds on prey only; its hit look comes from the rules' own Hit event (fx review P2-3). A landing on
-                    // nothing shows no bite, only a soft landing
-                    if (e.A != null && e.B != null) BamAudio.PlayAt(SfxId.WolfBite, Coords.Of(e.B));
-                    else if (e.A != null && m.IsVisibleTo(e.A, Mine)) ArtKit.PlayFx(FxKind.WolfLand, Coords.World(e.X, e.Y), 1f, Side(e.A.Team));
                     break;
                 case EventType.Shield:
                     // Moa's tap shield, on an ally this phone can see (it gave a hidden one in grass away; nr 73)
@@ -1105,7 +1095,6 @@ namespace BAM.Game
                 case UnitKind.Hero: return a.Hero == HeroId.Bonk || a.Hero == HeroId.Oaken ? SfxId.AttackBonk : a.Hero == HeroId.Hilde ? SfxId.AttackHilde : a.Hero == HeroId.Kugg ? SfxId.AttackKugg
                     : a.Hero == HeroId.Ragn ? SfxId.AttackRagn : a.Hero == HeroId.Nassla ? SfxId.AttackNassla : a.Hero == HeroId.Skrall ? SfxId.AttackSkrall : a.Hero == HeroId.Ravna ? SfxId.AttackRavna : SfxId.AttackBram + (int)a.Hero; // Bonk's came after the seven; Oaken borrows Bonk's until he has his own
                 case UnitKind.Tower: return SfxId.TowerShot;
-                case UnitKind.Wolf: return SfxId.WolfBite;
                 default: return SfxId.None; // minions are silent (Rickard 2026-10-26)
             }
         }
@@ -1115,7 +1104,6 @@ namespace BAM.Game
             switch (h)
             {
                 case HeroId.Bram: return BramS.Silver ? SfxId.BramCharge : SfxId.BramHammerThrow; // Hammer Line: the charge; the throw in ReleaseSound
-                case HeroId.Fenn: return dragged ? SfxId.FennWolfThrow : SfxId.FennWolfCall;
                 case HeroId.Tyra: return SfxId.TyraDraw; // the draw creak; the twang plays at the release (ReleaseSound)
                 case HeroId.Moa: return dragged ? SfxId.MoaField : SfxId.MoaShield;
                 case HeroId.Knut: return dragged ? SfxId.KnutAnchorThrow : SfxId.None; // the tap is silent until the anchor lands (KnutSlam on its Explosion); Rickard 2026-10-30 22:09: the wind-up's jingle out
@@ -1293,7 +1281,6 @@ namespace BAM.Game
             float speed01 = 0f;
             if (moving && u.BaseSpeed > 0f) speed01 = Mathf.Sqrt((u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY)) / Rules.Tick / u.BaseSpeed;
             v.SetMoving(moving, moving ? Mathf.Max(0.5f, speed01) : 0f);
-            if (u.Kind == UnitKind.Wolf) WolfLook(u, v, alpha);
 
             float hp01 = u.MaxHp > 0f ? Mathf.Clamp01(u.Hp / u.MaxHp) : 0f;
             float sh01 = u.MaxHp > 0f ? Mathf.Clamp01(u.ShieldAmount / u.MaxHp) : 0f;
@@ -1354,32 +1341,7 @@ namespace BAM.Game
         }
 
         // the decoy Fenn leaves as he fades into the Spectral Veil: its puff is the ghost one (the clone of his passive keeps the violet)
-        bool Spectral(Unit clone) => m.FennVeil && clone.Owner != null && clone.Owner.Hero == HeroId.Fenn && clone.Owner.Has(St.Veil);
-
-        // Fenn's wolf is drawn about 2 tiles long on a 0.2-tile disc: in a throw it leaps (how far along its red strip it is, cut short
-        // at the prey it turned onto, FENN-07), and a wall right in front of it pulls its body back so its head stays out (FENN-06)
-        void WolfLook(Unit w, UnitView v, float alpha)
-        {
-            float k = -1f, len = 0f;
-            if (w.Wolf == WolfMode.Fly)
-            {
-                k = 1f; // its strip already gone (a long turn onto a prey): it comes down
-                var list = m.Projs;
-                for (int i = 0; i < list.Count; i++)
-                {
-                    var p = list[i];
-                    if (p.Done || p.Mode != ProjMode.WarnLine || p.Src != w) continue;
-                    float along = (w.X - p.X) * SimMath.Cos(p.Ang) + (w.Y - p.Y) * SimMath.Sin(p.Ang);
-                    len = p.D;
-                    var prey = w.WolfPrey;
-                    if (prey != null) len = Mathf.Min(len, along + Mathf.Max(0f, SimMath.Dist(w, prey) - w.R - prey.R - 0.1f));
-                    k = len > 0.05f ? Mathf.Clamp01(along / len) : 1f;
-                    break;
-                }
-            }
-            v.SetLeap(k, len);
-            v.SetRoom(m.Map.ShotReach(Mathf.Lerp(w.PX, w.X, alpha), Mathf.Lerp(w.PY, w.Y, alpha), w.Facing, 1.2f));
-        }
+        bool Spectral(Unit clone) => clone.Owner != null && clone.Owner.Hero == HeroId.Fenn && clone.Owner.Has(St.Veil);
 
         // a hero in a fight: it swung at its target within about one swing's time, the target alive, seen by the player (facing it must
         // not give a hider away) and still about in reach, and the hero can swing (not stunned)

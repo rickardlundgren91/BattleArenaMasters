@@ -141,7 +141,6 @@ namespace BAM.Art.Editor
                 AddOther(ArtKit.CreateMinion(MinionKind.Melee, t), new Vector3(4.5f + t * 4f, 0f, 12.5f), t);
                 AddOther(ArtKit.CreateMinion(MinionKind.Ranged, t), new Vector3(5.5f + t * 4f, 0f, 12.5f), t);
                 AddOther(ArtKit.CreateMinion(MinionKind.Siege, t), new Vector3(6.6f + t * 4f, 0f, 12.5f), t);
-                AddOther(ArtKit.CreateWolf(t), new Vector3(3f + t * 9f, 0f, 12.5f), t);
                 AddOther(ArtKit.CreateTower(t), new Vector3(7.5f, 0f, t == 0 ? 5.5f : 29.5f), t);
             }
             AddOther(ArtKit.CreateTarget(), new Vector3(7.5f, 0f, 13.6f), 1);

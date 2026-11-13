@@ -187,24 +187,6 @@ namespace BAM.Sim
                 $"FIX 67: a 2 s burn of a 100 hit is exactly 8 ticks of 1.875 ({ticks} ticks, {sum:0.000} in all, {lo:0.000}-{hi:0.000}, burn left {a.Has(St.Burn)})");
         }
 
-        // 100 (HERO-A-1): with the warning on the thrown wolf homes on nobody, but the drag preview still marked a hero beside its flight
-        static void Fix100FennPreview()
-        {
-            foreach (bool tele in new[] { true, false })
-            {
-                var m = OneTapScene(HeroId.Fenn, out var p, out float cx, out float cy);
-                m.Telegraph = tele;
-                var e = m.Heroes.Find(h => h.Team != p.Team);
-                Place(e, p.X + 1.5f, p.Y + 0.7f); m.AddStatus(e, St.Stun, 999); // inside the homing strip, outside the landing circle
-                var a = m.AimFor(p, 0f, DragShare(HeroId.Fenn, 1f));
-                var buf = new List<Unit>(); m.AimTargets(p, a, buf);
-                bool marked = buf.Contains(e), bitten = false;
-                for (int t = 0; t < 40; t++) { m.Step(t == 0 ? DragIn(0f, 1f) : PlayerInput.None); if (CountEv(m, EventType.Hit, ev => ev.B == e && ev.Kind == (byte)ProjKind.WolfBite) > 0) bitten = true; }
-                Check(marked == bitten && marked != tele, $"FIX 100: telegraph {tele}: the preview marks the hero beside the flight {marked}, the thrown wolf bites him {bitten}");
-                if (tele) Check(a.PathHalf == 0, "FIX 100: no homing strip in the preview of a warned throw");
-            }
-        }
-
         // 101 (HERO-A-3): Knut died mid-haul and the freed catch kept the stun sized for the whole pull
         static void Fix101KnutDiesMidHaul()
         {
@@ -315,7 +297,7 @@ namespace BAM.Sim
         static void Fix0400()
         {
             Fix72KnutSlowOnCorpse(); Fix76DeadAttackerReveal(); Fix77TowerRetarget(); Fix78PadFlight(); Fix63KuggStockOnStun(); Fix64NoBlinkInNeedleRelease();
-            Fix67BurnTicks(); Fix100FennPreview(); Fix101KnutDiesMidHaul(); Fix102KnutWarnEnds(); Fix103DecoyHaul(); Fix106NoDenialInWarning(); Fix107ShotsStopAtEdge();
+            Fix67BurnTicks(); Fix101KnutDiesMidHaul(); Fix102KnutWarnEnds(); Fix103DecoyHaul(); Fix106NoDenialInWarning(); Fix107ShotsStopAtEdge();
             Check(SimMirror.Available, $"FIX 0.4.0: SimCopy.g.cs still mirrors the Sim classes (no field changed; hash {SimMirror.Hash()})");
         }
     }

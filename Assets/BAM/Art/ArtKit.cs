@@ -103,12 +103,6 @@ namespace BAM.Art
         /// field's shield and Queen's Instinct. A ring of hex cells at the feet that go dark as the shield is used. Call it only while
         /// the player can see the unit.</summary>
         public virtual void SetHoneyShields(float guard, float field, float queen) { }
-        /// <summary>Fenn's thrown wolf in the air: how far along its throw it is (0..1) and the throw's length in tiles; progress below 0
-        /// = on the ground. It leaps over the flight (FENN-07).</summary>
-        public virtual void SetLeap(float progress, float length) { }
-        /// <summary>Free ground in front of the unit along its facing, in tiles: a long body (Fenn's wolf, about 2 tiles on a 0.2-tile
-        /// disc) draws back from a wall instead of putting its head in it (FENN-06).</summary>
-        public virtual void SetRoom(float ahead) { }
         /// <summary>Where a hero's shot leaves its hand now (world space, at its height), for the shot's first drawn point (SHOT-02):
         /// Hilde's cannon mouth, the arrow on Tyra's bow, Blast's bomb, the head of a held weapon (Bram's hammer, Knut's anchor, the
         /// needle in the fist Tikta throws with), Moa's casting hand, Bonk's boulder between his hands. False for the rest (minions,
@@ -260,7 +254,7 @@ namespace BAM.Art
             for (int t = 0; t < 2; t++)
             {
                 Models.Minion(MinionKind.Melee, t); Models.Minion(MinionKind.Ranged, t); Models.Minion(MinionKind.Siege, t);
-                Models.Tower(t); Models.Wolf(t);
+                Models.Tower(t);
             }
             Shapes.Decal(UnitMarker.None); Shapes.Decal(UnitMarker.Player); Shapes.Decal(UnitMarker.Ally); Shapes.Decal(UnitMarker.Enemy);
             Warm();
@@ -367,15 +361,13 @@ namespace BAM.Art
         public static UnitView CreateHero(HeroId hero, int team) => Body(Models.Hero(hero, team), HeroKey + (int)hero, team);
         public static UnitView CreateMinion(MinionKind kind, int team) => Body(Models.Minion(kind, team), 10 + (int)kind, team);
         public static UnitView CreateTower(int team) => Body(Models.Tower(team), 20, team);
-        /// <summary>Fenn's spectral wolf.</summary>
-        public static UnitView CreateWolf(int team) => Body(Models.Wolf(team), 30, team);
         /// <summary>The guided match's practice dummy (a target board on a post). PlayAttack does nothing; SetDead bursts it into splinters.</summary>
         public static UnitView CreateTarget() => Body(Models.Target(), 40, Teams.Enemy);
         /// <summary>A hero for the menus (Home platform, hero cards): team 0 look, idle, no ground ring, bar or status
         /// markers, own pool. It is lit by the game's sun wherever it stands, and any camera can render it.</summary>
         public static UnitView CreateHeroPreview(HeroId hero) => Body(Models.Hero(hero, Teams.Player), PreviewKey + (int)hero, Teams.Player, true);
 
-        // the pools' keys: minions 10+, the tower 20, the wolf 30, the dummy 40; heroes and their menu previews in their own hundreds
+        // the pools' keys: minions 10+, the tower 20, the dummy 40 (30 was Fenn's wolf); heroes and their menu previews in their own hundreds
         // (2026-11-05: Kugg, hero 10, had key 10 = the melee minion's, so the two shared a pool and he never knew he was a hero)
         const int HeroKey = 100, PreviewKey = 200;
 
