@@ -47,7 +47,7 @@ namespace BAM.UI
             settingsBack.SetActive(false);
             VList(content, 2 * Cw, new RectOffset(0, 0, 0, Mathf.RoundToInt(6 * Cw)));
 
-            SetHead(content, "AUDIO");
+            SetHead(content, "SOUND & VIBRATION"); // Vibration lives here too (full review 2026-11-13 nr 132; was AUDIO)
             soundSwitch = SwitchRow(content, "Sound", on =>
             {
                 BamSettings.SfxVolume = on ? 0.8f : 0f;

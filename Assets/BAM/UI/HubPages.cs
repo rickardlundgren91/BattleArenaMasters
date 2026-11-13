@@ -23,7 +23,6 @@ namespace BAM.UI
         static readonly Color HubPicBack = new Color32(0x1d, 0x23, 0x50, 0xff);
         static readonly Color HubSelFill = new Color32(0x18, 0x20, 0x4f, 0xff);
         static readonly Color HubDark = new Color32(0x06, 0x23, 0x1a, 0xff);
-        static readonly Color HubToggleOn = new Color(0.102f, 0.186f, 0.317f); // HubToggle: #161b46 under rgba(62,230,176,0.10)
 
         // Home's painting behind every subpage, dimmed, so the pages feel like the same place (Rickard 2026-10-29: "samma
         // känsla, behåll vår stil"). Covers the frame, centred; nothing when the picture is missing.
@@ -815,10 +814,11 @@ namespace BAM.UI
         /// <summary>HubSegments: short choices side by side in a dark box on the right of the row; the chosen one mint.</summary>
         sealed class HubChoice
         {
-            readonly Image[] fills, edges;
+            readonly Image[] fills;
             readonly Text[] labels;
             readonly bool[] dims;
-            readonly bool strong; // the mode sheet's rows: the chosen one filled mint with dark letters (Rickard 2026-10-31), Settings keep the old look
+            // the chosen one filled mint with dark letters everywhere (Rickard 2026-10-31 for the mode sheet; full review
+            // 2026-11-13 nr 132: Settings too, where the chosen one was a framed dark box beside filled grey ones and read backwards)
 
             // full: the segments fill the row (the mode sheet's BOT DIFFICULTY); else they sit on the right of a settings row
             public HubChoice(RectTransform row, string[] names, System.Action<int> chosen, bool full = false)
@@ -834,9 +834,8 @@ namespace BAM.UI
                     box.rectTransform.offsetMin = new Vector2(0, -5.5f * Cw);
                     box.rectTransform.offsetMax = new Vector2(-2.5f * Cw, 5.5f * Cw);
                 }
-                strong = full;
                 int n = names.Length;
-                fills = new Image[n]; edges = new Image[n]; labels = new Text[n]; dims = new bool[n];
+                fills = new Image[n]; labels = new Text[n]; dims = new bool[n];
                 for (int i = 0; i < n; i++)
                 {
                     int index = i;
@@ -849,8 +848,6 @@ namespace BAM.UI
                     fills[i].sprite = UiKit.Rounded;
                     fills[i].type = Image.Type.Sliced;
                     Radius(fills[i], 2 * Cw);
-                    edges[i] = Pic(cell, "Edge", HomeArt.RoundRing(0.45f / 2f), UiKit.Primary);
-                    RingRadius(edges[i], 2 * Cw);
                     labels[i] = UiKit.Label(cell, names[i], Mathf.RoundToInt(3.6f * Cw), TextAnchor.MiddleCenter, UiKit.TextDim);
                     UiKit.Stretch(labels[i].rectTransform);
                     var b = cell.gameObject.AddComponent<Button>();
@@ -866,9 +863,8 @@ namespace BAM.UI
                 for (int i = 0; i < fills.Length; i++)
                 {
                     bool on = i == sel;
-                    fills[i].color = on ? (strong ? UiKit.Primary : HubToggleOn) : new Color(1, 1, 1, 0.04f);
-                    edges[i].enabled = on && !strong;
-                    labels[i].color = on ? (strong ? (Color)new Color32(0x06, 0x28, 0x1d, 0xff) : Color.white) : dims[i] ? new Color(UiKit.TextDim.r, UiKit.TextDim.g, UiKit.TextDim.b, UiKit.TextDim.a * 0.35f) : UiKit.TextDim;
+                    fills[i].color = on ? UiKit.Primary : new Color(1, 1, 1, 0.04f);
+                    labels[i].color = on ? (Color)new Color32(0x06, 0x28, 0x1d, 0xff) : dims[i] ? new Color(UiKit.TextDim.r, UiKit.TextDim.g, UiKit.TextDim.b, UiKit.TextDim.a * 0.35f) : UiKit.TextDim;
                 }
             }
 
