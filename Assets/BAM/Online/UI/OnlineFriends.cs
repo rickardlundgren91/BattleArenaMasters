@@ -58,7 +58,11 @@ namespace BAM.Online.UI
             var list = Social.Friends;
             HubPeople(ix + cw(2.5f), y + cw(3.5f), cw(2.4f), HUB_ACCENT);
             Text("Friends", ix + cw(8), y + cw(3.5f), Lil(cw(5.2f)), HUB_TEXT);
-            ctx.font = Lil(cw(5.2f)); Text(list.Count.ToString(), ix + cw(8) + ctx.measureText("Friends") + cw(2), y + cw(3.7f), Treb(cw(3.2f), true), HUB_DIM);
+            // "2/7 online" (tester 2026-11-13: "man borde ändå se hur många som är online"), the same presence the rows show
+            int onl = 0; foreach (var f in list) if (BAM.Online.Mp.MpSocial.Seen(f) != Social.Presence.Offline) onl++;
+            ctx.font = Lil(cw(5.2f)); float cx0 = ix + cw(8) + ctx.measureText("Friends") + cw(2);
+            string cnt = list.Count == 0 ? "0" : onl + "/" + list.Count + " online";
+            Text(cnt, cx0, y + cw(3.7f), Treb(cw(3.2f), true), onl > 0 ? HUB_ACCENT : HUB_DIM);
             float ab = cw(11), ax = ix + iw - ab, ady = Down("hubFriendsAdd") ? cw(0.4f) : 0;
             ctx.fillStyle = "rgba(62,230,176,0.14)"; ctx.beginPath(); ctx.arc(ax + ab / 2, y + cw(3.5f) + ady, ab / 2 - cw(0.6f), 0, 7); ctx.fill();
             HubUserPlus(ax + ab / 2, y + cw(3.5f) + ady, cw(2.3f), HUB_ACCENT);

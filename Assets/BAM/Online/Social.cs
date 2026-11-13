@@ -191,10 +191,19 @@ namespace BAM.Online
             string id = await Server.FindPlayer(name);
             if (id == null) return "No player is called " + name;
             if (id == PlayerIdNow) return "That is you";
+            if (RelationTo(id) == Relation.Blocked) return BlockedByUs(name);
             return await Run(() => FriendsService.Instance.AddFriendAsync(id), "Friend request sent", "Could not send the request", id);
         }
 
-        public static Task<string> AddById(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend request sent", "Could not send the request", playerId);
+        public static Task<string> AddById(string playerId)
+        {
+            if (RelationTo(playerId) == Relation.Blocked) return Task.FromResult(BlockedByUs(null));
+            return Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend request sent", "Could not send the request", playerId);
+        }
+        // a friend request to someone we blocked is refused by Friends: say so and where to undo it (tester 2026-11-13 thought a
+        // once blocked player could never be added again)
+        static string BlockedByUs(string name) => "You have blocked " + (string.IsNullOrEmpty(name) ? "this player" : name)
+            + ". Unblock them first (Settings > Account > Blocked players), then send the request";
         public static Task<string> Accept(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend added", "Could not add friend", playerId);
         public static Task<string> Decline(string playerId) => Run(() => FriendsService.Instance.DeleteIncomingFriendRequestAsync(playerId), null, "Could not decline");
         public static Task<string> Cancel(string playerId) => Run(() => FriendsService.Instance.DeleteOutgoingFriendRequestAsync(playerId), null, "Could not cancel");
@@ -284,7 +293,8 @@ namespace BAM.Online
             if (ServiceStopped(e)) return Offline;
             if (m.Contains("network") || m.Contains("timeout") || m.Contains("timed out") || m.Contains("connection") || m.Contains("resolve host"))
                 return fail + ". Check your internet and try again";
-            if (m.Contains("block")) return fail + ". This player is blocked";
+            // we have not blocked them (checked before the call), so the other player blocks us; not said outright
+            if (m.Contains("block")) return fail.StartsWith("Could not send") || fail.StartsWith("Could not add") ? fail + ". This player is not taking friend requests from you" : fail + ". This player is blocked";
             if (m.Contains("limit") || m.Contains("too many") || m.Contains("429")) return fail + ". Too many requests, wait a moment";
             if (m.Contains("already") || m.Contains("exist")) return fail + ". You already have a request or friendship with this player";
             return fail + ". Try again in a moment";
