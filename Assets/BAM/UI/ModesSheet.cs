@@ -41,10 +41,10 @@ namespace BAM.UI
 
         const float OptH = 17 * Cw, OptGap = 2.4f * Cw, ExpH = 20.5f * Cw, SheetX = 4 * Cw;
 
-        static string ModeTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : m == Mode.HeroTest ? "HERO TEST" : m == Mode.NewMap ? "NEW MAP" : "TUTORIAL";
+        static string ModeTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : m == Mode.HeroTest ? "HERO TEST" : m == Mode.NewMap ? "GROVE" : "TUTORIAL";
         // the sheet's two cards: CLASSIC, and PRACTICE for both Training and HeroTest
         static string CardTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : "PRACTICE";
-        static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial, any hero, or the new map";
+        static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial, any hero, or Grove";
 
         // what Home's PLAY and the sheet's PLAY start (HubPlayNow)
         static void PlayMode()
@@ -153,7 +153,7 @@ namespace BAM.UI
             Stretched(pracLabel.rectTransform, 0, Cw + 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
             var prsegs = UiKit.NewRect("Pick", modePracticeExpand);
             Stretched(prsegs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
-            modePractice = new HubChoice(prsegs, new[] { "TUTORIAL", "HERO TEST", "NEW MAP" }, i =>
+            modePractice = new HubChoice(prsegs, new[] { "TUTORIAL", "HERO TEST", "GROVE" }, i =>
             {
                 sheetMode = lastPractice = i == 0 ? Mode.Training : i == 1 ? Mode.HeroTest : Mode.NewMap;
                 RefreshModes();

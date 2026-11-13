@@ -234,7 +234,7 @@ namespace BAM.UI
             string title = homeMode == Mode.Classic ? "CLASSIC 3V3" : CardTitle(homeMode);
             string rest = party ? "With your party"
                 : homeMode == Mode.Classic ? "vs bots · " + DifficultyNames[(int)BamSettings.LastDifficulty]
-                : homeMode == Mode.HeroTest ? "Hero test" : homeMode == Mode.NewMap ? "New map · vs bots · " + DifficultyNames[(int)BamSettings.LastDifficulty] : "Tutorial";
+                : homeMode == Mode.HeroTest ? "Hero test" : homeMode == Mode.NewMap ? "Grove · vs bots · " + DifficultyNames[(int)BamSettings.LastDifficulty] : "Tutorial";
             playSub.text = title;
             playSub2.text = rest;
             float w = 1.4f * Cw + homeModeIconSize + 1.4f * Cw + Mathf.Max(playSub.preferredWidth, playSub2.preferredWidth) + 5.5f * Cw;
