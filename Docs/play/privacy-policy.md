@@ -36,8 +36,12 @@ is removed when you uninstall the game or clear its data in Android settings.
 If you allow it, the game uses **Unity Analytics**, a service from Unity Technologies, to send the following:
 
 **Game events we record**
-- Match started: the hero you picked, the difficulty (Easy, Normal, Hard or Ultra) and whether it was the tutorial match.
-- Match ended: the same, plus whether you won or left early, how long the match lasted, your kills, deaths and hero level.
+- Match started: the hero you picked, the difficulty (Easy, Normal, Hard or Ultra), whether it was the tutorial match,
+  the kind of match (against bots, on the practice map or online), how many people played in it and whether one of them
+  was on the other team, and your battle spell.
+- Match ended: the same, plus whether you won or left early, how long the match lasted, your kills, deaths and hero level,
+  and the items you picked.
+- Item picked: the item you picked in a match, your hero and hero level, the kind of match and how long the choice was open.
 - Tutorial progress: which tutorial step you reached.
 
 **Data Unity Analytics adds automatically**

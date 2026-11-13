@@ -15,10 +15,16 @@ namespace BAM.Analytics
     // Unity Analytics 6.1+ on Unity 6.2+ takes consent through the engine's EndUserConsent API (the old
     // StartDataCollection/StopDataCollection throw once EndUserConsent is used, so they are never called here).
     // Unity Services are initialized only after the player said yes, so a player who says no never talks to Unity at all.
-    // Only three custom events exist; they must match Docs/play/privacy-policy.md and Docs/play/data-safety.md:
-    //   matchStart   {heroName, difficulty, tutorial}
-    //   matchEnd     {heroName, difficulty, tutorial, won, quit, matchSeconds, kills, deaths, heroLevel}
+    // Only four custom events exist; they must match Docs/play/privacy-policy.md, Docs/play/data-safety.md and the Event Manager
+    // on the Unity Dashboard (Docs/play/unity-analytics-sv.md: an event with a parameter the Event Manager lacks is Invalid, lost):
+    //   matchStart   {heroName, difficulty, tutorial, mode, humans, versus, spell}
+    //   matchEnd     {heroName, difficulty, tutorial, won, quit, matchSeconds, kills, deaths, heroLevel, mode, humans, versus, spell,
+    //                 item1, item2}
+    //   itemPicked   {itemName, heroName, heroLevel, mode, offerSeconds}
     //   tutorialStep {stepIndex, stepName}
+    // mode: "classic" (against bots, the tutorial too), "online" (with other phones; difficulty is then the room's bots) or the
+    // PRACTICE map's name ("grove"); humans: the people in the match; versus: one of them on the other team (full review
+    // 2026-11-13 nr 110: before, an online match looked like a bot match and Grove sent nothing).
     // BAM_UGS_ANALYTICS comes from a versionDefine in BAM.Analytics.asmdef (com.unity.services.analytics >= 6.1.0), so the
     // project compiles, and simply sends nothing, before the package is installed.
     public static class BamAnalytics
@@ -42,18 +48,32 @@ namespace BAM.Analytics
             else if (PlayerPrefs.GetInt(DeletePendingKey, 0) == 1) Sdk.RequestDeletion();
         }
 
-        public static void MatchStarted(MatchSetup setup)
+        /// <summary>start: the match as it begins (GameFlow.Result), for its mode, people and spell.</summary>
+        public static void MatchStarted(MatchSetup setup, MatchResult start)
         {
             if (!Allowed) return;
-            Sdk.MatchStart(Played(setup).ToString(), setup.Difficulty.ToString(), setup.Tutorial);
+            Sdk.MatchStart(Played(setup).ToString(), setup.Difficulty.ToString(), setup.Tutorial, Mode(setup, start.Online), start.Humans,
+                start.Versus, start.Spell.ToString());
         }
 
         public static void MatchEnded(MatchSetup setup, MatchResult result)
         {
             if (!Allowed) return;
             Sdk.MatchEnd(result.Hero.ToString(), setup.Difficulty.ToString(), setup.Tutorial, result.Won, result.Quit,
-                Mathf.RoundToInt(result.Seconds), result.Kills, result.Deaths, result.Level);
+                Mathf.RoundToInt(result.Seconds), result.Kills, result.Deaths, result.Level, Mode(setup, result.Online), result.Humans,
+                result.Versus, result.Spell.ToString(), Item(result.Item1), Item(result.Item2));
         }
+
+        /// <summary>The player took an item from its choice of three; offerSeconds: how long the choice stood (match time).</summary>
+        public static void ItemPicked(MatchSetup setup, bool online, BAM.Sim.ItemId item, BAM.Sim.HeroId hero, int level, float offerSeconds)
+        {
+            if (!Allowed) return;
+            Sdk.ItemPicked(Item(item), hero.ToString(), level, Mode(setup, online), (float)Math.Round(offerSeconds, 1));
+        }
+
+        static string Mode(MatchSetup setup, bool online) =>
+            online ? "online" : setup.Map != BAM.Sim.MapId.Runes && !setup.Tutorial ? setup.Map.ToString().ToLowerInvariant() : "classic";
+        static string Item(BAM.Sim.ItemId id) => id == BAM.Sim.ItemId.None ? "none" : id.ToString();
 
         public static void TutorialStep(int step, string name)
         {
@@ -199,18 +219,23 @@ namespace BAM.Analytics
                 PlayerPrefs.Save();
             }
 
-            public static void MatchStart(string hero, string difficulty, bool tutorial)
+            public static void MatchStart(string hero, string difficulty, bool tutorial, string mode, int humans, bool versus, string spell)
             {
                 var e = New("matchStart");
                 if (e == null) return;
                 e["heroName"] = hero;
                 e["difficulty"] = difficulty;
                 e["tutorial"] = tutorial;
+                e["mode"] = mode;
+                e["humans"] = humans;
+                e["versus"] = versus;
+                e["spell"] = spell;
                 Record(e);
                 Upload();
             }
 
-            public static void MatchEnd(string hero, string difficulty, bool tutorial, bool won, bool quit, int seconds, int kills, int deaths, int level)
+            public static void MatchEnd(string hero, string difficulty, bool tutorial, bool won, bool quit, int seconds, int kills, int deaths, int level,
+                string mode, int humans, bool versus, string spell, string item1, string item2)
             {
                 var e = New("matchEnd");
                 if (e == null) return;
@@ -223,8 +248,27 @@ namespace BAM.Analytics
                 e["kills"] = kills;
                 e["deaths"] = deaths;
                 e["heroLevel"] = level;
+                e["mode"] = mode;
+                e["humans"] = humans;
+                e["versus"] = versus;
+                e["spell"] = spell;
+                e["item1"] = item1;
+                e["item2"] = item2;
                 Record(e);
                 Upload();
+            }
+
+            // rides along with the next match event or the automatic upload, as the tutorial steps do
+            public static void ItemPicked(string item, string hero, int level, string mode, float offerSeconds)
+            {
+                var e = New("itemPicked");
+                if (e == null) return;
+                e["itemName"] = item;
+                e["heroName"] = hero;
+                e["heroLevel"] = level;
+                e["mode"] = mode;
+                e["offerSeconds"] = offerSeconds;
+                Record(e);
             }
 
             public static void TutorialStep(int step, string name)
@@ -265,8 +309,10 @@ namespace BAM.Analytics
         {
             public static void Start() => Debug.Log("[BAM.Analytics] consent granted, but com.unity.services.analytics is not installed: nothing is sent");
             public static void RequestDeletion() { PlayerPrefs.DeleteKey(DeletePendingKey); PlayerPrefs.Save(); }
-            public static void MatchStart(string hero, string difficulty, bool tutorial) { }
-            public static void MatchEnd(string hero, string difficulty, bool tutorial, bool won, bool quit, int seconds, int kills, int deaths, int level) { }
+            public static void MatchStart(string hero, string difficulty, bool tutorial, string mode, int humans, bool versus, string spell) { }
+            public static void MatchEnd(string hero, string difficulty, bool tutorial, bool won, bool quit, int seconds, int kills, int deaths, int level,
+                string mode, int humans, bool versus, string spell, string item1, string item2) { }
+            public static void ItemPicked(string item, string hero, int level, string mode, float offerSeconds) { }
             public static void TutorialStep(int step, string name) { }
         }
 #endif

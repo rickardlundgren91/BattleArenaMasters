@@ -22,7 +22,7 @@
 | Rights register | `Docs/LICENSES.md`; in-game text `Assets/BAM/Resources/BAM/Licenses.txt` |
 
 What is collected (keep these four in sync: `BamAnalytics.cs`, `privacy-policy.md`, `data-safety.md`, Play Console):
-only with consent, Unity Analytics with three custom events (`matchStart`, `matchEnd`, `tutorialStep`) plus Unity's
+only with consent, Unity Analytics with four custom events (`matchStart`, `matchEnd`, `itemPicked`, `tutorialStep`) plus Unity's
 automatic events (session start/stop, first start, device info), the Unity installation ID, and approximate location
 derived from the IP address. With the optional Google Play Games sign-in (since 0.2) our game server (Unity Gaming
 Services) also keeps the account data of `privacy-policy.md` section 4: the player ID, the player name, match results and

@@ -125,9 +125,11 @@ at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, 
 ## Analytics (BAM.Analytics) - called by BAM.Game
 
 Nothing is sent without `BamSettings.AnalyticsConsent == Granted`; turning it off stops collection at once (and asks
-the service to delete the data if the SDK supports it). Events: `MatchStarted` (hero, difficulty, tutorial),
-`MatchEnded` (won/quit, seconds, kills, deaths, level), `TutorialStep` (index, name). No personal data, no ads, no
-cross-app tracking. What is collected must match the Data safety answers in `Docs/play/`.
+the service to delete the data if the SDK supports it). Events: `MatchStarted` (hero, difficulty, tutorial, mode, people,
+versus, spell), `MatchEnded` (the same plus won/quit, seconds, kills, deaths, level, the two items), `ItemPicked` (item, hero,
+level, mode, how long the choice stood), `TutorialStep` (index, name); mode is classic, online or the practice map's name
+(full review 2026-11-13 nr 110). No personal data, no ads, no cross-app tracking. What is collected must match the Data
+safety answers in `Docs/play/` and the Event Manager (`Docs/play/unity-analytics-sv.md`).
 
 ## Build (BAM.Build.Editor) - menu items in Rickard's Unity
 

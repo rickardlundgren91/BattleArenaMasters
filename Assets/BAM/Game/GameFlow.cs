@@ -232,10 +232,13 @@ namespace BAM.Game
             // Rickard's loop plays through the match (also across the guided match's two halves); the result screen and
             // leaving the match fade it out
             BamAudio.PlayMusic(MusicId.Match);
-            if ((!setup.Tutorial || island) && !setup.HeroTest && !Practice)
+            itemsLogged = 0; offerSince = -1f;
+            if ((!setup.Tutorial || island) && !setup.HeroTest)
             {
-                BamAnalytics.MatchStarted(setup); // HERO TEST is practice, not a match (old: no stats)
-                Flow.MatchStarted?.Invoke();      // online: "in a match" for friends
+                // HERO TEST is practice, not a match (old: no stats); PRACTICE > NEW MAP is sent too, as mode "grove", and an online
+                // match as "online" instead of looking like one against the room's bots (full review 2026-11-13 nr 110)
+                BamAnalytics.MatchStarted(setup, Result(false));
+                if (!Practice) Flow.MatchStarted?.Invoke(); // online: "in a match" for friends
             }
             Debug.Log("[BAM.Game] match started: " + (net != null ? "online, seat " + cfg.LocalSeat + " of " + cfg.Seats.Length + ", " : "") + cfg.PlayerHero + ", " + cfg.Difficulty + (cfg.Tutorial ? (island ? ", guided match (island)" : ", guided match (arena)") : "") + (cfg.HeroTest ? ", HERO TEST level " + cfg.HeroTestLevel : "") + (cfg.Map != MapId.Runes ? ", map " + cfg.Map : "") + ", seed " + seed);
         }
@@ -327,6 +330,7 @@ namespace BAM.Game
                 }
                 if (acc >= Rules.Tick) acc = 0f;
             }
+            LogItems();
             float alpha = frozen || over ? 1f : Mathf.Clamp01((net != null && mirror == null ? netDraw : acc) / Rules.Tick);
             BAM.Art.ArtKit.SetSimClock(match.Ticks, alpha); // the swings' clock (Animation Foundation): blows land on their shots' frame
             views.Frame(alpha, dt, frozen);
@@ -508,6 +512,10 @@ namespace BAM.Game
                 Practice = Practice,
                 Online = net != null,
                 Versus = versus,
+                Humans = net != null && match.Config.Seats != null ? match.Config.Seats.Length : 1,
+                Spell = p.Spell,
+                Item1 = p.ItemCount > 0 ? p.Items[0].Id : ItemId.None,
+                Item2 = p.ItemCount > 1 ? p.Items[1].Id : ItemId.None,
             };
         }
 
@@ -541,7 +549,8 @@ namespace BAM.Game
         }
 
         // Exactly one MatchEnded per match: at the result, or as a quit when the player leaves or restarts before it.
-        // PRACTICE > NEW MAP (the second map, Grove): practice like HERO TEST, so no analytics, no bot-level move, no online XP
+        // PRACTICE > NEW MAP (the second map, Grove): practice, so no bot-level move and no online XP; the analytics get it as mode
+        // "grove" since full review 2026-11-13 nr 110 (before, nothing showed whether anyone played the second map)
         bool Practice => setup.Map != MapId.Runes && setup.Net == null;
 
         void SendEnd(bool quit)
@@ -549,10 +558,10 @@ namespace BAM.Game
             if (match == null || endSent) return;
             endSent = true;
             if (net != null) net.MatchEnded(quit && !over);
-            if (setup.HeroTest || Practice) return;
-            var r = Result(quit && !over);
+            if (setup.HeroTest) return;
             LogEnd(quit);
-            Flow.MatchEnded?.Invoke(r); // online: level, XP and rating are counted on the server
+            if (Practice) return;
+            Flow.MatchEnded?.Invoke(Result(quit && !over)); // online: level, XP and rating are counted on the server
         }
 
         // The analytics' matchEnd, once per match: already as the match is decided (the tower falls), not with the result card
@@ -561,9 +570,27 @@ namespace BAM.Game
         // them just when matches end). The values are the same as at the card: the match stops stepping once it is over.
         void LogEnd(bool quit)
         {
-            if (match == null || endLogged || setup.HeroTest || Practice) return;
+            if (match == null || endLogged || setup.HeroTest) return;
             endLogged = true;
             BamAnalytics.MatchEnded(setup, Result(quit && !over));
+        }
+
+        // The analytics' itemPicked: each item the player takes (level 6 and 12), once, with how long its choice of three stood
+        // in match seconds (a pause does not count), so the reports show which items are taken and how long the cards cover the
+        // lane (full review 2026-11-13 nr 110, 123). Only counts up: a correction of the predicted online match cannot send one twice.
+        int itemsLogged;
+        float offerSince = -1f;
+        void LogItems()
+        {
+            var p = match != null ? match.Player : null;
+            if (p == null || setup.HeroTest || setup.Tutorial) return;
+            if (p.OfferCount > 0 && offerSince < 0f) offerSince = match.Time;
+            while (itemsLogged < p.ItemCount)
+            {
+                var id = p.Items[itemsLogged++].Id;
+                BamAnalytics.ItemPicked(setup, net != null, id, p.Hero, p.Level, offerSince >= 0f ? match.Time - offerSince : 0f);
+                offerSince = p.OfferCount > 0 ? match.Time : -1f; // a queued choice comes up at once
+            }
         }
 
         void OnApplicationPause(bool pausedByOs)

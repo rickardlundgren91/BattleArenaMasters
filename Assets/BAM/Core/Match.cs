@@ -32,6 +32,9 @@ namespace BAM.Core
         public bool Practice;   // PRACTICE > NEW MAP: no XP, Rating or bot-level move, so the result card shows no XP line (bug review 2026-11-04 nr 51)
         public bool Online;     // an online match (MatchSetup.Net): the card says so instead of the bots' level and hides PLAY AGAIN (full review 2026-11-09 nr 61)
         public bool Versus;     // online with a person on the other team ("vs players"); false when everyone played together against bots
+        public int Humans;      // the people in the match: 1 offline, one per seat online (analytics, full review 2026-11-13 nr 110)
+        public SpellId Spell;   // the player's battle spell (analytics)
+        public ItemId Item1, Item2; // the items the player picked, in pick order (None: not picked); analytics' matchEnd
     }
 
     /// <summary>
