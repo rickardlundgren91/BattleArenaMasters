@@ -43,7 +43,7 @@ namespace BAM.Online.UI
         public static void OpenProfile() { Init(); OnlineMenu.Close(); OnlineMenu.Go(SignedIn ? "profile" : "golive"); }
         public static void OpenFriends() { Init(); OnlineMenu.Close(); OnlineMenu.OpenFriends(); }
         /// <summary>Friends online now (not in a match), for the badge on Home's FRIENDS button.</summary>
-        public static int FriendsOnline() { int n = 0; foreach (var f in Social.Friends) if (f.Presence == Social.Presence.Online) n++; return n; }
+        public static int FriendsOnline() { int n = 0; foreach (var f in Social.Friends) if (BAM.Online.Mp.MpSocial.Seen(f) == Social.Presence.Online) n++; return n; }
         /// <summary>Home's + INVITE: the invite panel (friends first, then everyone online), or the sign-in first.</summary>
         public static void OpenInvite()
         {

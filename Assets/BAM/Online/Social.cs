@@ -104,6 +104,7 @@ namespace BAM.Online
                 active = true;
                 await SyncName();
                 await SendPresence();
+                presenceAt = Time.realtimeSinceStartup + PresenceEvery; refreshAt = Time.realtimeSinceStartup + RefreshEvery;
                 Rebuild();
                 return true;
             }
@@ -145,8 +146,31 @@ namespace BAM.Online
         /// <summary>Once per frame from the menu (cheap): rebuilds the lists after the service told us something changed.</summary>
         public static void Tick()
         {
-            if (active && dirty) Rebuild();
+            if (!active) return;
+            // Bug 2026-11-13 (Rickard and a friend, both with the game open: each saw the other Offline, yet INVITE worked through the
+            // online list). The presence was sent once at sign-in, and the friends' presence only changed on a PresenceUpdated event,
+            // so a lapsed presence on the service or a missed event (the event link drops in the background) stayed wrong for good.
+            // Now our presence is sent again every minute and after the app comes back, and the friends list is fetched again every
+            // 30 s while a menu is open.
+            float now = Time.realtimeSinceStartup;
+            if (now >= presenceAt) { presenceAt = now + PresenceEvery; _ = SendPresence(); }
+            if (now >= refreshAt && !refreshing) { refreshAt = now + RefreshEvery; _ = Refresh(); }
+            if (dirty) Rebuild();
         }
+        const float PresenceEvery = 60, RefreshEvery = 30;
+        static float presenceAt, refreshAt;
+        static bool refreshing;
+
+        static async Task Refresh()
+        {
+            refreshing = true;
+            try { await FriendsService.Instance.ForceRelationshipsRefreshAsync(); dirty = true; }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] friends refresh: " + e.Message); }
+            finally { refreshing = false; }
+        }
+
+        /// <summary>The app came back from the background: send our presence and fetch the friends' again at the next Tick.</summary>
+        internal static void Resumed() { presenceAt = 0; refreshAt = 0; }
 
         /// <summary>The game tells friends whether the player is in a match (shown as Playing).</summary>
         public static void SetInMatch(bool playing)

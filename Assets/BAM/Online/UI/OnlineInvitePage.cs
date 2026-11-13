@@ -65,7 +65,7 @@ namespace BAM.Online.UI
             ctx.save(); ctx.beginPath(); ctx.rect(ix - cw(1), listTop, iw + cw(2), listBot - listTop); ctx.clip();
             clipOn = true; clipTop = listTop; clipBot = listBot; scrollOff = pageScroll; ctx.translate(0, -pageScroll);
             float ry = listTop;
-            int on = 0; foreach (var f in invFriends) if (f.Presence != Social.Presence.Offline) on++;
+            int on = 0; foreach (var f in invFriends) if (BAM.Online.Mp.MpSocial.Seen(f) != Social.Presence.Offline) on++;
             ry = InvHead("FRIENDS", invFriends.Count > 0 ? on + " online" : null, ix, ry);
             if (invFriends.Count == 0) { ry = InvNote(Social.Active ? "No friends yet. Add friends from the FRIENDS button on Home." : "Friends is not available right now. Check your connection.", ix, ry, iw); }
             foreach (var f in invFriends) { if (ry + rh >= listTop + pageScroll - rh && ry <= listBot + pageScroll + rh) InvFriendRow(f, ix, ry, iw, rh); ry += rh + gap; }
@@ -86,7 +86,7 @@ namespace BAM.Online.UI
             }
         }
 
-        static int Rank(Social.Person f) => MpSocial.CanInvite(f.PlayerId) ? 0 : f.Presence == Social.Presence.Online ? 1 : f.Presence == Social.Presence.Playing ? 2 : 3;
+        static int Rank(Social.Person f) => MpSocial.CanInvite(f.PlayerId) ? 0 : BAM.Online.Mp.MpSocial.Seen(f) == Social.Presence.Online ? 1 : BAM.Online.Mp.MpSocial.Seen(f) == Social.Presence.Playing ? 2 : 3;
 
         static float InvHead(string t, string n, float x, float y)
         {
@@ -108,12 +108,12 @@ namespace BAM.Online.UI
             ctx.fillStyle = "rgba(255,255,255,0.04)"; ctx.beginPath(); ctx.roundRect(x, y, w, h, cw(3)); ctx.fill();
             float ar = cw(4), acx = x + cw(2) + ar, acy = y + h / 2;
             HubAvatar(f.PlayerId, f.Name, acx, acy, ar);
-            string pc = PresenceCol(f.Presence);
+            string pc = PresenceCol(BAM.Online.Mp.MpSocial.Seen(f));
             ctx.fillStyle = "#151a42"; ctx.beginPath(); ctx.arc(acx + ar * 0.72f, acy + ar * 0.72f, cw(1.6f), 0, 7); ctx.fill();
             ctx.fillStyle = pc; ctx.beginPath(); ctx.arc(acx + ar * 0.72f, acy + ar * 0.72f, cw(1.1f), 0, 7); ctx.fill();
             var row = MpPresence.Find(f.PlayerId);
-            string what = row != null && f.Presence != Social.Presence.Offline ? PresenceState.Text(row.State) : PresenceText(f.Presence);
-            InvName(f.Name, what, f.Presence == Social.Presence.Offline ? HUB_DIM : HUB_TEXT, pc, acx + ar + cw(2.5f), x + w - HubFriendPillW - cw(2), y, h);
+            string what = row != null ? PresenceState.Text(row.State) : PresenceText(f.Presence);
+            InvName(f.Name, what, BAM.Online.Mp.MpSocial.Seen(f) == Social.Presence.Offline ? HUB_DIM : HUB_TEXT, pc, acx + ar + cw(2.5f), x + w - HubFriendPillW - cw(2), y, h);
             HubFriendPill3(f, x + w - HubFriendPillW - cw(1), y, HubFriendPillW, h);
         }
         // someone who is not a friend but has the game open now (the Online now list): INVITE when they are free

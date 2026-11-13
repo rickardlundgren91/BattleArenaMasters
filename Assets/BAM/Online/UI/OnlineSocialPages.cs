@@ -98,7 +98,7 @@ namespace BAM.Online.UI
         }
         static string PresenceOf(string id)
         {
-            foreach (var f in Social.Friends) if (f.PlayerId == id) return f.Presence == Social.Presence.Online ? "Online" : f.Presence == Social.Presence.Playing ? "In a match" : "Offline";
+            foreach (var f in Social.Friends) if (f.PlayerId == id) { var p = BAM.Online.Mp.MpSocial.Seen(f); return p == Social.Presence.Online ? "Online" : p == Social.Presence.Playing ? "In a match" : "Offline"; }
             return "Player";
         }
         static float HubProfileActions(string id, string name, Social.Relation rel, float x, float y, float w)

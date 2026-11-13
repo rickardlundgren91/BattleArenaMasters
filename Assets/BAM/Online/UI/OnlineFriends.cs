@@ -119,13 +119,13 @@ namespace BAM.Online.UI
             ctx.fillStyle = open || dn ? "rgba(62,230,176,0.10)" : "rgba(255,255,255,0.04)"; ctx.beginPath(); ctx.roundRect(x, y, w, h, cw(3)); ctx.fill();
             float ar = cw(4.4f), acx = x + cw(2) + ar, acy = y + h / 2;
             HubAvatar(f.PlayerId, f.Name, acx, acy, ar);
-            string pc = PresenceCol(f.Presence);
+            string pc = PresenceCol(BAM.Online.Mp.MpSocial.Seen(f));
             ctx.fillStyle = "#151a42"; ctx.beginPath(); ctx.arc(acx + ar * 0.72f, acy + ar * 0.72f, cw(1.6f), 0, 7); ctx.fill();
             ctx.fillStyle = pc; ctx.beginPath(); ctx.arc(acx + ar * 0.72f, acy + ar * 0.72f, cw(1.1f), 0, 7); ctx.fill();
             float nx = acx + ar + cw(2.5f), actW = HubFriendPillW, nw = x + w - actW - cw(2) - nx;
             string nm = f.Name ?? ""; ctx.font = Lil(cw(3.8f)); while (nm.Length > 3 && ctx.measureText(nm) > nw) nm = nm.Substring(0, nm.Length - 2) + "…";
-            Text(nm, nx, y + h * 0.36f, Lil(cw(3.8f)), f.Presence == Social.Presence.Offline ? HUB_DIM : HUB_TEXT);
-            Text(PresenceText(f.Presence), nx, y + h * 0.7f, Treb(Min11(cw(2.8f)), true), pc);
+            Text(nm, nx, y + h * 0.36f, Lil(cw(3.8f)), BAM.Online.Mp.MpSocial.Seen(f) == Social.Presence.Offline ? HUB_DIM : HUB_TEXT);
+            Text(PresenceText(BAM.Online.Mp.MpSocial.Seen(f)), nx, y + h * 0.7f, Treb(Min11(cw(2.8f)), true), pc);
             string fid = f.PlayerId;
             Btn("hubFr:" + fid, x, y, x + w - actW - cw(1) - x, h, () => { friendMenu = friendMenu == fid ? null : fid; });
             HubFriendPill3(f, x + w - actW - cw(1), y, actW, h);
@@ -146,15 +146,15 @@ namespace BAM.Online.UI
                 if (!sent) Btn("hubFrInv:" + id, x, py, w, ph, () => InviteSomeone(id, nm));
                 return;
             }
-            if (otherVersion && f.Presence != Social.Presence.Offline)
+            if (otherVersion && BAM.Online.Mp.MpSocial.Seen(f) != Social.Presence.Offline)
             {
                 // another game version: they cannot play together until both have the same one
                 string id = f.PlayerId, nm = f.Name, v = f.Version;
                 label = "OTHER VERSION"; col = "#ffb0b0";
                 Btn("hubFrVer:" + id, x, py, w, ph, () => Toast(nm + " has version " + v + ", you have " + Social.GameVersion + ". Both need the same version."));
             }
-            else if (f.Presence == Social.Presence.Playing) { label = "IN MATCH"; col = "rgba(154,162,214,0.6)"; }
-            else if (f.Presence == Social.Presence.Offline) { label = "OFFLINE"; col = "rgba(154,162,214,0.5)"; }
+            else if (BAM.Online.Mp.MpSocial.Seen(f) == Social.Presence.Playing) { label = "IN MATCH"; col = "rgba(154,162,214,0.6)"; }
+            else if (BAM.Online.Mp.MpSocial.Seen(f) == Social.Presence.Offline) { label = "OFFLINE"; col = "rgba(154,162,214,0.5)"; }
             else { label = "ONLINE"; col = HUB_ACCENT; }
             ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.beginPath(); ctx.roundRect(x, py, w, ph, ph / 2); ctx.fill();
             float fs = Min11(cw(2.6f)); ctx.font = Treb(fs, true); while (fs > cw(2) && ctx.measureText(label) > w - cw(2)) { fs -= cw(0.1f); ctx.font = Treb(fs, true); }

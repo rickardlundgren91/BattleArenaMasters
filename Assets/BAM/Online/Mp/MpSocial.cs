@@ -121,6 +121,16 @@ namespace BAM.Online.Mp
             || notePending.Contains(playerId) || noted.TryGetValue(playerId, out var c) && c == MpRoom.Code;
 
         /// <summary>Can INVITE be offered for this player: free in the online list, or a friend the Friends service shows online.</summary>
+        /// <summary>A friend's presence as this phone sees it: a live sign in the online list (this game version, the app open now)
+        /// wins over the Friends service, whose presence can lag or stay Offline (bug 2026-11-13: a friend shown Offline, not counted
+        /// online, yet with a green INVITE because the sign said free).</summary>
+        public static Social.Presence Seen(Social.Person f)
+        {
+            var r = MpPresence.Find(f.PlayerId);
+            if (r != null) return r.Free ? Social.Presence.Online : Social.Presence.Playing;
+            return f.Presence;
+        }
+
         public static bool CanInvite(string playerId)
         {
             var r = MpPresence.Find(playerId);

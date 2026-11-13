@@ -33,6 +33,7 @@ namespace BAM.Online
         /// <summary>The app came back from the background: retry a failed sign-in and send waiting matches.</summary>
         public static void Resumed()
         {
+            Social.Resumed();
             if (Account.State == Account.Status.Offline) Account.Start();
             else if (Account.SessionLost) Account.Start();   // the Unity session expired in the background: sign in again
             else if (Account.State == Account.Status.Ready) _ = Server.SendPending();
