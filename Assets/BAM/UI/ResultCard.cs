@@ -41,6 +41,7 @@ namespace BAM.UI
         static RectTransform resBigDisc;
         static RawImage resBigPic;
         static Button resAgain, resHome;
+        static CanvasGroup resAgainGroup, resHomeGroup;
         static Image resAgainShadow, resHomeShadow, resHomeEdge, resAgainShine;
         static Text resAgainText, resHomeText;
         static CanvasGroup resFade;
@@ -242,6 +243,8 @@ namespace BAM.UI
 
             resAgain = ResButton("PLAY AGAIN", true, RestartMatch, out resAgainShadow, out resAgainText, out resAgainShine);
             resHome = ResButton("HOME", false, GoToMenu, out resHomeShadow, out resHomeText, out resHomeEdge);
+            resAgainGroup = resAgain.gameObject.AddComponent<CanvasGroup>();
+            resHomeGroup = resHome.gameObject.AddComponent<CanvasGroup>();
         }
 
         static ResRow MakeResRow()
@@ -555,7 +558,12 @@ namespace BAM.UI
             r.sizeDelta = new Vector2(w, h);
         }
 
-        /// <summary>The card fades in over 0.3 s and slides up a little; the buttons answer once it is in (HudV3 drawResult, ResultDown).</summary>
+        /// <summary>The card fades in over 0.3 s and slides up a little (HudV3 drawResult, ResultDown). The buttons answer only from
+        /// ResultArm after that, and only to a finger that lands after it: till then they are dim and take no touch at all. HOME lies
+        /// where the SPECIAL is, so a player still tapping SPECIAL as the tower fell went straight to the menu without seeing the
+        /// result (review 2026-11-13, nr 3; they answered after 0.3 s, and a finger down before that clicked on lifting).</summary>
+        const float ResultArm = 1f;
+
         sealed class ResultFx : MonoBehaviour
         {
             float shownAt;
@@ -581,13 +589,24 @@ namespace BAM.UI
             void Step()
             {
                 if (resFade == null || resCard == null) return;
-                float k = Mathf.Clamp01((Time.unscaledTime - shownAt) / 0.3f);
+                float since = Time.unscaledTime - shownAt, k = Mathf.Clamp01(since / 0.3f);
                 resFade.alpha = k;
-                bool ready = k >= 1f;
+                bool ready = since >= ResultArm;
                 resAgain.interactable = resHome.interactable = ready;
+                // no raycast before it: a finger landing early presses nothing, so lifting it later cannot click
+                float a = ready ? Mathf.Clamp01(0.45f + 0.55f * (since - ResultArm) / 0.15f) : 0.45f;
+                Arm(resAgainGroup, ready, a);
+                Arm(resHomeGroup, ready, a);
                 var p = resCard.anchoredPosition;
                 float H = resBody.rect.height, top = (resTableMode ? H * 0.1f : H * 0.2f) + (1 - k) * H * 0.03f;
                 if (Mathf.Abs(p.y + top) > 0.01f) { p.y = -top; resCard.anchoredPosition = p; }
+            }
+
+            static void Arm(CanvasGroup g, bool ready, float alpha)
+            {
+                if (g == null) return;
+                if (g.blocksRaycasts != ready) { g.blocksRaycasts = ready; g.interactable = ready; }
+                if (Mathf.Abs(g.alpha - alpha) > 0.001f) g.alpha = alpha;
             }
         }
     }
