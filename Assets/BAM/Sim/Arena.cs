@@ -59,9 +59,9 @@ namespace BAM.Sim
             ".......2.......", // 4
             ".......1.......", // 5
             "...............", // 6
-            "...........J...", // 7  the pad throws you to row 13, over the wall bar into the grass
-            "...............", // 8
-            "..........####.", // 9  the wall bar
+            "gg.........J...", // 7  the pad throws you to row 13, over the wall bar into the grass; the left grass strip reaches
+            "gg.............", // 8  up to row 7 toward the tower (Rickard 2026-11-13: grass over the bare patch by the water,
+            "gg........####.", // 9  top and bottom); the wall bar
             "gg.........gggg", // 10
             "gg.#.......gggg", // 11
             "gg.#.......gggg", // 12
