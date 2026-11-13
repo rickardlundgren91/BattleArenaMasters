@@ -725,6 +725,7 @@ namespace BAM.Art
                 }
             }
             if (k == ZoneKind.HoneyField) MakeComb();
+            if (k == ZoneKind.Bramble) MakeBrambleMarks();
             if (k == ZoneKind.FireLane || k == ZoneKind.FeatherTrail) { capA = Child("CapStart", Shapes.ZoneCap(), mat, 0f); capB = Child("CapEnd", Shapes.ZoneCap(), mat, 0f); }
             if (k == ZoneKind.BombFuse || warn)
             {
@@ -936,6 +937,27 @@ namespace BAM.Art
                     edgeMat[i].SetColor(ArtMaterials.BaseColor, new Color(1f * es, 0.82f * es, 0.35f * es, 1f));
                 }
             }
+            if (kind == ZoneKind.Bramble && edge[0] != null)
+            {
+                Color tc = Pal.Get(Pal.TeamLight(team));
+                for (int i = 0; i < 3; i++)
+                {
+                    float es = EdgeStrength[i] * a * (i == 0 ? 0.9f + 0.1f * Mathf.Sin(age * 7f) : 1f);
+                    edgeMat[i].SetColor(ArtMaterials.BaseColor, new Color(tc.r * es, tc.g * es, tc.b * es, 1f));
+                }
+                // seconds since it rooted, also when it is shown late with the time it has left (a hidden Nässla's, then seen)
+                float since = NasslaS.Duration - duration + age, ft = since / Mathf.Max(0.05f, NasslaS.Warn);
+                bool filling = ft < 1f;
+                if (innerR.enabled != filling) innerR.enabled = filling;
+                if (filling)
+                {
+                    float fs = radius * Mathf.Lerp(0.05f, 0.94f, Mathf.Clamp01(ft));
+                    inner.localScale = new Vector3(fs, 1f, fs);
+                    inner.localPosition = new Vector3(0f, 0.004f, 0f);
+                    Color fc = tc; fc.a = 0.35f * a;
+                    innerMat.SetColor(ArtMaterials.BaseColor, fc);
+                }
+            }
             if (warn) return;
             if (kind == ZoneKind.FireLane && length > 0f) LaneIgnite();
             if (kind == ZoneKind.FireLane && length > 0f && laneFire != null) LaneFire();
@@ -988,6 +1010,29 @@ namespace BAM.Art
             laneMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
             laneMesh.RecalculateBounds();
             return laneMesh;
+        }
+
+        // Nässla's thicket (hero review 2026-11-13): the same lime floor for both teams did not say whose it was, poison or heal, and
+        // nothing showed when it first stings. Now the edge is the team's colour (the enemy's red, ours blue, as the shots) and a fill
+        // grows to the edge until the first tick (NasslaS.Warn), as a bomb's fuse; her own picture comes later (orders)
+        void MakeBrambleMarks()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                edgeMat[i] = ArtMaterials.Instance(ArtMaterials.UnlitAdd);
+                edgeMat[i].renderQueue = 2992 + i;
+                edge[i] = Child("Edge" + i, EdgeMesh(i), edgeMat[i], 0.007f + i * 0.001f);
+            }
+            var ig = new GameObject("Fuse");
+            inner = ig.transform;
+            inner.SetParent(transform, false);
+            ig.AddComponent<MeshFilter>().sharedMesh = Shapes.Disc(Pal.WhiteMid);
+            innerR = ig.AddComponent<MeshRenderer>();
+            innerMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
+            innerMat.renderQueue = 2991;
+            innerR.sharedMaterial = innerMat;
+            innerR.shadowCastingMode = ShadowCastingMode.Off;
+            innerR.receiveShadows = false;
         }
 
         void MakeComb()

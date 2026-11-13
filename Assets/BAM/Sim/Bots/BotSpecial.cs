@@ -325,7 +325,7 @@ namespace BAM.Sim
             return rec.Yes;
         }
 
-        /// <summary>The way out of every enemy shot line, bomb circle and red warning the bot stands in (false = none).</summary>
+        /// <summary>The way out of every enemy shot line, bomb circle, Nässla's thicket and red warning the bot stands in (false = none).</summary>
         bool DodgeVector(out float vx, out float vy)
         {
             var h = H; vx = vy = 0;
@@ -337,7 +337,9 @@ namespace BAM.Sim
             {
                 var p = ps[i];
                 if (p.Done || p.Src == null || p.Team == h.Team) continue;
-                bool warn = p.IsWarning || p.Mode == ProjMode.Smash, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb || p.Mode == ProjMode.Keg;
+                bool warn = p.IsWarning || p.Mode == ProjMode.Smash, line = (p.Mode == ProjMode.Hook && p.Out) || p.Mode == ProjMode.Bolt || p.Mode == ProjMode.Hammer || p.Mode == ProjMode.HammerLine || p.Mode == ProjMode.Boulder, bomb = p.Mode == ProjMode.Bomb || p.Mode == ProjMode.Keg || p.Mode == ProjMode.Bramble;
+                // Nässla's thicket too, like a bomb's circle: until the hero review of 2026-11-13 bots stood in it for all four ticks,
+                // so her special looked much stronger in bot matches than against a player who walks out
                 if (!warn && !line && !bomb) continue;
                 if (warn && M.CastHiddenFrom(p, h.Team)) continue; // a hidden Tikta's strip is not seen (TIKTA-05)
                 if (!DodgeRoll(p, chance, out var dg) || Now < dg.At || Now > dg.At + dg.Len) continue;
