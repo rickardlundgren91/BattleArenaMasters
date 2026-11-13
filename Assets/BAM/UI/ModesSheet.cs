@@ -9,7 +9,7 @@ namespace BAM.UI
     // The old mode sheet (MenuHome3.cs HubModeSheet in the ONE_PLAY style): a dark scrim, a sheet sliding up from the bottom
     // with a handle, "Choose mode", one card per mode (its icon, name and a line under it; the chosen card warm with the gold
     // rune frame and a gold tick, the others dim with a chevron), CLASSIC opening its BOT DIFFICULTY under it, and the orange
-    // PLAY at the bottom, which starts the chosen mode. Home's PLAY and MODES icon follow the chosen mode too (HubPlayNow).
+    // PLAY at the bottom, which starts the chosen mode. Home's PLAY and MODES icon follow the mode the sheet's PLAY last started (nr 129).
     // BAM's modes: CLASSIC (3v3 against bots), TRAINING (the guided match) and HERO TEST ("Try out any hero", the old mode
     // list's entry); RANKED is not in BAM. 2026-10-31 (Rickard's pick on a card): TRAINING and HERO TEST share one card, PRACTICE,
     // which opens TUTORIAL / HERO TEST under it the way CLASSIC opens its BOT DIFFICULTY; Home still plays the one picked. Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
@@ -24,6 +24,9 @@ namespace BAM.UI
         static HubChoice modePractice;
         const float PracH = 18.5f * Cw;
         static Mode homeMode = Mode.Classic; // CLASSIC when the game starts, as in the old game
+        // what the open sheet shows: tapping a card only looks; Home's PLAY changes when the sheet's own PLAY is pressed
+        // (full review 2026-11-13 nr 129: a look at PRACTICE made Home's PLAY start the tutorial after the sheet closed)
+        static Mode sheetMode = Mode.Classic;
 
         sealed class ModeCard { public Mode Id; public RectTransform Rect; public CanvasGroup Icon; public GameObject On, Off, Tick, Chevron; public Image Fill; }
 
@@ -152,8 +155,7 @@ namespace BAM.UI
             Stretched(prsegs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
             modePractice = new HubChoice(prsegs, new[] { "TUTORIAL", "HERO TEST", "NEW MAP" }, i =>
             {
-                homeMode = lastPractice = i == 0 ? Mode.Training : i == 1 ? Mode.HeroTest : Mode.NewMap;
-                RefreshHome();
+                sheetMode = lastPractice = i == 0 ? Mode.Training : i == 1 ? Mode.HeroTest : Mode.NewMap;
                 RefreshModes();
             }, true);
 
@@ -219,8 +221,7 @@ namespace BAM.UI
             {
                 BamAudio.Play(SfxId.UiTap);
                 // both cards open their pick under them, so the sheet stays; PRACTICE comes back to the last practice picked
-                homeMode = mode == Mode.Classic ? Mode.Classic : IsPractice(homeMode) ? homeMode : lastPractice;
-                RefreshHome();
+                sheetMode = mode == Mode.Classic ? Mode.Classic : IsPractice(sheetMode) ? sheetMode : lastPractice;
                 RefreshModes();
             });
             head.gameObject.AddComponent<ButtonFx>().PressScale = false;
@@ -263,6 +264,8 @@ namespace BAM.UI
             button.onClick.AddListener(() =>
             {
                 BamAudio.Play(SfxId.UiConfirm);
+                homeMode = sheetMode; // only here does the sheet change what Home's PLAY starts (nr 129)
+                RefreshHome();
                 PlayMode(); // StartMatch hides every screen, the sheet too
             });
             rt.gameObject.AddComponent<ButtonFx>();
@@ -303,7 +306,7 @@ namespace BAM.UI
             for (int i = 0; i < modeCards.Length; i++)
             {
                 var c = modeCards[i];
-                bool on = c.Id == homeMode || IsPractice(c.Id) && IsPractice(homeMode), open = on;
+                bool on = c.Id == sheetMode || IsPractice(c.Id) && IsPractice(sheetMode), open = on;
                 float oh = OptH + (open ? (c.Id == Mode.Classic ? expH : PracH) : 0);
                 Stretched(c.Rect, SheetX, y, SheetX, oh);
                 c.On.SetActive(on);
@@ -320,18 +323,18 @@ namespace BAM.UI
                 if (open && IsPractice(c.Id))
                 {
                     modePracticeExpand.gameObject.SetActive(true);
-                    modePractice.Set(homeMode == Mode.HeroTest ? 1 : homeMode == Mode.NewMap ? 2 : 0);
+                    modePractice.Set(sheetMode == Mode.HeroTest ? 1 : sheetMode == Mode.NewMap ? 2 : 0);
                     Stretched(modePracticeExpand, SheetX + 3 * Cw, y + OptH, SheetX + 3 * Cw, PracH);
                 }
                 y += oh + OptGap;
             }
-            if (homeMode != Mode.Classic) modeExpand.gameObject.SetActive(false);
-            if (!IsPractice(homeMode)) modePracticeExpand.gameObject.SetActive(false);
+            if (sheetMode != Mode.Classic) modeExpand.gameObject.SetActive(false);
+            if (!IsPractice(sheetMode)) modePracticeExpand.gameObject.SetActive(false);
             y = LayoutOnlineRows(y);
             Stretched(modeSheetPlay, SheetX, y + Cw, SheetX, 14 * Cw);
-            modePlaySub.text = party != null ? "WITH YOUR PARTY" : PlaySubFor(homeMode, false);
+            modePlaySub.text = party != null ? "WITH YOUR PARTY" : PlaySubFor(sheetMode, false);
             float rows = SheetModes.Length + OnlineRowCount;
-            modeSheet.sizeDelta = new Vector2(0, 19 * Cw + rows * OptH + (rows - 1) * OptGap + (homeMode == Mode.Classic ? expH : PracH) + 4 * Cw + 13 * Cw + 6 * Cw + 6 * Cw);
+            modeSheet.sizeDelta = new Vector2(0, 19 * Cw + rows * OptH + (rows - 1) * OptGap + (sheetMode == Mode.Classic ? expH : PracH) + 4 * Cw + 13 * Cw + 6 * Cw + 6 * Cw);
         }
 
         // HubModeIcon: the mode's sign on a dark rounded square of size s (classic the robot, training two open pages,
@@ -414,6 +417,7 @@ namespace BAM.UI
             {
                 k = 0;
                 closing = false;
+                sheetMode = homeMode; // the sheet opens on what Home plays now
                 RefreshModes();
                 Apply();
             }
