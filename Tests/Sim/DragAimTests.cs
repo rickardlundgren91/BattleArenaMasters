@@ -85,20 +85,21 @@ namespace BAM.Sim
                 Check(!m.DragAimOn && !cast && p.SpecialReady, "DRAG off: with nobody in reach a drag does nothing, as a tap");
             }
 
-            // the bots never drag: a bot match plays exactly the same with drag aim on and off (same brain on both teams)
+            // Easy and Normal bots never drag (Bronze and Silver tap): a Normal bot match plays exactly the same with drag aim on and off
+            // (same brain on both teams). Gold, Platinum and Ultra drag since the bot audit of 2026-11-13 (HeroReview1113Tests BotDragChecks)
             for (int s = 1; s <= 3; s++)
             {
                 string[] end = new string[2];
                 for (int v = 0; v < 2; v++)
                 {
-                    var m = Create(new MatchConfig { PlayerHero = OneTapHeroes[s], Allies = new[] { OneTapHeroes[(s + 1) % 8], OneTapHeroes[(s + 2) % 8] }, Enemies = new[] { OneTapHeroes[(s + 3) % 8], OneTapHeroes[(s + 4) % 8], OneTapHeroes[(s + 5) % 8] }, Seed = 40 + s, PlayerIsBot = true, Difficulty = Difficulty.Hard });
+                    var m = Create(new MatchConfig { PlayerHero = OneTapHeroes[s], Allies = new[] { OneTapHeroes[(s + 1) % 8], OneTapHeroes[(s + 2) % 8] }, Enemies = new[] { OneTapHeroes[(s + 3) % 8], OneTapHeroes[(s + 4) % 8], OneTapHeroes[(s + 5) % 8] }, Seed = 40 + s, PlayerIsBot = true, Difficulty = Difficulty.Normal });
                     m.DragAim = v == 0;
                     int casts = 0;
                     while (m.State != MatchState.Over && m.Time < 180) { m.Step(PlayerInput.None); foreach (var ev in m.Events) if (ev.Type == EventType.Cast) casts++; }
                     float hp = 0; foreach (var h in m.Heroes) hp += h.Hp;
                     end[v] = $"{m.Time:0.000} {casts} {hp:0.0}";
                 }
-                Check(end[0] == end[1], $"DRAG bots: seed {40 + s} plays the same with drag aim on and off ({end[0]} / {end[1]})");
+                Check(end[0] == end[1], $"DRAG bots: a Normal bot match (seed {40 + s}) plays the same with drag aim on and off ({end[0]} / {end[1]})");
             }
         }
     }

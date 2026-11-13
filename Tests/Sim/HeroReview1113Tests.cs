@@ -4,13 +4,15 @@ namespace BAM.Sim
     public sealed partial class Match
     {
         /// <summary>The hero review of 2026-11-13 (bam-work/review/hjaltar-2026-11-13/, Rickard "ja" to Ragn's ring and text, then
-        /// "fixa alla punkter"). Run with the live forms (Fenn's Veil, Bram's Hammer Line). Bram's Focus as a rhythm: SilverTests.</summary>
+        /// "fixa alla punkter"). Run with the live forms (Fenn's Veil, Bram's Hammer Line). Bram's Focus in Silver's steps: SilverTests.
+        /// The bot audit the same day (Gold, Platinum and Ultra bots drag the one special as a player may): BotDragChecks.</summary>
         public static void HeroReview1113()
         {
             RagnRingStays();
             FennStrikeChecks();
             KuggChecks();
             TiktaPastMinions();
+            BotDragChecks();
             Check(HeroCatalog.Get(HeroId.Nassla).SpecialText.EndsWith(HeroInfo.DragLine), "NASSLA text: the hold card says a drag aims the thicket");
             Check(HeroCatalog.Get(HeroId.Blast).SpecialText.Contains("1 s after the tap") && Math.Abs(TeleTime(HeroId.Blast) + BlastS.Delay - 1f) < 1e-4f, "BLAST text: the bomb explodes 1 s after the tap (warning + fuse)");
         }
@@ -126,5 +128,52 @@ namespace BAM.Sim
             m.Step(TapIn()); for (int k = 0; k < 90; k++) m.Step(PlayerInput.None);
             Check(mn.Hp == mh && !p.SpecialReady, "TIKTA: a tap at a lone minion spends the charge and the needles pass it unhurt");
         }
+
+        static bool Toward(float ang, float want, float tol = 0.06f) => !float.IsNaN(ang) && Math.Abs(SimMath.Atan2(SimMath.Sin(ang - want), SimMath.Cos(ang - want))) < tol;
+
+        /// <summary>The bot audit of 2026-11-13 (Rickard "Se om det är fel på fler bottar som med Knut", "ja bygg ... den bot fixen"): Gold,
+        /// Platinum and Ultra bots drag the one special by hand as a player may (BotSpecial.OneTapDrag): Knut's hook, Bram's hammer and
+        /// Tyra's bolt at a hero past the white ring, the hero rather than a random minion, Moa's field onto the most hurt ally. Easy and
+        /// Normal bots tap as before.</summary>
+        static void BotDragChecks()
+        {
+            float x = 7.5f, y = 17.5f, down = -SimMath.PI / 2; // the open stretch KuggChecks uses: a clear line 5 tiles down
+            foreach (var id in new[] { HeroId.Knut, HeroId.Bram, HeroId.Tyra })
+            {
+                foreach (var d in new[] { Difficulty.Hard, Difficulty.Normal })
+                {
+                    var m = MakeBots(id, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Blast, HeroId.Bonk, HeroId.Kugg }, d, 11);
+                    var p = m.Player; var b = p.Bot; var e = m.Foe(HeroId.Blast);
+                    Place(p, x, y); Place(e, x, y - 5); m.AddStatus(e, St.Stun, 999); p.Charge = p.HDef.MaxCharge;
+                    bool hard = d == Difficulty.Hard, wanted = b.SpecialWanted(false), drag = b.OneTapDrag(out float ang, out _);
+                    Check(5 > TapReach(id) + e.R && !m.TapHasTarget(p), $"BOT DRAG {id}: the enemy hero 5 tiles off is past his white ring ({TapReach(id)}), the tap has nobody");
+                    if (hard) Check(wanted && drag && Toward(ang, down), $"BOT DRAG {id}: a Hard bot wants it and drags it at the hero ({ang:0.00} rad)");
+                    else Check(!wanted && !drag, $"BOT DRAG {id}: a Normal bot taps as before, so it waits");
+                    if (!hard || id != HeroId.Knut) continue;
+                    bool caught = false; // the whole way: the Hard bot Knut hooks the hero 5 tiles off
+                    for (int k = 0; k < 240 && !caught; k++) { m.Step(PlayerInput.None); foreach (var ev in m.Events) if (ev.Type == EventType.Pull && ev.A == p && ev.B == e) caught = true; }
+                    Check(caught, "BOT DRAG Knut: a Hard bot hooks an enemy hero 5 tiles off (the tap's ring is 2.3)");
+                }
+            }
+            // a hero and a minion both in Ragn's reach: the Hard bot leaps at the hero, never the minion
+            for (int seed = 1; seed <= 6; seed++)
+            {
+                var m = MakeBots(HeroId.Ragn, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Blast, HeroId.Bonk, HeroId.Kugg }, Difficulty.Hard, seed);
+                var p = m.Player; var e = m.Foe(HeroId.Blast);
+                Place(p, x, y); Place(e, x, y - 2.5f); m.AddStatus(e, St.Stun, 999); p.Charge = p.HDef.MaxCharge;
+                var mn = m.NewMinion(MinionKind.Melee, e.Team, x - 1.2f, y); m.AddStatus(mn, St.Stun, 999);
+                Check(p.Bot.OneTapDrag(out float ang, out float k) && Toward(ang, down) && Math.Abs(k * DragRing0(m, HeroId.Ragn) - 2.5f) < 0.3f, $"BOT DRAG Ragn (seed {seed}): the leap goes at the hero, not the minion beside him ({ang:0.00} rad, k {k:0.00})");
+            }
+            // Moa: the field onto the most hurt ally in her ring, not a random one
+            {
+                var m = MakeBots(HeroId.Moa, new[] { HeroId.Knut, HeroId.Fenn }, new[] { HeroId.Blast, HeroId.Bonk, HeroId.Kugg }, Difficulty.Hard, 5);
+                var p = m.Player; var hurt = m.Heroes.Find(u => u.Hero == HeroId.Knut && u.Team == p.Team); var fine = m.Heroes.Find(u => u.Hero == HeroId.Fenn && u.Team == p.Team);
+                Place(p, x, y); Place(hurt, x, y - 2); Place(fine, x - 2, y); hurt.Hp = hurt.MaxHp * 0.3f; fine.Hp = fine.MaxHp * 0.9f;
+                Check(p.Bot.OneTapDrag(out float ang, out float k) && Toward(ang, down) && Math.Abs(k * DragRing0(m, HeroId.Moa) - 2) < 0.05f, $"BOT DRAG Moa: the field goes onto the hurt ally ({ang:0.00} rad, k {k:0.00})");
+                hurt.Hp = hurt.MaxHp; p.Hp = p.MaxHp * 0.2f;
+                Check(p.Bot.OneTapDrag(out ang, out k) && k == 0, "BOT DRAG Moa: hurt herself, the field goes where she stands");
+            }
+        }
+        static float DragRing0(Match m, HeroId id) => m.DragRing(id);
     }
 }

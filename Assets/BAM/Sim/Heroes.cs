@@ -799,7 +799,7 @@ namespace BAM.Sim
 
         /// <summary>Does a tower (either team's) stand on the straight line from h to u before the shot (half wide) reaches u's body? A tapped
         /// straight special never picks a target hidden behind the base, so the tap is not spent on the tower.</summary>
-        bool TowerInWay(Unit h, Unit u, float half)
+        internal bool TowerInWay(Unit h, Unit u, float half) // internal: the bots' drag aim (BotSpecial.DragHero)
         {
             float dx = u.X - h.X, dy = u.Y - h.Y, d = SimMath.Hypot(dx, dy);
             if (d < 1e-4f) return false;

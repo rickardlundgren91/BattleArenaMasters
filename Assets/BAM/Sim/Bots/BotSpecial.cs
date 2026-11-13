@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace BAM.Sim
 {
     // When a bot fires its special, tap or drag, and how it steps out of shots and red warnings (old SimAI.cs aiSpecialWanted,
-    // sureShot, dodgeVector; SimHeroes6.cs newHeroSpecialWanted; SimSpecials2.cs v2Wanted; SimBotDrag.cs).
+    // sureShot, dodgeVector; SimHeroes6.cs newHeroSpecialWanted; SimSpecials2.cs v2Wanted; SimBotDrag.cs). In the one-tap game Gold,
+    // Platinum and Ultra bots drag the one special by hand as a player may (OneTapDrag, bot audit 2026-11-13).
     public sealed partial class BotBrain
     {
         // ---------- who is in reach ----------
@@ -60,6 +61,10 @@ namespace BAM.Sim
                     if ((retreat || danger) && HpR(h) < 0.35f) return Foes(5, true, false, l) > 0;
                     return !retreat && Foes(r, true, false, l) > 0;
                 }
+                // a long shot: Gold, Platinum and Ultra drag Knut's hook, Bram's hammer and Tyra's bolt at a hero past the white ring, as a
+                // player may (bot audit 2026-11-13, Rickard "Se om det är fel på fler bottar som med Knut" ... "ja bygg ... den bot fixen":
+                // the bots only tapped, so on Hard a hero stood in the long reach and out of the ring 3.6-4.9 s a minute with it ready)
+                if (DragTier && M.DragAimOn && !retreat && DragHero(out bool far) != null && far) return true;
                 if (!M.TapHasTarget(h)) return false;
                 // Kugg's Anchor roots him for up to 10 s (Hero7.cs): ROI17's old AI (SimAI AI_Joker) deployed above 60 % health with an
                 // enemy hero within 7 tiles or 4 enemies in reach, never to escape. The bot waits for KuggAnchorStocks (he may anchor from
@@ -298,10 +303,80 @@ namespace BAM.Sim
             return false;
         }
 
+        // ---------- the one-tap game's drag (bot audit 2026-11-13) ----------
+        // A player may drag SPECIAL to aim the one special by hand (Rules.DragAimSpecial, protocol 58); until this audit the bots only
+        // tapped, at a random enemy in the white ring. So they never threw Knut's hook, Bram's hammer or Tyra's bolt at a hero past the
+        // ring, though the forms fly 7, 8 and 9 tiles; spent 20-42 % of their casts on a minion when they wanted the special for a hero
+        // (Ragn worst: as many leaps on minions as on heroes); and Moa put her field on a random ally, reaching the most hurt one 78 %
+        // of the time. Gold, Platinum and Ultra now drag as a player who aims would; Bronze and Silver (Easy, Normal) tap as before.
+        // Both teams alike (BOTS SAME BRAIN). Hard bots, 2400 matches: Ragn's leaps on heroes 9 200 -> 13 200, Moa's field on the most hurt
+        // ally 78 -> 91 %, Tyra 51 -> 61 % (her long bolt; 62 % in 9600 matches with the whole review), the others within 5 points.
+
+        /// <summary>How far a drag sends h's special at a hero: Knut's hook, Bram's hammer and Tyra's bolt their own length; the others stop
+        /// at the white ring, as the tap (OneTap.DragRing, DragShare).</summary>
+        static float LongReach(HeroId id) => id == HeroId.Knut ? KnutS.HookDistance : id == HeroId.Bram && Match.SilverOn ? BramS.LineReach : id == HeroId.Tyra ? TyraS.Length : Match.TapReach(id);
+
+        /// <summary>The enemy hero a Gold/Platinum/Ultra bot drags its special at: the lowest one the form reaches (half a tile short of a
+        /// long form's end) with a clear line, a straight form with no base and nothing in front that stops it (Bram's hammer flies through
+        /// every enemy); far = past the white ring. Null when none.</summary>
+        Unit DragHero(out bool far)
+        {
+            var h = H; far = false; float ring = Match.TapReach(h.Hero), reach = Math.Max(ring, LongReach(h.Hero) - 0.5f);
+            bool line = h.Hero == HeroId.Knut || h.Hero == HeroId.Bram || h.Hero == HeroId.Tyra || h.Hero == HeroId.Tikta;
+            float w = h.Hero == HeroId.Knut ? KnutS.HookRadius : h.Hero == HeroId.Bram ? BramS.LineWidth * 0.5f : h.Hero == HeroId.Tyra ? TyraS.Hitbox : TiktaS.LineHitbox;
+            var hs = FoeHeroes(h, reach); Unit t = null;
+            for (int i = 0; i < hs.Count; i++)
+            {
+                var e = hs[i];
+                if (!M.Map.LosClear(h, e)) continue;
+                if (!line && Dist(h, e) > ring + e.R) continue; // a placed form lands at most at the white ring
+                if (line && (M.TowerInWay(h, e, w) || h.Hero != HeroId.Bram && !LineFree(e, w, Match.PassesMinions(h.Hero)))) continue;
+                if (t == null || e.Hp < t.Hp) t = e;
+            }
+            if (t != null) far = Dist(h, t) > ring + t.R;
+            return t;
+        }
+
+        /// <summary>A Gold/Platinum/Ultra bot's drag of the one special: at the lowest enemy hero the form reaches (DragHero), led where it
+        /// lands later (Knut's hook and Tyra's bolt by their flight, Tikta's needles too, Blast's bomb by its 1 s, Nässla's thicket till it
+        /// roots, Ragn's leap by its warning, as his tap); Bram's hammer straight at the hero (a led line got walked into and stepped out
+        /// of by Hard bots, hero review 2026-11-13); Moa's field onto the most hurt ally hero in her ring. False: the tap. Internal for Tests/Sim.</summary>
+        internal bool OneTapDrag(out float ang, out float k)
+        {
+            ang = float.NaN; k = 1; var h = H;
+            if (!DragTier || !M.DragAimOn || !Match.CanDragAim(h.Hero)) return false;
+            float ring = Math.Max(0.01f, M.DragRing(h.Hero)), tele = M.TeleOn ? Match.TeleTime(h.Hero) : 0;
+            if (h.Hero == HeroId.Moa)
+            {
+                var a = M.MostHurtAlly(h, Match.TapReach(HeroId.Moa));
+                if (a == null) return false;
+                if (a == h) { ang = h.Facing; k = 0; return true; } // her own spot
+                ang = AngTo(a.X, a.Y); k = SimMath.Clamp(Dist(h, a) / ring, 0, 1); return true;
+            }
+            var t = DragHero(out _);
+            if (t == null) return false;
+            float ax = t.X, ay = t.Y;
+            switch (h.Hero)
+            {
+                case HeroId.Knut: M.LeadAim(h, t, Match.Flight.Linear, tele, KnutS.OutSpeed, out ax, out ay); break;
+                case HeroId.Tyra: M.LeadAim(h, t, Match.Flight.Linear, tele + TyraS.Windup, TyraS.Speed, out ax, out ay); break;
+                case HeroId.Tikta: M.LeadAim(h, t, Match.Flight.Linear, tele, TiktaS.Speed, out ax, out ay); break;
+                case HeroId.Blast: M.LeadAim(h, t, Match.Flight.Const, tele + BlastS.Delay, 0, out ax, out ay); break;
+                case HeroId.Nassla: M.LeadAim(h, t, Match.Flight.Const, tele + NasslaS.Warn, 0, out ax, out ay); break;
+                case HeroId.Ragn: M.LeadAim(h, t, Match.Flight.Const, tele, 0, out ax, out ay); break;
+            }
+            ang = AngTo(ax, ay); k = SimMath.Clamp(Hyp(ax - h.X, ay - h.Y) / ring, 0, 1);
+            return true;
+        }
+
         /// <summary>The bot's cast: the drag form when it is the better play (and works), else the tap.</summary>
         bool BotCast(bool dz)
         {
-            if (M.OneTap) return M.TryTapSpecial(H); // one special, tapped like a player (OneTap.cs)
+            if (M.OneTap)
+            {   // the one special: Gold, Platinum and Ultra drag it by hand where a player would (OneTapDrag), else the tap, as every level
+                if (OneTapDrag(out float da, out float dk) && M.TryAimSpecial(H, da, dk)) return true;
+                return M.TryTapSpecial(H);
+            }
             if (DragPlan(dz, out float a, out float k) && M.TryCastSpecial(H, a, k)) return true;
             return M.TryCastSpecial(H, float.NaN, 0);
         }
