@@ -19,11 +19,11 @@ namespace BAM.Art.Editor
         bool IsClip => assetPath.Contains("/Anim/");
         /// <summary>The bodies whose cloth or hair swings (ClothSway): they are imported with Read/Write on so the game can find the
         /// cloth's vertices and add its spring bones once. Fenn's Original body (cape, tabard), Tyra (ponytail), Bonk (loincloth,
-        /// hair), Ragn (tail), Nässla (tunic), Clay-Fenn (panels, plume), Tikta (front panel, scarf ends), Moa (front panel).</summary>
+        /// hair), Ragn (tail), Nässla (tunic), Tikta (front panel, scarf ends), Moa (front panel).</summary>
         static bool ClothModel(string path) => path == ModelsDir + "FennOriginal/Fenn.fbx" || path == ModelsDir + "Tyra/Tyra.fbx"
             || path == ModelsDir + "Bonk/Bonk.fbx" || path == ModelsDir + "Ragn/Ragn.fbx"
             || path == ModelsDir + "Nassla/Nassla.fbx"
-            || path == ModelsDir + "Fenn/Fenn.fbx" || path == ModelsDir + "Tikta/Tikta.fbx" || path == ModelsDir + "Moa/Moa.fbx";
+            || path == ModelsDir + "Tikta/Tikta.fbx" || path == ModelsDir + "Moa/Moa.fbx";
 
         // Rickard's arena pictures repeat across the floor and walls; 512 is plenty at the match camera's distance.
         void OnPreprocessTexture()
@@ -205,7 +205,7 @@ namespace BAM.Art.Editor
             // made for an anchor hanging from the fist: Fenn's sword stood 35-60 degrees up at every blow (ANIM-21, Unity run 2), so he
             // chops down with Bonk's one-handed overhead strike from 12 % as Bram does (the hammer meets the target 15 degrees down),
             // his shield staying in the left hand (Rickard's pick 2026-10-29)
-            new Spec { Hero = "Fenn", Model = "Fenn/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.46f, Start = 0.12f },
+            new Spec { Hero = "Fenn", Model = "FennOriginal/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.46f, Start = 0.12f },
             // Tyra stands relaxed with the bow down (Moa's idle) in the menu and the match and raises it only to shoot (Rickard
             // 2026-10-27: her drawn-bow IdleBow in the menu "precis samma som när hon är i spelet"; old Speltest's Home had her in a
             // relaxed idle too). Since 2026-10-30 her own relaxed idle: Rickard's Mixamo Breathing Idle (9.9 s), no longer Moa's;
@@ -267,21 +267,10 @@ namespace BAM.Art.Editor
             new Spec { Hero = "Ravna", Model = "Ravna/Ravna", Idle = "Moa/Anim/Idle", Run = "Ravna/Anim/Run", Attack = "Ravna/Anim/Attack1", Cast = "Ravna/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.8f, Release = 0.38f },
         };
 
-        // Fenn's two bodies (Rickard 2026-10-29: "testa att ta in den bättre modellen av fenn som bugga innan"): the Original
-        // (Models/FennOriginal, his Meshy body rigged in Mixamo, with the right leg's ankle and foot weights mirrored from the left
-        // since Mixamo had put that ankle on the toes) or the Clay body (Models/Fenn). Original unless BAM > Art > Fenn: Clay is
-        // picked on this computer; the choice is remembered per computer and the hero list is built again at once.
-        const string FennClayPref = "BAM.Art.FennClay";
-        static string ModelOf(Spec s) => s.Hero == "Fenn" && !EditorPrefs.GetBool(FennClayPref, false) ? "FennOriginal/Fenn" : s.Model;
-
-        [MenuItem("BAM/Art/Fenn: Original")]
-        static void FennOriginal() { EditorPrefs.SetBool(FennClayPref, false); Rebuild(); }
-        [MenuItem("BAM/Art/Fenn: Original", true)]
-        static bool FennOriginalCheck() { Menu.SetChecked("BAM/Art/Fenn: Original", !EditorPrefs.GetBool(FennClayPref, false)); return true; }
-        [MenuItem("BAM/Art/Fenn: Clay")]
-        static void FennClay() { EditorPrefs.SetBool(FennClayPref, true); Rebuild(); }
-        [MenuItem("BAM/Art/Fenn: Clay", true)]
-        static bool FennClayCheck() { Menu.SetChecked("BAM/Art/Fenn: Clay", EditorPrefs.GetBool(FennClayPref, false)); return true; }
+        // Fenn has one body, the Original (Models/FennOriginal, his Meshy body rigged in Mixamo, the right ankle and foot weights
+        // mirrored from the left since Mixamo had put that ankle on the toes). The Clay body and the BAM > Art > Fenn menu were removed
+        // 2026-11-13 (Rickard: "ta bort clay"; his Unity had Original picked). His clips stay in Models/Fenn/Anim.
+        static string ModelOf(Spec s) => s.Model;
 
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
         // the hero list was not built yet on this computer.
