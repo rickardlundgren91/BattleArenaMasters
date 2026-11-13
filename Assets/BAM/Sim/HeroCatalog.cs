@@ -26,8 +26,8 @@ namespace BAM.Sim
     public static class HeroCatalog
     {
         /// <summary>The heroes in the game now (All). Bonk joined 2026-10-26 once his model and views were in, Kugg 2026-11-09; Hilde and
-        /// Oaken (HeroId 8 and 9) wait in Coming for theirs.</summary>
-        public const int Count = 11;
+        /// Oaken (HeroId 8 and 9) wait in Coming for theirs; Ravna back in 2026-11-14.</summary>
+        public const int Count = 12;
 
         /// <summary>Is this HeroId one of the heroes in the game (All)? HeroIds are not contiguous since Kugg (10) went in before Hilde (8)
         /// and Oaken (9), so a number below Count is not enough.</summary>
@@ -87,16 +87,6 @@ namespace BAM.Sim
                 SpecialName = "Thunder Judgement", SpecialDesc = "Three lightning strikes fall on random enemies in his range, each after a short red warning. Every enemy under one is hurt; heroes are stunned for 0.3 s.",
                 PassiveName = "Trance", PassiveDesc = "Every second he stands still with no enemy in reach he gathers a step, up to 3. His next attack deals 40% more per step; with all 3 it also jumps to another enemy close by.",
                 Difficulty = 3 },
-            // Ravna (Øli's crow druid, ABC2's Ron): in All on 2026-11-12, back to a preview for 0.4.1 (Rickard 2026-11-12: "ravna funkar inte men vi lugnar oss med henne")
-            new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false, Preview = true,
-                // Night Flight + Restless = ABC2's Ron (Rickard 2026-11-11 "ron blir ravna"); the Crow Flock texts stay for RavnaS.NightFlight = false
-                SpecialName = RavnaS.NightFlight ? "Night Flight" : "Crow Flock", SpecialDesc = RavnaS.NightFlight
-                    ? "Turns into a flock of crows for 2.2 s that flies the way she runs, through walls, and can be steered with the joystick. No aiming. As a flock she cannot be hit; every enemy she flies through is torn once and slowed by 30% for 1.5 s."
-                    : "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
-                PassiveName = RavnaS.NightFlight ? "Restless" : "Crow's Eye", PassiveDesc = RavnaS.NightFlight
-                    ? "Running charges her special: the ring fills as she moves, not only when she hits."
-                    : "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
-                Difficulty = 2 },
         };
 
         /// <summary>Whether HERO TEST also lists the Preview heroes waiting in Coming (Ragn, Nässla, Skrall, Ravna). Only in the Unity
@@ -192,6 +182,16 @@ namespace BAM.Sim
                 // the one-tap text, so the hold card ends with the drag line like every aimable hero's (hero review 2026-11-13)
                 OneTapDesc = "Tap: throws a seed pod at a random enemy in her range. A moment later a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.",
                 PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
+                Difficulty = 2 },
+            // Ravna (Øli's crow druid, ABC2's Ron): in All on 2026-11-12, a preview again, back in All 2026-11-14 with her V2 body (Rickard: "har du fixat ravena också så lägg in henne"); open for all like Ragn and Nässla
+            new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false,
+                // Night Flight + Restless = ABC2's Ron (Rickard 2026-11-11 "ron blir ravna"); the Crow Flock texts stay for RavnaS.NightFlight = false
+                SpecialName = RavnaS.NightFlight ? "Night Flight" : "Crow Flock", SpecialDesc = RavnaS.NightFlight
+                    ? "Turns into a flock of crows for 2.2 s that flies the way she runs, through walls, and can be steered with the joystick. No aiming. As a flock she cannot be hit; every enemy she flies through is torn once and slowed by 30% for 1.5 s."
+                    : "Turns into a flock of crows and flies up to 5.5 tiles straight at a random enemy in reach. As a flock she cannot be hit, and every enemy she flies through is torn at once.",
+                PassiveName = RavnaS.NightFlight ? "Restless" : "Crow's Eye", PassiveDesc = RavnaS.NightFlight
+                    ? "Running charges her special: the ring fills as she moves, not only when she hits."
+                    : "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
                 Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,
                 SpecialName = "Honey Rush", SpecialDesc = "Tap: shields the ally hero with the lowest health. Drag: a honey field that gives each ally hero in it a smaller shield. Shielded heroes run faster for a moment, and the shield blocks stuns and slows.",
