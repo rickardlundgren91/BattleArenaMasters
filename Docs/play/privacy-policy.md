@@ -1,6 +1,6 @@
 # Privacy Policy – Battle Arena Masters
 
-_Last updated: 9 November 2026_
+_Last updated: 13 November 2026_
 
 Battle Arena Masters ("BAM", "the game") is a mobile game made by **BAM Games** (Rickard Lundgren, Sweden; "we", "us"), who is responsible for the data described here.
 Questions about this policy or your data: **support@battlearenamasters.com**.
@@ -71,7 +71,7 @@ Friends, Lobby and Relay) as our game server.
 - **Match recordings:** the game keeps a small recording of each match you play: the match's setup and every player's
   controls (where they moved and aimed, and when they used their skills), a few kB, with no names. Once you are signed in,
   the recordings are sent to our server, where they are stored without your player ID or name, so they cannot be tied to
-  you. We use them to teach the bots to play more like real players. Recordings are deleted after 90 days.
+  you. We use them to teach the bots to play more like real players. Recordings are deleted from our server within 14 days.
 - **Friends:** your friends, the friend requests you send and receive, and the players you block.
 - **Reports:** if you report a player, we store your player ID, theirs, the reason you picked (rude name, cheating or
   something else) and the time. If someone reports you, the same is stored about that report.
@@ -93,7 +93,7 @@ can see them on the Top 100 or on your profile. Reports and blocks are never sho
 interest in fair play and in handling reports of abuse (Article 6(1)(f)).
 
 **How long:** as long as your account exists. The note of which players were in a match against other players is deleted
-about a day after the match. Match recordings are deleted after 90 days. When you delete your account, your player name, totals, match history, friends and your
+about a day after the match. Match recordings are deleted from our server within 14 days. When you delete your account, your player name, totals, match history, friends and your
 place on the Top 100 are deleted. Reports you sent about other players may be kept for up to 12 months so that repeated
 abuse can be handled.
 
