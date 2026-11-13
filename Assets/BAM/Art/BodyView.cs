@@ -154,6 +154,9 @@ namespace BAM.Art
         float deathT = -1f, spawnT = -1f, vis = 1f, ghostPulse;
         int lastQuality = -1;
         bool fading, renderersOn = true;
+        // a minion (ArtKit.Body calls MinionLook): its side's tint on the whole figure, and its bar only once it is hurt
+        bool minion;
+        Color tint = Color.white;
         Color flashColor = Color.white;
         float ownT = -1f, ownLen = 0.15f, ownPeak; // the player's own hit: a white flash over the red blink (PlayOwnHit)
         bool flashLit;                             // the emission is not black (a flash is showing or just ended)
@@ -886,7 +889,28 @@ namespace BAM.Art
             ApplyLook();
         }
 
-        public override void SetHealth(float hp01, float shield01) { hp = hp01; bar.Set(hp01, shield01); }
+        public override void SetHealth(float hp01, float shield01) { hp = hp01; bar.Set(hp01, shield01); bar.Visible = BarOn; }
+
+        // The bar: a minion's only once it has taken damage, as in Speltest (Hud.drawMinion: if (hurt) hpBar), so a full wave is not
+        // a row of full bars (review 2026-11-13, nr 5: 40 % of the bars on screen were full-health minions); none at all while the
+        // match intro flies in (ArtKit.BarsHidden; nr 11: the bars sat between the heroes' name plates)
+        bool BarOn => vis > 0.01f && !dead && !Preview && !ArtKit.BarsHidden && (!minion || (hp >= 0f && hp < 0.999f));
+
+        // ABC2 View3DCreeps CREEP_TINT: the whole figure takes 40 % of its side's colour (ours blue, theirs red) "so lanes read at a
+        // glance". The rebuild drew both sides' goblins alike, only the bar told them apart (review 2026-11-13, nr 4). The view's Team
+        // is already the side as the player sees it (MatchViews.Side), so the online top team sees its own minions blue too.
+        static readonly Color CreepAlly = new Color(0.35f, 0.8f, 1f), CreepEnemy = new Color(1f, 0.32f, 0.36f);
+        const float CreepTint = 0.4f;
+
+        internal void MinionLook(int team)
+        {
+            minion = true;
+            tint = Color.Lerp(Color.white, team == Teams.Player ? CreepAlly : CreepEnemy, CreepTint);
+            for (int i = 0; i < mats.Length; i++)
+                if (System.Array.IndexOf(fadeMats, mats[i]) < 0) mats[i].SetColor(ArtMaterials.BaseColor, tint);
+            fading = true; // ApplyLook sets the materials again, the fading ones with the tint
+            ApplyLook();
+        }
         public override void SetLevel(int level) { } // the level badge is the HUD's (HudOverhead), over the bar's left end
         public override void SetMaxHp(float maxHp) => bar.SetMaxHp(maxHp);
         public override void SetEnergy(float charge01, bool ready) => bar.SetEnergy(charge01, ready);
@@ -989,7 +1013,7 @@ namespace BAM.Art
             }
             decalR.enabled = on && !dead && !Preview;
             if (towerGlow != null) towerGlow.gameObject.SetActive(on && !dead && !Preview);
-            bar.Visible = vis > 0.01f && !dead && !Preview;
+            bar.Visible = BarOn;
             status.Visible = vis > 0.01f && !dead && !Preview;
             if (!on) return;
             if (def.Ghost)
@@ -1006,7 +1030,7 @@ namespace BAM.Art
             bool wantFade = a < 0.99f;
             if (wantFade)
             {
-                Color c = Spectral ? new Color(SpectralFade.r, SpectralFade.g, SpectralFade.b, a) : new Color(1f, 1f, 1f, a);
+                Color c = Spectral ? new Color(SpectralFade.r, SpectralFade.g, SpectralFade.b, a) : new Color(tint.r, tint.g, tint.b, a);
                 for (int i = 0; i < fadeMats.Length; i++) fadeMats[i].SetColor(ArtMaterials.BaseColor, c);
                 if (!fading)
                 {
@@ -1033,6 +1057,7 @@ namespace BAM.Art
         {
             if (def == null) return; // a script reload in Play mode clears the view's state: stay still instead of throwing every frame
             float dt = Time.deltaTime * ArtKit.Slow; // in a hit-stop as slow as the rules' ticks, so the swing waits with its shot
+            bar.Visible = BarOn; // ArtKit.BarsHidden turns over without a call to the view
             if (lastQuality != ArtKit.QualityVersion)
             {
                 lastQuality = ArtKit.QualityVersion;

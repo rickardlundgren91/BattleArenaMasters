@@ -262,6 +262,7 @@ namespace BAM.Game
             SaveTrace();
             inMatch = false; paused = false;
             BAM.Art.ArtKit.SetSimClock(-1, 0f);
+            BAM.Art.ArtKit.BarsHidden = false;
             hud.End();
             intro.End(cam.Camera);
             views.Dispose();
@@ -331,6 +332,7 @@ namespace BAM.Game
             juice.Frame(frozen ? 0f : dt);
             if (intro.Active) intro.Frame(cam.Camera, frozen);
             else juice.Apply(cam.Camera);
+            BAM.Art.ArtKit.BarsHidden = intro.Active; // no health bars between the name plates while the intro flies in (review 2026-11-13, nr 11)
             BamAudio.SetListener(cam.Focus);
             hud.Frame(dt, paused || resultShown);
 

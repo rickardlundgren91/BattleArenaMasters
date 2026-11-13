@@ -187,6 +187,9 @@ namespace BAM.Art
 
     public static class ArtKit
     {
+        /// <summary>No health bars on the bodies (the match intro, GameFlow; review 2026-11-13, nr 11).</summary>
+        public static bool BarsHidden;
+
         static bool ready;
         static Transform root;
         static Light sun;
@@ -396,6 +399,7 @@ namespace BAM.Art
                 v.Pool = pool;
                 v.Preview = preview;
                 v.Build(def, team);
+                if (!preview && kindKey >= 10 && kindKey < 20) v.MinionLook(team); // CreateMinion's keys; kept with the view in its pool
             }
             v.InPool = false;
             v.IsHero = !preview && kindKey >= HeroKey && kindKey < PreviewKey;
