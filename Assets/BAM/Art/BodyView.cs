@@ -376,7 +376,7 @@ namespace BAM.Art
             graph = PlayableGraph.Create("BAM " + art.name);
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             var output = AnimationPlayableOutput.Create(graph, "Anim", anim);
-            bowHero = def.Gear != null && def.Gear == Weapons.For(HeroId.Tyra);
+            bowHero = def.Gear != null && (def.Gear == Weapons.For(HeroId.Tyra) || def.Gear == Weapons.For(HeroId.Tyra, true));
             cFour = art.RunFour != null ? src2.Length + (bowHero ? 1 : 0) : -1;
             mixer = AnimationMixerPlayable.Create(graph, src2.Length + (bowHero ? 1 : 0) + (cFour >= 0 ? 1 : 0));
             animOut = output;
@@ -1079,7 +1079,7 @@ namespace BAM.Art
             // cloth and hair last, after everything else has posed the body this frame
             if (imported && (IsHero || Preview) && clips != null && HeroIndex >= 0)
             {
-                if (!clothTried) { clothTried = true; cloth = ClothSway.For(anim, rends, HeroIndex); }
+                if (!clothTried) { clothTried = true; cloth = ClothSway.For(anim, rends, HeroIndex, def.Art != null && def.Art.V2); }
                 cloth?.Tick(dt, AnimFix.Cloth);
                 gear?.TickSway(dt, AnimFix.Cloth); // the cloth on the held props (Moa's shield and staff)
             }

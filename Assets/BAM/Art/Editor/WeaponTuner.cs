@@ -23,11 +23,16 @@ namespace BAM.Art.Editor
 
         void OnGUI()
         {
-            GearDef[] all = Weapons.All;
-            var names = new string[all.Length];
-            for (int i = 0; i < all.Length; i++) names[i] = ((HeroId)i).ToString();
-            hero = EditorGUILayout.Popup("Hero", Mathf.Clamp(hero, 0, all.Length - 1), names);
-            GearDef g = all[hero];
+            // the old bodies' entries first, then the V2 remakes' ("Knut V2", BAM > Art > Models V2)
+            GearDef[] all = Weapons.All, v2 = Weapons.AllV2;
+            int n1 = all.Length;
+            var names = new string[n1 + v2.Length];
+            for (int i = 0; i < n1; i++) names[i] = ((HeroId)i).ToString();
+            for (int i = 0; i < v2.Length; i++) names[n1 + i] = ((HeroId)i) + " V2";
+            hero = EditorGUILayout.Popup("Hero", Mathf.Clamp(hero, 0, names.Length - 1), names);
+            bool isV2 = hero >= n1;
+            int hi = isV2 ? hero - n1 : hero;
+            GearDef g = isV2 ? v2[hi] : all[hi];
             if (!Application.isPlaying)
                 EditorGUILayout.HelpBox("Press Play first: the sliders move the hero live on Home, the hero page and in a match.", MessageType.Info);
             if (g == null) { EditorGUILayout.HelpBox("This hero holds no weapon.", MessageType.None); return; }
@@ -49,7 +54,7 @@ namespace BAM.Art.Editor
                         // the run hold's flat side: the idle's vote, or turned half a turn about the shaft
                         int was = d.RunSign == 0 ? 0 : 1;
                         int pick = EditorGUILayout.Popup(new GUIContent("Walk: flip", "Turns the weapon half a turn about its shaft while the hero walks"), was, new[] { "No (as BAM picks)", "Yes, turned round" });
-                        if (pick != was) d.RunSign = pick == 0 ? 0 : -WalkVote(hero, w);
+                        if (pick != was) d.RunSign = pick == 0 ? 0 : -WalkVote(hi, w);
                     }
                     if (d.Menu.On)
                     {
@@ -109,6 +114,30 @@ namespace BAM.Art.Editor
                     EditorGUILayout.Slider("  forward", c.Offset.z, -0.5f, 0.5f));
             }
 
+            if (g.Worn != null)
+                for (int w = 0; w < g.Worn.Length; w++)
+                {
+                    // the parts worn on the body (capes, packs, the V2 remakes' accessories): placed on their bone, these move them live
+                    WornDef d = g.Worn[w];
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField(d.Model + " (on " + d.Bone + ")", EditorStyles.boldLabel);
+                    if (d.Wide > 0f) d.Wide = EditorGUILayout.Slider(new GUIContent("Size", "Size as a share of the distance between its two bones (the shoulders, the hips; along the forearm for a sleeve)"), d.Wide, 0.1f, 4f);
+                    else d.Height = EditorGUILayout.Slider(new GUIContent("Size", "Height as a share of the hero's height"), d.Height, 0.02f, 1.2f);
+                    d.Yaw = EditorGUILayout.Slider(new GUIContent("Turn round", "Degrees about the hero's up axis (180 = the other way round)"), d.Yaw, -180f, 180f);
+                    if (d.Sway > 0f || d.Model.Contains("cape") || d.Model.Contains("mantle") || d.Model.Contains("pelt") || d.Model.Contains("scarf") || d.Model.Contains("apron"))
+                        d.Sway = EditorGUILayout.Slider(new GUIContent("Swing", "Degrees it swings back at full run (0 = stiff)"), d.Sway, 0f, 45f);
+                    EditorGUILayout.LabelField("Extra turn (degrees about the hero's right, up, forward)");
+                    d.Turn = new Vector3(
+                        EditorGUILayout.Slider("  x", d.Turn.x, -180f, 180f),
+                        EditorGUILayout.Slider("  y", d.Turn.y, -180f, 180f),
+                        EditorGUILayout.Slider("  z", d.Turn.z, -180f, 180f));
+                    EditorGUILayout.LabelField("Place (share of the hero's height, from its bone)");
+                    d.At = new Vector3(
+                        EditorGUILayout.Slider("  right", d.At.x, -0.5f, 0.5f),
+                        EditorGUILayout.Slider("  up", d.At.y, -0.5f, 0.5f),
+                        EditorGUILayout.Slider("  forward", d.At.z, -0.5f, 0.5f));
+                }
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Arms", EditorStyles.boldLabel);
             g.ArmSpread = EditorGUILayout.Slider(new GUIContent("Arms out", "Degrees both upper arms turn out from the sides"), g.ArmSpread, 0f, 45f);
@@ -135,10 +164,10 @@ namespace BAM.Art.Editor
             EditorGUILayout.Space();
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Save", GUILayout.Height(28))) Save(all);
+                if (GUILayout.Button("Save", GUILayout.Height(28))) Save(all, v2);
                 if (GUILayout.Button("Reset " + names[hero], GUILayout.Height(28)))
                 {
-                    GearDef code = Weapons.CodeDefaults()[hero];
+                    GearDef code = (isV2 ? Weapons.CodeDefaultsV2() : Weapons.CodeDefaults())[hi];
                     if (code != null) WeaponTuning.Copy(WeaponTuning.From(names[hero], code), g);
                 }
             }
@@ -162,9 +191,9 @@ namespace BAM.Art.Editor
             EditorGUILayout.Slider(new GUIContent("  arm forward", "The upper arm forward (negative = back)"), v.y, -90f, 90f),
             EditorGUILayout.Slider(new GUIContent("  elbow bend", "More bend at the elbow (negative = straighter)"), v.z, -120f, 120f));
 
-        static void Save(GearDef[] all)
+        static void Save(GearDef[] all, GearDef[] v2)
         {
-            File.WriteAllText(FilePath, WeaponTuning.ToJson(all));
+            File.WriteAllText(FilePath, WeaponTuning.ToJson(all, v2));
             AssetDatabase.Refresh();
             Debug.Log("[BAM.Art] Weapon numbers saved to " + FilePath);
         }

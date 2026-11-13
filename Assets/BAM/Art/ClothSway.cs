@@ -54,6 +54,30 @@ namespace BAM.Art
             public bool Single;              // BackFlaps, Skirt: one spring for the whole flap (long hair, one piece), not one per side
             public bool FrontOnly;           // Skirt: only cloth in front of the hips (a single front panel; the seat behind stays put)
             public float Kick = 1f;          // how hard the hero's own moves push it (secondary action, Kick); 0 = never
+            public bool WithSpine;           // HipTail: the Spine bone counts as the hips too (V2 Ragn: Mixamo put his tail ~2/3 on Hips,
+                                             // ~1/4 on Spine; with Hips alone only 35 of ~126 tail vertices passed the 0.8 share test)
+            public bool WithHead;            // BackFlaps: the neck and head count as the torso too (V2 Nässla: her hanging hair is
+                                             // weighted to the shoulders, Spine2, Neck and Head together)
+        }
+
+        /// <summary>The 2026-11-13 remakes (HeroArt.V2, Art/ModelsV2): only cloth and hair that are part of the body shell; capes,
+        /// scarves and pelts are parts of their own there (Weapons.MakeV2, WornDef.Sway). Measured on the V2 FBX files (weights and
+        /// heights as shares of the height, bam-work/art/remake/&lt;hero&gt;/notes.md).</summary>
+        static Spec[] SpecsForV2(int hero)
+        {
+            switch (hero)
+            {
+                case 2: // Tyra: the ponytail behind her head, as on her old body (its lower part also carries some right-arm weight in the
+                        // V2 rig, so only what sits on the head and neck swings)
+                    return new[] { new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 30f, Drag = 0.06f } };
+                case 11: // Ragn: the wolf tail behind the hips, 0.36-0.50 of his height (the hips at about 0.42, so it reaches 0.08 above
+                         // them), out to 0.30 behind; on Hips and Spine together
+                    return new[] { new Spec { Kind = Kind.HipTail, Back0 = 0.12f, Back1 = 0.20f, Above = 0.09f, WithSpine = true, Hz = 2.2f, Damping = 0.38f, MaxAngle = 30f, Drag = 0.06f, Flare = 0.3f } };
+                case 12: // Nässla: her white hair hanging behind, 0.72-0.82 of her height (the hips at about 0.55), 0.10-0.13 behind,
+                         // lying close on her back: one spring that lifts it out and never in (testers 2026-11-13: the hair must swing)
+                    return new[] { new Spec { Kind = Kind.BackFlaps, Single = true, WithHead = true, Top0 = 0.27f, Top1 = 0.23f, Low = 0.15f, Back0 = 0.085f, Back1 = 0.115f, MaxSide = 0.11f, Hz = 2.3f, Damping = 0.4f, MaxAngle = 16f, Drag = 0.05f, Flare = 0.15f, Inward = 0f, Kick = 0.8f } };
+                default: return null;
+            }
         }
 
         static Spec[] SpecsFor(int hero, Mesh body)
@@ -170,14 +194,14 @@ namespace BAM.Art
         ClothSway(Spring[] s, Transform body) { springs = s; this.body = body; lastFwd = body.forward; }
 
         /// <summary>null when this hero has no cloth parts, or its model can't be read.</summary>
-        internal static ClothSway For(Animator an, Renderer[] rends, int heroIndex)
+        internal static ClothSway For(Animator an, Renderer[] rends, int heroIndex, bool v2 = false)
         {
             Spec[] specs = null;
             if (an == null || !an.isHuman || rends == null) return null;
             SkinnedMeshRenderer smr = null;
             for (int i = 0; i < rends.Length && smr == null; i++) smr = rends[i] as SkinnedMeshRenderer;
             if (smr == null || smr.sharedMesh == null) return null;
-            specs = SpecsFor(heroIndex, smr.sharedMesh);
+            specs = v2 ? SpecsForV2(heroIndex) : SpecsFor(heroIndex, smr.sharedMesh);
             if (specs == null) return null;
             Mesh src = smr.sharedMesh;
             if (!baked.TryGetValue(src, out Baked b))
@@ -377,6 +401,7 @@ namespace BAM.Art
                     int lSh = Idx(HumanBodyBones.LeftShoulder), rSh = Idx(HumanBodyBones.RightShoulder);
                     var set = new List<int> { hips };
                     foreach (int b in new[] { s1, s2, s3, lSh, rSh }) if (b >= 0) set.Add(b);
+                    if (sp.WithHead) foreach (int b in new[] { Idx(HumanBodyBones.Neck), head }) if (b >= 0) set.Add(b);
                     int[] setA = set.ToArray();
                     int parent = s3 >= 0 ? s3 : s2 >= 0 ? s2 : s1 >= 0 ? s1 : hips;
                     var sw = new float[n];
@@ -416,7 +441,8 @@ namespace BAM.Art
                     // a tail behind the hips: what sits on the hips, behind them and not up the back, hangs on one spring bone tied on
                     // at the rump (Ragn.fbx has the tail wholly on Hips)
                     Vector3 hp = At(hips), back = -fwd;
-                    int[] setA = { hips };
+                    int spn = Idx(HumanBodyBones.Spine);
+                    int[] setA = sp.WithSpine && spn >= 0 ? new[] { hips, spn } : new[] { hips };
                     Vector3 pivot = hp + back * (sp.Back0 * H) + up * (sp.PivotUp * H);
                     var sw = new float[n];
                     Vector3 sum = Vector3.zero; float ws = 0f;

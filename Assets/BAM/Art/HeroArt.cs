@@ -25,5 +25,8 @@ namespace BAM.Art
         /// <summary>Where in the attack clip (0..1) the swing starts; the frames before it are skipped (a clip whose wind-up first
         /// dips away from the resting pose).</summary>
         public float AttackStart;
+        /// <summary>The body is the 2026-11-13 remake (Art/ModelsV2/&lt;Hero&gt;): its own weapon and part table (Weapons.ForV2) and cloth
+        /// (ClothSway). BAM &gt; Art &gt; Models V2 switches each hero between the remake and the old body.</summary>
+        public bool V2;
     }
 }

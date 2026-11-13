@@ -196,6 +196,13 @@ namespace BAM.Art
         public float Flat = 1f;
         /// <summary>Degrees the part swings back about its top edge at full run (0 = rigid), with a soft spring.</summary>
         public float Sway;
+        /// <summary>Sway: the part hangs in front of the body (an apron flap), so it swings forward, away from the legs.</summary>
+        public bool Front;
+        /// <summary>Its +y (the mesh's height) laid along <see cref="From"/> to <see cref="To"/> in the bind pose, its origin on From's
+        /// joint plus <see cref="At"/>: a sleeve on a forearm (V2 Kugg's cannon).</summary>
+        public bool Along;
+        /// <summary>Degrees turned about the hero's right, up and forward after <see cref="Yaw"/> (Weapon Tuner "Extra turn").</summary>
+        public Vector3 Turn;
     }
 
     /// <summary>
@@ -206,8 +213,19 @@ namespace BAM.Art
     static class Weapons
     {
         static readonly GearDef[] byHero = WeaponTuning.Apply(Make());
+        // after byHero (static fields start in this order): the V2 table starts from Rickard's tuned old numbers
+        static readonly GearDef[] byHeroV2 = WeaponTuning.Apply(MakeV2(), WeaponTuning.V2);
 
         public static GearDef For(HeroId hero) => (int)hero < byHero.Length ? byHero[(int)hero] : null;
+
+        /// <summary>The gear for the hero's body: the V2 remake's own table (HeroArt.V2) or the old one.</summary>
+        public static GearDef For(HeroId hero, bool v2) => !v2 ? For(hero) : (int)hero < byHeroV2.Length ? byHeroV2[(int)hero] : null;
+
+        /// <summary>The V2 table, live (the Weapon Tuner's "&lt;Hero&gt; V2" entries).</summary>
+        internal static GearDef[] AllV2 => byHeroV2;
+
+        /// <summary>A fresh copy of the V2 numbers in this file, without its WeaponTune.json entries (the tuner's Reset).</summary>
+        internal static GearDef[] CodeDefaultsV2() => MakeV2();
 
         /// <summary>The live table every view reads each frame (the Weapon Tuner changes it in place).</summary>
         internal static GearDef[] All => byHero;
@@ -389,6 +407,122 @@ namespace BAM.Art
             return g;
         }
 
+        // The 2026-11-13 remakes (Art/ModelsV2, one shared art style), each with its own Tripo weapon and accessory parts
+        // (Resources/BAMArt/Props/v2_*, converted from ModelsV2/<Hero>/Parts/*.obj; bones from each hero's notes.md in
+        // bam-work/art/remake). The held weapons start from the old ones' numbers as Rickard tuned them (WeaponTune.json), so the
+        // holds he picked carry over; the worn parts are first guesses from the bones, to be tuned with BAM > Art > Weapon Tuner
+        // ("<Hero> V2"). Rickard 2026-11-13: "jag måste ju kunna spela dom så lägg in dom". No numbers of the match change.
+        static GearDef[] MakeV2()
+        {
+            GearDef[] old = byHero ?? WeaponTuning.Apply(Make());
+            GearDef[] g = Make();
+            for (int i = 0; i < g.Length; i++)
+                if (g[i] != null && old[i] != null) WeaponTuning.Copy(WeaponTuning.From(((HeroId)i).ToString(), old[i]), g[i]);
+            const HumanBodyBones Chest = HumanBodyBones.UpperChest, LArm = HumanBodyBones.LeftUpperArm, RArm = HumanBodyBones.RightUpperArm,
+                Hips = HumanBodyBones.Hips, LLeg = HumanBodyBones.LeftUpperLeg, RLeg = HumanBodyBones.RightUpperLeg, Head = HumanBodyBones.Head;
+
+            // Fenn: sword and round shield as before; his cape hangs from between the shoulder joints (made facing out at +z, so turned
+            // round onto his back) and swings back as he runs
+            GearDef f = g[(int)HeroId.Fenn];
+            f.Weapons[0].Model = "v2_fenn_sword";
+            f.Shield.Model = "v2_fenn_shield";
+            f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.42f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f } };
+
+            // Tyra: her new longbow in the left fist (turned a quarter in the conversion so its belly faces as the old bow's did), the
+            // quiver on her back, slanting over her right shoulder. Her V2 rig has all its finger bones, so her fingers play the clips
+            GearDef ty = g[(int)HeroId.Tyra];
+            ty.Weapons[0].Model = "v2_tyra_bow";
+            ty.StillFingers = false;
+            ty.Worn = new[] { new WornDef { Model = "v2_tyra_quiver", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0.03f, -0.2f, -0.08f), Turn = new Vector3(0f, 0f, -20f) } };
+
+            // Moa: the honey dipper staff and the honeycomb shield where her old ones were (her body keeps its own pauldrons, so the
+            // separate pauldron part is left out: notes.md, "use only if the fused ones bend badly")
+            GearDef m = g[(int)HeroId.Moa];
+            m.Weapons[0].Model = "v2_moa_staff";
+            m.Shield.Model = "v2_moa_shield";
+
+            g[(int)HeroId.Knut].Weapons[0].Model = "v2_knut_anchor";
+
+            // Tikta: the new needles in both fists; the chitin wing plate on her back (made from behind, so turned round), her scarf tails
+            // hanging down her back from the neck (a soft swing) and the spare-needle holster on her right thigh
+            GearDef tk = g[(int)HeroId.Tikta];
+            tk.Weapons[0].Model = "v2_tikta_needle"; tk.Weapons[1].Model = "v2_tikta_needle";
+            tk.Worn = new[]
+            {
+                new WornDef { Model = "v2_tikta_wings", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.14f, -0.07f), Yaw = 180f },
+                new WornDef { Model = "v2_tikta_scarf", Bone = HumanBodyBones.Neck, From = LArm, To = RArm, Height = 0.22f, At = new Vector3(0f, 0.03f, -0.06f), Flat = 0.7f, Sway = 20f },
+                new WornDef { Model = "v2_tikta_holster", Bone = RLeg, From = RLeg, To = HumanBodyBones.RightLowerLeg, Height = 0.12f, At = new Vector3(0.045f, -0.02f, 0f) },
+            };
+
+            // Blast: the new skull bomb (still thrown), and his bomb belt round the hips, as wide as twice the hip joints
+            GearDef bl = g[(int)HeroId.Blast];
+            bl.Weapons[0].Model = "v2_blast_bomb";
+            bl.Worn = new[] { new WornDef { Model = "v2_blast_belt", Bone = Hips, From = LLeg, To = RLeg, Wide = 2.3f, At = new Vector3(0f, 0.03f, 0f) } };
+
+            // Bonk: the new club on his shoulder as before; the wolf pelt over his shoulders (its top at the shoulder line, wolf head on
+            // his left, a little stiff swing) and the fang necklace on his chest; both came at Tripo's raw size and are scaled here
+            // from the distance between his shoulder joints
+            GearDef bo = g[(int)HeroId.Bonk];
+            bo.Weapons[0].Model = "v2_bonk_club";
+            bo.Worn = new[]
+            {
+                new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = 1.9f, At = new Vector3(0f, 0.07f, -0.02f), Flat = 0.8f, Sway = 8f },
+                new WornDef { Model = "v2_bonk_necklace", Bone = Chest, From = LArm, To = RArm, Wide = 0.85f, At = new Vector3(0f, -0.05f, 0.05f) },
+            };
+
+            // Bram: the new throwing hammer (still on his shoulder at rest); the rack of three spare hammers on his back (made facing
+            // +z, so turned round), the boar pauldron on his left shoulder and the leather apron flap over his thighs, swinging forward
+            GearDef br = g[(int)HeroId.Bram];
+            br.Weapons[0].Model = "v2_bram_hammer";
+            br.Worn = new[]
+            {
+                new WornDef { Model = "v2_bram_backrack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.08f), Yaw = 180f },
+                new WornDef { Model = "v2_bram_pauldron", Bone = LArm, From = LArm, Height = 0.11f, At = new Vector3(-0.01f, -0.02f, 0f) },
+                new WornDef { Model = "v2_bram_apronflap", Bone = Hips, From = LLeg, To = RLeg, Wide = 1.9f, At = new Vector3(0f, 0.04f, 0.06f), Flat = 0.7f, Sway = 8f, Front = true },
+            };
+
+            // Kugg (no weapon until now: the cannon was his arm): the rune cannon as a sleeve over his right forearm, muzzle past the
+            // fist where his shot leaves (1.46 forearms from the elbow, BodyView.MuzzleAt); the rune-engine backpack and the short cape
+            // on his back. The cape is a stiff part, so it gets a small spring
+            g[(int)HeroId.Kugg] = new GearDef
+            {
+                Worn = new[]
+                {
+                    new WornDef { Model = "v2_kugg_cannon", Bone = HumanBodyBones.RightLowerArm, From = HumanBodyBones.RightLowerArm, To = HumanBodyBones.RightHand, Along = true, Wide = 1.46f },
+                    new WornDef { Model = "v2_kugg_pack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.1f) },
+                    new WornDef { Model = "v2_kugg_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.32f, At = new Vector3(0f, 0.02f, -0.07f), Flat = 0.8f, Sway = 10f },
+                },
+            };
+
+            // Ragn (no weapon until now): his short forge hammer in the right fist, as it holds it; his tail sways from the body (ClothSway)
+            g[(int)HeroId.Ragn] = new GearDef { Weapons = new[] { new WeaponDef { Model = "v2_ragn_hammer", Len = 0.38f, Grip = 0.12f } } };
+
+            // Nässla: the new root staff held as before, the mushroom cap on her head and the basket on her back (her V2 body has
+            // neither built in)
+            GearDef n = g[(int)HeroId.Nassla];
+            n.Weapons[0].Model = "v2_nassla_staff";
+            n.Worn = new[]
+            {
+                new WornDef { Model = "v2_nassla_cap", Bone = Head, From = Head, Height = 0.14f, At = new Vector3(0f, 0.11f, 0f) },
+                new WornDef { Model = "v2_nassla_basket", Bone = Chest, From = LArm, To = RArm, Height = 0.22f, At = new Vector3(0f, -0.16f, -0.09f) },
+            };
+
+            // Ravna (on hold, Preview): talon daggers in both fists, the crow-skull mask on her head (beak turned to the front in the
+            // conversion), the mantle from her shoulders and the crow on her left shoulder
+            GearDef rv = g[(int)HeroId.Ravna];
+            rv.Weapons[0].Model = "v2_ravna_dagger"; rv.Weapons[1].Model = "v2_ravna_dagger";
+            rv.Worn = new[]
+            {
+                new WornDef { Model = "v2_ravna_mantle", Bone = Chest, From = LArm, To = RArm, Height = 0.55f, At = new Vector3(0f, 0.03f, -0.05f), Flat = 0.8f, Sway = 20f },
+                new WornDef { Model = "v2_ravna_mask", Bone = Head, From = Head, Height = 0.16f, At = new Vector3(0f, 0.06f, 0f) },
+                new WornDef { Model = "v2_ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = LArm, Height = 0.1f, At = new Vector3(-0.015f, 0.04f, -0.015f) },
+            };
+
+            // only the twelve remade heroes have a V2 body
+            g[(int)HeroId.Hilde] = null; g[(int)HeroId.Oaken] = null;
+            return g;
+        }
+
         // x and z of a shaft's centre line at height y (model units), from the vertices in a band round it; once per mesh (build time)
         static readonly Dictionary<Mesh, Vector2> shaftAxis = new Dictionary<Mesh, Vector2>();
         public static Vector3 ShaftAxis(Mesh m, float y)
@@ -414,6 +548,8 @@ namespace BAM.Art
     static class WeaponTuning
     {
         public const string ResourcePath = "BAMArt/WeaponTune";
+        /// <summary>Added to the hero's name for the V2 table's entries in the file ("KnutV2").</summary>
+        public const string V2 = "V2";
 
         [System.Serializable]
         internal sealed class File { public Hero[] Heroes; }
@@ -428,6 +564,15 @@ namespace BAM.Art
             public Vector3 RightArm, LeftArm; // 0 (an older file) = the clip's arms
             public Shield Shield; // Fenn's and Moa's; Dia 0 (an older file) leaves the code's numbers
             public Cannon Cannon; // Hilde's; Len 0 (an older file, or a hero without one) leaves the code's numbers
+            public Worn[] Worn; // the worn parts' places (V2); missing in an older file
+        }
+
+        [System.Serializable]
+        internal sealed class Worn
+        {
+            public float Height, Wide, Sway;
+            public Vector3 At, Turn;
+            public float Yaw;
         }
 
         [System.Serializable]
@@ -454,7 +599,9 @@ namespace BAM.Art
             public float MenuUp, MenuOut; // the menu's own hold (Tyra's bow on Home); MenuUp 0 (an older file) leaves the code's
         }
 
-        public static GearDef[] Apply(GearDef[] g)
+        public static GearDef[] Apply(GearDef[] g) => Apply(g, "");
+
+        public static GearDef[] Apply(GearDef[] g, string suffix)
         {
             var asset = Resources.Load<TextAsset>(ResourcePath);
             if (asset == null) return g;
@@ -464,7 +611,7 @@ namespace BAM.Art
                 if (f != null && f.Heroes != null)
                     foreach (Hero h in f.Heroes)
                         for (int i = 0; i < g.Length; i++)
-                            if (g[i] != null && ((HeroId)i).ToString() == h.Name) Copy(h, g[i]);
+                            if (g[i] != null && ((HeroId)i).ToString() + suffix == h.Name) Copy(h, g[i]);
             }
             catch (System.Exception e) { Debug.LogWarning("[BAM.Art] Could not read WeaponTune.json: " + e.Message); }
             return g;
@@ -478,6 +625,13 @@ namespace BAM.Art
             d.CarryAt = h.CarryAt; d.Elbow = h.Elbow;
             if (d.Shield != null && h.Shield != null && h.Shield.Dia > 0f) { d.Shield.Dia = h.Shield.Dia; d.Shield.Twist = h.Shield.Twist; d.Shield.Shift = h.Shield.Shift; }
             if (d.Cannon != null && h.Cannon != null && h.Cannon.Len > 0f) { d.Cannon.Len = h.Cannon.Len; d.Cannon.Offset = h.Cannon.Offset; d.Cannon.Turn = h.Cannon.Turn; }
+            if (h.Worn != null && d.Worn != null)
+                for (int w = 0; w < h.Worn.Length && w < d.Worn.Length; w++)
+                {
+                    Worn s = h.Worn[w]; WornDef t = d.Worn[w];
+                    if (s == null || (s.Height <= 0f && s.Wide <= 0f)) continue;
+                    t.Height = s.Height; t.Wide = s.Wide; t.Sway = s.Sway; t.At = s.At; t.Turn = s.Turn; t.Yaw = s.Yaw;
+                }
             if (h.Weapons == null || d.Weapons == null) return;
             for (int w = 0; w < h.Weapons.Length && w < d.Weapons.Length; w++)
             {
@@ -492,6 +646,15 @@ namespace BAM.Art
             var h = new Hero { Name = name, ArmSpread = d.ArmSpread, CarryAt = d.CarryAt, Elbow = d.Elbow, RightArm = d.RightArm, LeftArm = d.LeftArm };
             if (d.Shield != null) h.Shield = new Shield { Dia = d.Shield.Dia, Twist = d.Shield.Twist, Shift = d.Shield.Shift };
             if (d.Cannon != null) h.Cannon = new Cannon { Len = d.Cannon.Len, Offset = d.Cannon.Offset, Turn = d.Cannon.Turn };
+            if (d.Worn != null)
+            {
+                h.Worn = new Worn[d.Worn.Length];
+                for (int w = 0; w < d.Worn.Length; w++)
+                {
+                    WornDef s = d.Worn[w];
+                    h.Worn[w] = new Worn { Height = s.Height, Wide = s.Wide, Sway = s.Sway, At = s.At, Turn = s.Turn, Yaw = s.Yaw };
+                }
+            }
             int n = d.Weapons != null ? d.Weapons.Length : 0;
             h.Weapons = new Weapon[n];
             for (int w = 0; w < n; w++)
@@ -502,11 +665,12 @@ namespace BAM.Art
             return h;
         }
 
-        /// <summary>Every hero's current numbers as the file's text.</summary>
-        internal static string ToJson(GearDef[] g)
+        /// <summary>Every hero's current numbers as the file's text, the V2 table's after the old one's ("KnutV2").</summary>
+        internal static string ToJson(GearDef[] g, GearDef[] v2 = null)
         {
             var list = new List<Hero>();
             for (int i = 0; i < g.Length; i++) if (g[i] != null) list.Add(From(((HeroId)i).ToString(), g[i]));
+            if (v2 != null) for (int i = 0; i < v2.Length; i++) if (v2[i] != null) list.Add(From(((HeroId)i).ToString() + V2, v2[i]));
             return JsonUtility.ToJson(new File { Heroes = list.ToArray() }, true);
         }
     }
@@ -555,7 +719,7 @@ namespace BAM.Art
         const float DeathLetGo = 0.25f;
         float figH;
         // worn parts (GearDef.Worn): their transforms, rest turns and swing springs
-        WornDef[] worn; Transform[] wornT; Quaternion[] wornRest; float[] swayA, swayV; float swayClock;
+        WornDef[] worn; Transform[] wornT; Quaternion[] wornRest; Vector3[] swayAx; float[] swayA, swayV; float swayClock;
         // thrown: when the weapon leaves the hand, how long it stays away, and whether a weapon that is not Thrown goes too (Throw)
         float hideIn = -1f, backIn = -1f, awayFor = AwayFor;
         bool hideHeld;
@@ -666,10 +830,15 @@ namespace BAM.Art
             return r;
         }
 
+        // where each worn part was placed from, kept in its bone's own space so the Weapon Tuner can move it live (PlaceWorn)
+        struct WornBase { public Vector3 FromL; public Quaternion RootL, LayL; public float Span, Ps, H, MeshX, MeshY; public Vector3 At, Turn; public float Yaw, Height, Wide; }
+        WornBase[] wornB;
+
         void AddWorn(WornDef[] ws, Animator an, float H, List<Renderer> rends, List<Material> op, List<Material> fd)
         {
             int n = ws.Length;
-            worn = ws; wornT = new Transform[n]; wornRest = new Quaternion[n]; swayA = new float[n]; swayV = new float[n];
+            worn = ws; wornT = new Transform[n]; wornRest = new Quaternion[n]; swayAx = new Vector3[n]; swayA = new float[n]; swayV = new float[n];
+            wornB = new WornBase[n];
             for (int i = 0; i < n; i++)
             {
                 WornDef w = ws[i];
@@ -684,17 +853,38 @@ namespace BAM.Art
                 t.SetParent(bone, false);
                 Transform fa = w.From != HumanBodyBones.LastBone ? an.GetBoneTransform(w.From) : null;
                 Transform fb = fa != null && w.To != HumanBodyBones.LastBone ? an.GetBoneTransform(w.To) : null;
-                Vector3 from = fa == null ? root.position : fb == null ? fa.position : (fa.position + fb.position) * 0.5f;
-                t.position = from + (root.right * w.At.x + root.up * w.At.y + root.forward * w.At.z) * H;
-                t.rotation = root.rotation * Quaternion.Euler(0f, w.Yaw, 0f);
-                float k = w.Wide > 0f && fb != null
-                    ? w.Wide * Vector3.Distance(fa.position, fb.position) / Mathf.Max(1e-4f, mesh.bounds.size.x)
-                    : w.Height * H / Mathf.Max(1e-4f, mesh.bounds.size.y);
-                float ps = Mathf.Max(1e-6f, bone.lossyScale.x);
-                t.localScale = new Vector3(k, k, k * w.Flat) / ps;
-                wornT[i] = t; wornRest[i] = t.localRotation;
+                Vector3 from = fa == null ? root.position : fb == null || w.Along ? fa.position : (fa.position + fb.position) * 0.5f;
+                Quaternion lay = w.Along && fb != null && (fb.position - fa.position).sqrMagnitude > 1e-10f
+                    ? Quaternion.FromToRotation(root.up, (fb.position - fa.position).normalized) : Quaternion.identity;
+                Quaternion inv = Quaternion.Inverse(bone.rotation);
+                wornB[i] = new WornBase
+                {
+                    FromL = bone.InverseTransformPoint(from), RootL = inv * root.rotation, LayL = inv * lay * bone.rotation,
+                    Span = fb != null ? Vector3.Distance(fa.position, fb.position) : 0f, Ps = Mathf.Max(1e-6f, bone.lossyScale.x), H = H,
+                    MeshX = Mathf.Max(1e-4f, mesh.bounds.size.x), MeshY = Mathf.Max(1e-4f, mesh.bounds.size.y),
+                };
+                wornT[i] = t;
+                PlaceWorn(i);
                 if (w.Skin && SkinWorn(go, mesh, an, rends)) wornT[i] = null; // follows the body now: no sway of its own
             }
+        }
+
+        // puts worn part i on its bone from its WornDef (bind pose frame kept in WornBase), and notes the numbers it used
+        void PlaceWorn(int i)
+        {
+            WornDef w = worn[i]; Transform t = wornT[i];
+            ref WornBase b = ref wornB[i];
+            b.At = w.At; b.Turn = w.Turn; b.Yaw = w.Yaw; b.Height = w.Height; b.Wide = w.Wide;
+            Vector3 at = w.At * b.H / b.Ps;
+            t.localPosition = b.FromL + b.RootL * at;
+            Quaternion turn = Quaternion.AngleAxis(w.Turn.z, Vector3.forward) * Quaternion.AngleAxis(w.Turn.y, Vector3.up) * Quaternion.AngleAxis(w.Turn.x, Vector3.right);
+            t.localRotation = b.RootL * turn * Quaternion.Inverse(b.RootL) * b.LayL * b.RootL * Quaternion.Euler(0f, w.Yaw, 0f);
+            // Wide: a share of the distance between its two bones, across (a cloak to the shoulders) or, Along, lengthwise (a sleeve)
+            float k = w.Wide > 0f && b.Span > 0f ? w.Wide * b.Span / (w.Along ? b.MeshY : b.MeshX) : w.Height * b.H / b.MeshY;
+            t.localScale = new Vector3(k, k, k * w.Flat) / b.Ps;
+            wornRest[i] = t.localRotation;
+            // a swing goes back about the hero's right (forward for a Front flap), whatever the part's own Yaw
+            swayAx[i] = (Quaternion.Inverse(t.localRotation) * (b.RootL * Vector3.right)) * (w.Front ? -1f : 1f);
         }
 
         // the bones a skinned part follows and where each one's segment ends; a thigh pulls at most ThighShare, the rest stays on the hips
@@ -781,13 +971,15 @@ namespace BAM.Art
             {
                 Transform t = wornT[i];
                 if (t == null) continue;
+                WornDef w = worn[i];
+                if (w.At != wornB[i].At || w.Turn != wornB[i].Turn || w.Yaw != wornB[i].Yaw || w.Height != wornB[i].Height || w.Wide != wornB[i].Wide) PlaceWorn(i); // the Weapon Tuner moved it
                 float max = worn[i].Sway;
                 if (max <= 0f) continue;
                 float target = dead ? 0f : max * Mathf.Clamp01(moveW) + max * 0.25f * Mathf.Clamp01(atkW) + 1.5f * Mathf.Sin(swayClock * 1.4f + i);
                 float acc = 40f * (target - swayA[i]) - 7f * swayV[i];
                 swayV[i] += acc * Mathf.Min(dt, 0.05f);
                 swayA[i] = Mathf.Clamp(swayA[i] + swayV[i] * Mathf.Min(dt, 0.05f), -max * 0.3f, max * 1.3f);
-                t.localRotation = wornRest[i] * Quaternion.AngleAxis(swayA[i], Vector3.right);
+                t.localRotation = wornRest[i] * Quaternion.AngleAxis(swayA[i], swayAx[i]);
             }
         }
 

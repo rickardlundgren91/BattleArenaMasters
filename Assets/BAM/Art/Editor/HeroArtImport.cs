@@ -12,10 +12,14 @@ namespace BAM.Art.Editor
     sealed class HeroArtImport : AssetPostprocessor
     {
         const string ModelsDir = "Assets/BAM/Art/Models/";
+        /// <summary>The remade heroes of 2026-11-13 (one shared art style): ModelsV2/&lt;Hero&gt;/&lt;Hero&gt;.fbx + &lt;Hero&gt;_Tex.jpg beside the
+        /// old Models/&lt;Hero&gt;, which stay untouched. A hero uses its V2 body when that file is there and BAM &gt; Art &gt; Models V2 has not
+        /// turned it off (Rickard 2026-11-13: "jag måste ju kunna spela dom så lägg in dom"); its clips stay the ones in specs below.</summary>
+        const string ModelsV2Dir = "Assets/BAM/Art/ModelsV2/";
         const string OutDir = "Assets/BAM/Art/Resources/BAMArt/Heroes";
         static string OutOf(Spec s) => s.Out == null ? OutDir : "Assets/BAM/Art/Resources/BAMArt/" + s.Out;
 
-        bool Ours => assetPath.StartsWith(ModelsDir) && assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase);
+        bool Ours => (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith(ModelsV2Dir)) && assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase);
         bool IsClip => assetPath.Contains("/Anim/");
         /// <summary>The bodies whose cloth or hair swings (ClothSway): they are imported with Read/Write on so the game can find the
         /// cloth's vertices and add its spring bones once. Fenn's Original body (cape, tabard), Tyra (ponytail), Bonk (loincloth,
@@ -23,13 +27,16 @@ namespace BAM.Art.Editor
         static bool ClothModel(string path) => path == ModelsDir + "FennOriginal/Fenn.fbx" || path == ModelsDir + "Tyra/Tyra.fbx"
             || path == ModelsDir + "Bonk/Bonk.fbx" || path == ModelsDir + "Ragn/Ragn.fbx"
             || path == ModelsDir + "Nassla/Nassla.fbx"
-            || path == ModelsDir + "Tikta/Tikta.fbx" || path == ModelsDir + "Moa/Moa.fbx";
+            || path == ModelsDir + "Tikta/Tikta.fbx" || path == ModelsDir + "Moa/Moa.fbx"
+            // the remakes whose swinging cloth or hair is part of the body shell (ClothSway's V2 specs): Tyra's ponytail, Ragn's tail,
+            // Nässla's hair; capes, scarves and pelts are parts of their own (Weapons.cs, WornDef.Sway)
+            || path == ModelsV2Dir + "Tyra/Tyra.fbx" || path == ModelsV2Dir + "Ragn/Ragn.fbx" || path == ModelsV2Dir + "Nassla/Nassla.fbx";
 
         // Rickard's arena pictures repeat across the floor and walls; 512 is plenty at the match camera's distance.
         void OnPreprocessTexture()
         {
             var ti = (TextureImporter)assetImporter;
-            if (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Props/")
+            if (assetPath.StartsWith(ModelsDir) || assetPath.StartsWith(ModelsV2Dir) || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Props/")
                 || assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Forms/"))
             {
                 // the heroes', props' and forms' colour pictures: 1024 is plenty on a phone, compressed (Kugg's turret picture came
@@ -134,7 +141,7 @@ namespace BAM.Art.Editor
         static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
             foreach (string p in imported)
-                if (p.StartsWith(ModelsDir) || p.StartsWith("Assets/BAM/Art/Editor/"))
+                if (p.StartsWith(ModelsDir) || p.StartsWith(ModelsV2Dir) || p.StartsWith("Assets/BAM/Art/Editor/"))
                 {
                     EditorApplication.delayCall -= BuildAll;
                     EditorApplication.delayCall += BuildAll;
@@ -245,6 +252,62 @@ namespace BAM.Art.Editor
         // 2026-11-13 (Rickard: "ta bort clay"; his Unity had Original picked). His clips stay in Models/Fenn/Anim.
         static string ModelOf(Spec s) => s.Model;
 
+        // ---- the V2 switch (BAM > Art > Models V2) ----
+        // Kept per computer in EditorPrefs, so a sync from the repository never flips it; on by default. The HeroArt asset is rebuilt
+        // with the chosen body, so a phone build gets whatever is ticked here.
+        static string V2Key(string hero) => "BAM.Art.ModelsV2.Off." + hero;
+        static bool V2On(string hero) => !EditorPrefs.GetBool(V2Key(hero), false);
+        static string V2Body(Spec s) => ModelsV2Dir + s.Hero + "/" + s.Hero + ".fbx";
+        static bool UsesV2(Spec s) => s.Out == null && V2On(s.Hero) && File.Exists(V2Body(s));
+        /// <summary>The body file the hero uses now: its V2 remake, or the old model.</summary>
+        static string ModelPath(Spec s) => UsesV2(s) ? V2Body(s) : ModelsDir + ModelOf(s) + ".fbx";
+        static string TexPath(Spec s) => UsesV2(s) ? ModelsV2Dir + s.Hero + "/" + s.Hero + "_Tex.jpg" : ModelsDir + ModelOf(s) + "_Tex.jpg";
+
+        static void SetV2(string hero, bool on)
+        {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("[BAM.Art] Leave Play first, then switch Models V2 (the heroes are rebuilt outside Play)"); return; }
+            if (on) EditorPrefs.DeleteKey(V2Key(hero)); else EditorPrefs.SetBool(V2Key(hero), true);
+            BuildAll();
+            Debug.Log("[BAM.Art] " + hero + ": " + (on ? "new model (V2)" : "old model"));
+        }
+
+        static void SetAllV2(bool on)
+        {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("[BAM.Art] Leave Play first, then switch Models V2 (the heroes are rebuilt outside Play)"); return; }
+            foreach (Spec s in specs) if (s.Out == null) { if (on) EditorPrefs.DeleteKey(V2Key(s.Hero)); else EditorPrefs.SetBool(V2Key(s.Hero), true); }
+            BuildAll();
+            Debug.Log("[BAM.Art] Every hero: " + (on ? "new models (V2)" : "old models"));
+        }
+
+        const string V2Menu = "BAM/Art/Models V2/";
+        [MenuItem(V2Menu + "All heroes: new models (V2)", false, 0)] static void AllV2() => SetAllV2(true);
+        [MenuItem(V2Menu + "All heroes: old models", false, 1)] static void AllOld() => SetAllV2(false);
+        static bool Tick(string hero) { Menu.SetChecked(V2Menu + hero, V2On(hero)); return !EditorApplication.isPlaying; }
+        [MenuItem(V2Menu + "Blast", false, 20)] static void TBlast() => SetV2("Blast", !V2On("Blast"));
+        [MenuItem(V2Menu + "Blast", true)] static bool VBlast() => Tick("Blast");
+        [MenuItem(V2Menu + "Bonk", false, 21)] static void TBonk() => SetV2("Bonk", !V2On("Bonk"));
+        [MenuItem(V2Menu + "Bonk", true)] static bool VBonk() => Tick("Bonk");
+        [MenuItem(V2Menu + "Bram", false, 22)] static void TBram() => SetV2("Bram", !V2On("Bram"));
+        [MenuItem(V2Menu + "Bram", true)] static bool VBram() => Tick("Bram");
+        [MenuItem(V2Menu + "Fenn", false, 23)] static void TFenn() => SetV2("Fenn", !V2On("Fenn"));
+        [MenuItem(V2Menu + "Fenn", true)] static bool VFenn() => Tick("Fenn");
+        [MenuItem(V2Menu + "Knut", false, 24)] static void TKnut() => SetV2("Knut", !V2On("Knut"));
+        [MenuItem(V2Menu + "Knut", true)] static bool VKnut() => Tick("Knut");
+        [MenuItem(V2Menu + "Kugg", false, 25)] static void TKugg() => SetV2("Kugg", !V2On("Kugg"));
+        [MenuItem(V2Menu + "Kugg", true)] static bool VKugg() => Tick("Kugg");
+        [MenuItem(V2Menu + "Moa", false, 26)] static void TMoa() => SetV2("Moa", !V2On("Moa"));
+        [MenuItem(V2Menu + "Moa", true)] static bool VMoa() => Tick("Moa");
+        [MenuItem(V2Menu + "Nassla", false, 27)] static void TNassla() => SetV2("Nassla", !V2On("Nassla"));
+        [MenuItem(V2Menu + "Nassla", true)] static bool VNassla() => Tick("Nassla");
+        [MenuItem(V2Menu + "Ragn", false, 28)] static void TRagn() => SetV2("Ragn", !V2On("Ragn"));
+        [MenuItem(V2Menu + "Ragn", true)] static bool VRagn() => Tick("Ragn");
+        [MenuItem(V2Menu + "Ravna", false, 29)] static void TRavna() => SetV2("Ravna", !V2On("Ravna"));
+        [MenuItem(V2Menu + "Ravna", true)] static bool VRavna() => Tick("Ravna");
+        [MenuItem(V2Menu + "Tikta", false, 30)] static void TTikta() => SetV2("Tikta", !V2On("Tikta"));
+        [MenuItem(V2Menu + "Tikta", true)] static bool VTikta() => Tick("Tikta");
+        [MenuItem(V2Menu + "Tyra", false, 31)] static void TTyra() => SetV2("Tyra", !V2On("Tyra"));
+        [MenuItem(V2Menu + "Tyra", true)] static bool VTyra() => Tick("Tyra");
+
         // Also when Unity opens or the scripts reload: the game must never fall back to the code figures just because
         // the hero list was not built yet on this computer.
         [InitializeOnLoadMethod]
@@ -258,7 +321,7 @@ namespace BAM.Art.Editor
                 foreach (Spec s in specs)
                 {
                     var art = AssetDatabase.LoadAssetAtPath<HeroArt>(OutOf(s) + "/" + s.Hero + ".asset");
-                    if (art == null || art.Model == null || art.Model != AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + ModelOf(s) + ".fbx") || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
+                    if (art == null || art.Model == null || art.Model != AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath(s)) || art.V2 != UsesV2(s) || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
                         || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null
                         || (s.RunFour != null && art.RunFour == null)) { BuildAll(); return; } // Ragn's all-fours run came 2026-11-10: a HeroArt built before it lacks it
                     if (art.Cast != Clip(s.Cast, 3)) { BuildAll(); return; } // a cast clip changed in specs (Bram's throw 2026-11-13): no Rebuild by hand needed
@@ -272,8 +335,11 @@ namespace BAM.Art.Editor
         {
             var paths = new System.Collections.Generic.HashSet<string>();
             foreach (Spec s in specs)
-                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
+            {
+                paths.Add(ModelPath(s));
+                foreach (string p in new[] { s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
                     if (p != null) paths.Add(ModelsDir + p + ".fbx");
+            }
             foreach (string p in pool) paths.Add(ModelsDir + p + ".fbx");
             bool any = false;
             AssetDatabase.StartAssetEditing();
@@ -308,8 +374,11 @@ namespace BAM.Art.Editor
         static void Rebuild()
         {
             foreach (Spec s in specs)
-                foreach (string p in new[] { ModelOf(s), s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
+            {
+                AssetDatabase.ImportAsset(ModelPath(s), ImportAssetOptions.ForceUpdate);
+                foreach (string p in new[] { s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
                     if (p != null) AssetDatabase.ImportAsset(ModelsDir + p + ".fbx", ImportAssetOptions.ForceUpdate);
+            }
             BuildAll();
         }
 
@@ -319,15 +388,16 @@ namespace BAM.Art.Editor
             int ok = 0;
             foreach (Spec s in specs)
             {
-                var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsDir + ModelOf(s) + ".fbx");
-                if (model == null) { Debug.LogWarning("[BAM.Art] " + s.Hero + ": model " + ModelOf(s) + ".fbx not found, the code model is used"); continue; }
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath(s));
+                if (model == null) { Debug.LogWarning("[BAM.Art] " + s.Hero + ": model " + ModelPath(s) + " not found, the code model is used"); continue; }
                 if (!AssetDatabase.IsValidFolder(OutOf(s))) { Directory.CreateDirectory(OutOf(s)); AssetDatabase.Refresh(); }
                 string path = OutOf(s) + "/" + s.Hero + ".asset";
                 var art = AssetDatabase.LoadAssetAtPath<HeroArt>(path);
                 bool isNew = art == null;
                 if (isNew) art = ScriptableObject.CreateInstance<HeroArt>();
                 art.Model = model;
-                art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ModelsDir + ModelOf(s) + "_Tex.jpg");
+                art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(TexPath(s));
+                art.V2 = UsesV2(s);
                 art.Idle = Clip(s.Idle, 0); art.Run = Clip(s.Run, 1); art.Attack = Clip(s.Attack, 2);
                 art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
                 art.RunFour = s.RunFour != null ? Load(s.RunFour) : null;

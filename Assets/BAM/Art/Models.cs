@@ -113,7 +113,7 @@ namespace BAM.Art
             {
                 d.Height = d.Art.Height;
                 d.ThrowsProp = false;
-                d.Gear = Weapons.For(gearOf);
+                d.Gear = Weapons.For(gearOf, d.Art.V2); // a V2 remake has its own parts (Weapons.MakeV2)
             }
             cache[k] = d;
             return d;
