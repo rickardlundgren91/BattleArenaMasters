@@ -17,40 +17,16 @@ namespace BAM.Sim
             Check(kugg.SpecialText.Contains("once " + KuggS.MinShots + " are loaded") && kugg.SpecialText.Contains("up to " + KuggS.Shots),
                 "Kugg's special text follows the 2..6 rule: " + kugg.SpecialText);
 
-            // nr 104: the bars follow Defs in terciles of the heroes in the game: level 1 hp, auto attack damage per second, walking speed
-            var all = HeroCatalog.All;
-            int n = all.Length;
-            var hp = new float[n]; var dps = new float[n]; var spd = new float[n];
-            for (int i = 0; i < n; i++) { var d = Defs.Hero(all[i].Id); hp[i] = d.Hp; dps[i] = d.Dmg / d.Cd; spd[i] = d.Speed; }
-            int[] hb = Terciles(hp), db = Terciles(dps), sb = Terciles(spd);
-            for (int i = 0; i < n; i++)
-                Check(all[i].Health == hb[i] && all[i].Damage == db[i] && all[i].Speed == sb[i],
-                    $"{all[i].Name}'s bars follow Defs: health {hb[i]} ({hp[i]} hp), damage {db[i]} ({dps[i]:0.0}/s), speed {sb[i]} ({spd[i]}); the catalog says {all[i].Health}/{all[i].Damage}/{all[i].Speed}");
+            // nr 104 -> full review 2026-11-13 nr 118: the bars are worked out from Defs on the hero page (UI/HubPages.cs), the catalog
+            // keeps only Rickard's Difficulty, shown as 1..3 dots there (nr 128)
+            foreach (var h in HeroCatalog.All)
+                Check(h.Difficulty >= 1 && h.Difficulty <= 3, h.Name + "'s Difficulty is 1..3 dots: " + h.Difficulty);
         }
 
         static void CatalogPercent(HeroInfo h)
         {
             string text = (h.SpecialDesc ?? "") + " " + (h.OneTapDesc ?? "") + " " + (h.PassiveDesc ?? "");
             Check(!text.Contains(" %"), h.Name + "'s texts write percentages as N%");
-        }
-
-        /// <summary>1..3 by rank among the values (the lowest third 1, the top third 3); equal values share the bar of their middle rank.</summary>
-        static int[] Terciles(float[] v)
-        {
-            int n = v.Length;
-            var order = new int[n];
-            for (int i = 0; i < n; i++) order[i] = i;
-            Array.Sort(order, (a, b) => v[a] != v[b] ? v[a].CompareTo(v[b]) : a.CompareTo(b));
-            var rank = new int[n];
-            for (int r = 0; r < n; r++) rank[order[r]] = r;
-            var bar = new int[n];
-            for (int i = 0; i < n; i++)
-            {
-                int lo = rank[i], hi = rank[i];
-                for (int j = 0; j < n; j++) if (v[j] == v[i]) { if (rank[j] < lo) lo = rank[j]; if (rank[j] > hi) hi = rank[j]; }
-                bar[i] = 1 + (lo + hi) / 2 * 3 / n;
-            }
-            return bar;
         }
     }
 }

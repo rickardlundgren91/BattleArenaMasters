@@ -15,10 +15,9 @@ namespace BAM.Sim
             ? (Rules.DragAimSpecial && Match.CanDragAim(Id) ? OneTapDesc + " " + DragLine : OneTapDesc) : SpecialDesc;
         /// <summary>The line every aimable hero's special text ends with (Rules.DragAimSpecial, tester Ski 2026-11-07).</summary>
         public const string DragLine = "Drag to aim it yourself.";
-        /// <summary>1..3, for the bars on the hero-select screen. Health, Damage and Speed follow Defs in terciles of the nine heroes in
-        /// the game (level 1 hp, attack damage per second = Dmg / Cd, walking speed; equal values share a bar), checked by
-        /// Tests/Sim/Fix0400Tests.cs (full review 2026-11-09 nr 104). Difficulty is Rickard's call.</summary>
-        public int Health, Damage, Speed, Difficulty;
+        /// <summary>1..3, Rickard's call: the three dots on the hero page (full review 2026-11-13 nr 118 + 128). The page's bars
+        /// (health, damage, speed) are worked out from Defs in UI/HubPages.cs, so the catalog no longer keeps its own copies.</summary>
+        public int Difficulty;
         public bool Ranged;
         /// <summary>A hero not in the game yet that PRACTICE > HERO TEST already lists, so Rickard can try its rules with a stand-in body.</summary>
         public bool Preview;
@@ -76,18 +75,18 @@ namespace BAM.Sim
             new HeroInfo { Id = HeroId.Hilde, Name = "Hilde", Title = "Siege Support", Role = "Support", Ranged = true,
                 SpecialName = "Powder Keg", SpecialDesc = "Tap: tosses a small, quick keg at a random enemy that knocks it back a little. Drag: places the big keg that hits towers hardest and knocks every hero it hits the way you aimed, into walls if you like.",
                 PassiveName = "Wall Crash", PassiveDesc = "When her Powder Keg knocks an enemy hero into a wall, that hero is stunned for 0.4 s. One hero per keg.",
-                Health = 2, Damage = 2, Speed = 1, Difficulty = 1 },
+                Difficulty = 1 },
             // Oaken 3.0 (Speltest, Simon's Worldbreaker; Rickard 2026-10-28: hero 10), hidden until his model and views are in
             new HeroInfo { Id = HeroId.Oaken, Name = "Oaken", Title = "The Worldbreaker", Role = "Tank", Ranged = false,
                 SpecialName = "Earth Judgement", SpecialDesc = "Tap: after a short moment he slams the ground, hurting every enemy around him. Drag: a quake runs along a line, hurting every enemy in it and knocking enemy heroes back. Walls stop it.",
                 PassiveName = "Stored Impact", PassiveDesc = "After 4 s without losing health, the next hit from an enemy hero is cut by 30%, and part of it is added to his next attack. Every 16 s.",
-                Health = 3, Damage = 2, Speed = 1, Difficulty = 2 },
+                Difficulty = 2 },
             // Tester Øli's ideas Skrall and Ravna (Rickard 2026-11-09 "vi bygger alla fyra", kit approved on a card; Hero8.cs). In
             // HERO TEST only (Preview), with stand-in bodies until Rickard's own models are in (Models.cs); Ragn and Nässla are in All
             new HeroInfo { Id = HeroId.Skrall, Name = "Skrall", Title = "The Storm Monk", Role = "Mage", Ranged = true, Preview = true,
                 SpecialName = "Thunder Judgement", SpecialDesc = "Three lightning strikes fall on random enemies in his range, each after a short red warning. Every enemy under one is hurt; heroes are stunned for 0.3 s.",
                 PassiveName = "Trance", PassiveDesc = "Every second he stands still with no enemy in reach he gathers a step, up to 3. His next attack deals 40% more per step; with all 3 it also jumps to another enemy close by.",
-                Health = 1, Damage = 3, Speed = 1, Difficulty = 3 },
+                Difficulty = 3 },
             // Ravna (Øli's crow druid, ABC2's Ron): in All on 2026-11-12, back to a preview for 0.4.1 (Rickard 2026-11-12: "ravna funkar inte men vi lugnar oss med henne")
             new HeroInfo { Id = HeroId.Ravna, Name = "Ravna", Title = "The Crow Druid", Role = "Assassin", Ranged = false, Preview = true,
                 // Night Flight + Restless = ABC2's Ron (Rickard 2026-11-11 "ron blir ravna"); the Crow Flock texts stay for RavnaS.NightFlight = false
@@ -97,7 +96,7 @@ namespace BAM.Sim
                 PassiveName = RavnaS.NightFlight ? "Restless" : "Crow's Eye", PassiveDesc = RavnaS.NightFlight
                     ? "Running charges her special: the ring fills as she moves, not only when she hits."
                     : "An enemy hero she hurts is seen by everyone for 3 s, even in grass.",
-                Health = 2, Damage = 3, Speed = 3, Difficulty = 2 }, // bars from Defs' terciles
+                Difficulty = 2 },
         };
 
         /// <summary>Whether HERO TEST also lists the Preview heroes waiting in Coming (Ragn, Nässla, Skrall, Ravna). Only in the Unity
@@ -149,14 +148,14 @@ namespace BAM.Sim
                 SpecialName = "Pinpoint Bolt", SpecialDesc = "Tap: Arrow Volley, five arrows in a cone at a random enemy in her range; each enemy in it is hit once. Drag: a heavy bolt after a short draw that flies until it hits something: the first enemy in its path, a tower or a wall.",
                 OneTapDesc = "Tap: a quick bolt at a random enemy in her range, minions too, aimed where a running hero is heading. It flies past minions until it hits something: the first enemy hero in its path, a tower or a wall. Its path leaves wind and feathers that slow enemies 25% for 1.5 s.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
                 PassiveName = "Featherstep", PassiveDesc = "When her attack hurts an enemy hero she runs 12% faster for 1.5 s, once every 10 s.",
-                Health = 1, Damage = 2, Speed = 1, Difficulty = 2 }, // damage bar 3 -> 2 with the 2026-11-09 damage cut (nr 75): the bars are terciles of Defs (nr 104)
+                Difficulty = 2 },
             // Kugg (Rickard 2026-11-05: ROI17's principle from the old game, his own concept; Hero7.cs). In the game as hero 2 in the
             // list and open for everyone (Rickard 2026-11-09 "lägg in honom som nr 2 i spelet och upplåst för alla"); Oaken's body is his
             // stand-in until Rickard's own model is rigged (Models.cs)
             new HeroInfo { Id = HeroId.Kugg, Name = "Kugg", Title = "The Rune Golem", Role = "Marksman", Ranged = true,
                 SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles and he fires faster. Each hit loads a shot, up to 6, and he can anchor once 2 are loaded: he fires them all (or 10 s pass), then pulls the spikes up again.",
                 PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
-                Health = 2, Damage = 3, Speed = 2, Difficulty = 3 }, // damage bar 2 -> 3: third highest dps once Tyra dropped under him (nr 75, terciles of Defs)
+                Difficulty = 3 },
             // Hammer Line + Focus = ABC2's Silver (Rickard 2026-11-11, card "Silver (Marksman)"); the anvil texts stay for BramS.Silver = false
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
                 SpecialName = BramS.Silver ? "Hammer Line" : "Hammer Throw", SpecialDesc = BramS.Silver ? "Charges his hammer for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes. Walls stop it; a stun while he charges cuts it."
@@ -165,7 +164,7 @@ namespace BAM.Sim
                     : "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
                 PassiveName = BramS.Silver ? "Focus" : "Backlash", PassiveDesc = BramS.Silver ? "Each attack in a row on the same target hits 8% harder, up to 40%. A new target starts again."
                     : "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
-                Health = 1, Damage = 2, Speed = 3, Difficulty = 2 },
+                Difficulty = 2 },
             new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = FennS.Veil ? "The Spectral Knight" : "Pack Runner", Role = FennS.Veil ? "Assassin" : "Fighter", Ranged = false,
                 // Spectral Veil = ABC2's Omega (Ignus Fatuus), Rickard 2026-11-11; a spectral knight assassin ("fenn spectral knight,
                 // assassin", same evening); the wolf texts stay for FennS.Veil = false
@@ -174,42 +173,42 @@ namespace BAM.Sim
                 OneTapDesc = FennS.Veil ? "Tap: leaves a decoy and turns invisible for 3.5 s, 35% faster, to escape or sneak up. Tap again near an enemy for a Phantom Strike: 120% more damage and a slow"
                     : "Tap: throws his wolf at a random enemy in his range. It hunts enemy heroes, or bites minions when no hero is near. Walls stop it.",
                 PassiveName = "Phantom Step", PassiveDesc = "When an enemy hero hits Fenn, a decoy of him appears for 3 s. It looks like it fights but deals no damage and vanishes at the first hit; if an enemy hero's attack hits it, Fenn runs 20% faster for 1 s. Every 18 s.",
-                Health = 2, Damage = 1, Speed = 2, Difficulty = 2 },
+                Difficulty = 2 },
             new HeroInfo { Id = HeroId.Moa, Name = "Moa", Title = "Honey Warden", Role = "Support", Ranged = true,
                 SpecialName = "Honey Rush", SpecialDesc = "Tap: shields the ally hero with the lowest health. Drag: a honey field that gives each ally hero in it a smaller shield. Shielded heroes run faster for a moment, and the shield blocks stuns and slows.",
                 OneTapDesc = "Tap: a honey field on a random ally hero near her, or on herself when no ally is close. Each ally hero in it gets a shield and runs faster for a moment; the shield blocks stuns and slows.",
                 PassiveName = "Queen's Instinct", PassiveDesc = "When an enemy would drop an ally near her below 25% health, she shields that ally. Every 22 s.",
-                Health = 1, Damage = 2, Speed = 2, Difficulty = 1 },
+                Difficulty = 1 },
             new HeroInfo { Id = HeroId.Knut, Name = "Knut", Title = "The Anchor", Role = "Tank", Ranged = false,
                 SpecialName = "Anchor Throw", SpecialDesc = "Tap: slams his anchor into the ground, hurting and slowing every enemy around him. Drag: throws the anchor where you aim; it flies past minions and pulls the first enemy hero it hits to him and stuns it.",
                 OneTapDesc = "Tap: throws his anchor at a random enemy in reach, minions too. It flies past minions, pulls the first enemy hero it hits to him and stuns it.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
                 PassiveName = "Anchor Drag", PassiveDesc = "His attacks slow the target.",
-                Health = 3, Damage = 3, Speed = 2, Difficulty = 2 },
+                Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tikta, Name = "Tikta", Title = "The Needle Wing", Role = "Assassin", Ranged = false,
                 SpecialName = "Needle Storm", SpecialDesc = "Fires four poison needles at random nearby enemies, minions too. Drag to fire them all in one straight line.",
                 OneTapDesc = "Tap: four poison needles in a straight line at a random enemy in reach; each needle stops in the first enemy it hits.",
                 PassiveName = "Deathmark", PassiveDesc = "A normal attack that hurts an enemy hero marks it for 3 s (one mark at a time). The first Needle Storm needle that hits the marked hero deals 50% of her attack damage more.",
-                Health = 3, Damage = 3, Speed = 3, Difficulty = 3 },
+                Difficulty = 3 },
             new HeroInfo { Id = HeroId.Blast, Name = "Blast", Title = "The Pyromaniac", Role = "Mage", Ranged = true,
                 SpecialName = "Supernova", SpecialDesc = "Tap: a strip of fire toward a random enemy that burns enemies standing in it for 2 s. Drag: throws a bomb where you aim that explodes after 0.5 s.",
                 OneTapDesc = "Tap: throws a bomb at a random enemy in reach that explodes after 0.5 s.",
                 PassiveName = "Ignite", PassiveDesc = "Hits set the target on fire: 15% more over 2 s. Chain Reaction (9 s cooldown): Supernova on a hero already burning from Blast blasts again where that hero stood 0.25 s later, hitting only the other enemies within 1 tile for 50% of his attack.",
-                Health = 2, Damage = 1, Speed = 1, Difficulty = 2 },
+                Difficulty = 2 },
             new HeroInfo { Id = HeroId.Bonk, Name = "Bonk", Title = "The Caveman", Role = "Fighter", Ranged = false,
                 SpecialName = "Ground Slam", SpecialDesc = "Slams his club into the ground: enemies around him take damage and are stunned for a moment. Drag to roll a boulder along a line instead: it hits the first enemy and knocks it back. Walls stop it.",
                 OneTapDesc = "Tap: slams his club into the ground with all his might: every enemy in a big circle around him takes heavy damage and is stunned for 0.8 s. Only with an enemy in the circle.",
                 PassiveName = "Heavy Club", PassiveDesc = "Every 4th attack is a power hit that deals 60% more damage.",
-                Health = 2, Damage = 2, Speed = 2, Difficulty = 1 }, // health 3 -> 2: Fenn 240 hp tops the terciles now (2026-11-10)
+                Difficulty = 1 },
             // Tester Øli's Ragn and Nässla (after the old game's Bronson and Ginette) with Rickard's own bodies: in the game for everyone
             // in 0.4.0 (Rickard 2026-11-10: "för 0.4.0 ska ragn och nässla vara tillgängliga för alla"), open from the start like Kugg
             new HeroInfo { Id = HeroId.Ragn, Name = "Ragn", Title = "The Werewolf", Role = "Fighter", Ranged = false,
                 SpecialName = "Moon Leap", SpecialDesc = "Rushes up to 5 tiles to where a random enemy in reach stands. If it is still there, it is hit hard, stunned for 1.25 s and shoved 4 tiles back, and Ragn gets a shield of 20% of his health for 2 s.",
                 PassiveName = "Wolf Run", PassiveDesc = "After 3 s out of combat he runs 40% faster, until he hits or is hit.",
-                Health = 3, Damage = 1, Speed = 1, Difficulty = 1 }, // speed bar 2 -> 1 at 2.4 (2026-11-12)
+                Difficulty = 1 },
             new HeroInfo { Id = HeroId.Nassla, Name = "Nässla", Title = "The Swamp Witch", Role = "Mage", Ranged = true,
                 SpecialName = "Thorn Thicket", SpecialDesc = "Throws a seed pod where a random enemy in her range stands. After half a second a thicket roots there: four times, once a second, enemies in it are poisoned and slowed 50% for 1 s.", // 75 -> 50 % (NasslaS.Slow, Rickard 2026-11-12)
                 PassiveName = "Healing Sap", PassiveDesc = "Allied heroes standing in her thicket get 2% of their health back at each of its four ticks.",
-                Health = 1, Damage = 1, Speed = 1, Difficulty = 2 }, // bars from Defs' terciles (Fix0400ClientTests)
+                Difficulty = 2 },
         };
     }
 }
