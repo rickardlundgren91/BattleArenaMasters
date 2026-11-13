@@ -32,7 +32,6 @@ own arena/tutorial textures; each such file gets a row under "Imported from the 
 | RagnLand | Audio/Resources/BAM/Sfx/RagnLand.mp3 | Mix av oss av: Kenney "Impact Sounds" (impactPunch_heavy_000, impactMining_001), rubberduck "80 CC0 RPG SFX" (chain_02), IgnasD "Ice breaking/shattering" (LedasLuzta2) | CC0 1.0 | None |
 | AttackNassla | Audio/Resources/BAM/Sfx/AttackNassla.mp3 | Mix av oss av: artisticdude "Swishes Sound Pack" (swish-12), artisticdude "RPG Sound Pack" (NPC/slime/slime1) | CC0 1.0 | None |
 | NasslaThrow | Audio/Resources/BAM/Sfx/NasslaThrow.mp3 | Mix av oss av: artisticdude "RPG Sound Pack" (battle/swing2, inventory/beads) | CC0 1.0 | None |
-| NasslaBramble | Audio/Resources/BAM/Sfx/NasslaBramble.mp3 | Mix av oss av: rubberduck "80 CC0 RPG SFX" (wood_05, wood_01, creature_slime_01), Kenney "RPG Audio" (creak1), qubodup "20 rustles (dry leaves)" (rustle05) | CC0 1.0 | None |
 
 ## Imported from the old game
 
