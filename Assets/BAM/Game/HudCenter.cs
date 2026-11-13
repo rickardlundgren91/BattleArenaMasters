@@ -8,7 +8,8 @@ namespace BAM.Game
     /// <summary>
     /// The middle of the screen as the old game draws it with the Glass HUD (ABC2 Hud.cs drawHUD, HudGlass.cs): "Match starts in"
     /// with the seconds on a glass banner during the countdown, the one-line start banner DESTROY THE ENEMY TOWER (gold and
-    /// orange on slim glass) for 2.5 s after it, while dead a dim screen with RESPAWN IN, the seconds and who did it, and
+    /// orange on slim glass) for 2.5 s after it, while dead a dim screen with RESPAWN IN, the seconds and who did it (small, at
+    /// the top left under our portraits since review 2026-11-13 nr 6; the old game had it over the middle of the fight), and
     /// VICTORY or DEFEAT until the result comes up. Also the pause button on a small round glass plate at the right edge, where
     /// the old game had its glass tool button.
     /// </summary>
@@ -20,9 +21,10 @@ namespace BAM.Game
 
         RectTransform countBanner, startBanner, pauseRoot;
         CanvasGroup startGroup;
-        Text countTitle, countNum, startText, centerText, respawnTitle, respawnText, defeatedText;
+        Text countTitle, countNum, startText, centerText, respawnText, defeatedText;
         Image dim;
-        int shownCount, shownRespawn;
+        int shownCount, shownRespawn, respawnNumSize = 72;
+        const string RespawnLead = "RESPAWN IN <size="; // the seconds ride on the same line, bigger and on the same baseline
         bool overShown;
 
         void BeginCenter()
@@ -40,7 +42,6 @@ namespace BAM.Game
         void SetRespawn(bool on)
         {
             dim.enabled = on;
-            respawnTitle.gameObject.SetActive(on);
             respawnText.gameObject.SetActive(on);
             if (!on) defeatedText.gameObject.SetActive(false);
         }
@@ -93,18 +94,20 @@ namespace BAM.Game
             if (waiting)
             {
                 int s = Mathf.Max(1, Mathf.CeilToInt(p.RespawnT));
-                if (s != shownRespawn) { shownRespawn = s; respawnText.text = Num(s); }
+                if (s != shownRespawn) { shownRespawn = s; respawnText.text = RespawnLead + respawnNumSize + ">" + Num(s) + "</size>"; }
             }
         }
 
         static void BamAudioCountdown() => BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.Countdown);
 
-        // "Defeated by Fenn · Hero" as the old hitByName · hitByKind
+        // "Defeated by Bram", "Defeated by Fenn's wolf", "Defeated by the tower" (the old hitByName · hitByKind said "Bram · Hero",
+        // too long for the corner it now sits in, review 2026-11-13 nr 6)
         static string KillerName(Unit k)
         {
             var who = k.Kind == UnitKind.Wolf && k.Owner != null ? k.Owner : k.IsClone && k.Owner != null ? k.Owner : k;
             if (who.Kind == UnitKind.Tower) return "the tower";
-            return HeroCatalog.Get(who.Hero).Name + (k.Kind == UnitKind.Wolf ? " · Wolf" : " · Hero");
+            if (k.Kind == UnitKind.Wolf && k.Owner == null) return "a wolf";
+            return HeroCatalog.Get(who.Hero).Name + (k.Kind == UnitKind.Wolf ? "'s wolf" : "");
         }
 
         // ---------------------------------------------------------------- layout and building
@@ -129,10 +132,15 @@ namespace BAM.Game
             float tw = startText.preferredWidth;
             Box(startBanner, Mathf.Min(W - 32f, tw + fs * 2.2f), ph, H * 0.27f - ph / 2f);
             GlassBannerLayout(startBanner, W);
-            // respawn: RESPAWN IN at 0.36 H, the seconds at 0.44 H, who did it at 0.5 H (baselines in the old canvas)
-            Line(respawnTitle, W * 0.045f, -H * 0.36f + W * 0.02f, W);
-            Line(respawnText, W * 0.14f, -H * 0.44f + W * 0.05f, W);
-            Line(defeatedText, W * 0.045f, -H * 0.5f + W * 0.02f, W);
+            // respawn (review 2026-11-13 nr 6): it sat over the middle of the fight (RESPAWN IN at 0.36 H, seconds 0.14 W tall at
+            // 0.44 H, who did it at 0.5 H, the old game's places) and is now small at the top left, from the first portrait's edge,
+            // as far under the strip as the kill feed, which keeps the middle (0.378-0.622 W): RESPAWN IN with the seconds bigger
+            // on one line (to 0.33 W), who did it under it (to 0.33 W for "Defeated by Fenn's wolf")
+            float rx = W * 0.032f, rTop = Mathf.Max(4f, H * 0.01f) + W * 0.088f + H * 0.014f;
+            respawnNumSize = Mathf.Max(12, Mathf.RoundToInt(W * 0.075f));
+            shownRespawn = -1; // the seconds' size is in the text: write it again
+            LineLeft(respawnText, W * 0.036f, rx, rTop + W * 0.045f, W * 0.34f);
+            LineLeft(defeatedText, W * 0.029f, rx, rTop + W * 0.11f, W * 0.34f);
             Line(centerText, W * 0.115f, -H * 0.22f, W);
             // the glass tool (score tab, or pause in the guided match): the old glass tool's place under the strip at the right edge
             float r = W * 0.034f, pad = W * 0.01f, gb = Mathf.Max(4f, H * 0.01f) + (W * 0.064f + W * 0.024f) + Mathf.Max(7f, W * 0.02f) * 1.6f;
@@ -156,6 +164,18 @@ namespace BAM.Game
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.sizeDelta = new Vector2(w, font * 1.6f);
             rt.anchoredPosition = new Vector2(0f, y + font * 0.8f);
+        }
+
+        // a left-aligned line whose left edge sits at x and its middle at centerY, both from the safe area's top left
+        static void LineLeft(Text t, float font, float x, float centerY, float w)
+        {
+            t.fontSize = Mathf.Max(8, Mathf.RoundToInt(font));
+            t.alignment = TextAnchor.MiddleLeft;
+            var rt = t.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.sizeDelta = new Vector2(w, font * 2.4f);
+            rt.anchoredPosition = new Vector2(x, -centerY);
         }
 
         void BuildCenter()
@@ -182,9 +202,9 @@ namespace BAM.Game
             UiKit.Stretch(startText.rectTransform);
 
             centerText = InkLabel(safe, "", Color.white, 6);
-            respawnTitle = InkLabel(safe, "RESPAWN IN", Color.white, 4);
-            respawnText = InkLabel(safe, "", Color.white, 6);
-            defeatedText = InkLabel(safe, "", Color.white, 4);
+            respawnText = InkLabel(safe, "", Color.white, 4);
+            respawnText.supportRichText = true;
+            defeatedText = InkLabel(safe, "", Color.white, 3);
         }
 
         // the old small()/big(): white with a thick dark navy edge
