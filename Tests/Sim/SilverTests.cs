@@ -48,7 +48,11 @@ namespace BAM.Sim
             Check(f0 == 0 && Near(f1, BramS.FocusStep) && Near(f2, 2 * BramS.FocusStep), $"SILVER: Focus grows on the same target ({f0}, {f1}, {f2})");
             for (int i = 0; i < 10; i++) m.BramFocus(b, a);
             Check(Near(m.BramFocus(b, a), BramS.FocusStep * BramS.FocusMax), "SILVER: Focus stops at FocusMax");
+            Check(Near(BramS.FocusStep * BramS.FocusMax, 0.8f) && HeroCatalog.Get(HeroId.Bram).PassiveDesc.Contains("10% harder, up to 80%"), "SILVER: Focus tops out at +80 % in 10 % steps, as the hold card says (Rickard 2026-11-13)");
             Check(m.BramFocus(b, c) == 0, "SILVER: a new target starts again");
+            // as the old game's Sharpshooter: a swing at Fenn's clone neither counts nor starts it again (hero review 2026-11-13)
+            m.BramFocus(b, c); far.IsClone = true; float fc = m.BramFocus(b, far); far.IsClone = false;
+            Check(fc == 0 && Near(m.BramFocus(b, c), 2 * BramS.FocusStep), "SILVER: a swing at Fenn's clone leaves Focus as it was");
             Check(!m.Projs.Exists(q => q.Mode == ProjMode.Echo && !q.Done), "SILVER: no Backlash echo");
         }
     }

@@ -32,8 +32,12 @@ namespace BAM.Sim
         /// Since 2026-11-12 (Rickard: "flyger för snabbt ... han ska ändå kasta en hammare och inte en laserstråle"): the same charge
         /// and red line, then he throws the hammer, which flies straight at LineSpeed and hits every enemy it passes once.</summary>
         public const float BeamCharge = 0.45f;
-        public const float LineReach = 8, LineSpeed = 16, LineWidth = 0.6f, LineCoeff = 3.2f, FocusStep = 0.08f; // thrown (2026-11-12): speed 45 -> 16, damage 2.15 -> 3.2 as it can now be dodged (Hard bots: 48.0 % as the beam, 39.2 % thrown at 2.15, 49.6 % at 3.2)
-        public const int FocusMax = 5;
+        public const float LineReach = 8, LineSpeed = 16, LineWidth = 0.6f, LineCoeff = 3.2f; // thrown (2026-11-12): speed 45 -> 16, damage 2.15 -> 3.2 as it can now be dodged (Hard bots: 48.0 % as the beam, 39.2 % thrown at 2.15, 49.6 % at 3.2)
+        /// <summary>Focus in Silver's steps (hero review 2026-11-13, Rickard "bram 80%"): +10 % a step up to 8 (+80 %); it was 8 % up to 5
+        /// (+40 %), Silver's Sharpshooter 10 % up to 10. Hard bots hardly notice (2400 matches: about a third of a step on average, 53 %
+        /// either way, never past 7 steps); it pays the player who keeps one target in his ring, a lone hero chased or a good spot.</summary>
+        public const float FocusStep = 0.10f;
+        public const int FocusMax = 8;
     }
 
     /// <summary>Fenn, Call of the Pack. Tap: a wolf that follows him and bites enemies near him. Drag: the wolf is thrown up to
@@ -384,10 +388,13 @@ namespace BAM.Sim
             if (p.D >= p.Travel - 1e-4f) p.Done = true;
         }
 
-        /// <summary>Focus: the share more this auto attack of Bram's on tgt deals (0 when it is a new target); counts the step.</summary>
+        /// <summary>Focus: the share more this auto attack of Bram's on tgt deals (0 when it is a new target); counts the step. The old game's
+        /// Sharpshooter as it was (oldsim SimCombat.cs, MarksmanPassiveConsecutiveAttacksDamageBuffScript): the same target in a row, a new
+        /// one starts again, no time limit, and a swing at Fenn's clone neither counts nor starts it again (hero review 2026-11-13; Rickard:
+        /// "silver spelade också med slumpmål", "positionerar man sig bra eller jagar ett ensamt mål så är den väldigt stark").</summary>
         float BramFocus(Unit u, Unit tgt)
         {
-            if (!SilverOn || u.Hero != HeroId.Bram || u.IsClone) return 0;
+            if (!SilverOn || u.Hero != HeroId.Bram || u.IsClone || tgt.IsClone) return 0;
             u.PassHits = tgt == u.FocusTgt ? Math.Min(BramS.FocusMax, u.PassHits + 1) : 0;
             u.FocusTgt = tgt;
             return BramS.FocusStep * u.PassHits;

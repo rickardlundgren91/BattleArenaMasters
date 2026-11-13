@@ -162,7 +162,7 @@ namespace BAM.Sim
                     : "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
                 OneTapName = BramS.Silver ? "Hammer Line" : "Anvil Drop", OneTapDesc = BramS.Silver ? "Tap: aims at a random enemy in reach, charges for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes."
                     : "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
-                PassiveName = BramS.Silver ? "Focus" : "Backlash", PassiveDesc = BramS.Silver ? "Each attack in a row on the same target hits 8% harder, up to 40%. A new target starts again."
+                PassiveName = BramS.Silver ? "Focus" : "Backlash", PassiveDesc = BramS.Silver ? "Each attack in a row on the same target hits 10% harder, up to 80%. A new target starts again."
                     : "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
                 Difficulty = 2 },
             new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = FennS.Veil ? "The Spectral Knight" : "Pack Runner", Role = FennS.Veil ? "Assassin" : "Fighter", Ranged = false,
