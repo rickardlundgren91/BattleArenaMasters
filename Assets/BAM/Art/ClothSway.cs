@@ -46,7 +46,10 @@ namespace BAM.Art
             public float Inward = 0.12f;     // Skirt: how far a part may swing in towards the legs (share of its length)
             public float Top0, Top1;         // BackFlaps: height above the hips (share of height) where the flaps hang free (Top1 = full)
             public float Low;                // BackFlaps: and above this (the seat below stays put)
-            public bool Single;              // BackFlaps: one spring for the whole flap (long hair, one piece), not one per side
+            public float Front0, Front1;     // Skirt: when set, the sway share comes from how far in front of the hips the cloth is
+                                             // (a panel lying over the thighs), not from its distance to the legs
+            public float SideFade;           // Skirt: a soft edge from MaxSide - SideFade to MaxSide instead of a hard cut
+            public bool Single;              // BackFlaps, Skirt: one spring for the whole flap (long hair, one piece), not one per side
             public bool FrontOnly;           // Skirt: only cloth in front of the hips (a single front panel; the seat behind stays put)
             public float Kick = 1f;          // how hard the hero's own moves push it (secondary action, Kick); 0 = never
         }
@@ -83,7 +86,11 @@ namespace BAM.Art
                     // Moa.fbx at 12 degrees out: bam-work/cloth/round7/moa-har.png); a small swing, since its top is her back's surface
                     return new[]
                     {
-                        new Spec { Kind = Kind.Skirt, Sectors = 6, Clear0 = 0.04f, Clear1 = 0.07f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.04f, FrontOnly = true, Hz = 2.3f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
+                        // (Rickard 2026-11-13 after testing: "fladdrar bara mitten av tyget och buggar när det drar sig utanför kanterna som
+                        // egentligen också ska röra sig"): the whole width of the panel (to 0.05 out, its gold edges too) on ONE spring, picked
+                        // by lying in front of her thighs (0.045-0.053 in front of the hips) instead of by distance to the leg bones, which
+                        // left its edges on the thighs and split the middle over three springs (measured on Moa.fbx)
+                        new Spec { Kind = Kind.Skirt, Single = true, Front0 = 0.045f, Front1 = 0.053f, Drop = 0.12f, MaxBelow = 0.4f, MaxSide = 0.056f, SideFade = 0.008f, FrontOnly = true, Hz = 2.3f, Damping = 0.42f, MaxAngle = 22f, Drag = 0.05f, Flare = 0.15f },
                         new Spec { Kind = Kind.BackFlaps, Single = true, Top0 = 0.254f, Top1 = 0.194f, Low = 0.054f, Back0 = 0.117f, Back1 = 0.147f, MaxSide = 0.075f, Hz = 2.2f, Damping = 0.45f, MaxAngle = 12f, Drag = 0.04f, Flare = 0.12f, Inward = 0f, Kick = 0.6f },
                     };
                 case 7: // Bonk: the fur loincloth flaps in front and behind, and the long hair behind his head
@@ -294,15 +301,24 @@ namespace BAM.Art
                     {
                         float below = -Vector3.Dot(v[i] - hp, up);
                         if (below <= 0f || Share(i, setA) < 0.8f) continue; // above the hips, or an arm hanging past them
-                        if (Mathf.Abs(Vector3.Dot(v[i] - hp, right)) > side) continue;
+                        float sideD = Mathf.Abs(Vector3.Dot(v[i] - hp, right));
+                        if (sideD > side) continue;
                         if (sp.MaxBelow > 0f && below > sp.MaxBelow * H) continue;
                         if (sp.FrontOnly && Vector3.Dot(v[i] - hp, fwd) < 0f) continue;
-                        float d = Mathf.Min(Mathf.Min(SegDist(v[i], aL, bL), SegDist(v[i], bL, cL)), Mathf.Min(SegDist(v[i], aR, bR), SegDist(v[i], bR, cR))) / H;
-                        float s = Smooth((d - sp.Clear0) / Mathf.Max(1e-4f, sp.Clear1 - sp.Clear0)) * Smooth(below / (sp.Drop * H));
+                        float s;
+                        if (sp.Front1 > sp.Front0)
+                            s = Smooth((Vector3.Dot(v[i] - hp, fwd) / H - sp.Front0) / (sp.Front1 - sp.Front0)); // in front of the thighs
+                        else
+                        {
+                            float d = Mathf.Min(Mathf.Min(SegDist(v[i], aL, bL), SegDist(v[i], bL, cL)), Mathf.Min(SegDist(v[i], aR, bR), SegDist(v[i], bR, cR))) / H;
+                            s = Smooth((d - sp.Clear0) / Mathf.Max(1e-4f, sp.Clear1 - sp.Clear0));
+                        }
+                        s *= Smooth(below / (sp.Drop * H));
+                        if (sp.SideFade > 0f) s *= Smooth((side - sideD) / (sp.SideFade * H));
                         if (s <= 0.005f) continue;
                         Vector3 h = v[i] - hp; h -= up * Vector3.Dot(h, up);
                         float ang = Mathf.Atan2(Vector3.Dot(h, right), Vector3.Dot(h, fwd)); // 0 = straight ahead
-                        float a = Mathf.Repeat(ang / (2f * Mathf.PI) * N, N);
+                        float a = sp.Single ? 0f : Mathf.Repeat(ang / (2f * Mathf.PI) * N, N); // Single: all on one spring, no seam
                         sw[i] = s; sa[i] = a;
                         int k0 = Mathf.FloorToInt(a) % N, k1 = (k0 + 1) % N;
                         float f = a - Mathf.Floor(a);
