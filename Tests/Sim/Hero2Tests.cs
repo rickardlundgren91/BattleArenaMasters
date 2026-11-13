@@ -152,24 +152,6 @@ namespace BAM.Sim
             m.BombBlast(bomb); any = false; foreach (var p in m.Projs) if (p.Mode == ProjMode.ChainBlast && !p.Done) any = true;
             Check(!any, "no chain from a dead Blast");
             BlastWalls();
-            BlastSoloBurn();
-        }
-
-        // Rickard 2026-11-13: a SPECIAL hit that finds one enemy alone burns it 50 % more (BlastS.SoloBurnMult)
-        static void BlastSoloBurn()
-        {
-            float Burn(bool alone)
-            {
-                var m = Make(HeroId.Blast, new[] { HeroId.Moa, HeroId.Fenn }, new[] { HeroId.Bram, HeroId.Knut, HeroId.Tikta });
-                var b = m.Player; var e1 = m.Foe(HeroId.Bram); var e2 = m.Foe(HeroId.Knut); var e3 = m.Foe(HeroId.Tikta);
-                float x = 7.5f, y = 20;
-                Place(b, x, y - 3); Place(e1, x, y + 0.3f); Place(e2, alone ? x + 6 : x + 1, alone ? y + 6 : y + 0.3f); Place(e3, x - 6, y - 6);
-                var bomb = m.NewProj(ProjMode.Bomb, b, x, y); bomb.Kind = ProjKind.BlastBomb; bomb.Dmg = 20; bomb.Done = true;
-                m.BombBlast(bomb);
-                int i = e1.Find(St.Burn); return i >= 0 ? e1.Sts[i].Amount : -1;
-            }
-            float solo = Burn(true), two = Burn(false);
-            Check(two > 0 && Near(solo, two * BlastS.SoloBurnMult), $"Supernova on one enemy alone burns 50 % more ({solo:0.00} vs {two:0.00} with two hit)");
         }
 
         // BAM wall rule for Chain Reaction (precision audit CHAIN-01/02) and a bot's bomb led into a wall (BLAST-04). The wall

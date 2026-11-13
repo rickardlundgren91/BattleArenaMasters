@@ -191,9 +191,6 @@ namespace BAM.Sim
         public const float Reach = 4.5f, Delay = 0.5f, Radius = 1.5f, DamageCoeff = 1.2f; // 1.45 -> 1.2 when the bomb became the aimed drag (2026-10-30: Hard 58.6 -> 53.1 %)
         public const float LaneLength = 4.5f, LaneHalfWidth = 0.45f, LaneDuration = 2, LaneTick = 0.5f, LaneCoeff = 0.35f;
         public const float BurnPercent = 0.15f, BurnDuration = 2, BurnTick = 0.25f;
-        /// <summary>A SPECIAL hit (bomb, or one tick of the fire strip) that finds only one enemy burns it 50 % more (Rickard 2026-11-13:
-        /// "30% mer burn om han bara träffar ett target med sin skill", then "50%mer").</summary>
-        public const float SoloBurnMult = 1.5f;
     }
 
     public sealed partial class Match
@@ -1041,8 +1038,7 @@ namespace BAM.Sim
                 if (u.Alive && u.Team != p.Team && u.Kind != UnitKind.Tower && !u.Has(St.Untargetable) && SimMath.Dist(u, p.X, p.Y) <= BlastS.Radius + u.R
                     && Map.LosClear(p.X, p.Y, u.X, u.Y)) areaBuf.Add(u); // thrown over walls, but the blast stops at them (Rickard 2026-10-28)
             }
-            if (areaBuf.Count == 1) { var u = areaBuf[0]; float b0 = BurnLeft(u); SpecialHit(h, u, p.Dmg, p.Kind, true, dk); SoloBurn(u, b0); } // one enemy alone burns more
-            else for (int i = 0; i < areaBuf.Count; i++) if (areaBuf[i].Alive) SpecialHit(h, areaBuf[i], p.Dmg, p.Kind, true, dk);
+            for (int i = 0; i < areaBuf.Count; i++) if (areaBuf[i].Alive) SpecialHit(h, areaBuf[i], p.Dmg, p.Kind, true, dk);
             Emit(EventType.Explosion, h, null, BlastS.Radius, (byte)p.Kind, true, p.X, p.Y, dk);
         }
 
@@ -1063,19 +1059,9 @@ namespace BAM.Sim
                     var u = Units[i];
                     if (Hurtable(h, u) && SimMath.PtSeg(u.X, u.Y, p.X, p.Y, ex, ey) <= BlastS.LaneHalfWidth + u.R) areaBuf.Add(u);
                 }
-                if (areaBuf.Count == 1) { var u = areaBuf[0]; float b0 = BurnLeft(u); SpecialHit(h, u, p.Dmg, p.Kind, false, DmgKind.Special, DmgFlags.NotDirect); SoloBurn(u, b0); } // one enemy alone burns more
-                else for (int i = 0; i < areaBuf.Count; i++) if (areaBuf[i].Alive) SpecialHit(h, areaBuf[i], p.Dmg, p.Kind, false, DmgKind.Special, DmgFlags.NotDirect);
+                for (int i = 0; i < areaBuf.Count; i++) if (areaBuf[i].Alive) SpecialHit(h, areaBuf[i], p.Dmg, p.Kind, false, DmgKind.Special, DmgFlags.NotDirect);
             }
             if (p.T >= BlastS.LaneDuration - 1e-4f) p.Done = true;
-        }
-
-        static float BurnLeft(Unit u) { int i = u.Find(St.Burn); return i >= 0 ? u.Sts[i].Amount : 0; }
-        /// <summary>A SPECIAL hit that found u alone: the burn it just added grows by BlastS.SoloBurnMult.</summary>
-        void SoloBurn(Unit u, float before)
-        {
-            int i = u.Find(St.Burn); if (i < 0 || !u.Alive) return;
-            float added = u.Sts[i].Amount - before;
-            if (added > 0) u.Sts[i].Amount += added * (BlastS.SoloBurnMult - 1);
         }
 
         /// <summary>Everything Blast hits burns: 15 % of the hit more over 2 s. One burn per target; a new hit adds to it and
