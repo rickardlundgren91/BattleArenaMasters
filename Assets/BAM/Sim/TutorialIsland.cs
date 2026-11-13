@@ -38,7 +38,7 @@ namespace BAM.Sim
             new IslandStepDef { Text = "Move here with the joystick!", HasTarget = true, TargetX = IslandDiscX, TargetY = IslandDiscY },
             new IslandStepDef { Text = "You attack automatically! Take down the |Minion|!", Spawn0 = 0, SpawnN = 1, Kill = true, Point = 1 },
             new IslandStepDef { Text = "Hide in the |grass|! Enemies only see you up close.", HasTarget = true, TargetX = 9.5f, TargetY = 14f },
-            new IslandStepDef { Text = "You hit a |random enemy| in reach. Make the leader your |only target|!", Spawn0 = 1, SpawnN = 3, Kill = true, Point = 2, HasTarget = true, TargetX = 2f, TargetY = 12.5f },
+            new IslandStepDef { Text = "Stand in the |gold ring|: from there only the leader is in reach!", Spawn0 = 1, SpawnN = 3, Kill = true, Point = 2, HasTarget = true, TargetX = 2f, TargetY = 12.5f },
             new IslandStepDef { Text = "Hop on the |boost pad| to reach the battle!", HasTarget = true, TargetX = IslandBridgeX0 + 1.5f, TargetY = 19.5f, Pad = true, Tip = true },
         };
         static readonly string[] IslandPlain = MakePlain();
