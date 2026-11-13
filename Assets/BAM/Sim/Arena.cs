@@ -52,13 +52,13 @@ namespace BAM.Sim
         // big grass field, and on the left a grass strip and a long wall with an opening in the middle (Rickard's drawing 2026-11-04). J = jump pad (walkable ground).
         static readonly string[] GroveTop =
         {
-            "...............", // 0
-            "......000......", // 1
-            "...............", // 2
-            "...............", // 3
-            ".......2.......", // 4
-            ".......1.......", // 5
-            "...............", // 6
+            "gg.............", // 0  the left grass strip runs all the way to the map's end (Rickard 2026-11-13)
+            "gg....000......", // 1
+            "gg.............", // 2
+            "gg.............", // 3
+            "gg.....2.......", // 4
+            "gg.....1.......", // 5
+            "gg.............", // 6
             "gg.........J...", // 7  the pad throws you to row 13, over the wall bar into the grass; the left grass strip reaches
             "gg.............", // 8  up to row 7 toward the tower (Rickard 2026-11-13: grass over the bare patch by the water,
             "gg........####.", // 9  top and bottom); the wall bar
