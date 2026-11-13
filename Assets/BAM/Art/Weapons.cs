@@ -1193,7 +1193,13 @@ namespace BAM.Art
                 // (2026-11-01) only for a weapon with the anatomical grip (Tyra): Knut's and Fenn's socket is a grip point only, and
                 // Rickard moves their weapon on top of it with his Offset ("då antar jag att jag bara flyttar den")
                 bool inSocket = AnimFix.PalmSocket && hasSock[i] && hasAnat[i] && (AnimFix.GripLock || full);
-                if (W.Offset != Vector3.zero && !inSocket) t.position += root.TransformDirection(W.Offset) * figH;
+                // the Offset goes with the fist: tuned on the idle in the hero's own axes, it is turned with the hand's turn from its
+                // idle (handRef), so at rest it is the same shift Rickard tuned, and as the arm moves the weapon stays where he put it
+                // in the hand. Added in the hero's axes (until 2026-11-13) it stood still while the hand turned round it, and Nässla's
+                // 13 cm Offset slid the staff about her fist by up to 9 cm in her idle sway alone (Unity measuring 2026-11-13; Rickard:
+                // "vapnet rör sig inte ihop med handen, den flyter iväg")
+                if (W.Offset != Vector3.zero && !inSocket)
+                    t.position += (rested && !sampling ? hand[i].rotation * Quaternion.Inverse(handRef[i]) * W.Offset : root.TransformDirection(W.Offset)) * figH;
                 if (W.Fist > 0.001f && !gone) CloseHand(i, W.Fist * liveW);
                 if (Legs != null && LegsW > 0.001f && !dead) OffLegs(i);
                 if (Floor > float.NegativeInfinity) AboveGround(i, dt);
