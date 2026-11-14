@@ -503,8 +503,10 @@ namespace BAM.Art
                 },
             };
 
-            // Ragn (no weapon until now): his short forge hammer in the right fist, as it holds it; his tail sways from the body (ClothSway)
-            g[(int)HeroId.Ragn] = new GearDef { Weapons = new[] { new WeaponDef { Model = "v2_ragn_hammer", Len = 0.38f, Grip = 0.12f } } };
+            // Ragn: his tail sways from the body (ClothSway).
+            // No weapon since 2026-11-14 (Rickard: "ragn behöver inget vapen han slår med händer"): he fights with his claws, as before
+            // V2; v2_ragn_hammer and the skins' hammers stay unused. An empty gear so his skins' worn parts (Jarl's cape) can go on.
+            g[(int)HeroId.Ragn] = new GearDef();
 
             // Nässla: the new root staff held as before, the mushroom cap on her head and the basket on her back (her V2 body has
             // neither built in)
