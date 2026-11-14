@@ -30,7 +30,9 @@ namespace BAM.Art.Editor
             || path == ModelsDir + "Tikta/Tikta.fbx" || path == ModelsDir + "Moa/Moa.fbx"
             // the remakes whose swinging cloth or hair is part of the body shell (ClothSway's V2 specs): Tyra's ponytail, Ragn's tail,
             // Nässla's hair; capes, scarves and pelts are parts of their own (Weapons.cs, WornDef.Sway)
-            || path == ModelsV2Dir + "Tyra/Tyra.fbx" || path == ModelsV2Dir + "Ragn/Ragn.fbx" || path == ModelsV2Dir + "Nassla/Nassla.fbx";
+            || path == ModelsV2Dir + "Tyra/Tyra.fbx" || path == ModelsV2Dir + "Ragn/Ragn.fbx" || path == ModelsV2Dir + "Nassla/Nassla.fbx"
+            // and their skins (ModelsV2/<Hero>/Skins/<Skin>/*.fbx), which sway the same way
+            || path.StartsWith(ModelsV2Dir + "Tyra/Skins/") || path.StartsWith(ModelsV2Dir + "Ragn/Skins/") || path.StartsWith(ModelsV2Dir + "Nassla/Skins/");
 
         // Rickard's arena pictures repeat across the floor and walls; 512 is plenty at the match camera's distance.
         void OnPreprocessTexture()
@@ -263,6 +265,94 @@ namespace BAM.Art.Editor
         static string ModelPath(Spec s) => UsesV2(s) ? V2Body(s) : ModelsDir + ModelOf(s) + ".fbx";
         static string TexPath(Spec s) => UsesV2(s) ? ModelsV2Dir + s.Hero + "/" + s.Hero + "_Tex.jpg" : ModelsDir + ModelOf(s) + "_Tex.jpg";
 
+        // ---- the skins (ModelsV2/<Hero>/Skins/<Skin>/: a body FBX and its <Body>_Tex.jpg; Parts/ under it are not used yet) ----
+        // Every skin of a V2 hero goes into its HeroArt (and so into the build); the player picks one on Home (HeroSkins).
+
+        struct SkinFiles { public string Name, Body, Tex; }
+
+        static SkinFiles[] SkinsOf(Spec s)
+        {
+            var list = new System.Collections.Generic.List<SkinFiles>();
+            string root = ModelsV2Dir + s.Hero + "/Skins";
+            if (s.Out != null || !Directory.Exists(root)) return list.ToArray();
+            string[] dirs = Directory.GetDirectories(root);
+            System.Array.Sort(dirs, System.StringComparer.Ordinal);
+            foreach (string d in dirs)
+            {
+                string dir = d.Replace('\\', '/');
+                string[] bodies = Directory.GetFiles(dir, "*.fbx");
+                if (bodies.Length == 0) continue; // a skin of parts only (Moa's Druid and Queen so far): waits for the weapon step
+                System.Array.Sort(bodies, System.StringComparer.Ordinal);
+                string body = bodies[0].Replace('\\', '/');
+                string tex = dir + "/" + Path.GetFileNameWithoutExtension(body) + "_Tex.jpg";
+                if (!File.Exists(tex))
+                {
+                    tex = null;
+                    foreach (string t in Directory.GetFiles(dir, "*_Tex.jpg")) { tex = t.Replace('\\', '/'); break; }
+                }
+                list.Add(new SkinFiles { Name = Path.GetFileName(dir), Body = body, Tex = tex });
+            }
+            return list.ToArray();
+        }
+
+        /// <summary>The picture's main colour, bright enough to read as text on the dark menu (its dark and grey pixels left out).</summary>
+        static Color MainColour(Texture2D tex)
+        {
+            if (tex == null) return Color.white;
+            const int N = 32;
+            var rt = RenderTexture.GetTemporary(N, N, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var was = RenderTexture.active;
+            Graphics.Blit(tex, rt);
+            RenderTexture.active = rt;
+            var small = new Texture2D(N, N, TextureFormat.RGBA32, false);
+            small.ReadPixels(new Rect(0, 0, N, N), 0, 0);
+            small.Apply();
+            RenderTexture.active = was;
+            RenderTexture.ReleaseTemporary(rt);
+            Color sum = Color.black; float w = 0;
+            foreach (Color c in small.GetPixels())
+            {
+                Color.RGBToHSV(c, out float h, out float sat, out float v);
+                if (v < 0.15f) continue;
+                float k = sat * v; // colourful, lit pixels count most
+                sum += c * k; w += k;
+            }
+            Object.DestroyImmediate(small);
+            if (w <= 1e-4f) return Color.white;
+            Color.RGBToHSV(sum / w, out float hh, out float ss, out float vv);
+            return Color.HSVToRGB(hh, Mathf.Clamp(ss * 1.3f, 0.45f, 0.85f), Mathf.Max(vv, 0.95f));
+        }
+
+        static void FillSkins(HeroArt art, Spec s)
+        {
+            SkinFiles[] files = art.V2 ? SkinsOf(s) : new SkinFiles[0];
+            var names = new System.Collections.Generic.List<string>();
+            var models = new System.Collections.Generic.List<GameObject>();
+            var texs = new System.Collections.Generic.List<Texture2D>();
+            var cols = new System.Collections.Generic.List<Color>();
+            foreach (SkinFiles f in files)
+            {
+                var m = AssetDatabase.LoadAssetAtPath<GameObject>(f.Body);
+                if (m == null) { Debug.LogWarning("[BAM.Art] " + s.Hero + " skin " + f.Name + ": " + f.Body + " not imported yet"); continue; }
+                var t = f.Tex != null ? AssetDatabase.LoadAssetAtPath<Texture2D>(f.Tex) : null;
+                names.Add(f.Name); models.Add(m); texs.Add(t); cols.Add(MainColour(t));
+            }
+            art.SkinNames = names.ToArray();
+            art.SkinModels = models.ToArray();
+            art.SkinTextures = texs.ToArray();
+            art.SkinColors = cols.ToArray();
+        }
+
+        static bool SkinsStale(HeroArt art, Spec s)
+        {
+            if (!art.V2) return art.SkinCount != 0;
+            SkinFiles[] files = SkinsOf(s);
+            if (art.SkinModels == null || art.SkinNames == null || art.SkinModels.Length != files.Length) return true;
+            for (int i = 0; i < files.Length; i++)
+                if (art.SkinModels[i] == null || art.SkinNames[i] != files[i].Name) return true;
+            return false;
+        }
+
         static void SetV2(string hero, bool on)
         {
             if (EditorApplication.isPlaying) { Debug.LogWarning("[BAM.Art] Leave Play first, then switch Models V2 (the heroes are rebuilt outside Play)"); return; }
@@ -324,7 +414,8 @@ namespace BAM.Art.Editor
                     if (art == null || art.Model == null || art.Model != AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath(s)) || art.V2 != UsesV2(s) || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
                         || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null
                         || (s.RunFour != null && art.RunFour == null)) { BuildAll(); return; } // Ragn's all-fours run came 2026-11-10: a HeroArt built before it lacks it
-                    if (art.Cast != Clip(s.Cast, 3)) { BuildAll(); return; } // a cast clip changed in specs (Bram's throw 2026-11-13): no Rebuild by hand needed
+                    if (art.Cast != Clip(s.Cast, 3)) { BuildAll(); return; }
+                    if (SkinsStale(art, s)) { BuildAll(); return; } // a skin folder came or went // a cast clip changed in specs (Bram's throw 2026-11-13): no Rebuild by hand needed
                 }
             };
         }
@@ -337,6 +428,7 @@ namespace BAM.Art.Editor
             foreach (Spec s in specs)
             {
                 paths.Add(ModelPath(s));
+                if (UsesV2(s)) foreach (SkinFiles f in SkinsOf(s)) paths.Add(f.Body);
                 foreach (string p in new[] { s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
                     if (p != null) paths.Add(ModelsDir + p + ".fbx");
             }
@@ -398,6 +490,7 @@ namespace BAM.Art.Editor
                 art.Model = model;
                 art.Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(TexPath(s));
                 art.V2 = UsesV2(s);
+                FillSkins(art, s);
                 art.Idle = Clip(s.Idle, 0); art.Run = Clip(s.Run, 1); art.Attack = Clip(s.Attack, 2);
                 art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
                 art.RunFour = s.RunFour != null ? Load(s.RunFour) : null;

@@ -296,7 +296,8 @@ namespace BAM.Game
             switch (u.Kind)
             {
                 case UnitKind.Hero:
-                    v = ArtKit.CreateHero(u.Hero, Side(u.Team));
+                    // the player's own hero, and Fenn's decoy of it, wear the skin picked on Home (HeroSkins, kept on this phone only)
+                    v = ArtKit.CreateHero(u.Hero, Side(u.Team), m.Player != null && (u == m.Player || (u.IsClone && u.Owner == m.Player)) ? HeroSkins.Chosen(u.Hero) : 0);
                     if (!u.IsClone) BamAudio.Preload(SfxId.HeroDeath, HeroVoice(u.Hero)); // its own death sound is ready before it dies
                     break;
                 case UnitKind.Tower: v = ArtKit.CreateTower(Side(u.Team)); break;

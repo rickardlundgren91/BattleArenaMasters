@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BAM.Art;
 using BAM.Audio;
 using BAM.Core;
 using BAM.Sim;
@@ -30,6 +31,10 @@ namespace BAM.UI
         static Text homeHeroName; // "BONK · FIGHTER" under the hero's ring (BuildHeroName); hidden in a party, where the name tags take its place
         static int homeModeShown = -1;
         static GameObject homeTutCard;
+        static GameObject homeSkinPick; // the skin dropdown under the top bar (BuildSkinPick); hidden for a hero with one look
+        static Text homeSkinText;
+        static RectTransform homeSkinList;
+        static int homeSkinListFor = -1; // the hero whose list is open
         static Text homeTutTitle, homeTutNext;
 
         const float Cw = 10.8f;                 // cw(1) at the design width
@@ -69,6 +74,7 @@ namespace BAM.UI
                 for (int i = homeModeIcon.childCount - 1; i >= 0; i--) Object.Destroy(homeModeIcon.GetChild(i).gameObject);
                 ModeIcon(homeModeIcon, homeMode, homeModeIconSize);
             }
+            RefreshSkinPick(id);
             homeTutCard.SetActive(BamSettings.TutorialCard);
             if (BamSettings.TutorialCard) // done or skipped (full review 2026-11-13 nr 112)
             {
@@ -76,6 +82,60 @@ namespace BAM.UI
                 homeTutNext.text = BamSettings.TutorialSkipped ? "Play it any time in Settings > How to play" : "Next: your first match";
             }
             homeFx.Layout();
+        }
+
+        // ---- the skin dropdown (Rickard 2026-11-14: "en knapp i huvudmenyn uppe till vänster", a dropdown, "färgad text"): the
+        // hero's look in its own colour; a tap opens the list of looks, a pick puts it on the hero on the platform at once ----
+
+        static void RefreshSkinPick(HeroId id)
+        {
+            int n = HeroSkins.Count(id);
+            homeSkinPick.SetActive(n > 1);
+            int cur = HeroSkins.Chosen(id);
+            homeSkinText.text = "SKIN  <color=#" + ColorUtility.ToHtmlStringRGB(HeroSkins.Tint(id, cur)) + ">" + HeroSkins.Name(id, cur).ToUpperInvariant() + "</color>  \u25BE";
+            if (homeSkinListFor != (int)id) SkinListOpen(false);
+        }
+
+        static void SkinListOpen(bool open)
+        {
+            if (homeSkinList == null) return;
+            for (int i = homeSkinList.childCount - 1; i >= 0; i--) Object.Destroy(homeSkinList.GetChild(i).gameObject);
+            homeSkinList.gameObject.SetActive(open);
+            homeSkinListFor = open ? BamSettings.LastHero : -1;
+            if (!open) return;
+            homeSkinList.SetAsLastSibling();
+            var id = (HeroId)BamSettings.LastHero;
+            int n = HeroSkins.Count(id), cur = HeroSkins.Chosen(id);
+            const float rowH = 6.4f * Cw, gap = 0.8f * Cw, w = 36 * Cw;
+            homeSkinList.sizeDelta = new Vector2(w, n * (rowH + gap));
+            for (int i = 0; i < n; i++)
+            {
+                int skin = i;
+                var row = UiKit.Fill(homeSkinList, i == cur ? new Color(30 / 255f, 40 / 255f, 90 / 255f, 0.97f) : new Color(10 / 255f, 13 / 255f, 36 / 255f, 0.95f), UiKit.Rounded);
+                row.name = "Skin " + HeroSkins.Name(id, skin);
+                row.pixelsPerUnitMultiplier = 28f / (1.6f * Cw);
+                var rr = row.rectTransform;
+                rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0, 1);
+                rr.anchoredPosition = new Vector2(0, -i * (rowH + gap));
+                rr.sizeDelta = new Vector2(w, rowH);
+                var t = UiKit.Label(rr, (i == cur ? "\u2713  " : "    ") + HeroSkins.Name(id, skin).ToUpperInvariant(), Mathf.RoundToInt(3f * Cw), TextAnchor.MiddleLeft, HeroSkins.Tint(id, skin));
+                t.raycastTarget = false;
+                t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                var tr = t.rectTransform;
+                tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one; tr.offsetMin = new Vector2(2.2f * Cw, 0); tr.offsetMax = Vector2.zero;
+                t.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.85f);
+                var b = row.gameObject.AddComponent<Button>();
+                b.targetGraphic = row;
+                b.transition = Selectable.Transition.None;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                b.onClick.AddListener(() =>
+                {
+                    BamAudio.Play(SfxId.UiTap);
+                    HeroSkins.Choose(id, skin);
+                    SkinListOpen(false);
+                    RefreshHome(); // the hero on the platform changes into the look at once
+                });
+            }
         }
 
         // ---- the painted background (HomeBg): scaled so its platform sits just above the hero's feet ----
@@ -237,6 +297,7 @@ namespace BAM.UI
                 BuildTopBar();
                 OnlineFriendsPill(top, 7.5f * Cw); // online builds only: top right, level with the profile chip
                 BuildTutCard();
+                BuildSkinPick();
                 BuildPartyTags();
                 top.SetAsLastSibling(); // the top bar over the hero
                 Layout();
@@ -560,6 +621,39 @@ namespace BAM.UI
                 Edge(homeTitle, new Color(6 / 255f, 8 / 255f, 26 / 255f, 0.9f), 0.25f * Cw, new Color(0, 0, 0, 0.85f), 0.35f * Cw);
                 AtTop(homeTitle.rectTransform, tx, cy + 1.1f * Cw - 2.5f * Cw, 50 * Cw, 5 * Cw);
                 if (OnlineChip(top, cy)) { disc.gameObject.SetActive(false); homeName.gameObject.SetActive(false); homeTitle.gameObject.SetActive(false); } // online builds: the old profile chip
+            }
+
+            // the skin dropdown, under the hero's picture and name: "SKIN  THUNDER ▾", the name in the skin's colour
+            void BuildSkinPick()
+            {
+                float y = 14.2f * Cw, h = 6.4f * Cw, w = 36 * Cw;
+                var pill = Img(top, "SkinPick", UiKit.Rounded, new Color(10 / 255f, 13 / 255f, 36 / 255f, 0.85f));
+                Round(pill, 1.6f * Cw);
+                pill.raycastTarget = true;
+                AtTop(pill.rectTransform, 4 * Cw, y, w, h);
+                var edge = Img(pill.rectTransform, "Edge", HomeArt.RoundRing(0.3f * Cw / (1.6f * Cw)), Fade(HubGold, 0.7f));
+                RoundRing(edge, 1.6f * Cw);
+                UiKit.Stretch(edge.rectTransform);
+                edge.raycastTarget = false;
+                var label = Lil(pill.rectTransform, "", 2.8f, HubSoft);
+                label.supportRichText = true;
+                label.alignment = TextAnchor.MiddleLeft;
+                label.font = UiKit.BodyFont;
+                label.fontStyle = FontStyle.Bold;
+                var lr = label.rectTransform;
+                lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one; lr.offsetMin = new Vector2(2.2f * Cw, 0); lr.offsetMax = Vector2.zero;
+                Edge(label, new Color(6 / 255f, 8 / 255f, 26 / 255f, 0.9f), 0.2f * Cw, new Color(0, 0, 0, 0.85f), 0.3f * Cw);
+                var b = pill.gameObject.AddComponent<Button>();
+                b.targetGraphic = pill;
+                b.transition = Selectable.Transition.None;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                b.onClick.AddListener(() => { BamAudio.Play(SfxId.UiTap); SkinListOpen(!homeSkinList.gameObject.activeSelf); });
+                homeSkinPick = pill.gameObject;
+                homeSkinText = label;
+
+                homeSkinList = UiKit.NewRect("SkinList", top);
+                AtTop(homeSkinList, 4 * Cw, y + h + 0.8f * Cw, w, 0);
+                homeSkinList.gameObject.SetActive(false);
             }
 
             // HubTutCard (the old MenuNewPlayer.cs): after the first tutorial, "Tutorial done" and "Next: your first match" on a dark

@@ -358,24 +358,27 @@ namespace BAM.Art
             return Arena.Build(arena);
         }
 
-        public static UnitView CreateHero(HeroId hero, int team) => Body(Models.Hero(hero, team), HeroKey + (int)hero, team);
+        public static UnitView CreateHero(HeroId hero, int team) => CreateHero(hero, team, 0);
+        /// <summary>A hero wearing look skin (HeroSkins; 0 = the plain body). Each look has its own pool.</summary>
+        public static UnitView CreateHero(HeroId hero, int team, int skin) => Body(Models.Hero(hero, team, skin), HeroKey + (int)hero, team, false, skin);
         public static UnitView CreateMinion(MinionKind kind, int team) => Body(Models.Minion(kind, team), 10 + (int)kind, team);
         public static UnitView CreateTower(int team) => Body(Models.Tower(team), 20, team);
         /// <summary>The guided match's practice dummy (a target board on a post). PlayAttack does nothing; SetDead bursts it into splinters.</summary>
         public static UnitView CreateTarget() => Body(Models.Target(), 40, Teams.Enemy);
         /// <summary>A hero for the menus (Home platform, hero cards): team 0 look, idle, no ground ring, bar or status
         /// markers, own pool. It is lit by the game's sun wherever it stands, and any camera can render it.</summary>
-        public static UnitView CreateHeroPreview(HeroId hero) => Body(Models.Hero(hero, Teams.Player), PreviewKey + (int)hero, Teams.Player, true);
+        public static UnitView CreateHeroPreview(HeroId hero) => CreateHeroPreview(hero, HeroSkins.Chosen(hero));
+        public static UnitView CreateHeroPreview(HeroId hero, int skin) => Body(Models.Hero(hero, Teams.Player, skin), PreviewKey + (int)hero, Teams.Player, true, skin);
 
         // the pools' keys: minions 10+, the tower 20, the dummy 40 (30 was Fenn's wolf); heroes and their menu previews in their own hundreds
         // (2026-11-05: Kugg, hero 10, had key 10 = the melee minion's, so the two shared a pool and he never knew he was a hero)
         const int HeroKey = 100, PreviewKey = 200;
 
-        static BodyView Body(RigDef def, int kindKey, int team, bool preview = false)
+        static BodyView Body(RigDef def, int kindKey, int team, bool preview = false, int skin = 0)
         {
             Init();
             team = team == 1 ? 1 : 0;
-            int key = kindKey * 2 + team;
+            int key = kindKey * 2 + team + 100000 * Mathf.Clamp(skin, 0, 7); // a skin's views are built with its body: their own pool
             if (!bodyPools.TryGetValue(key, out Stack<BodyView> pool)) { pool = new Stack<BodyView>(); bodyPools[key] = pool; }
             BodyView v;
             if (pool.Count > 0)

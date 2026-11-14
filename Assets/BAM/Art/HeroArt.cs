@@ -28,5 +28,14 @@ namespace BAM.Art
         /// <summary>The body is the 2026-11-13 remake (Art/ModelsV2/&lt;Hero&gt;): its own weapon and part table (Weapons.ForV2) and cloth
         /// (ClothSway). BAM &gt; Art &gt; Models V2 switches each hero between the remake and the old body.</summary>
         public bool V2;
+        /// <summary>The V2 body's other looks (Art/ModelsV2/&lt;Hero&gt;/Skins/&lt;Skin&gt;: its own body and colour picture, same clips and
+        /// weapons), in folder-name order; index i here is skin i + 1 (0 = the plain V2 body above). Built by HeroArtImport, chosen
+        /// with <see cref="HeroSkins"/> (Rickard 2026-11-14: "hur byter jag skins nu").</summary>
+        public string[] SkinNames = new string[0];
+        public GameObject[] SkinModels = new GameObject[0];
+        public Texture2D[] SkinTextures = new Texture2D[0];
+        /// <summary>Each skin's main colour (from its picture), for its name in the skin list.</summary>
+        public Color[] SkinColors = new Color[0];
+        public int SkinCount => SkinModels != null ? SkinModels.Length : 0;
     }
 }

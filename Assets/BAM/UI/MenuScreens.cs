@@ -111,6 +111,7 @@ namespace BAM.UI
         RenderTexture rt;
         UnitView view;
         HeroId shownId;
+        int shownSkin; // the look shown (HeroSkins): a new pick on Home builds the hero again
         bool hasHero;
         float heroHeight = 1.8f; // world units, measured from the model when shown
         // the held weapons' highest point over the feet so far (world units, 0 = none yet), from the frame the idle holds them,
@@ -118,13 +119,15 @@ namespace BAM.UI
         float gearTop, swingTill;
         int measureAt;
 
-        /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback).</summary>
-        public bool Show(HeroId id)
+        /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback). mine: in this player's own skin
+        /// (HeroSkins); a party member's hero on Home shows its plain body (skins are not sent online yet).</summary>
+        public bool Show(HeroId id, bool mine = true)
         {
-            if (hasHero && id == shownId) return true;
+            int skin = mine ? HeroSkins.Chosen(id) : 0;
+            if (hasHero && id == shownId && skin == shownSkin) return true;
             Setup();
             if (hasHero) { ArtKit.Release(view); view = null; hasHero = false; }
-            try { view = ArtKit.CreateHeroPreview(id); }
+            try { view = ArtKit.CreateHeroPreview(id, skin); }
             catch (System.Exception e) { Debug.LogException(e); view = null; }
             if (view == null) { Picture.enabled = false; return false; }
             view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, Facing(), 0));
@@ -133,6 +136,7 @@ namespace BAM.UI
             gearTop = swingTill = 0;
             measureAt = Time.frameCount + 2; // the model plays its idle from the next frame, and the weapons follow in its LateUpdate
             shownId = id;
+            shownSkin = skin;
             hasHero = true;
             view.gameObject.SetActive(isActiveAndEnabled);
             Picture.enabled = false; // shown once its weapons are measured (FitGear), so the hero never jumps smaller

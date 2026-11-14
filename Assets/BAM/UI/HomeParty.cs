@@ -193,7 +193,7 @@ namespace BAM.UI
                     s.NotReady.SetActive(!m.Ready);
                     readyFrontOf[i].SetActive(m.Ready);
                     notFrontOf[i].SetActive(!m.Ready);
-                    if (!s.Stage.Show(m.Hero)) s.Stage.Picture.enabled = false;
+                    if (!s.Stage.Show(m.Hero, false)) s.Stage.Picture.enabled = false;
                     s.Stage.Frame();
                 }
                 if (myTag != null) myTag.gameObject.SetActive(shownCount > 0); // alone (ONE_PLAY): no plate, the name is in the top bar

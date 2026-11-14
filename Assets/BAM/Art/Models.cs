@@ -80,9 +80,10 @@ namespace BAM.Art
             return body != hero;
         }
 
-        public static RigDef Hero(HeroId hero, int team)
+        /// <summary>The hero's model; skin &gt; 0 wears that look of its V2 body (HeroSkins), the same rig, clips and weapons.</summary>
+        public static RigDef Hero(HeroId hero, int team, int skin = 0)
         {
-            int k = Key(0, (int)hero, team);
+            int k = Key(0, (int)hero, team) * 8 + Mathf.Clamp(skin, 0, 7);
             if (cache.TryGetValue(k, out RigDef d)) return d;
             b.Clear();
             switch (hero)
@@ -108,6 +109,7 @@ namespace BAM.Art
             d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + hero);
             var gearOf = hero;
             if (d.Art == null && StandIn(hero, out HeroId si)) { d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + si); gearOf = si; } // Øli's four: a stand-in body and its weapon until Rickard's own models
+            if (skin > 0 && d.Art != null && gearOf == hero) d.Art = HeroSkins.Apply(d.Art, skin);
             if (d.Art == null && hero >= HeroId.Bonk) Debug.LogError("[BAM.Art] " + hero + " has no HeroArt (run BAM > Art > Build Hero Art): showing a stand-in figure");
             if (d.Art != null)
             {
