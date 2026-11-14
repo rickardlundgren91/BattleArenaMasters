@@ -1053,6 +1053,9 @@ namespace BAM.Art
             // there too; Kugg's fist stayed in his head on Home, Rickard 2026-11-11)
             if (imported && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
             if (imported && !dead && HeroIndex == (int)HeroId.Kugg) KuggGuard();
+            // Blast's remake (V2): his clips, made on his old body, throw the big new head back (Rickard 2026-11-14: "hans huvud är
+            // vikt bakåt"); it is nodded forward again after the Animator, in the menu and in a match
+            if (imported && HeroIndex == (int)HeroId.Blast && def.Art != null && def.Art.V2) NodHead(BlastV2HeadDown);
             if (!Preview && imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggAim();
             // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
             if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
@@ -1879,6 +1882,17 @@ namespace BAM.Art
                 }
             }
             return any;
+        }
+
+        /// <summary>Degrees Blast's V2 head is nodded forward over what his clips give it.</summary>
+        const float BlastV2HeadDown = 25f;
+
+        void NodHead(float deg)
+        {
+            Transform h = anim != null && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
+            if (h == null) return;
+            // about the hero's own right: a positive angle tips the face down
+            h.rotation = Quaternion.AngleAxis(deg, anim.transform.right) * h.rotation;
         }
 
         static float BindBottom(Renderer[] rs, float fallback) => BindY(rs, fallback, false);
