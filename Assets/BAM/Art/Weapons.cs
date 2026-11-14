@@ -425,6 +425,11 @@ namespace BAM.Art
             // round onto his back) and swings back as he runs
             GearDef f = g[(int)HeroId.Fenn];
             f.Weapons[0].Model = "v2_fenn_sword";
+            // the palm socket and the stand-in thumb were measured on his old right hand (index only, 2026-11-01); on the V2 rig, with
+            // all five fingers, they bent the hand back into the forearm (Rickard 2026-11-14: "fenns högra hand är böjd tillbaka in i
+            // armen"), so the sword sits by the plain grip as on the other remakes
+            f.Weapons[0].Socket = Vector3.zero;
+            f.Weapons[0].NoFingerThumb = Vector3.zero;
             f.Shield.Model = "v2_fenn_shield";
             f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.42f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f } };
 
@@ -441,7 +446,11 @@ namespace BAM.Art
             m.Weapons[0].Model = "v2_moa_staff";
             m.Shield.Model = "v2_moa_shield";
 
-            g[(int)HeroId.Knut].Weapons[0].Model = "v2_knut_anchor";
+            // Knut: the new anchor; his old socket and stand-in finger points were for his old fingerless hand (as Fenn's above), so
+            // on the V2 rig with real fingers the anchor goes by the plain grip
+            WeaponDef kn = g[(int)HeroId.Knut].Weapons[0];
+            kn.Model = "v2_knut_anchor";
+            kn.Socket = Vector3.zero; kn.NoFingerIndex = Vector3.zero; kn.NoFingerThumb = Vector3.zero;
 
             // Tikta: the new needles in both fists; the chitin wing plate on her back (made from behind, so turned round), her scarf tails
             // hanging down her back from the neck (a soft swing) and the spare-needle holster on her right thigh
