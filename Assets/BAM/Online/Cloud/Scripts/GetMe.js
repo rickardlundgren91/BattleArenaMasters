@@ -10,5 +10,7 @@ module.exports = async ({ context }) => {
   const item = k => (got.data.results.find(r => r.key === k) || {}).value;
   const name = item("bam-name"), t = item("bam-progress") || null;
   if (t && t.rs !== SEASON) { t.rating = 0; t.pend = 0; }   // Rating season 2 (2026-10-29): ReportMatch saves the 0 at the next match
+  // gold (2026-11-15): an account from before gold has 100 for every level it already has; ReportMatch saves it at the next match
+  if (t && t.gold === undefined) { let l = 1, xp = t.xp || 0; while (l < 30 && xp >= 100 + 50 * (l - 1)) { xp -= 100 + 50 * (l - 1); l++; } t.gold = 100 * (l - 1); }
   return { name: name ? name.name : null, totals: t };
 };

@@ -241,7 +241,8 @@ namespace BAM.UI
             homeModeChip.sizeDelta = new Vector2(Mathf.Clamp(w, 36 * Cw, 70 * Cw), homeModeChip.sizeDelta.y);
             int xp = homeMode == Mode.Classic && OnlineHooks.FirstWinXp != null ? OnlineHooks.FirstWinXp() : 0;
             homeFirstWinText.gameObject.SetActive(xp > 0);
-            if (xp > 0) homeFirstWinText.text = "FIRST WIN TODAY · +" + xp + " XP";
+            int gold = xp > 0 && OnlineHooks.FirstWinGold != null ? OnlineHooks.FirstWinGold() : 0;
+            if (xp > 0) homeFirstWinText.text = "FIRST WIN TODAY · +" + xp + " XP" + (gold > 0 ? " · +" + gold + " GOLD" : "");
             homePlayLabel.anchoredPosition = new Vector2(0, xp > 0 ? 0.08f * BrowH : 0); // PLAY moves up over the line, as with the old sub line
         }
 

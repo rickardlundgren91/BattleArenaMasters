@@ -50,6 +50,8 @@ namespace BAM.UI
         {
             var body = NewScreen("Home", false, out mainMenu);
             BuildHomeBackground(body);
+            // a gold skin not bought yet (or one coming soon) is never worn, also in a match (HomeGold.cs); offline every look
+            HeroSkins.Wearable = (id, skin) => OnlineHooks.SkinPrice == null || OnlineHooks.SkinPrice(id, skin) == 0;
             homeFx = body.gameObject.AddComponent<HomeFx>();
             homeFx.Build(body);
         }
@@ -93,6 +95,7 @@ namespace BAM.UI
             int cur = HeroSkins.Chosen(id);
             homeSkinText.text = "SKIN  <color=#" + ColorUtility.ToHtmlStringRGB(HeroSkins.Tint(id, cur)) + ">" + HeroSkins.Name(id, cur).ToUpperInvariant() + "</color>  \u25BE";
             if (homeSkinListFor != (int)id) SkinListOpen(false);
+            RefreshGoldPill();
         }
 
         static void SkinListOpen(bool open)
@@ -101,7 +104,9 @@ namespace BAM.UI
             for (int i = homeSkinList.childCount - 1; i >= 0; i--) Object.Destroy(homeSkinList.GetChild(i).gameObject);
             homeSkinList.gameObject.SetActive(open);
             homeSkinListFor = open ? BamSettings.LastHero : -1;
+            skinBuyAsk = -1;
             if (!open) return;
+            GoalListOpen(false);
             homeSkinList.SetAsLastSibling();
             var id = (HeroId)BamSettings.LastHero;
             int n = HeroSkins.Count(id), cur = HeroSkins.Chosen(id);
@@ -118,7 +123,9 @@ namespace BAM.UI
                 rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0, 1);
                 rr.anchoredPosition = new Vector2(0, -i * (rowH + gap));
                 rr.sizeDelta = new Vector2(w, rowH);
-                var t = UiKit.Label(rr, (i == cur ? "\u2713  " : "    ") + HeroSkins.Name(id, skin).ToUpperInvariant(), Mathf.RoundToInt(3f * Cw), TextAnchor.MiddleLeft, HeroSkins.Tint(id, skin));
+                int price = OnlineHooks.SkinPrice != null ? OnlineHooks.SkinPrice(id, skin) : 0;
+                var t = UiKit.Label(rr, SkinRowText(id, skin, cur, price, null), Mathf.RoundToInt(3f * Cw), TextAnchor.MiddleLeft, HeroSkins.Tint(id, skin));
+                t.supportRichText = true;
                 t.raycastTarget = false;
                 t.horizontalOverflow = HorizontalWrapMode.Overflow;
                 var tr = t.rectTransform;
@@ -131,6 +138,7 @@ namespace BAM.UI
                 b.onClick.AddListener(() =>
                 {
                     BamAudio.Play(SfxId.UiTap);
+                    if (price != 0) { SkinBuyTap(id, skin, price, t); return; } // gold skin not bought yet, or coming soon (HomeGold.cs)
                     HeroSkins.Choose(id, skin);
                     SkinListOpen(false);
                     RefreshHome(); // the hero on the platform changes into the look at once
@@ -298,6 +306,7 @@ namespace BAM.UI
                 OnlineFriendsPill(top, 7.5f * Cw); // online builds only: top right, level with the profile chip
                 BuildTutCard();
                 BuildSkinPick();
+                BuildGoldPill(); // online builds only (HomeGold.cs)
                 BuildPartyTags();
                 top.SetAsLastSibling(); // the top bar over the hero
                 Layout();

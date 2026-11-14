@@ -386,7 +386,10 @@ namespace BAM.UI
             if (!on) return;
             if (g.Unlocked != null) resUnlock.text = "NEW HERO UNLOCKED: " + g.Unlocked.ToUpperInvariant();
             bool up = g.Level > g.LevelBefore;
-            resXp.text = "+" + g.Xp + " XP  ·  " + (g.RatingText ?? "+" + g.Rating + " Rating") + (g.FirstWin ? "  (first win today)" : "");
+            // gold (2026-11-15): "+150 GOLD" in gold; it already says the day's first win paid, so "(first win today)" goes then
+            resXp.supportRichText = true;
+            resXp.text = "+" + g.Xp + " XP  ·  " + (g.RatingText ?? "+" + g.Rating + " Rating")
+                + (g.Gold > 0 ? "  ·  <color=#ffd166>+" + g.Gold + " GOLD</color>" : g.FirstWin ? "  (first win today)" : "");
             resLevel.text = (up ? "LEVEL UP! " : "") + "Level " + g.Level + " · " + g.LevelText;
             resLevel.color = up ? ResLevelUp : ResSub;
             resXpPart = Mathf.Clamp01(g.LevelProgress);

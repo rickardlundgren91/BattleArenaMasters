@@ -37,6 +37,16 @@ namespace BAM.Online.UI
             OnlineHooks.Matches = () => Progress.Shown.matches;
             OnlineHooks.FirstWinXp = () => Account.State == Account.Status.Ready || Account.State == Account.Status.NeedsName
                 || Account.State == Account.Status.Offline && Account.Enabled ? Progress.FirstWinXpLeft() : 0;
+            OnlineHooks.Gold = () => Progress.Shown.gold;
+            OnlineHooks.FirstWinGold = () => OnlineHooks.FirstWinXp() > 0 && Gold.FirstWinLeft() ? Gold.FirstWin : 0;
+            OnlineHooks.DailyGoals = () =>
+            {
+                var list = new System.Collections.Generic.List<DailyGoal>(3);
+                foreach (var g in Gold.TodayGoals()) list.Add(new DailyGoal { Text = g.Text, Have = g.Have, Need = g.Need, Done = g.Done });
+                return list;
+            };
+            OnlineHooks.SkinPrice = (id, skin) => Gold.PriceOf(id.ToString(), skin);
+            OnlineHooks.BuySkin = async (id, done) => { string why = await Gold.BuySkin(id.ToString()); done?.Invoke(why); };
             OnlineHooks.Party = OnlineMenu.Party;
             OnlineHooks.PartyPlay = OnlineMenu.PartyPlay;
             OnlineHooks.LeaveParty = OnlineMenu.LeaveParty;
@@ -70,6 +80,7 @@ namespace BAM.Online.UI
             {
                 Xp = Progress.LastXp, Rating = Progress.LastRating, Level = t.level, LevelBefore = Progress.LastLevelBefore,
                 RatingText = RatingText(),
+                Gold = Progress.LastGold,
                 FirstWin = Progress.LastFirstWin,
                 LevelProgress = max || need <= 0 ? 1f : (float)have / need,
                 LevelText = max ? "Max level" : have + " / " + need + " XP",

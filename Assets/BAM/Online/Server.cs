@@ -162,6 +162,9 @@ namespace BAM.Online
 
         internal static Task DeleteMe() => Call<OkAnswer>("DeleteMe", null, "ok");
 
+        /// <summary>Buys the hero's gold skin (BuySkin.js): the server takes Gold.SkinPrice from the gold it keeps.</summary>
+        internal static Task<BuyAnswer> BuySkin(string hero) => Call<BuyAnswer>("BuySkin", new Dictionary<string, object> { { "hero", hero } }, "ok");
+
 #if UNITY_EDITOR
         // BAM > Bots > Download match traces: the bot lab's copy of every trace on the server (ExportTraces.js), as .bmt files in
         // Downloads/BAM-Traces (a file already there is skipped). Needs Play mode (signed in) and this editor's player ID in the

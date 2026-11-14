@@ -17,6 +17,10 @@
 // later (an empty "matches" list is fine). Unconfirmed after WAIT_SECONDS, the match counts as a match against its bots.
 // Leaving an online match against players ("quit") gives no XP or stats, only the players' Rating loss, and tells the
 // other side the match was lost.
+// Gold (Rickard 2026-11-15, Gold.cs): the day's first win 100, each of the day's three goals 50, each new level 100; a normal
+// match none. The gold and the bought skins ("skins", hero ids) live in "bam-progress" too; BuySkin.js spends the gold. An
+// account from before gold gets 100 for every level it already has, once. "bam-progress" is written with its write lock, so
+// a BuySkin running at the same moment is never overwritten (this call then fails and the phone sends again later).
 const { DataApi } = require("@unity-services/cloud-save-1.4");
 const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
 
@@ -66,9 +70,29 @@ async function sweepPvp(data, projectId, now) {
 // ("hero or bot level") and the phone drops it for good (full review 2026-11-09 nr 68). Keep this list equal to HeroCatalog.All.
 const HEROES = ["Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk", "Kugg", "Hilde", "Oaken", "Ragn", "Nassla", "Ravna"], LEVELS = ["Easy", "Normal", "Hard", "Ultra"];
 
+// keep equal to Gold.cs (and BuySkin.js)
+const GOLD_FIRST_WIN = 100, GOLD_GOAL = 50, GOLD_LEVEL = 100;
+const GOAL_TARGET = [3, 2, 10, 1], GOAL_HEROES = ["Tyra", "Kugg", "Bram", "Fenn", "Ragn", "Nassla"];
+/// The day's three goals (all four kinds but one: 0 play, 1 win, 2 kills, 3 a match with one hero) and that hero, from the day alone.
+function dayGoals(day) {
+  const h = (day * 2654435761) % 4294967296, skip = h % 4;
+  return { goals: [0, 1, 2, 3].filter(g => g !== skip), hero: GOAL_HEROES[Math.floor(h / 256) % GOAL_HEROES.length] };
+}
+function applyGold(t, day, won, kills, hero, firstWin, levelBefore, levelAfter) {
+  if (levelAfter > levelBefore) t.gold += GOLD_LEVEL * (levelAfter - levelBefore);
+  if (firstWin) t.gold += GOLD_FIRST_WIN;
+  if (day > t.gDay) { t.gDay = day; t.gm = t.gw = t.gk = t.gh = t.gDone = 0; }
+  if (day !== t.gDay) return;
+  t.gm++; if (won) t.gw++; t.gk += Math.min(60, Math.max(0, kills));
+  const d = dayGoals(day);
+  if (hero === d.hero) t.gh = 1;
+  const have = [t.gm, t.gw, t.gk, t.gh];
+  for (const g of d.goals) if (!(t.gDone & (1 << g)) && have[g] >= GOAL_TARGET[g]) { t.gDone |= 1 << g; t.gold += GOLD_GOAL; }
+}
+
 const xpToNext = l => 100 + 50 * (l - 1);
 function levelOf(xp) { let l = 1; while (l < MAX_LEVEL && xp >= xpToNext(l)) { xp -= xpToNext(l); l++; } return l; }
-const fresh = () => ({ xp: 0, level: 1, rating: 0, rs: SEASON, pend: 0, matches: 0, wins: 0, losses: 0, kills: 0, deaths: 0, streak: 0, bestStreak: 0, seconds: 0, winDay: -1, heroes: [], mk: {} });
+const fresh = () => ({ xp: 0, level: 1, rating: 0, rs: SEASON, pend: 0, matches: 0, wins: 0, losses: 0, kills: 0, deaths: 0, streak: 0, bestStreak: 0, seconds: 0, winDay: -1, heroes: [], mk: {}, gold: 0, gm: 0, gw: 0, gk: 0, gh: 0, gDone: 0, gDay: -1, skins: [] });
 const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 
 /// The Rating one match changes: a win up to the cap of its kind (0 = none), a loss never under 0.
@@ -84,11 +108,13 @@ module.exports = async ({ params, context, logger }) => {
   const got = await data.getProtectedItems(projectId, playerId, ["bam-progress", "bam-matches", "bam-name"]);
   const item = k => (got.data.results.find(r => r.key === k) || {}).value;
   const old = item("bam-progress"), t = Object.assign(fresh(), old || {});
+  const lock = (got.data.results.find(r => r.key === "bam-progress") || {}).writeLock;
   const seen = Object.assign({ ids: [], lastAt: 0, days: {}, wait: [] }, item("bam-matches") || {});
   const name = (item("bam-name") || {}).name || "";
   const now = Math.floor(Date.now() / 1000), today = Math.floor(now / 86400);
   let changed = false;
   if (old && old.rs !== SEASON) { t.rating = 0; t.rs = SEASON; t.pend = 0; seen.wait = []; changed = true; }
+  if (old && old.gold === undefined) { t.gold = GOLD_LEVEL * (levelOf(t.xp) - 1); changed = true; }   // levels from before gold
 
   // the other team's entry: its players may date the match a day either side of ours (midnight, clocks), so all three are read
   const otherSide = async (vs, team, day) => {
@@ -159,8 +185,9 @@ module.exports = async ({ params, context, logger }) => {
 
     const day = Math.floor(at / 86400), won = m.won === true && !quit;
     if (!quit) {
-      const firstWin = won && t.winDay !== day;
+      const firstWin = won && t.winDay !== day, levelBefore = levelOf(t.xp);
       t.xp += (won ? XP_WIN : XP_LOSS) + Math.min(XP_FIGHT_MAX, m.kills * XP_KILL) + (firstWin ? XP_FIRST_WIN : 0);
+      applyGold(t, day, won, m.kills, m.hero, firstWin, levelBefore, levelOf(t.xp));
       if (firstWin) t.winDay = day;
       t.matches++;
       if (won) { t.wins++; t.streak++; t.bestStreak = Math.max(t.bestStreak, t.streak); } else { t.losses++; t.streak = 0; }
@@ -209,7 +236,7 @@ module.exports = async ({ params, context, logger }) => {
     spans.sort((a, b) => a[1] - b[1]);
     seen.spans = spans.filter(sp => sp[1] >= now - MAX_AGE - 3600).slice(-KEEP_SPANS);
     for (const d of Object.keys(seen.days)) if (Number(d) < today - 31) delete seen.days[d];
-    await data.setProtectedItemBatch(projectId, playerId, { data: [{ key: "bam-progress", value: t }, { key: "bam-matches", value: seen }] });
+    await data.setProtectedItemBatch(projectId, playerId, { data: [Object.assign({ key: "bam-progress", value: t }, lock ? { writeLock: lock } : {}), { key: "bam-matches", value: seen }] });
     await lb.addLeaderboardPlayerScore(projectId, "rating", playerId, { score: t.rating, metadata: { n: name, l: t.level } });
   }
   return { totals: t, done: done, waiting: seen.wait.length };

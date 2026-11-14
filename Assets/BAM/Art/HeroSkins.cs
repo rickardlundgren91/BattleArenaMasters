@@ -12,6 +12,9 @@ namespace BAM.Art
     {
         const string Key = "BAM.Skin.";
 
+        /// <summary>Whether the player may wear the look now (gold skins must be bought, Gold.cs). Null: every look, as in offline builds.</summary>
+        public static System.Func<HeroId, int, bool> Wearable;
+
         static HeroArt Art(HeroId hero) => Resources.Load<HeroArt>("BAMArt/Heroes/" + hero);
 
         /// <summary>How many looks the hero has, the plain one included (1 = no skins).</summary>
@@ -40,7 +43,7 @@ namespace BAM.Art
         public static int Chosen(HeroId hero)
         {
             int s = PlayerPrefs.GetInt(Key + hero, 0);
-            return s > 0 && s < Count(hero) ? s : 0;
+            return s > 0 && s < Count(hero) && (Wearable == null || Wearable(hero, s)) ? s : 0;
         }
 
         public static void Choose(HeroId hero, int skin)

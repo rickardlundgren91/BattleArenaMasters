@@ -60,7 +60,7 @@ namespace BAM.Online
         public static int PendingCount { get { Load(); return pending.Count; } }
 
         /// <summary>What the last counted match gave, for the result card (Speltest Progression.lastXp etc.). Zero XP = nothing.</summary>
-        public static int LastXp, LastRating, LastLevelBefore;
+        public static int LastXp, LastRating, LastLevelBefore, LastGold;
         public static bool LastFirstWin, LastWon;
         /// <summary>What the last match counted as for Rating: "Easy", "Normal", "Hard" or <see cref="Players"/>.</summary>
         public static string LastRatingKind;
@@ -151,7 +151,7 @@ namespace BAM.Online
         public static void MatchEnded(MatchResult r)
         {
             Load();
-            LastXp = LastRating = 0;
+            LastXp = LastRating = LastGold = 0;
             string vs = NextVs; int team = NextTeam;
             NextVs = null;
             // leaving a match against players still counts it as lost for Rating (no XP), so the other side gets its win
@@ -185,6 +185,7 @@ namespace BAM.Online
             if (pending.Count > MaxPending) pending.RemoveAt(0);
             SavePending();
             Recount();
+            LastGold = Math.Max(0, shown.gold - before.gold);
         }
 
         // ---------- what the server says ----------
@@ -223,7 +224,9 @@ namespace BAM.Online
             if (m.quit) return;   // a match against players that was left: only its Rating
             long day = m.at / 86400;
             bool firstWin = m.won && t.winDay != day;
+            int levelBefore = LevelOf(t.xp);
             t.xp += XpFor(m.won, m.kills, firstWin);
+            Gold.Apply(t, day, m.won, m.kills, m.hero, firstWin, levelBefore, LevelOf(t.xp));
             if (firstWin) t.winDay = day;
             t.matches++;
             if (m.won) { t.wins++; t.streak++; if (t.streak > t.bestStreak) t.bestStreak = t.streak; }
@@ -304,6 +307,11 @@ namespace BAM.Online
         public int rs, pend;   // Rating season; Rating from matches against players that wait for the other side's report
         public long seconds, winDay = -1;
         public List<HeroTotals> heroes = new List<HeroTotals>();
+        // gold (Gold.cs, 2026-11-15): the balance; today's goals (gDay, matches, wins, kills, hero goal 0/1, done bits); the heroes
+        // whose gold skin is bought
+        public int gold, gm, gw, gk, gh, gDone;
+        public long gDay = -1;
+        public List<string> skins = new List<string>();
 
         public HeroTotals Hero(string id)
         {
@@ -327,6 +335,7 @@ namespace BAM.Online
             var c = (Totals)MemberwiseClone();
             c.heroes = new List<HeroTotals>(heroes.Count);
             for (int i = 0; i < heroes.Count; i++) c.heroes.Add(new HeroTotals { id = heroes[i].id, m = heroes[i].m, w = heroes[i].w });
+            c.skins = skins != null ? new List<string>(skins) : new List<string>();
             return c;
         }
     }
