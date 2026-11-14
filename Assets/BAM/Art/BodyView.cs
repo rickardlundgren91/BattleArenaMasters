@@ -311,6 +311,13 @@ namespace BAM.Art
             // Fitted to these bounds, every hero was drawn 7-14 % shorter than its Height (COORDS-03, Unity run 2026-10-29)
             float h = BindTop(rends, bb.max.y) - sole;
             if (h < 0.5f * hb || h > 1.02f * hb) h = hb;
+            // the remakes (V2) are measured where their skin really draws them in the bind pose (each bone times its bind matrix),
+            // not by the renderers' stored bounds or the mesh's own transform: on the Mixamo-rigged remakes those disagreed with the
+            // drawn body, which came out a few centimetres tall or headless (Rickard 2026-11-14: Blast, Knut, Bram, then Kugg)
+            if (art.V2 && SkinBindBox(rends, out Bounds sb) && sb.size.y > 1e-5f)
+            {
+                bb = sb; hb = sb.size.y; sole = sb.min.y; h = hb;
+            }
             float k = art.Height / h;
             gearK = hb / h; // the weapons, the shoulder carry and the tuner's offsets grow with the body, as Rickard tuned them on it
 #if UNITY_EDITOR
@@ -1848,6 +1855,32 @@ namespace BAM.Art
         // the lowest (BindBottom) or highest (BindTop) point of the meshes in the pose the model was made in: each mesh's stored
         // bounds through its own node (no CPU read, so fine on a phone), or a renderer's bounds where it has no mesh. All the heroes
         // and minions stand with their soles on their origin there (Blender 2026-10-28)
+        /// <summary>The box of the skinned meshes as the skin draws them in the bind pose (a fresh instance's bones stand in it): the
+        /// mesh's bounds through a bone's world matrix times its bind matrix. False without a skinned mesh.</summary>
+        static bool SkinBindBox(Renderer[] rs, out Bounds box)
+        {
+            box = default;
+            bool any = false;
+            foreach (Renderer r in rs)
+            {
+                if (!(r is SkinnedMeshRenderer sk) || sk.sharedMesh == null) continue;
+                Mesh m = sk.sharedMesh;
+                Transform[] bs = sk.bones;
+                Matrix4x4[] bp = m.bindposes;
+                Matrix4x4 w = Matrix4x4.zero;
+                bool found = false;
+                for (int i = 0; i < bs.Length && i < bp.Length; i++) if (bs[i] != null) { w = bs[i].localToWorldMatrix * bp[i]; found = true; break; }
+                if (!found) continue;
+                Bounds b = m.bounds;
+                for (int c = 0; c < 8; c++)
+                {
+                    var p = w.MultiplyPoint3x4(new Vector3((c & 1) == 0 ? b.min.x : b.max.x, (c & 2) == 0 ? b.min.y : b.max.y, (c & 4) == 0 ? b.min.z : b.max.z));
+                    if (!any) { box = new Bounds(p, Vector3.zero); any = true; } else box.Encapsulate(p);
+                }
+            }
+            return any;
+        }
+
         static float BindBottom(Renderer[] rs, float fallback) => BindY(rs, fallback, false);
         static float BindTop(Renderer[] rs, float fallback) => BindY(rs, fallback, true);
 
