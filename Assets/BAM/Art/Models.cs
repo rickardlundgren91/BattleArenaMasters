@@ -116,6 +116,7 @@ namespace BAM.Art
                 d.Height = d.Art.Height;
                 d.ThrowsProp = false;
                 d.Gear = Weapons.For(gearOf, d.Art.V2); // a V2 remake has its own parts (Weapons.MakeV2)
+                if (skin > 0 && d.Art.V2 && gearOf == hero) d.Gear = SkinGear.For(hero, HeroSkins.SkinName(d.Art, skin), d.Gear); // and a skin its own
             }
             cache[k] = d;
             return d;

@@ -326,6 +326,8 @@ namespace BAM.Art.Editor
         static void FillSkins(HeroArt art, Spec s)
         {
             SkinFiles[] files = art.V2 ? SkinsOf(s) : new SkinFiles[0];
+            // the skins' weapons and worn parts into Props (SkinGear reads them)
+            foreach (SkinFiles f in files) SkinParts.Convert(s.Hero, Path.GetDirectoryName(f.Body).Replace('\\', '/'));
             var names = new System.Collections.Generic.List<string>();
             var models = new System.Collections.Generic.List<GameObject>();
             var texs = new System.Collections.Generic.List<Texture2D>();
@@ -347,6 +349,7 @@ namespace BAM.Art.Editor
         {
             if (!art.V2) return art.SkinCount != 0;
             SkinFiles[] files = SkinsOf(s);
+            foreach (SkinFiles f in files) if (SkinParts.Pending(s.Hero, Path.GetDirectoryName(f.Body).Replace('\\', '/'))) return true; // a part to convert
             if (art.SkinModels == null || art.SkinNames == null || art.SkinModels.Length != files.Length) return true;
             for (int i = 0; i < files.Length; i++)
                 if (art.SkinModels[i] == null || art.SkinNames[i] != files[i].Name) return true;

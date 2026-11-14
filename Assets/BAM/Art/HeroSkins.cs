@@ -49,6 +49,14 @@ namespace BAM.Art
             PlayerPrefs.Save();
         }
 
+        /// <summary>The skin's folder name (its parts' names, SkinGear), from the HeroArt a skin was applied to or the plain one.</summary>
+        internal static string SkinName(HeroArt art, int skin)
+        {
+            if (art == null || skin <= 0) return null;
+            if (art.SkinNames != null && skin - 1 < art.SkinNames.Length) return art.SkinNames[skin - 1];
+            return null;
+        }
+
         /// <summary>The hero's HeroArt with skin's body and picture in place of the plain ones (a copy, made once per skin).</summary>
         internal static HeroArt Apply(HeroArt art, int skin)
         {
