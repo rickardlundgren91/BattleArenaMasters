@@ -31,7 +31,7 @@ namespace BAM.UI
         static Text homeHeroName; // "BONK · FIGHTER" under the hero's ring (BuildHeroName); hidden in a party, where the name tags take its place
         static int homeModeShown = -1;
         static GameObject homeTutCard;
-        static GameObject homeSkinPick; // the skin dropdown under the top bar (BuildSkinPick); hidden for a hero with one look
+        static GameObject homeSkinPick; // the skin dropdown under the top bar (BuildSkinPick), for every hero
         static Text homeSkinText;
         static RectTransform homeSkinList;
         static int homeSkinListFor = -1; // the hero whose list is open
@@ -89,8 +89,7 @@ namespace BAM.UI
 
         static void RefreshSkinPick(HeroId id)
         {
-            int n = HeroSkins.Count(id);
-            homeSkinPick.SetActive(n > 1);
+            homeSkinPick.SetActive(true); // shown for every hero, also one with Classic only, so the choice is always found (Rickard 2026-11-14 "inget skin val" on Tyra)
             int cur = HeroSkins.Chosen(id);
             homeSkinText.text = "SKIN  <color=#" + ColorUtility.ToHtmlStringRGB(HeroSkins.Tint(id, cur)) + ">" + HeroSkins.Name(id, cur).ToUpperInvariant() + "</color>  \u25BE";
             if (homeSkinListFor != (int)id) SkinListOpen(false);
