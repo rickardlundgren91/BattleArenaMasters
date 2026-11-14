@@ -17,6 +17,9 @@ namespace BAM.Art.Editor
     {
         const string PropsDir = "Assets/BAM/Art/Resources/BAMArt/Props/";
         static readonly HashSet<string> hangs = new HashSet<string> { "cape", "mantle", "pelt", "scarf", "apronflap" };
+        // parts the V2 conversion turned a quarter about y as well (Tyra's bow, so its belly faces as the old bow's; Ravna's mask,
+        // beak to the front): x' = -z, z' = -x instead of the plain mirror
+        static bool Turned(string hero, string slot) => (hero == "Tyra" && slot == "bow") || (hero == "Ravna" && slot == "mask");
 
         /// <summary>True when a part of the skin is not converted yet, or changed since (HeroArtImport.EnsureBuilt).</summary>
         public static bool Pending(string hero, string skinDir) => Convert(hero, skinDir, true) > 0;
@@ -43,7 +46,7 @@ namespace BAM.Art.Editor
                 if (onlyCount) { n++; continue; }
                 try
                 {
-                    byte[] data = Prop(obj, hangs.Contains(slot), out int verts);
+                    byte[] data = Prop(obj, hangs.Contains(slot), Turned(hero, slot), out int verts);
                     if (data == null) { Debug.LogWarning("[BAM.Art] " + obj + ": " + verts + " corners, more than a Props mesh can hold (65535)"); continue; }
                     File.WriteAllBytes(bytes, data);
                     if (File.Exists(tex)) File.Copy(tex, jpg, true);
@@ -60,7 +63,7 @@ namespace BAM.Art.Editor
         static float F(string s) => float.Parse(s, NumberStyles.Float, CultureInfo.InvariantCulture);
 
         // OBJ -> the Props .bytes format (Props.cs): count, 1 submesh, flags 3, positions, normals, uvs, 16-bit indices
-        static byte[] Prop(string path, bool top, out int count)
+        static byte[] Prop(string path, bool top, bool turned, out int count)
         {
             var V = new List<Vector3>(); var VT = new List<Vector2>(); var VN = new List<Vector3>();
             var pos = new List<Vector3>(); var nor = new List<Vector3>(); var uv = new List<Vector2>();
@@ -89,9 +92,9 @@ namespace BAM.Art.Editor
                                 k = pos.Count;
                                 index[key] = k;
                                 Vector3 p = V[vi];
-                                pos.Add(new Vector3(-p.x, p.y, p.z));
                                 Vector3 nn = ni >= 0 ? VN[ni] : Vector3.zero;
-                                nor.Add(new Vector3(-nn.x, nn.y, nn.z));
+                                pos.Add(turned ? new Vector3(-p.z, p.y, -p.x) : new Vector3(-p.x, p.y, p.z));
+                                nor.Add(turned ? new Vector3(-nn.z, nn.y, -nn.x) : new Vector3(-nn.x, nn.y, nn.z));
                                 uv.Add(ti >= 0 ? VT[ti] : Vector2.zero);
                             }
                             face.Add(k);
