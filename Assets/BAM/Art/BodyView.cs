@@ -368,6 +368,7 @@ namespace BAM.Art
                 float f = LowestFoot();
                 if (!float.IsNaN(f)) footRef = f - transform.position.y; // the bind pose, its mesh's sole on the ground
             }
+            if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureHeadHold(); else headHold = false;
             anim.runtimeAnimatorController = null;
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -1053,9 +1054,10 @@ namespace BAM.Art
             // there too; Kugg's fist stayed in his head on Home, Rickard 2026-11-11)
             if (imported && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
             if (imported && !dead && HeroIndex == (int)HeroId.Kugg) KuggGuard();
-            // Blast's remake (V2): his clips, made on his old body, throw the big new head back (Rickard 2026-11-14: "hans huvud är
-            // vikt bakåt"); it is nodded forward again after the Animator, in the menu and in a match
-            if (imported && HeroIndex == (int)HeroId.Blast && def.Art != null && def.Art.V2) NodHead(BlastV2HeadDown);
+            // Blast's remake (V2): his clips, made on his old body, throw the big new head back and round (Rickard 2026-11-14: "hans
+            // huvud är vikt bakåt", still after a fixed 25-degree nod); the head is held on the chest as it sits in the bind pose,
+            // mostly, after the Animator, in the menu and in a match
+            if (imported && headHold) HoldHead(BlastV2HeadHold);
             if (!Preview && imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggAim();
             // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
             if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
@@ -1884,15 +1886,28 @@ namespace BAM.Art
             return any;
         }
 
-        /// <summary>Degrees Blast's V2 head is nodded forward over what his clips give it.</summary>
-        const float BlastV2HeadDown = 25f;
+        /// <summary>How much of Blast's V2 head pose comes from the bind pose on his chest (the rest from his clips).</summary>
+        const float BlastV2HeadHold = 0.85f;
+        bool headHold;
+        Transform holdHead, holdChest;
+        Quaternion holdRel = Quaternion.identity;
 
-        void NodHead(float deg)
+        /// <summary>Notes the head's turn on the chest in the bind pose (a fresh instance stands in it), for <see cref="HoldHead"/>.</summary>
+        void MeasureHeadHold()
         {
-            Transform h = anim != null && anim.isHuman ? anim.GetBoneTransform(HumanBodyBones.Head) : null;
-            if (h == null) return;
-            // about the hero's own right: a positive angle tips the face down
-            h.rotation = Quaternion.AngleAxis(deg, anim.transform.right) * h.rotation;
+            headHold = false;
+            if (anim == null || !anim.isHuman) return;
+            holdHead = anim.GetBoneTransform(HumanBodyBones.Head);
+            holdChest = anim.GetBoneTransform(HumanBodyBones.UpperChest) ?? anim.GetBoneTransform(HumanBodyBones.Chest) ?? anim.GetBoneTransform(HumanBodyBones.Spine);
+            if (holdHead == null || holdChest == null) return;
+            holdRel = Quaternion.Inverse(holdChest.rotation) * holdHead.rotation;
+            headHold = true;
+        }
+
+        void HoldHead(float w)
+        {
+            if (holdHead == null || holdChest == null) return;
+            holdHead.rotation = Quaternion.Slerp(holdHead.rotation, holdChest.rotation * holdRel, w);
         }
 
         static float BindBottom(Renderer[] rs, float fallback) => BindY(rs, fallback, false);
