@@ -112,6 +112,7 @@ namespace BAM.UI
                 int skin = i;
                 var row = UiKit.Fill(homeSkinList, i == cur ? new Color(30 / 255f, 40 / 255f, 90 / 255f, 0.97f) : new Color(10 / 255f, 13 / 255f, 36 / 255f, 0.95f), UiKit.Rounded);
                 row.name = "Skin " + HeroSkins.Name(id, skin);
+                row.raycastTarget = true; // UiKit.Fill makes pictures that let taps through (Rickard 2026-11-14: the skins could not be picked)
                 row.pixelsPerUnitMultiplier = 28f / (1.6f * Cw);
                 var rr = row.rectTransform;
                 rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0, 1);
