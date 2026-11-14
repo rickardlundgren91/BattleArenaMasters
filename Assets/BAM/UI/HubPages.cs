@@ -271,6 +271,12 @@ namespace BAM.UI
         static int heroPeek;
         static RectTransform heroContent, heroStageRt, heroSelectRt;
         static LayoutElement heroStageSize, heroNameSize, heroStatsSize;
+        // The stats sit closed under a STATS row so the whole hero fits without scrolling (Rickard 2026-11-14); a tap opens them
+        static GameObject heroStatsRows;
+        static Text heroStatsToggle;
+        static bool heroStatsOpen;
+        static float heroStatsOpenH;
+        const float StatsHeadH = 8.4f * Cw;
         static HeroStage heroStage;
         static Image heroRing, heroRingGlow, heroRingShadow;
         static GameObject heroSelectedTag;
@@ -384,12 +390,37 @@ namespace BAM.UI
             // what the hero does comes before the numbers: special and passive one line each, tap for the whole text (nr 128)
             for (int k = 0; k < 2; k++) heroAbilities[k] = BuildAbilityCard(content, k == 0);
 
-            // stats: label | bar | value, the bars against the best in the roster
+            // stats: closed, one row "STATS ... SHOW"; open, label | bar | value under it, the bars against the best in the roster
             var stats = UiKit.NewRect("Stats", content);
             heroStatsSize = stats.gameObject.AddComponent<LayoutElement>();
-            float rowH = 5.4f * Cw;
-            heroStatsSize.preferredHeight = 2.6f * Cw + StatRows * rowH + 1.2f * Cw;
+            float rowH = 5.4f * Cw, rowsTop = StatsHeadH - 1.6f * Cw, rowsH = 2.6f * Cw + StatRows * rowH + 1.2f * Cw;
+            heroStatsOpenH = rowsTop + rowsH;
             CardBack(stats, 4 * Cw);
+            var statsTitle = Treb(stats, "STATS", 2.6f, UiKit.TextDim);
+            Stretched(statsTitle.rectTransform, 4 * Cw, StatsHeadH / 2 - 2.5f * Cw, 4 * Cw, 5 * Cw);
+            heroStatsToggle = Treb(stats, "", 2.6f, UiKit.Primary);
+            heroStatsToggle.alignment = TextAnchor.MiddleRight;
+            Stretched(heroStatsToggle.rectTransform, 4 * Cw, StatsHeadH / 2 - 2.5f * Cw, 4 * Cw, 5 * Cw);
+            var rowsRt = UiKit.NewRect("Rows", stats);
+            Stretched(rowsRt, 0, rowsTop, 0, rowsH);
+            heroStatsRows = rowsRt.gameObject;
+            var statsHit = stats.gameObject.AddComponent<Image>(); // the children catch no touches: the whole card is the button
+            statsHit.color = Color.clear;
+            var statsBtn = stats.gameObject.AddComponent<Button>();
+            statsBtn.targetGraphic = statsHit;
+            statsBtn.transition = Selectable.Transition.None;
+            statsBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+            statsBtn.onClick.AddListener(() =>
+            {
+                BamAudio.Play(SfxId.UiTap);
+                heroStatsOpen = !heroStatsOpen;
+                ShowHeroStats();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);
+                var sr = heroContent.GetComponentInParent<ScrollRect>();
+                if (sr != null && heroStatsOpen) sr.verticalNormalizedPosition = 0; // opened: scroll down so the numbers are in view
+            });
+            ShowHeroStats();
+            stats = rowsRt;
             // "Attack time": 1.85 s is a time, not a speed (2026-10-31). "Damage/s" and "Special" added from the tester's wish for exact
             // numbers (2026-11-02): damage per second of steady attacking, and the hits the special needs with the fastest time to fill it.
             string[] labels = { "Health", "Damage", "Attack time", "Damage/s", "Range", "Move speed", "Special" };
@@ -639,8 +670,9 @@ namespace BAM.UI
             // the stage takes the height that is left, so everything fits without scrolling on a phone
             LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);
             float view = ((RectTransform)heroContent.parent).rect.height;
-            float below = heroNameSize.preferredHeight + heroStatsSize.preferredHeight + heroAbilities[0].Size.preferredHeight
-                          + heroAbilities[1].Size.preferredHeight + 3 * 2.2f * Cw;
+            // the closed STATS row and the battle spell card count too, so everything fits on the screen (Rickard 2026-11-14)
+            float below = heroNameSize.preferredHeight + StatsHeadH + heroAbilities[0].Size.preferredHeight
+                          + heroAbilities[1].Size.preferredHeight + SpellCardH + 4 * 2.2f * Cw;
             float stH = Mathf.Clamp(view - 19 * Cw - below - 2.2f * Cw, 40 * Cw, 66 * Cw);
             heroStageSize.preferredHeight = stH;
             LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);
@@ -655,6 +687,13 @@ namespace BAM.UI
             heroStage.Frame();
             var scroll = heroContent.GetComponentInParent<ScrollRect>();
             if (scroll != null) scroll.verticalNormalizedPosition = 1;
+        }
+
+        static void ShowHeroStats()
+        {
+            heroStatsRows.SetActive(heroStatsOpen);
+            heroStatsSize.preferredHeight = heroStatsOpen ? heroStatsOpenH : StatsHeadH;
+            heroStatsToggle.text = heroStatsOpen ? "HIDE" : "SHOW";
         }
 
         static void FillAbility(AbilityCard a, string kind, string name, string desc, string icon)

@@ -18,9 +18,11 @@ namespace BAM.UI
         static Text spellDesc;
         static readonly Color ChipOn = new Color(62 / 255f, 230 / 255f, 176 / 255f, 0.22f);
 
+        const float SpellCardH = 8 * Cw + 15 * Cw + 10 * Cw;
+
         static void BuildSpellCard(RectTransform content)
         {
-            float chipH = 15 * Cw, h = 8 * Cw + chipH + 10 * Cw;
+            float chipH = 15 * Cw, h = SpellCardH;
             var card = UiKit.NewRect("BattleSpell", content);
             card.gameObject.AddComponent<LayoutElement>().preferredHeight = h;
             CardBack(card, 4 * Cw);
