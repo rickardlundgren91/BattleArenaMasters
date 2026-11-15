@@ -31,7 +31,7 @@ namespace BAM.Sim
         /// lightning bolt from the hammer hits everyone in the whole line AT ONCE; LineSpeed is only how fast the bolt is drawn.
         /// Since 2026-11-12 (Rickard: "flyger för snabbt ... han ska ändå kasta en hammare och inte en laserstråle"): the same charge
         /// and red line, then he throws the hammer, which flies straight at LineSpeed and hits every enemy it passes once.</summary>
-        public const float BeamCharge = 0.45f;
+        public const float BeamCharge = 0.3f; // 0.45 -> 0.3 (Rickard 2026-11-15: "Brams laddningstid för special är för lång", card: the wind-up before the throw)
         public const float LineReach = 8, LineSpeed = 16, LineWidth = 0.6f, LineCoeff = 3.2f; // thrown (2026-11-12): speed 45 -> 16, damage 2.15 -> 3.2 as it can now be dodged (Hard bots: 48.0 % as the beam, 39.2 % thrown at 2.15, 49.6 % at 3.2)
         /// <summary>Focus in Silver's steps (hero review 2026-11-13, Rickard "bram 80%"): +10 % a step up to 8 (+80 %); it was 8 % up to 5
         /// (+40 %), Silver's Sharpshooter 10 % up to 10. Hard bots hardly notice (2400 matches: about a third of a step on average, 53 %
