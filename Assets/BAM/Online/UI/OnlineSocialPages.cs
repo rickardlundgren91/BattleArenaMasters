@@ -104,7 +104,9 @@ namespace BAM.Online.UI
         static float HubProfileActions(string id, string name, Social.Relation rel, float x, float y, float w)
         {
             float bh = cw(11), gap = cw(2), half = (w - gap) / 2;
-            bool live = Social.Active;
+            // signed in is enough: a friends call starts the Friends service again when it had stopped (Social.Run). Before,
+            // ADD FRIEND and Block stayed grey for good after Friends failed to start once (a short network drop at sign-in).
+            bool live = Account.State == Account.Status.Ready;
             Action<string, string, float, float, bool, bool, Action> B = (key, label, bx, bw, primary, enabled, a) =>
             {
                 bool dn = enabled && Down(key);
@@ -124,7 +126,7 @@ namespace BAM.Online.UI
                     B("hubPFriends", "FRIENDS", x, half, false, false, null);
                     B("hubPRemove", "REMOVE FRIEND", x + half + gap, half, false, true, () => hubSocialConfirm = "remove:" + id); break;
                 case Social.Relation.Blocked:
-                    B("hubPUnblock", "UNBLOCK", x, w, false, true, () => Run(Social.Unblock(id), null)); break;
+                    B("hubPUnblock", "UNBLOCK", x, w, false, true, () => Run(Social.Unblock(id), name + " is unblocked")); break;
                 default:
                     B("hubPAdd", "ADD FRIEND", x, w, true, live, () => Run(Social.AddById(id), null)); break;
             }
@@ -133,7 +135,7 @@ namespace BAM.Online.UI
             if (rel != Social.Relation.Blocked)
             {
                 string c1 = HubToggle("hubPBlock", x, y, sw, sh, cw(2.5f), false, live); Text("Block", x + sw / 2, y + sh / 2, Treb(cw(3), true), live ? "#ff8a8a" : c1, "center");
-                Btn("hubPBlock", x, y, sw, sh, live ? (Action)(() => hubSocialConfirm = "block:" + id) : () => Toast("Friends is not available right now"));
+                Btn("hubPBlock", x, y, sw, sh, live ? (Action)(() => hubSocialConfirm = "block:" + id) : () => Toast("Sign in with Google Play Games first"));
             }
             string c2 = HubToggle("hubPReport", x + sw + gap, y, sw, sh, cw(2.5f), false, true); Text("Report", x + sw + gap + sw / 2, y + sh / 2, Treb(cw(3), true), "#ffb07a", "center");
             Btn("hubPReport", x + sw + gap, y, sw, sh, () => hubReportFor = id);
@@ -170,7 +172,7 @@ namespace BAM.Online.UI
                 return;
             }
             bool remove = hubSocialConfirm.StartsWith("remove:", StringComparison.Ordinal);
-            var body = Wrap(remove ? "Remove " + name + " from your friends?" : "Block " + name + "? They can no longer send you friend requests, and they are removed from your friends.", iw, Treb(cw(3.3f), true));
+            var body = Wrap(remove ? "Remove " + name + " from your friends?" : "Block " + name + "? They can no longer send you friend requests or invites, and they are removed from your friends. You can unblock them later in Settings > Account.", iw, Treb(cw(3.3f), true));
             float h2 = cw(5) + cw(9) + body.Count * cw(4.6f) + cw(4) + cw(11) + cw(5), y2 = H / 2 - h2 / 2;
             ctx.fillStyle = "#151a42"; ctx.beginPath(); ctx.roundRect(dx, y2, dw, h2, cw(4)); ctx.fill();
             ctx.strokeStyle = "#ff8a8a"; ctx.lineWidth = cw(0.4f); ctx.beginPath(); ctx.roundRect(dx, y2, dw, h2, cw(4)); ctx.stroke();
@@ -186,7 +188,7 @@ namespace BAM.Online.UI
             ctx.fillStyle = Down("hubSocYes") ? "#c94848" : "#e05a5a"; ctx.beginPath(); ctx.roundRect(rx, y3, bw, bh, cw(3)); ctx.fill();
             Text(remove ? "REMOVE" : "BLOCK", rx + bw / 2, y3 + bh / 2, Lil(cw(4)), "#fff", "center");
             string pid = p.playerId;
-            Btn("hubSocYes", rx, y3, bw, bh, () => { hubSocialConfirm = null; Run(remove ? Social.Remove(pid) : Social.Block(pid), null); });
+            Btn("hubSocYes", rx, y3, bw, bh, () => { hubSocialConfirm = null; Run(remove ? Social.Remove(pid) : Social.Block(pid), remove ? name + " is no longer your friend" : null); });
         }
         static async void SendReport(string id, string reason)
         {

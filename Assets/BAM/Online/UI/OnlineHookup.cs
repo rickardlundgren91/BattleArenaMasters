@@ -25,6 +25,7 @@ namespace BAM.Online.UI
             OnlineHooks.HomeChip = OnlineUi.HomeChip;
             OnlineHooks.OpenFriends = OnlineUi.OpenFriends;
             OnlineHooks.FriendsOnline = OnlineUi.FriendsOnline;
+            OnlineHooks.FriendRequests = () => Social.Incoming.Count;
             OnlineHooks.OpenAccount = OnlineUi.OpenAccount;
             OnlineHooks.OpenPlayFriends = OnlineUi.OpenPlayFriends;
             OnlineHooks.OnlineMatch = OnlineUi.OnlineMatch;
@@ -38,7 +39,9 @@ namespace BAM.Online.UI
             OnlineHooks.FirstWinXp = () => Account.State == Account.Status.Ready || Account.State == Account.Status.NeedsName
                 || Account.State == Account.Status.Offline && Account.Enabled ? Progress.FirstWinXpLeft() : 0;
             OnlineHooks.Gold = () => Progress.Shown.gold;
-            OnlineHooks.FirstWinGold = () => OnlineHooks.FirstWinXp() > 0 && Gold.FirstWinLeft() ? Gold.FirstWin : 0;
+            // not tied to the sign-in like FirstWinXp: the gold list showed "✓ First win today" (done, green) to a player who was
+            // not signed in and had not won; an unsent match still gets its gold once it reaches the server (2026-11-15)
+            OnlineHooks.FirstWinGold = () => Gold.FirstWinLeft() ? Gold.FirstWin : 0;
             OnlineHooks.DailyGoals = () =>
             {
                 var list = new System.Collections.Generic.List<DailyGoal>(3);

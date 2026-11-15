@@ -12,7 +12,7 @@ namespace BAM.Online.Mp
 {
     public static class MpSocial
     {
-        const string BlockedKey = "bam.online.blocked", ShowKey = "bam.online.showme";
+        const string BlockedKey = "bam.online.blocked", PendingBlockKey = "bam.online.blocked.pending", ShowKey = "bam.online.showme";
         static bool started;
         static readonly List<string> pending = new List<string>(); // invited before the room had its code
         static readonly Dictionary<string, string> names = new Dictionary<string, string>();
@@ -43,8 +43,45 @@ namespace BAM.Online.Mp
             MpPresence.IsBlocked = id => Social.RelationTo(id) == Social.Relation.Blocked;
             MpPresence.SaveBlocked = () => { PlayerPrefs.SetString(BlockedKey, string.Join(",", MpPresence.Blocked)); PlayerPrefs.Save(); };
             Social.Unblocked += MpPresence.Unblock; // bug review 2026-11-02, nr 24
+            foreach (var id in (PlayerPrefs.GetString(PendingBlockKey, "") ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) pendingBlocks.Add(id);
+            Social.Changed += Reconcile;
             Social.NoteIn += OnNote;
+            Reconcile();
         }
+
+        // "Blockeringar som inte försvinner" (Rickard 2026-11-15). The phone keeps its own list of blocked players (MpPresence.Blocked,
+        // so a block holds before Friends has started), but nothing ever took a player off it except UNBLOCK on this same phone:
+        // a player unblocked on another phone, or blocked while another account was signed in here, stayed hidden from the online
+        // list and their invites were dropped for good, and they were in no BLOCKED PLAYERS list to unblock. The Friends server
+        // is the truth now: once its lists are read, a player it does not block leaves the phone's list, unless the block from
+        // the invite card never reached the server (no network); that one is sent again.
+        static readonly HashSet<string> pendingBlocks = new HashSet<string>();
+        static readonly List<string> tmpIds = new List<string>();
+        static void Reconcile()
+        {
+            if (!Social.Loaded) return;
+            tmpIds.Clear(); tmpIds.AddRange(MpPresence.Blocked);
+            bool pendingChanged = false;
+            foreach (var id in tmpIds)
+            {
+                if (Social.RelationTo(id) == Social.Relation.Blocked) { if (pendingBlocks.Remove(id)) pendingChanged = true; continue; }
+                if (pendingBlocks.Contains(id)) { SendBlock(id); continue; }
+                MpPresence.Unblock(id);
+            }
+            if (pendingChanged) SavePending();
+        }
+        static readonly HashSet<string> sending = new HashSet<string>();
+        static async void SendBlock(string id)
+        {
+            if (!sending.Add(id)) return;
+            try
+            {
+                string err = await Social.Block(id);
+                if (err == null && pendingBlocks.Remove(id)) SavePending();
+            }
+            finally { sending.Remove(id); }
+        }
+        static void SavePending() { PlayerPrefs.SetString(PendingBlockKey, string.Join(",", pendingBlocks)); PlayerPrefs.Save(); }
 
         static void OnNote(string from, Social.Note n)
         {
@@ -195,7 +232,10 @@ namespace BAM.Online.Mp
             if (r == null) return;
             MpPresence.Decline(r, true);
             MpPresence.Block(r.Owner);
-            _ = Social.Block(r.Owner); // on the Friends server too, so it follows the account to another phone
+            // on the Friends server too, so it follows the account to another phone and shows under BLOCKED PLAYERS (where it is
+            // undone); kept as "pending" until the server has it, so Reconcile sends it again instead of dropping it
+            if (pendingBlocks.Add(r.Owner)) SavePending();
+            SendBlock(r.Owner);
         }
     }
 }

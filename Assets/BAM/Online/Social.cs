@@ -68,10 +68,14 @@ namespace BAM.Online
 
         static readonly List<Person> friends = new List<Person>(), incoming = new List<Person>(), outgoing = new List<Person>(), blocked = new List<Person>();
         static readonly Dictionary<string, Relation> relation = new Dictionary<string, Relation>();
-        static bool active, starting, dirty, inMatch, sentInMatch;
+        static bool active, starting, dirty, inMatch, sentInMatch, loaded;
         static int seenIncoming = -1;
 
         public static bool Active => active;
+        /// <summary>The lists have been read from the Friends service at least once since it started (they can be trusted).</summary>
+        public static bool Loaded => active && loaded;
+        /// <summary>The last successful <see cref="Add"/> made a friendship at once (they had already asked us), not a request.</summary>
+        public static bool LastAddWasAccept;
         public static IReadOnlyList<Person> Friends => friends;
         public static IReadOnlyList<Person> Incoming => incoming;
         public static IReadOnlyList<Person> Outgoing => outgoing;
@@ -135,8 +139,9 @@ namespace BAM.Online
                 f.MessageReceived -= OnMessage;
             }
             catch (Exception e) { Debug.LogWarning("[BAM.Online] friends stop: " + e.Message); }
-            active = false;
+            active = false; loaded = false;
             seenIncoming = -1;   // a new account must not toast the old one's requests
+            expect.Clear(); working.Clear();
             friends.Clear(); incoming.Clear(); outgoing.Clear(); blocked.Clear(); relation.Clear();
             Changed?.Invoke();
         }
@@ -155,8 +160,11 @@ namespace BAM.Online
             float now = Time.realtimeSinceStartup;
             if (now >= presenceAt) { presenceAt = now + PresenceEvery; _ = SendPresence(); }
             if (now >= refreshAt && !refreshing) { refreshAt = now + RefreshEvery; _ = Refresh(); }
+            // while a change of ours is laid over the SDK's copy, look again twice a second, so the overlay ends as soon as the copy agrees
+            if (expect.Count > 0 && now >= overlayAt) { overlayAt = now + 0.5f; dirty = true; }
             if (dirty) Rebuild();
         }
+        static float overlayAt;
         const float PresenceEvery = 60, RefreshEvery = 30;
         static float presenceAt, refreshAt;
         static bool refreshing;
@@ -191,29 +199,42 @@ namespace BAM.Online
             string id = await Server.FindPlayer(name);
             if (id == null) return "No player is called " + name;
             if (id == PlayerIdNow) return "That is you";
-            if (RelationTo(id) == Relation.Blocked) return BlockedByUs(name);
-            return await Run(() => FriendsService.Instance.AddFriendAsync(id), "Friend request sent", "Could not send the request", id);
+            return await AddChecked(id, name);
         }
 
-        public static Task<string> AddById(string playerId)
+        public static Task<string> AddById(string playerId) => AddChecked(playerId, null);
+
+        // the relation we already have decides (2026-11-15): a friend or a request already sent is said plainly instead of the
+        // service's "already exists" error, and a player who already asked us is simply accepted ("Friend added")
+        static Task<string> AddChecked(string id, string name)
         {
-            if (RelationTo(playerId) == Relation.Blocked) return Task.FromResult(BlockedByUs(null));
-            return Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend request sent", "Could not send the request", playerId);
+            LastAddWasAccept = false;
+            string who = string.IsNullOrEmpty(name) ? "This player" : name;
+            switch (RelationTo(id))
+            {
+                case Relation.Blocked: return Task.FromResult(BlockedByUs(name));
+                case Relation.Friends: return Task.FromResult(who + " is already your friend");
+                case Relation.Outgoing: return Task.FromResult("You already sent " + (string.IsNullOrEmpty(name) ? "this player" : name) + " a request. They show up in your list once they accept");
+                case Relation.Incoming:
+                    LastAddWasAccept = true;
+                    return Run(() => FriendsService.Instance.AddFriendAsync(id), "Friend added", "Could not add friend", id, Relation.Friends);
+            }
+            return Run(() => FriendsService.Instance.AddFriendAsync(id), "Friend request sent", "Could not send the request", id);
         }
         // a friend request to someone we blocked is refused by Friends: say so and where to undo it (tester 2026-11-13 thought a
         // once blocked player could never be added again)
         static string BlockedByUs(string name) => "You have blocked " + (string.IsNullOrEmpty(name) ? "this player" : name)
             + ". Unblock them first (Settings > Account > Blocked players), then send the request";
-        public static Task<string> Accept(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend added", "Could not add friend", playerId);
-        public static Task<string> Decline(string playerId) => Run(() => FriendsService.Instance.DeleteIncomingFriendRequestAsync(playerId), null, "Could not decline");
-        public static Task<string> Cancel(string playerId) => Run(() => FriendsService.Instance.DeleteOutgoingFriendRequestAsync(playerId), null, "Could not cancel");
-        public static Task<string> Remove(string playerId) => Run(() => FriendsService.Instance.DeleteFriendAsync(playerId), null, "Could not remove friend");
-        public static Task<string> Block(string playerId) => Run(() => FriendsService.Instance.AddBlockAsync(playerId), "Blocked", "Could not block");
+        public static Task<string> Accept(string playerId) => Run(() => FriendsService.Instance.AddFriendAsync(playerId), "Friend added", "Could not add friend", playerId, Relation.Friends);
+        public static Task<string> Decline(string playerId) => Run(() => FriendsService.Instance.DeleteIncomingFriendRequestAsync(playerId), null, "Could not decline", null, Relation.None, playerId);
+        public static Task<string> Cancel(string playerId) => Run(() => FriendsService.Instance.DeleteOutgoingFriendRequestAsync(playerId), null, "Could not cancel", null, Relation.None, playerId);
+        public static Task<string> Remove(string playerId) => Run(() => FriendsService.Instance.DeleteFriendAsync(playerId), null, "Could not remove friend", null, Relation.None, playerId);
+        public static Task<string> Block(string playerId) => Run(() => FriendsService.Instance.AddBlockAsync(playerId), "Blocked", "Could not block", null, Relation.Blocked, playerId);
         // tells MpSocial too, so the phone's own list of blocked invites (MpPresence.Blocked) lets the player in again; before,
         // an unblocked player's invites and online sign stayed hidden on this phone for good (bug review 2026-11-02, nr 24)
         public static async Task<string> Unblock(string playerId)
         {
-            string err = await Run(() => FriendsService.Instance.DeleteBlockAsync(playerId), null, "Could not unblock");
+            string err = await Run(() => FriendsService.Instance.DeleteBlockAsync(playerId), null, "Could not unblock", null, Relation.None, playerId);
             if (err == null) Unblocked?.Invoke(playerId);
             return err;
         }
@@ -234,9 +255,14 @@ namespace BAM.Online
         // the call is made here, after the check: FriendsService.Instance throws before the service has started.
         // target: an add or accept. The request can reach the other player while the answer to us fails (Rickard 2026-10-29:
         // "Could not send the request", yet FUL got it), so after an error we look whether Friends now knows the link before saying so.
-        static async Task<string> Run(Func<Task> call, string ok, string fail, string target = null)
+        // after: what the relation is once the call went through (null: let the service say). key: the player the call is about;
+        // a second tap while the first call still runs is ignored (Accept pressed twice sent two calls, and the second one's
+        // "already" error was shown although the first had worked).
+        static async Task<string> Run(Func<Task> call, string ok, string fail, string target = null, Relation? after = null, string key = null)
         {
-            if (!active && !await StartAsync()) return Offline;
+            key = key ?? target;
+            if (key != null && !working.Add(key)) return null;
+            if (!active && !await StartAsync()) { if (key != null) working.Remove(key); return Offline; }
             try
             {
                 for (int attempt = 0; ; attempt++)
@@ -244,6 +270,8 @@ namespace BAM.Online
                     try
                     {
                         await call();
+                        if (after.HasValue && key != null) Expect(key, after.Value);
+                        await RefreshNow();
                         if (ok != null) Say?.Invoke(ok);
                         return null;
                     }
@@ -262,7 +290,7 @@ namespace BAM.Online
                 if (target != null)
                     for (int i = 0; i < 6; i++)
                     {
-                        try { if (Linked(target)) { if (ok != null) Say?.Invoke(ok); return null; } } catch (Exception) { }
+                        try { if (Linked(target)) { if (after.HasValue) Expect(target, after.Value); if (ok != null) Say?.Invoke(ok); return null; } } catch (Exception) { }
                         await Task.Delay(250);
                     }
                 return Friendly(e, fail);
@@ -270,7 +298,37 @@ namespace BAM.Online
             finally
             {
                 dirty = true;
+                if (key != null) working.Remove(key);
             }
+        }
+        static readonly HashSet<string> working = new HashSet<string>();
+
+        // "Blockeringar som inte försvinner" (Rickard 2026-11-15): after Unblock (or Block, Remove, Accept...) the lists were
+        // rebuilt from the Friends SDK's own copy, which only follows the change when the service's event arrives over its
+        // notification link. With that link down (it drops in the background) an unblocked player stayed under BLOCKED PLAYERS
+        // and kept the UNBLOCK button, a blocked one stayed among the friends, until the next 30 s refresh or longer. Now the
+        // lists are fetched again right after every change, and the change we know we made is laid over the SDK's copy until
+        // the copy agrees (at most ExpectFor seconds).
+        static async Task RefreshNow()
+        {
+            try { await FriendsService.Instance.ForceRelationshipsRefreshAsync(); }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] friends refresh: " + e.Message); }
+            refreshAt = Time.realtimeSinceStartup + RefreshEvery;
+            dirty = true;
+        }
+        const float ExpectFor = 20;
+        static readonly Dictionary<string, (Relation rel, float until, Person who)> expect = new Dictionary<string, (Relation, float, Person)>();
+        static void Expect(string id, Relation rel)
+        {
+            var who = new Person { PlayerId = id, Name = NameOf(id), Presence = Presence.Offline, Version = "" };
+            foreach (var l in new[] { friends, incoming, outgoing, blocked }) foreach (var p in l) if (p.PlayerId == id) who = p;
+            expect[id] = (rel, Time.realtimeSinceStartup + ExpectFor, who);
+            dirty = true;
+        }
+        static string NameOf(string id)
+        {
+            foreach (var l in new[] { friends, incoming, outgoing, blocked }) foreach (var p in l) if (p.PlayerId == id && !string.IsNullOrEmpty(p.Name)) return p.Name;
+            return "";
         }
 
         const string Offline = "Friends is not available right now. Try again in a moment";
@@ -337,10 +395,36 @@ namespace BAM.Online
             foreach (var r in s.IncomingFriendRequests) Add(incoming, r, Relation.Incoming);
             foreach (var r in s.OutgoingFriendRequests) Add(outgoing, r, Relation.Outgoing);
             foreach (var r in s.Blocks) Add(blocked, r, Relation.Blocked);
+            // a blocked player is never also a friend or a request (the service removes those when blocking; its copy may lag)
+            foreach (var b in blocked) { friends.RemoveAll(p => p.PlayerId == b.PlayerId); incoming.RemoveAll(p => p.PlayerId == b.PlayerId); outgoing.RemoveAll(p => p.PlayerId == b.PlayerId); }
+            Overlay();
+            loaded = true;
             friends.Sort((a, b) => a.Presence != b.Presence ? b.Presence.CompareTo(a.Presence) : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             if (seenIncoming >= 0 && incoming.Count > seenIncoming) Say?.Invoke(incoming[incoming.Count - 1].Name + " sent you a friend request");
             seenIncoming = incoming.Count;
             Changed?.Invoke();
+        }
+
+        // the changes this phone just made, over the SDK's copy until it shows them too
+        static readonly List<string> expectDone = new List<string>();
+        static void Overlay()
+        {
+            if (expect.Count == 0) return;
+            float now = Time.realtimeSinceStartup;
+            expectDone.Clear();
+            foreach (var kv in expect)
+            {
+                string id = kv.Key; var e = kv.Value;
+                if (now > e.until || RelationTo(id) == e.rel) { expectDone.Add(id); continue; }
+                friends.RemoveAll(p => p.PlayerId == id); incoming.RemoveAll(p => p.PlayerId == id);
+                outgoing.RemoveAll(p => p.PlayerId == id); blocked.RemoveAll(p => p.PlayerId == id);
+                relation.Remove(id);
+                var who = e.who; if (string.IsNullOrEmpty(who.Name)) who.Name = "Player";
+                if (e.rel == Relation.Friends) friends.Add(who);
+                else if (e.rel == Relation.Blocked) blocked.Add(who);
+                if (e.rel != Relation.None) relation[id] = e.rel;
+            }
+            foreach (var id in expectDone) expect.Remove(id);
         }
 
         static void Add(List<Person> into, Relationship r, Relation kind)
@@ -353,11 +437,13 @@ namespace BAM.Online
             into.Add(new Person
             {
                 PlayerId = m.Id,
-                Name = Leaderboard.StripTag(m.Profile != null ? m.Profile.Name : ""),
+                Name = NameOrPlayer(Leaderboard.StripTag(m.Profile != null ? m.Profile.Name : "")),
                 Presence = av == Availability.Online || av == Availability.Away ? Presence.Online : av == Availability.Busy ? Presence.Playing : Presence.Offline,
                 Version = ver,
             });
             relation[m.Id] = kind;
         }
+        // a player whose Unity name never synced (an old build) had an empty row under BLOCKED PLAYERS with only "Unblock"
+        static string NameOrPlayer(string n) => string.IsNullOrEmpty(n) ? "Player" : n;
     }
 }

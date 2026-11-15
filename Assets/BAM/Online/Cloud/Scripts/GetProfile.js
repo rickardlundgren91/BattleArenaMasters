@@ -19,6 +19,8 @@ module.exports = async ({ params, context }) => {
     // only what the profile page shows and the privacy policy calls public (full review 2026-11-09 nr 95): no current streak, no
     // season number, no bot-level mistakes (mk), and of the per-hero lines only the three most played (the phone sorts them again)
     delete t.streak; delete t.rs; delete t.mk;
+    // gold (2026-11-15) is the player's own: not the balance, the day's goals or the bought skins
+    delete t.gold; delete t.gDay; delete t.gm; delete t.gw; delete t.gk; delete t.gh; delete t.gDone; delete t.skins;
     t.heroes = (t.heroes || []).sort((a, b) => b.m - a.m).slice(0, 3);
   }
   let rank = 0;

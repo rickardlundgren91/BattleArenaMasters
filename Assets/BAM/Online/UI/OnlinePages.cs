@@ -120,7 +120,7 @@ namespace BAM.Online.UI
             y += tlh + cw(1.5f);
             y = HubProfileFight(t, x, y, w);
             int waiting = Progress.PendingCount;
-            var note = Wrap("Finished matches against bots. The tutorial and matches left early do not count." + (waiting > 0 ? " " + waiting + (waiting == 1 ? " match is" : " matches are") + " waiting to be sent to the server." : ""), w - cw(2), Treb(cw(2.8f)));
+            var note = Wrap("Finished matches against bots and players. The tutorial and matches left early do not count." + (waiting > 0 ? " " + waiting + (waiting == 1 ? " match is" : " matches are") + " waiting to be sent to the server." : ""), w - cw(2), Treb(cw(2.8f)));
             for (int i = 0; i < note.Count; i++) Text(note[i], x + cw(1), y + cw(2) + i * cw(4), Treb(cw(2.8f)), "rgba(154,162,214,0.8)");
             y += cw(2) + note.Count * cw(4) + cw(2);
             y = HubSetHead("TOP HEROES", x, y);

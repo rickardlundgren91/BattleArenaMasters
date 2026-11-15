@@ -137,7 +137,8 @@ namespace BAM.UI
         /// <summary>The badge follows the number of friends online (asked twice a second).</summary>
         sealed class FriendsBadge : MonoBehaviour
         {
-            RectTransform box; Image ring, fill; Text num; float left, top, t; int shown = -1;
+            RectTransform box; Image ring, fill; Text num; float left, top, t; int shown = -1; bool shownReq;
+            static readonly Color RequestRed = new Color32(0xff, 0x5a, 0x5a, 0xff);
 
             public void Set(RectTransform box, Image ring, Image fill, Text num, float left, float top)
             {
@@ -149,11 +150,15 @@ namespace BAM.UI
             {
                 if ((t -= Time.unscaledDeltaTime) > 0) return;
                 t = 0.5f;
-                int n = OnlineHooks.FriendsOnline != null ? OnlineHooks.FriendsOnline() : 0;
-                if (n == shown) return;
-                shown = n;
+                // friend requests first, in red (nobody saw a request unless they opened the panel), else the friends online
+                int req = OnlineHooks.FriendRequests != null ? OnlineHooks.FriendRequests() : 0;
+                int n = req > 0 ? req : OnlineHooks.FriendsOnline != null ? OnlineHooks.FriendsOnline() : 0;
+                if (n == shown && (req > 0) == shownReq) return;
+                shown = n; shownReq = req > 0;
                 box.gameObject.SetActive(n > 0);
                 if (n <= 0) return;
+                fill.color = shownReq ? RequestRed : UiKit.Primary;
+                num.color = shownReq ? Color.white : new Color32(0x0e, 0x12, 0x30, 0xff);
                 num.text = n > 9 ? "9+" : n.ToString();
                 float w = Mathf.Max(4.6f * Cw, num.preferredWidth + 2.4f * Cw), h = 4.6f * Cw;
                 box.anchoredPosition = new Vector2(left - 0.5f * Cw, top);

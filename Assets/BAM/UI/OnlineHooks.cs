@@ -18,6 +18,8 @@ namespace BAM.UI
         public static Action OpenFriends, OpenAccount, OpenPlayFriends, OnlineMatch;
         /// <summary>How many friends are online now (the badge on Home's FRIENDS button).</summary>
         public static Func<int> FriendsOnline;
+        /// <summary>Friend requests waiting for an answer: the badge turns red with their number, as in other mobile games (2026-11-15).</summary>
+        public static Func<int> FriendRequests;
         /// <summary>Once, after the first match after the tutorial: asks to go online. True when the question was shown.</summary>
         public static Func<bool> AskToGoOnline;
         /// <summary>What the match that just ended gave the account, for the result card (Xp 0 = show nothing).</summary>

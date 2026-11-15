@@ -76,7 +76,7 @@ namespace BAM.Online.UI
             if (friendsTab != 0) { HubFriendsOther(ix, y, iw, listBot); return; }
             if (list.Count == 0)
             {
-                var msg = Wrap(Social.Active ? "No friends yet. Tap the add button to send a friend request." : "Friends is not available right now. Check your connection.", iw - cw(6), Treb(cw(3.2f)));
+                var msg = Wrap(Social.Active ? "No friends yet. Tap the add button to send a friend request." : "Friends is not available right now. Check your connection, or tap the add button to try again.", iw - cw(6), Treb(cw(3.2f)));
                 float boxH = cw(4) + msg.Count * cw(4.4f);
                 ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.beginPath(); ctx.roundRect(ix, y, iw, boxH, cw(3)); ctx.fill();
                 for (int i = 0; i < msg.Count; i++) Text(msg[i], ix + cw(3), y + cw(2) + cw(2.2f) + i * cw(4.4f), Treb(cw(3.2f)), HUB_DIM);
@@ -226,7 +226,10 @@ namespace BAM.Online.UI
         }
         static void HubRequestRow(Social.Person p, float x, float y, float w, float h, bool incoming)
         {
-            ctx.fillStyle = incoming ? "rgba(255,210,87,0.07)" : "rgba(255,255,255,0.04)"; ctx.beginPath(); ctx.roundRect(x, y, w, h, cw(3)); ctx.fill();
+            string pid = p.PlayerId; bool dn = Down("hubReqRow:" + pid);
+            ctx.fillStyle = dn ? "rgba(62,230,176,0.10)" : incoming ? "rgba(255,210,87,0.07)" : "rgba(255,255,255,0.04)"; ctx.beginPath(); ctx.roundRect(x, y, w, h, cw(3)); ctx.fill();
+            // a tap on the name opens their profile, so a request from a stranger can be looked at (or blocked) before accepting
+            Btn("hubReqRow:" + pid, x, y, w, h, () => OpenPlayer(pid));
             HubAvatar(p.PlayerId, p.Name, x + cw(2) + cw(3.6f), y + h / 2, cw(3.6f));
             string nm = p.Name ?? ""; ctx.font = Lil(cw(3.4f)); while (nm.Length > 3 && ctx.measureText(nm) > w - cw(36)) nm = nm.Substring(0, nm.Length - 2) + "…";
             Text(nm, x + cw(11), y + h * 0.38f, Lil(cw(3.4f)), HUB_TEXT);
@@ -261,10 +264,11 @@ namespace BAM.Online.UI
             float fh = cw(11);
             Field("fname", ix, y, iw, fh, friendNameDraft, "PLAYER NAME");
             y += fh + cw(3);
-            bool ok = Social.Active && !friendSending && friendNameDraft.Trim().Length > 0; float sh = cw(11), sdy = ok && Down("hubFrSend") ? cw(0.5f) : 0;
+            // Social.Add starts Friends again if it had stopped, so being signed in is enough
+            bool ok = !friendSending && friendNameDraft.Trim().Length > 0; float sh = cw(11), sdy = ok && Down("hubFrSend") ? cw(0.5f) : 0;
             ctx.fillStyle = ok ? (object)VGrad(y + sdy, y + sdy + sh, "#4c6bff", "#3a3fd0") : "#2a2f5a"; ctx.beginPath(); ctx.roundRect(ix, y + sdy, iw, sh, cw(3)); ctx.fill();
             Text(friendSending ? "SENDING…" : "SEND FRIEND REQUEST", ix + iw / 2, y + sdy + sh / 2, Lil(cw(3.8f)), ok ? "#fff" : "rgba(255,255,255,0.45)", "center");
-            Btn("hubFrSend", ix, y, iw, sh, () => { if (ok) SendFriendRequest(); else if (!Social.Active) Toast("Friends is not available right now"); });
+            Btn("hubFrSend", ix, y, iw, sh, () => { if (ok) SendFriendRequest(); });
             y += sh + cw(3);
             if (friendReqMsg != null)
             {
@@ -281,7 +285,8 @@ namespace BAM.Online.UI
             {
                 string err = await Social.Add(name);
                 friendReqOk = err == null;
-                friendReqMsg = err ?? "Friend request sent to " + name + ". They show up in your list once they accept.";
+                friendReqMsg = err ?? (Social.LastAddWasAccept ? name + " had already asked you: you are friends now."
+                    : "Friend request sent to " + name + ". They show up in your list once they accept.");
                 if (friendReqOk) friendNameDraft = "";
             }
             finally { friendSending = false; }
