@@ -8,7 +8,7 @@ using UnityEngine;
 // ONLINE MATCH's queue as one card with clear steps (Rickard 2026-10-31, thread "Förbättra menyns UI efter Speltest": the Speltest
 // copy is done, now develop it). Before this the queue was one line of text with the seconds and CANCEL. Now:
 //   SEARCHING   the player's hero in a radar, the time, your team against three "?" places, how many others search right now,
-//               after 30 s PLAY BOTS INSTEAD, and CANCEL;
+//               after MpRoom.BotFillAfter (12 s) bots take the empty places (2026-11-15; was PLAY BOTS INSTEAD after 30 s), and CANCEL;
 //   JOINING     a lobby was found and the phone is getting into it;
 //   MATCH FOUND both teams with their heroes, "Starting in 2" (one sound and one vibration, and the page comes back if the
 //               player had gone to another page);
@@ -18,10 +18,9 @@ namespace BAM.Online.UI
 {
     static partial class OnlineMenu
     {
-        const float BotsOfferAfter = 30f;
         static bool foundSeen;
 
-        // the editor's look test (BAM > Test Online Search): 1 searching, 2 searching for 35 s, 3 joining, 4 match found, 5 error;
+        // the editor's look test (BAM > Test Online Search): 1 searching, 2 searching for 9 s, 3 joining, 4 match found, 5 error;
         // 0 = the real queue. Only the picture: nothing goes online, and every button here just ends the test.
         static int preview; static float previewSince;
         static readonly HeroId[] PreviewThem = { HeroId.Tyra, HeroId.Knut, HeroId.Bonk };
@@ -45,7 +44,7 @@ namespace BAM.Online.UI
         {
             bool found = SearchFound(out int mySide);
             bool joining = !found && (preview > 0 ? preview == 3 : MpRoom.State == MpRoom.Phase.Connecting && MpRoom.QuickJoining);
-            float t = preview > 0 ? Now - previewSince + (preview == 2 ? 35 : 0) : Now - MpRoom.SearchSince, y = y0, cx = x + w / 2;
+            float t = preview > 0 ? Now - previewSince + (preview == 2 ? 9 : 0) : Now - MpRoom.SearchSince, y = y0, cx = x + w / 2;
 
             // the title
             string title = found ? "MATCH FOUND!" : joining ? "JOINING" : "SEARCHING";
@@ -112,8 +111,11 @@ namespace BAM.Online.UI
             else
             {
                 int others = preview > 0 ? 0 : OnlineUi.Searching();
+                float fill = preview > 0 ? MpRoom.BotFillAfter - t : MpRoom.BotFillIn;
                 info = others > 0 ? others + (others == 1 ? " other player is" : " other players are") + " searching right now."
-                    : "Nobody else is searching right now. You play the next one who presses ONLINE MATCH.";
+                    : "Nobody else is searching right now.";
+                if (fill >= 0) info += fill <= 5 ? " Bots take the empty places in " + Mathf.CeilToInt(Mathf.Max(1, fill)) + "…"
+                    : " Bots take the empty places if nobody comes.";
                 if (MpRoom.PartySize > 1) info = "Your group is searching together. " + info;
             }
             var il = Wrap(info, w, Treb(12));
@@ -122,13 +124,7 @@ namespace BAM.Online.UI
 
             if (found) return y - y0;
 
-            // few players in the beta: after a while, offer a bot match instead of more waiting (alone only; a group plays from Home)
-            bool solo = MpRoom.PartySize <= 1 && !joining;
-            if (solo && t >= BotsOfferAfter)
-            {
-                if (draw) StartButton("mpBotsInstead", x, y, w, rowH + 6, "PLAY BOTS INSTEAD", preview > 0 ? (Action)EndPreview : PlayBotsInstead, null);
-                y += rowH + 12;
-            }
+            // no PLAY BOTS INSTEAD any more: after MpRoom.BotFillAfter the bots come by themselves (SearchTick)
             if (draw) MpBtn("mpCancel", "CANCEL", x, y, w, rowH, "#39407a", preview > 0 ? (Action)EndPreview : () => { MpRoom.CancelSearch(); MpRoom.ClearQuickError(); });
             y += rowH + 6;
             return y - y0;
@@ -221,6 +217,14 @@ namespace BAM.Online.UI
                 if (page != "mp" && Flow.Game != null && !Flow.Game.InMatch) { Close(); Go("mp"); }
             }
             foundSeen = f;
+
+            // nobody came in MpRoom.BotFillAfter: bots take the empty places. Alone that is a bot match like Home's PLAY (no Relay
+            // for one phone); a group's leader starts the group's room match with the other side all bots
+            if (preview == 0 && MpRoom.BotFillIn == 0 && Flow.Game != null && !Flow.Game.InMatch)
+            {
+                if (MpRoom.PartySize > 1 && MpRoom.Members.Count > 1) MpRoom.FillWithBots();
+                else { Debug.Log("[BAM.Online] queue: nobody found in " + MpRoom.BotFillAfter + " s, bots instead"); PlayBotsInstead(); }
+            }
         }
     
 #if UNITY_EDITOR
@@ -231,7 +235,7 @@ namespace BAM.Online.UI
             if (p == 4) { BamAudio.Play(SfxId.UiConfirm); foundSeen = true; }
         }
         [UnityEditor.MenuItem("BAM/Test Online Search/Searching")] static void TestSearching() => Preview(1);
-        [UnityEditor.MenuItem("BAM/Test Online Search/Searching for 35 s (PLAY BOTS INSTEAD)")] static void TestLong() => Preview(2);
+        [UnityEditor.MenuItem("BAM/Test Online Search/Searching for 9 s (bots soon)")] static void TestLong() => Preview(2);
         [UnityEditor.MenuItem("BAM/Test Online Search/Joining")] static void TestJoining() => Preview(3);
         [UnityEditor.MenuItem("BAM/Test Online Search/Match found")] static void TestFound() => Preview(4);
         [UnityEditor.MenuItem("BAM/Test Online Search/Error")] static void TestError() => Preview(5);

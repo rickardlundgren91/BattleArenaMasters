@@ -99,6 +99,9 @@ namespace BAM.Online.Mp
         static int RoomCap => Quick ? 2 * Size : Capacity(Mode);
         public static int MaxGroup => Size;
         const float QuickStartDelay = 2f, MergeEvery = 3f, PartyWait = 10f;
+        /// <summary>ONLINE MATCH: seconds of searching before bots take the empty places (Rickard 2026-11-15, launch plan: a match
+        /// within 10-15 s even when nobody else is online). Before this the queue waited for ever, with PLAY BOTS INSTEAD after 30 s.</summary>
+        public const float BotFillAfter = 12f;
         static string myParty = "", otherParty; static int partySize = 1, otherSize; static float claimT;
         static int quickTok, quickTries; static float startT = -1, mergeT;
         static readonly HashSet<string> tried = new HashSet<string>();
@@ -302,6 +305,31 @@ namespace BAM.Online.Mp
             Debug.Log("[BAM.Online] queue: " + why + ", looking again");
             QuickFind();
             return true;
+        }
+
+        /// <summary>ONLINE MATCH: seconds until bots take the empty places, -1 when this phone does not decide that (a guest in
+        /// someone's lobby, one of a group whose leader searches, a match already found, or not searching).</summary>
+        public static float BotFillIn
+        {
+            get
+            {
+                if (!Quick || State == Phase.Match || QuickJoining || otherParty != null) return -1;
+                if (relay != null && !IsHost) return -1;                       // in a stranger's lobby: its host starts
+                if (partySize > 1 && !(IsHost && myParty == MyPlayerId)) return -1; // a group: only its leader
+                return Mathf.Max(0, BotFillAfter - (Time.realtimeSinceStartup - SearchSince));
+            }
+        }
+
+        /// <summary>A group's leader, nobody found in BotFillAfter: the lobby closes to the queue and the group plays against bots
+        /// (the same room match as with strangers, the other side all bots). Alone, the menu starts a bot match instead
+        /// (OnlineMenu.SearchTick), since a room with one phone gains nothing from Relay.</summary>
+        public static void FillWithBots()
+        {
+            if (!Quick || !IsHost || State != Phase.Lobby || otherParty != null || relay == null || Members.Count < 2) return;
+            Debug.Log("[BAM.Online] queue: nobody found in " + BotFillAfter + " s, the group plays bots");
+            ++quickTok; startT = -1;
+            relay.Quick = false; relay.SetOpen(false);
+            StartMatch();
         }
 
         /// <summary>Host: the bots' level for the next match.</summary>
