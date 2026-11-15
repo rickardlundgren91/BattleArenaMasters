@@ -85,6 +85,11 @@ namespace BAM.Sim
         /// match's special lesson, as BoltPassesMinions) and stops only at the island's edge. false = it stops at the first enemy hero,
         /// tower or wall as before.</summary>
         public const bool BoltPierces = true;
+        /// <summary>The bolt hurts more the farther it has flown (Rickard 2026-11-15 "Tyras pil ska göra dmg baserat på avstånd"): at a hit
+        /// DistNear + DistPerTile x the tiles from where it left, at most DistMax, times the bolt's damage. 1.0 + 0.1/tile: full right by her, 1.5x at 5 tiles, 2x from 10 tiles.</summary>
+        public const bool DistanceDamage = true;
+        public const float DistNear = 1.0f, DistPerTile = 0.1f, DistMax = 2.0f;
+        public static float DistFactor(float tiles) => DistanceDamage ? System.Math.Max(0f, System.Math.Min(DistMax, DistNear + DistPerTile * tiles)) : 1f;
         /// <summary>The bolt's old length: 2 x (her attack range 4 + 0.5), as the old boltLen. Since 2026-10-30 (Rickard: "tyras pil ska
         /// fortsätta tills den träffar något") only how far the bots look for a bolt target and fear hers; the bolt flies Flight.</summary>
         public const float Length = 2 * (4f + 0.5f);
@@ -667,7 +672,10 @@ namespace BAM.Sim
                 if (p.Src == null || u.Kind == UnitKind.Tower || !Hurtable(p.Src, u) || u.Team == p.Team || (pastMinions && u.Kind != UnitKind.Hero) || p.HasHit(u)) continue;
                 if (SimMath.PtSeg(u.X, u.Y, ox, oy, p.X, p.Y) > p.Radius + u.R) continue;
                 p.AddHit(u);
-                SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
+                // how far it flew to this body: along the line from where it left (TyraS.DistanceDamage)
+                float sx = p.X - SimMath.Cos(p.Ang) * p.D, sy = p.Y - SimMath.Sin(p.Ang) * p.D;
+                float along = Math.Max(0, Math.Min(p.D, (u.X - sx) * SimMath.Cos(p.Ang) + (u.Y - sy) * SimMath.Sin(p.Ang)));
+                SpecialHit(p.Src, u, p.Dmg * TyraS.DistFactor(along), p.Kind, true);
             }
             if (p.D >= p.Travel - 1e-5f) { p.Done = true; FeatherTrail(p, p.D); }
         }
