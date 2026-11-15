@@ -14,7 +14,8 @@ namespace BAM.Game
     /// städa upp det ui": the first panel sat low over the joystick and the SPECIAL with tiny text). Each card has the item's own
     /// icon (drawn in code, ItemIconArt), its name, its rarity and one short line; a tap anywhere on a card takes it, no SELECT
     /// button. The match does not stop: the cards wait until the player picks (keys 1-3 in the editor), and they keep clear of
-    /// every control. They open by themselves only while the player is dead or calm behind our own tower; anywhere else a pulsing
+    /// every control. They open by themselves only while the player is dead, or stands still out of combat with no enemy hero near (Rickard
+    /// 2026-11-15); otherwise a pulsing
     /// ITEM button by the SPECIAL waits (where the next item will sit) and opens them, and a hit takes them back to the button
     /// (review 2026-11-13 nr 2: at 1:20 and 2:56 they came up in the middle of tower fights and lay over RESPAWN IN). The items
     /// held sit as two small icons beside the SPECIAL on the screen's inner side, dark while they cool down; a finger held on one shows what it does, as on the SPECIAL (HudHold.cs; Rickard 2026-11-13). Pure display and
@@ -226,23 +227,29 @@ namespace BAM.Game
         }
 
         // Dead: open (the 10-20 s with nothing else to do are the best time to choose). Hit: back to the button. Otherwise a tap's
-        // opening holds, and without one the cards are open exactly while the player is behind our own tower and out of combat
-        // (no hit taken or dealt for 3 s, Unit.InCombat), so a respawn opens them and walking out to the lane closes them.
+        // opening holds, and without one the cards are open exactly while the player stands still, is out of combat (no hit taken
+        // or dealt for 3 s, Unit.InCombat) and has no enemy hero it can see within OfferFoeGap tiles (Rickard 2026-11-15: "bara
+        // syns ... när man står stilla och ute ur combat helst en liten bit ifrån"), anywhere on the map; walking closes them again.
+        // It was "behind our own tower" before (review 2026-11-13 nr 2).
+        const float OfferStillTime = 0.4f, OfferFoeGap = 4.5f;
         bool OfferOpen(Unit p, bool hurt)
         {
             if (!p.Alive) { offerOpen = true; offerByTap = false; }
             else if (hurt) { offerOpen = false; offerByTap = false; }
-            else if (!offerByTap) offerOpen = BehindOwnTower(p) && !p.InCombat(m.Time);
+            else if (!offerByTap) offerOpen = m.Time - p.MovedAt >= OfferStillTime && !p.InCombat(m.Time) && !FoeNear(p);
             return offerOpen;
         }
 
-        // behind our own tower, seen from the enemy's: more than half a tile on the base side of its middle (where the heroes spawn,
-        // respawn and Recall, 4 tiles back)
-        bool BehindOwnTower(Unit p)
+        // an enemy hero alive and in sight within OfferFoeGap tiles
+        bool FoeNear(Unit p)
         {
-            Unit own = m.Towers[p.Team], foe = m.Towers[Teams.Other(p.Team)];
-            if (own == null || foe == null) return false;
-            return (p.Y - own.Y) * Mathf.Sign(foe.Y - own.Y) < -0.5f;
+            for (int i = 0; i < m.Heroes.Count; i++)
+            {
+                var e = m.Heroes[i];
+                if (e.Team == p.Team || !e.Alive || !m.IsVisibleTo(e, p.Team)) continue;
+                if (SimMath.Dist(e, p) <= OfferFoeGap) return true;
+            }
+            return false;
         }
 
         void OfferButtonFrame(bool show)
