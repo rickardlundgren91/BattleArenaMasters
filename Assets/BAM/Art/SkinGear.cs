@@ -118,7 +118,7 @@ namespace BAM.Art
                     return new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.32f, At = new Vector3(0f, 0.02f, -0.07f), Flat = 0.8f, Sway = 10f };
                 case "mantle": // Bonk's pelt over the shoulders; on anyone else a cape like Fenn's
                     return hero == HeroId.Bonk
-                        ? new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = 1.9f, At = new Vector3(0f, 0.07f, -0.02f), Flat = 0.8f, Sway = 8f }
+                        ? new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = Weapons.BonkPeltWide, At = Weapons.BonkPeltAt, Flat = 0.8f, Sway = 8f }
                         : new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.42f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f };
                 case "wings": // Tikta's wing plate
                     return new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.14f, -0.07f), Yaw = 180f };

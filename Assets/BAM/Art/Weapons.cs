@@ -412,6 +412,10 @@ namespace BAM.Art
         // bam-work/art/remake). The held weapons start from the old ones' numbers as Rickard tuned them (WeaponTune.json), so the
         // holds he picked carry over; the worn parts are first guesses from the bones, to be tuned with BAM > Art > Weapon Tuner
         // ("<Hero> V2"). Rickard 2026-11-13: "jag måste ju kunna spela dom så lägg in dom". No numbers of the match change.
+        /// <summary>Bonk's V2 wolf pelt over his shoulders (shared with his skins' mantles, SkinGear).</summary>
+        internal const float BonkPeltWide = 1.3f;
+        internal static Vector3 BonkPeltAt => new Vector3(0f, 0.15f, -0.03f); // a property: byHeroV2 above is made before any field below it
+
         static GearDef[] MakeV2()
         {
             GearDef[] old = byHero ?? WeaponTuning.Apply(Make());
@@ -470,13 +474,18 @@ namespace BAM.Art
 
             // Bonk: the new club on his shoulder as before; the wolf pelt over his shoulders (its top at the shoulder line, wolf head on
             // his left, a little stiff swing) and the fang necklace on his chest; both came at Tripo's raw size and are scaled here
-            // from the distance between his shoulder joints
+            // from the distance between his shoulder joints. Rickard 2026-11-15 ("majoriteten buggar" in the menus): at the first
+            // guesses (pelt 1.9 shoulder spans wide, necklace 0.85 and lying flat 5 % below the shoulders) the pelt hung from mid-chest
+            // to his ankles with the wolf head on his left breast, and the necklace sat inside his chest with only the fang tips
+            // showing. Measured on his V2 body in its bind pose (bam-work/menu-look/bonk): the pelt 1.3 spans wide and 0.15 of his height
+            // over the shoulder line puts the wolf head on his left shoulder and the hem at his waist; the necklace round the base of
+            // his neck, 1.0 spans wide and tipped 25 degrees so its front drops onto his chest, shows the cord and the fangs
             GearDef bo = g[(int)HeroId.Bonk];
             bo.Weapons[0].Model = "v2_bonk_club";
             bo.Worn = new[]
             {
-                new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = 1.9f, At = new Vector3(0f, 0.07f, -0.02f), Flat = 0.8f, Sway = 8f },
-                new WornDef { Model = "v2_bonk_necklace", Bone = Chest, From = LArm, To = RArm, Wide = 0.85f, At = new Vector3(0f, -0.05f, 0.05f) },
+                new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = BonkPeltWide, At = BonkPeltAt, Flat = 0.8f, Sway = 8f },
+                new WornDef { Model = "v2_bonk_necklace", Bone = Chest, From = LArm, To = RArm, Wide = 1.0f, At = new Vector3(0f, 0f, 0.04f), Turn = new Vector3(25f, 0f, 0f) },
             };
 
             // Bram: the new throwing hammer (still on his shoulder at rest); the rack of three spare hammers on his back (made facing
