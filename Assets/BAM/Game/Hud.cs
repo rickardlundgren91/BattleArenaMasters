@@ -649,7 +649,11 @@ namespace BAM.Game
             joy.RightSide = leftHanded;
             joy.SideGap = leftHanded ? gapR : gapL;
             float side = leftHanded ? 0f : 1f, edge = leftHanded ? -gapL : gapR;
-            UiKit.Place(specialRoot, side, 0f, (leftHanded ? 70f : -70f) + edge, 150f, 270f, 270f);
+            // SPECIAL's centre sits on the joystick's rest line (13 % up, JoystickZone.RestPosition) so the two line up (Rickard 2026-11-15);
+            // a landscape window keeps the fixed 150 it always had
+            UnityEngine.Rect sr = safe.rect;
+            float specialY = sr.height > sr.width ? 0.13f * sr.height - 0.5f * 270f : 150f;
+            UiKit.Place(specialRoot, side, 0f, (leftHanded ? 70f : -70f) + edge, specialY, 270f, 270f);
             Canvas.ForceUpdateCanvases();
             joy.Rest();
         }
