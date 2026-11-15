@@ -498,8 +498,9 @@ namespace BAM.Art
                 Worn = new[]
                 {
                     new WornDef { Model = "v2_kugg_cannon", Bone = HumanBodyBones.RightLowerArm, From = HumanBodyBones.RightLowerArm, To = HumanBodyBones.RightHand, Along = true, Wide = 1.46f },
-                    new WornDef { Model = "v2_kugg_pack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.1f) },
-                    new WornDef { Model = "v2_kugg_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.32f, At = new Vector3(0f, 0.02f, -0.07f), Flat = 0.8f, Sway = 10f },
+                    // no backpack or cape since the round V3 body (2026-11-14): measured on it, both sat wholly inside the ball (its back
+                    // is 0.21 behind the shoulders, the pack reached 0.15, the cape 0.14), and the ball has its own chimney
+                    // (Rickard 2026-11-15: "majoriteten buggar" in the menus)
                 },
             };
 

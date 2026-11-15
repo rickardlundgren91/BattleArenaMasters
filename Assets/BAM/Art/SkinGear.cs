@@ -90,6 +90,8 @@ namespace BAM.Art
             {
                 string m = PropName(hero, skin, slot);
                 if (used.Contains(m) || !Has(m)) continue;
+                // Kugg's round V3 bodies hide a pack or a cape wholly inside the ball (as the plain one's, Weapons.MakeV2)
+                if (hero == HeroId.Kugg && (slot == "pack" || slot == "cape")) continue;
                 WornDef w = Extra(hero, slot);
                 if (w == null) { Debug.LogWarning("[BAM.Art] " + hero + " skin " + skin + ": no place for its " + slot + " yet"); continue; }
                 w.Model = m;
