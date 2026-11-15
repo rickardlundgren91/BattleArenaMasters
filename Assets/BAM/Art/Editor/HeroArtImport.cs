@@ -84,11 +84,15 @@ namespace BAM.Art.Editor
             mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             // a clip whose first frame is far from a standing pose (Ragn's Running Crawl, on all fours) gives Unity no usable avatar of
             // its own, and then no clip at all (Rickard 2026-11-10: "no clip in Ragn/Anim/RunFour.fbx"): it borrows the avatar of its
-            // hero's body (Models/<Hero>/<Hero>.fbx), built from the standing bind pose
+            // hero's body (Models/<Hero>/<Hero>.fbx), built from the standing bind pose. Since 2026-11-15 the avatar of the hero's own
+            // Run.fbx beside it comes first (same Mixamo rig, standing, and its clip is known to import): Ragn's body was replaced on
+            // 2026-11-12 and the clip came out empty again with that body's avatar (HeroArt RunFour none, Rickard's console 2026-11-15)
             if (IsClip && Path.GetFileNameWithoutExtension(assetPath).StartsWith("RunFour"))
             {
-                string heroDir = Path.GetDirectoryName(Path.GetDirectoryName(assetPath)).Replace('\\', '/');
-                Avatar body = AssetDatabase.LoadAssetAtPath<Avatar>(heroDir + "/" + Path.GetFileName(heroDir) + ".fbx");
+                string animDir = Path.GetDirectoryName(assetPath).Replace('\\', '/');
+                string heroDir = Path.GetDirectoryName(animDir).Replace('\\', '/');
+                Avatar body = AssetDatabase.LoadAssetAtPath<Avatar>(animDir + "/Run.fbx");
+                if (body == null || !body.isValid || !body.isHuman) body = AssetDatabase.LoadAssetAtPath<Avatar>(heroDir + "/" + Path.GetFileName(heroDir) + ".fbx");
                 if (body != null) { mi.avatarSetup = ModelImporterAvatarSetup.CopyFromOther; mi.sourceAvatar = body; }
                 else Debug.LogWarning("[BAM.Art] " + assetPath + ": no avatar in " + heroDir + " to borrow, its own is used");
             }
