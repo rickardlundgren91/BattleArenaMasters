@@ -17,7 +17,7 @@ namespace BAM.UI
     // BOT DIFFICULTY, RUNES or GROVE (the old sheet's map pick), and Grove left PRACTICE. Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
     // 2026-11-15 (Rickard: "lägg in 2v2 mode och lägg in grove mapen som val på både 3v3 och 2v2", "gör även så att man kan köra 2v2
     // med vänner och mot andra"): 3V3 / 2V2 beside "Choose mode" counts for CLASSIC, ONLINE MATCH and a party; a party has the MAP
-    // row too (the leader's pick, MpRoom.Map), with PARTY under it. ONLINE MATCH plays Runes.
+    // row too (the leader's pick, MpRoom.Map), with PARTY under it. ONLINE MATCH plays the MAP picked here; two players with different picks get one of them 50/50 (MpRoom.Map).
     public static partial class Screens
     {
         enum Mode { Classic, Training, HeroTest }

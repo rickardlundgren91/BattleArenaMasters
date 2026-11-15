@@ -62,8 +62,11 @@ namespace BAM.Online.Mp
         /// <summary>Heroes per team in this room: 3 (3v3) or 2 (2v2, Rickard 2026-11-15: "gör även så att man kan köra 2v2 med vänner
         /// och mot andra"). The leader picks it for a party; ONLINE MATCH looks only for lobbies of the same size (MpRelay.QuickTag).</summary>
         public static int Size { get; private set; } = 3;
-        /// <summary>The arena of this room's matches: the leader's MAP pick for a party; ONLINE MATCH plays Runes.</summary>
+        /// <summary>The arena of this room's matches: the leader's MAP pick for a party. ONLINE MATCH: each side brings its own pick
+        /// (quickMap, sent in Hello); the same pick plays it, two different picks 50/50 by the match's seed (Rickard 2026-11-15: "om man
+        /// har valt olika kartor är det 50/50. Inte vara runes"). The host decides and sends it in Start, so every phone plays the same.</summary>
         public static MapId Map { get; private set; } = MapId.Runes;
+        static MapId quickMap = MapId.Runes, otherMap = MapId.Runes; // ONLINE MATCH: this side's pick, and the side that joined the host's
         public static readonly List<Member> Members = new List<Member>(MpRelay.MaxPlayers);
         public static int MyId { get; private set; }
         public static Member Me { get { foreach (var m in Members) if (m.Id == MyId) return m; return null; } }
@@ -192,7 +195,7 @@ namespace BAM.Online.Mp
             }
             Leave(); QuickError = null;
             Quick = true; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
-            Size = BamSettings.TeamSize; Map = MapId.Runes; // a stranger's lobby of the same size (MpRelay.QuickTag); ONLINE MATCH plays Runes
+            Size = BamSettings.TeamSize; Map = quickMap = BamSettings.LastMap; // a stranger's lobby of the same size (MpRelay.QuickTag), with this player's map pick
             myParty = MyPlayerId; partySize = 1;
             MpRunner.Ensure();
             QuickFind();
@@ -204,7 +207,7 @@ namespace BAM.Online.Mp
             if (IsHost && Quick && partySize > 1 && myParty == MyPlayerId && otherParty == null && relay != null && State == Phase.Lobby)
             {
                 ++quickTok; Quick = false; myParty = ""; partySize = 1; startT = -1;
-                relay.Quick = false; relay.SetOpen(false); Status = ""; Map = BamSettings.LastMap; SendRoom();
+                relay.Quick = false; relay.SetOpen(false); Status = ""; SendRoom();
                 return;
             }
             Leave();
@@ -214,7 +217,7 @@ namespace BAM.Online.Mp
         static async void GroupMatch()
         {
             Quick = true; QuickError = null; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
-            Map = MapId.Runes; // the room's team size stays: the group looks for a lobby of that size
+            quickMap = Map; // the room's team size and map stay: the group looks for a lobby of that size and brings its map pick
             myParty = MyPlayerId; partySize = Members.Count; otherParty = null; startT = -1;
             foreach (var m in Members) { m.Party = myParty; m.Side = 0; }
             Status = ""; SendRoom();
@@ -396,6 +399,8 @@ namespace BAM.Online.Mp
             if (!CanStart) return;
             int seed = UnityEngine.Random.Range(1, int.MaxValue);
             var diff = Diff;
+            // ONLINE MATCH with two different map picks: 50/50 by the seed (every phone gets the host's choice in Start)
+            var map = Quick && otherParty != null && otherMap != quickMap ? ((seed & 1) == 0 ? quickMap : otherMap) : Map;
             var seats = new SeatConfig[Members.Count];
             var host = Me; if (host != null) host.Skin = MySkin(host.Hero); // the host's own look as it is now
             for (int i = 0; i < Members.Count; i++)
@@ -408,13 +413,13 @@ namespace BAM.Online.Mp
             {
                 w.Begin(MpMsg.Start); w.I32(seed); w.U8((int)diff); w.U8(Mode); w.U8(seats.Length);
                 for (int s = 0; s < seats.Length; s++) { w.U8((int)seats[s].Hero); w.U8(seats[s].Team); w.U8((int)seats[s].Spell); w.Str(Members[s].Name); }
-                w.U8(i); w.U8(Size); w.U8((int)Map);
+                w.U8(i); w.U8(Size); w.U8((int)map);
                 for (int s = 0; s < seats.Length; s++) w.U8(seats[s].Skin); // last, after the 2v2 fields: every seat's look
                 relay.SendTo(Members[i].Conn, w);
             }
             relay.Flush(); // out now, not with the next frame's sends after this phone has built its scene (bug review NET-6)
             loadT = 0;
-            Begin(seed, diff, seats, 0, Size, Map);
+            Begin(seed, diff, seats, 0, Size, map);
         }
 
         static void Begin(int seed, Difficulty diff, SeatConfig[] seats, int mySeat, int size, MapId map)
@@ -539,7 +544,7 @@ namespace BAM.Online.Mp
             {
                 if (IsHost) return;
                 w.Begin(MpMsg.Hello); w.I32(MpMsg.Protocol); w.Str(Application.version); w.Str(MyPlayerId); w.Str(MyName); w.U8((int)MyHero); w.U8((int)BamSettings.Spell);
-                w.Str(Quick ? myParty : ""); w.U8(Quick ? partySize : 1); w.U8(MySkin(MyHero));
+                w.Str(Quick ? myParty : ""); w.U8(Quick ? partySize : 1); w.U8(MySkin(MyHero)); w.U8((int)(Quick ? quickMap : Map)); // last: the ONLINE MATCH map pick
                 relay.Send(w);
             };
             relay.OnDisconnect = OnDisconnect;
@@ -591,7 +596,7 @@ namespace BAM.Online.Mp
                 case MpMsg.Hello:
                 {
                     int proto = r.I32(); string version = r.Str(), pid = r.Str(), name = r.Str(); int hero = r.U8(), spell = r.U8();
-                    string party = r.Str(); int psize = Math.Max(1, r.U8()); int skin = r.U8();
+                    string party = r.Str(); int psize = Math.Max(1, r.U8()); int skin = r.U8(); var hmap = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
                     if (string.IsNullOrEmpty(party)) party = pid;
                     string no = proto != MpMsg.Protocol || version != Application.version ? "Your game and your friend's are different versions. Update both from Google Play."
                         : State == Phase.Match ? "A match is being played in that room. Try again when it is over."
@@ -603,7 +608,7 @@ namespace BAM.Online.Mp
                         if (otherParty == null)
                         {
                             if (psize > MaxGroup || CountSide(0) + psize > 2 * Size) no = "That match is full.";
-                            else { otherParty = party; otherSize = psize; claimT = 0; startT = -1; relay.SetOpen(false); }
+                            else { otherParty = party; otherSize = psize; otherMap = hmap; claimT = 0; startT = -1; relay.SetOpen(false); }
                         }
                         else if (party != otherParty || CountSide(1) >= otherSize) no = "That match is full.";
                         side = 1;
@@ -682,7 +687,7 @@ namespace BAM.Online.Mp
                     // our group's host found a waiting lobby: follow it there
                     string id = r.Str(), party = r.Str(); int size = Math.Max(1, r.U8());
                     ++quickTok; CloseRelay();
-                    Quick = true; Mode = Versus; myParty = party; partySize = size; quickTries = 0; tried.Clear();
+                    Quick = true; Mode = Versus; myParty = party; partySize = size; quickTries = 0; tried.Clear(); quickMap = Map; // the leader's map pick
                     State = Phase.Connecting; Status = "Joining…";
                     QuickJoin(id); Changed?.Invoke();
                     return;
