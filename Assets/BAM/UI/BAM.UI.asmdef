@@ -9,6 +9,7 @@
         "UnityEngine.UI",
         "Unity.InputSystem",
         "Google.Play.AppUpdate",
+        "Google.Play.Review",
         "Google.Play.Common"
     ],
     "includePlatforms": [],
@@ -23,6 +24,11 @@
             "name": "com.google.play.appupdate",
             "expression": "1.8.0",
             "define": "BAM_PLAY_UPDATE"
+        },
+        {
+            "name": "com.google.play.review",
+            "expression": "1.8.0",
+            "define": "BAM_PLAY_REVIEW"
         }
     ],
     "noEngineReferences": false

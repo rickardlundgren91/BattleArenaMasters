@@ -560,7 +560,9 @@ namespace BAM.Game
             if (net != null) net.MatchEnded(quit && !over);
             if (setup.HeroTest) return;
             LogEnd(quit);
-            Flow.MatchEnded?.Invoke(Result(quit && !over)); // online: level, XP and rating are counted on the server
+            var result = Result(quit && !over);
+            Screens.NoteMatchForReview(result); // Google Play's review card after the third win, never after a loss (ReviewAsk.cs)
+            Flow.MatchEnded?.Invoke(result); // online: level, XP and rating are counted on the server
         }
 
         // The analytics' matchEnd, once per match: already as the match is decided (the tower falls), not with the result card

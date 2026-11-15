@@ -269,8 +269,8 @@ namespace BAM.UI
             Flow.Game.StartMatch(setup);
         }
 
-        /// <summary>Per-frame work (from UiRoot): the hint bubble's bob and the update notice. No allocations.</summary>
-        internal static void Tick() { TickHint(); TickUpdateNotice(); }
+        /// <summary>Per-frame work (from UiRoot): the hint bubble's bob, the update notice and the review ask. No allocations.</summary>
+        internal static void Tick() { TickHint(); TickUpdateNotice(); TickReviewAsk(); }
 
         // ---- shared screen pieces ----
 
