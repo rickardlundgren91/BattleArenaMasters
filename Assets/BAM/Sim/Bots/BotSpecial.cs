@@ -190,7 +190,7 @@ namespace BAM.Sim
                 case HeroId.Tyra:
                     {   // the bolt at the lowest enemy hero with no minion in front (it stops in the first enemy)
                         var hs = FoeHeroes(h, TyraS.Length - 0.3f); Unit t = null;
-                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if (LineFree(e, TyraS.Hitbox, TyraS.BoltPassesMinions) && (t == null || e.Hp < t.Hp)) t = e; }
+                        for (int i = 0; i < hs.Count; i++) { var e = hs[i]; if ((TyraS.BoltPierces || LineFree(e, TyraS.Hitbox, TyraS.BoltPassesMinions)) && (t == null || e.Hp < t.Hp)) t = e; }
                         if (t == null) return false;
                         // a second enemy hero in the volley's cone round that one: the tap hits both, so tap instead (XYZ SimBotDrag.cs)
                         float ta = AngTo(t.X, t.Y); var vs = FoeHeroes(h, h.Range);

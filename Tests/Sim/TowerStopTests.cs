@@ -4,6 +4,8 @@ namespace BAM.Sim
 {
     // Both bases stop every hero's straight special (Match.TowerReach; Fenn's thrown wolf too until it was taken out, nr 116; tester 2026-11-02, Rickard
     // "alla heroes ska stanna mot basen, inte orättvist", own tower too: "ja"): it used to stop only Tyra's bolt at the enemy tower.
+    // Except Tyra since 2026-11-15: her bolt goes through everything and stops only at the island's edge (TyraS.BoltPierces; Rickard
+    // "Tyras special gå igenom allt"), so for her the checks below are turned round: the enemy behind either base is hit once, no puff.
     public sealed partial class Match
     {
         static readonly HeroId[] TowerStopHeroes = { HeroId.Tyra, HeroId.Tikta, HeroId.Knut, HeroId.Bonk };
@@ -36,7 +38,8 @@ namespace BAM.Sim
                 {
                     var m1 = TowerScene(hero, out var p1, out var e1, out var tw1);
                     bool inReach = SimMath.Dist(p1, e1) <= TapReach(hero) + e1.R;
-                    Check(inReach && !m1.TapHasTarget(p1), $"BASE {hero}: an enemy right behind the enemy tower is not a tap target (in reach {inReach})");
+                    if (hero == HeroId.Tyra && TyraS.BoltPierces) Check(inReach && m1.TapHasTarget(p1), $"BASE {hero}: her piercing bolt takes an enemy right behind the enemy tower as a tap target (in reach {inReach})");
+                    else Check(inReach && !m1.TapHasTarget(p1), $"BASE {hero}: an enemy right behind the enemy tower is not a tap target (in reach {inReach})");
                 }
 
                 // the old drag form aimed straight through the tower: stopped on it, the enemy behind is not hit
@@ -50,8 +53,13 @@ namespace BAM.Sim
                     m.Step(k == 0 ? drag : PlayerInput.None);
                     foreach (var ev in m.Events) { if (ev.Type == EventType.Blocked && ev.A == p) blocked = true; if (ev.Type == EventType.Hit && ev.A == p && ev.B == e && ev.Dmg != DmgKind.Auto) hits++; }
                 }
-                Check(hits == 0, $"BASE {hero}: the enemy behind the enemy tower takes no hit from the special ({hits} hits)");
-                Check(blocked, $"BASE {hero}: the special puffs out on the enemy tower");
+                bool pierce = hero == HeroId.Tyra && TyraS.BoltPierces;
+                if (pierce) Check(hits == 1 && !blocked, $"BASE {hero}: her bolt goes through the enemy tower and hits the enemy behind it once ({hits} hits, puff {blocked})");
+                else
+                {
+                    Check(hits == 0, $"BASE {hero}: the enemy behind the enemy tower takes no hit from the special ({hits} hits)");
+                    Check(blocked, $"BASE {hero}: the special puffs out on the enemy tower");
+                }
 
                 // the own tower stops its team's shots too (Rickard 2026-11-02 "ja"): the same line through the player's own base misses
                 m = TowerScene(hero, out p, out e, out tw);
@@ -64,7 +72,8 @@ namespace BAM.Sim
                 drag.AimAngle = ang;
                 hits = 0; blocked = false;
                 for (int k = 0; k < 120; k++) { m.Step(k == 0 ? drag : PlayerInput.None); foreach (var ev in m.Events) { if (ev.Type == EventType.Hit && ev.A == p && ev.B == e && ev.Dmg != DmgKind.Auto) hits++; if (ev.Type == EventType.Blocked && ev.A == p) blocked = true; } }
-                Check(hits == 0 && blocked, $"BASE {hero}: the hero's own tower stops its special too ({hits} hits, puff {blocked})");
+                if (pierce) Check(hits == 1 && !blocked, $"BASE {hero}: her bolt goes through her own tower too ({hits} hits, puff {blocked})");
+                else Check(hits == 0 && blocked, $"BASE {hero}: the hero's own tower stops its special too ({hits} hits, puff {blocked})");
             }
         }
 

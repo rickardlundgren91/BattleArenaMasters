@@ -57,7 +57,7 @@ namespace BAM.Sim
         List<Unit> TapTargets(Unit h)
         {
             var l = EnemiesInRange(h, TapReach(h.Hero), Pick.HeroOrMinion, true, tapBuf);
-            float half = h.Hero == HeroId.Tyra ? TyraS.Hitbox : h.Hero == HeroId.Tikta ? TiktaS.LineHitbox : h.Hero == HeroId.Knut ? KnutS.HookRadius
+            float half = h.Hero == HeroId.Tyra ? (TyraS.BoltPierces ? -1 : TyraS.Hitbox) : h.Hero == HeroId.Tikta ? TiktaS.LineHitbox : h.Hero == HeroId.Knut ? KnutS.HookRadius
                 : h.Hero == HeroId.Ravna ? RavnaS.HitRadius : -1;
             if (half < 0) return l;
             for (int i = l.Count - 1; i >= 0; i--) if (TowerInWay(h, l[i], half)) l.RemoveAt(i);

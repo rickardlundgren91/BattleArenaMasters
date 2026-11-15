@@ -80,6 +80,11 @@ namespace BAM.Sim
         /// <summary>Her bolt flies past minions and Fenn's wolf and hits only heroes (decoys too), as Knut's hook (Rickard 2026-11-02 "tyras
         /// pil ska likt knut gå genom creeps ändå men ändå kunna sikta på dom"); towers and walls still stop it. false = the old rule.</summary>
         public const bool BoltPassesMinions = true;
+        /// <summary>Her special goes through everything (Rickard 2026-11-15 "Tyras special gå igenom allt", "Bara kanten av kartan, ön vi
+        /// är på"): walls, towers of both teams, minions and heroes; it hurts every enemy hero it passes once (minions only in the guided
+        /// match's special lesson, as BoltPassesMinions) and stops only at the island's edge. false = it stops at the first enemy hero,
+        /// tower or wall as before.</summary>
+        public const bool BoltPierces = true;
         /// <summary>The bolt's old length: 2 x (her attack range 4 + 0.5), as the old boltLen. Since 2026-10-30 (Rickard: "tyras pil ska
         /// fortsätta tills den träffar något") only how far the bots look for a bolt target and fear hers; the bolt flies Flight.</summary>
         public const float Length = 2 * (4f + 0.5f);
@@ -585,7 +590,7 @@ namespace BAM.Sim
         /// <summary>How far Tyra's bolt aimed at ang flies with no hero or minion in the way: to the first wall, tower or the
         /// arena's edge (what the aim and the red warning draw).</summary>
         internal float BoltReach(Unit h, float ang)
-            => TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, Map.EdgeReach(h.X, h.Y, ang, TyraS.Flight)), TyraS.Hitbox);
+            => TyraS.BoltPierces ? Map.EdgeReach(h.X, h.Y, ang, TyraS.Flight) : TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, Map.EdgeReach(h.X, h.Y, ang, TyraS.Flight)), TyraS.Hitbox);
 
         /// <summary>How far a straight shot from (x, y) along ang, half wide, flies before it touches a living tower, at most len. Both
         /// bases stop every hero's shot as a wall does, with no damage (specials never hurt towers): the enemy tower used to stop only
@@ -626,13 +631,14 @@ namespace BAM.Sim
             return TowerReach(h.X, h.Y, SimMath.Atan2(dy, dx), need, half) < need - 1e-4f;
         }
 
-        /// <summary>Tyra's bolt flies straight and stops in the first enemy, tower of either team (no damage: specials never hurt towers) or wall
-        /// it meets.</summary>
+        /// <summary>Tyra's bolt flies straight; with TyraS.BoltPierces through everything to the island's edge (BoltPierce), else it stops
+        /// in the first enemy, tower of either team (no damage: specials never hurt towers) or wall it meets.</summary>
         void BoltUpdate(Proj p, float dt)
         {
             // the wall first, then the enemies, as the volley's arrows (precision TYRA-11); the last step stops on the reach
             float ox = p.X, oy = p.Y, step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D)), ca = SimMath.Cos(p.Ang), sa = SimMath.Sin(p.Ang);
             p.X += ca * step; p.Y += sa * step; p.D += step;
+            if (TyraS.BoltPierces) { BoltPierce(p, ox, oy); return; }
             if (Map.ShotBlocked(ox, oy, p.X, p.Y)) { p.Done = true; Blocked(p, ox, oy); FeatherTrail(p, p.D - step); return; }
             // the guided match's special lesson ("TAP it to fire a bolt!") has only minions to shoot at and is passed by a bolt that
             // hits: there the bolt stops at minions, as before protocol 37 (no player passed the lesson on 0.3.3, 2026-11-02)
@@ -646,6 +652,22 @@ namespace BAM.Sim
                 if (tower) Blocked(p, p.X, p.Y); else SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
                 FeatherTrail(p, p.D);
                 return;
+            }
+            if (p.D >= p.Travel - 1e-5f) { p.Done = true; FeatherTrail(p, p.D); }
+        }
+
+        /// <summary>TyraS.BoltPierces: the bolt flies through walls, towers and minions and hurts each enemy hero on its way once
+        /// (the guided match's special lesson: minions too), until the island's edge (p.Travel, Map.EdgeReach at the cast).</summary>
+        void BoltPierce(Proj p, float ox, float oy)
+        {
+            bool pastMinions = TyraS.BoltPassesMinions && !(Tut != null && !Tut.Island && Tut.Step == Tutorial.StepSpecial);
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (p.Src == null || u.Kind == UnitKind.Tower || !Hurtable(p.Src, u) || u.Team == p.Team || (pastMinions && u.Kind != UnitKind.Hero) || p.HasHit(u)) continue;
+                if (SimMath.PtSeg(u.X, u.Y, ox, oy, p.X, p.Y) > p.Radius + u.R) continue;
+                p.AddHit(u);
+                SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
             }
             if (p.D >= p.Travel - 1e-5f) { p.Done = true; FeatherTrail(p, p.D); }
         }

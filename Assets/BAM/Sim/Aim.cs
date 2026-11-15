@@ -38,7 +38,7 @@ namespace BAM.Sim
             k = SimMath.Clamp(k, 0, 1);
             switch (h.Hero)
             {
-                case HeroId.Tyra: Line(ref a, BoltReach(h, ang), TyraS.Hitbox, true); break; // to the first wall, enemy tower or the edge; every line below stops on a base too, either team's (TowerReach)
+                case HeroId.Tyra: Line(ref a, BoltReach(h, ang), TyraS.Hitbox, true); break; // to the island's edge (TyraS.BoltPierces), else the first wall, tower or the edge; every line below stops on a base too, either team's (TowerReach)
                 case HeroId.Knut: Line(ref a, TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, KnutS.HookDistance), KnutS.HookRadius), KnutS.HookRadius, true); break;
                 case HeroId.Tikta: Line(ref a, TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, NeedleReach), TiktaS.LineHitbox), TiktaS.LineHitbox, true); break;
                 case HeroId.Bonk: Line(ref a, TowerReach(h.X, h.Y, ang, Map.ShotReach(h.X, h.Y, ang, BonkS.BoulderReach), BonkS.BoulderHitbox), BonkS.BoulderHitbox, true); break;
