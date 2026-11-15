@@ -23,7 +23,7 @@ namespace BAM.Game
         const float ShakeTime = 0.4f; // the only sign a press was refused (no text since 2026-11-03), so a little longer and wider than before (0.35 s, 14)
         static readonly string[] Numbers = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20" };
         static readonly string[] TutStepNames = { "move", "auto_attack", "special_tap", "special_drag", "blink", "fight", "heal", "tower" };
-        static readonly string[] IslandStepNames = { "island_walk", "island_minion", "island_grass", "island_target", "island_pad" };
+        static readonly string[] IslandStepNames = { "island_walk", "island_minion", "island_grass", "island_focus", "island_target", "island_pad" }; // island_focus from 2026-11-15: the later numbers moved up one
         const float FadeInTime = 0.6f;
         const string MarkRed = "<color=#E0392B>", MarkTeal = "<color=#13A89E>", MarkEnd = "</color>";
 
@@ -122,6 +122,7 @@ namespace BAM.Game
             specialName.text = icon != null || HeroCatalog.Get(m.Player.Hero).Preview ? "" : HeroCatalog.Get(m.Player.Hero).SpecialTitle;
             BeginCenter();
             BeginTutorial();
+            BeginFocus();
             joyLogged = false;
             leftHanded = !BamSettings.LeftHanded; // forces the first layout
             layoutCheckUntil = Time.unscaledTime + LayoutSettle; // and the screen is measured every frame for a while, as it always was
@@ -265,7 +266,7 @@ namespace BAM.Game
             rings.AfterStep();
             if (m.Tut != null && m.Tut.Step != lastTutStep)
             {
-                // one numbering over both halves: the island's steps 0-4, then the arena's as 5-12
+                // one numbering over both halves: the island's steps 0-5, then the arena's as 6-13 (0-4 and 5-12 before the Focus step, 2026-11-15)
                 lastTutStep = m.Tut.Step;
                 var names = island ? IslandStepNames : TutStepNames;
                 string name = lastTutStep >= 0 && lastTutStep < names.Length ? names[lastTutStep] : "step";
@@ -300,6 +301,7 @@ namespace BAM.Game
             HoldFrame(hidden);
             HeroTestFrame(hidden);
             Special();
+            FocusFrame(hidden); // the FOCUS dots under SPECIAL (HudFocus.cs)
             Aim(hidden);
             Hint(hidden);
             IslandMarks(hidden);
@@ -836,6 +838,7 @@ namespace BAM.Game
             ringChevron = MakeChevron(canvasRect);
             fade = UiKit.Fill(canvasRect, Color.clear);
             fade.enabled = false;
+            BuildFocus(); // under the tutorial's pieces, over the controls
             BuildTutorial(); // the guided match's own pieces; its picture of Home over everything, even the black
 
             canvas.gameObject.SetActive(false);

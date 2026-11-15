@@ -15,6 +15,7 @@ namespace BAM.Sim
             public float Time;               // > 0: the step ends after this long
             public int Spawn0, SpawnN;       // the practice minions it brings (spawner ids Spawn0 .. Spawn0 + SpawnN - 1)
             public bool Kill, Pad, Tip;
+            public bool Focus;               // the Focus lesson: the three stand still, Tyra hits them at random from the ring
             public byte Point;               // 0 none, 1 the first living minion, 2 the leader
         }
 
@@ -38,7 +39,12 @@ namespace BAM.Sim
             new IslandStepDef { Text = "Move here with the joystick!", HasTarget = true, TargetX = IslandDiscX, TargetY = IslandDiscY },
             new IslandStepDef { Text = "You attack automatically! Take down the |Minion|!", Spawn0 = 0, SpawnN = 1, Kill = true, Point = 1 },
             new IslandStepDef { Text = "Hide in the |grass|! Enemies only see you up close.", HasTarget = true, TargetX = 9.5f, TargetY = 14f },
-            new IslandStepDef { Text = "Stand in the |gold ring|: from there only the leader is in reach!", Spawn0 = 1, SpawnN = 3, Kill = true, Point = 2, HasTarget = true, TargetX = 2f, TargetY = 12.5f },
+            // Rickard 2026-11-15: Focus back, with the dots, explained and shown before the "only target" step. The three come in
+            // and cannot fall; from the ring all three are in Tyra's reach (3 dots) and her hits land on them at random until she
+            // has stood there FocusShow s. Then they are healed and cannot be hurt until she stands in the gold ring with only the
+            // leader in reach (he wrote the same evening that they were shot down on the way, so the leader fell to one shot).
+            new IslandStepDef { Text = "|Focus| = the enemies in your range (the dots).\nYou hit a |random| one! Stand in the ring and watch.", Spawn0 = 1, SpawnN = 3, Focus = true, HasTarget = true, TargetX = IslandDiscX, TargetY = IslandDiscY },
+            new IslandStepDef { Text = "Narrow your |Focus| to one: stand in the |gold ring|,\nonly the leader is in reach there!", Kill = true, Point = 2, HasTarget = true, TargetX = 2f, TargetY = 12.5f },
             new IslandStepDef { Text = "Hop on the |boost pad| to reach the battle!", HasTarget = true, TargetX = IslandBridgeX0 + 1.5f, TargetY = 19.5f, Pad = true, Tip = true },
         };
         static readonly string[] IslandPlain = MakePlain();
@@ -51,7 +57,11 @@ namespace BAM.Sim
 
         // the practice minions' spawners (old gamedata tutorial.spawners 0-3): they come in over the platform's far edge (row 6)
         // and walk down to their own spot (the old lane point, which the old tutStatic walk read as (wp.x + 0.5, wp.y + 1))
-        static readonly float[] IslandSpawnX = { 6, 5, 6, 7 }, IslandWpX = { 6, 4, 6, 7 }, IslandWpY = { 13, 12, 13, 12 };
+        // 2026-11-15: the other two stand right of the disc's middle (8.5, 12) and (8.5, 13.5), far from the gold ring: the old
+        // (6.5, 14) was 4.74 tiles from it, just past Tyra's reach of 4.4 + 0.25 since her range went up that day
+        static readonly float[] IslandSpawnX = { 6, 5, 8, 8 }, IslandWpX = { 6, 4, 8, 8 }, IslandWpY = { 13, 12, 11, 12.5f };
+        const float FocusShow = 5f;    // the Focus lesson: seconds with all three in reach after they walked in (about five of Tyra's hits)
+        const float FocusFloor = 0.5f; // nor do they drop below half health while she shows it
         const float IslandSpawnRow = 6, IslandInvulnerable = 3; // the three walk in to their spots first (was 8 s under the old 10 s step)
 
         // rows 17-49: the bridge and the old "Tutorial" map's lane below it (shown only once the bridge opens; walkable only
@@ -117,7 +127,7 @@ namespace BAM.Sim
             m.SpawnX = IslandWpX[id] + 0.5f; m.SpawnY = IslandWpY[id] + 1f;
             m.DmgOverride = 0; m.TutStatic = true; // it swings (every attack shows) but does no harm
             m.MaxHp = m.Hp = id <= 1 ? Rules.TutorialMinionHp * 0.5f : Rules.TutorialMinionHp; // the very first and the leader fall fast
-            if (id >= 1) AddStatus(m, St.Invulnerable, IslandInvulnerable);
+            if (id >= 1) { AddStatus(m, St.Invulnerable, IslandInvulnerable); m.TutUnkillable = true; }
             if (id == 1) Tut.Leader = m;
             Tut.Minions.Add(m);
         }
@@ -127,6 +137,13 @@ namespace BAM.Sim
             var tu = Tut; ref readonly var st = ref IslandSteps[tu.Step]; tu.T = 0;
             for (int i = 0; i < st.SpawnN; i++) IslandSpawn(st.Spawn0 + i);
             if (st.Pad) { tu.BridgeOpen = true; tu.PadOn = true; tu.CamHold = false; }
+            if (tu.Step == Tutorial.IslandTarget)
+                for (int i = 0; i < tu.Minions.Count; i++)
+                {
+                    // full health again, and no harm until Tyra stands in the gold ring (IslandGuard)
+                    var m = tu.Minions[i]; if (!m.Alive) continue;
+                    m.Hp = m.MaxHp; m.RemoveAll(St.Invulnerable); AddStatus(m, St.Invulnerable, 1e9f);
+                }
         }
 
         void UpdateIsland(float dt)
@@ -167,11 +184,36 @@ namespace BAM.Sim
                 return; // the pad step ends with the jump
             }
             bool done;
-            if (st.Time > 0) done = tu.T >= st.Time;
+            if (st.Focus)
+            {
+                // the clock runs only while all three stand on their spots in her reach (three dots), so her hits land on them
+                bool show = FocusTargets(p) >= 3;
+                for (int i = 0; i < tu.Minions.Count && show; i++) if (tu.Minions[i].Alive && tu.Minions[i].Has(St.Invulnerable)) show = false;
+                if (!show) tu.T = Math.Max(0, tu.T - dt);
+                for (int i = 0; i < tu.Minions.Count; i++) { var m = tu.Minions[i]; if (m.Alive && m.Hp < m.MaxHp * FocusFloor) m.Hp = m.MaxHp * FocusFloor; }
+                done = tu.T >= FocusShow;
+            }
+            else if (st.Time > 0) done = tu.T >= st.Time;
             else if (st.Kill) { done = true; for (int i = 0; i < tu.Minions.Count; i++) if (tu.Minions[i].Alive) { done = false; break; } }
             else done = st.HasTarget && SimMath.Hypot(p.X - st.TargetX, p.Y - st.TargetY) < 0.9f;
+            if (tu.Step == Tutorial.IslandTarget) IslandGuard(p);
             if (done) { tu.Step++; tu.T = 0; tu.Pause = IslandStepPause; }
             RefreshIsland();
+        }
+
+        /// <summary>Focus: how many enemies are in the hero's auto attack reach, the same list the attack picks from at random
+        /// (Combat.cs UpdateAttack). The HUD's FOCUS dots count the same (HudFocus.cs).</summary>
+        public int FocusTargets(Unit p) => p == null || !p.Alive ? 0 : EnemiesInRange(p, p.Range, Pick.Any, true, tmpBuf).Count;
+
+        // the "only target" step: the three cannot be hurt until Tyra stands in the gold ring with only the leader in reach
+        void IslandGuard(Unit p)
+        {
+            var tu = Tut; ref readonly var st = ref IslandSteps[tu.Step];
+            if (tu.Leader == null || !tu.Leader.Alive || !tu.Leader.Has(St.Invulnerable)) return;
+            if (SimMath.Hypot(p.X - st.TargetX, p.Y - st.TargetY) > 0.9f) return;
+            var l = EnemiesInRange(p, p.Range, Pick.Any, true, tmpBuf);
+            if (l.Count != 1 || l[0] != tu.Leader) return;
+            for (int i = 0; i < tu.Minions.Count; i++) { tu.Minions[i].RemoveAll(St.Invulnerable); tu.Minions[i].TutUnkillable = false; }
         }
 
         /// <summary>What the screen shows now: nothing between steps (the pause) or during the jump.</summary>

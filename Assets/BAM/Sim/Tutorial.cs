@@ -53,7 +53,7 @@ namespace BAM.Sim
         internal bool Burst, PressAimed, Hooked, Pulled, Helpers;
 
         // ---------- the training island (the first half, Tyra; TutorialIsland.cs). Unused in the arena half. ----------
-        public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandTarget = 3, IslandPad = 4;
+        public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandFocus = 3, IslandTarget = 4, IslandPad = 5;
         /// <summary>This is the island half: Step is one of the Island* steps, Done means the boost pad threw Tyra and the
         /// picture has faded to black, so the game starts the arena half (a new Match with Tutorial and without Island).</summary>
         public bool Island;
