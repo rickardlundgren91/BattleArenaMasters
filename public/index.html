@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Battle Arena Masters | Fast 3v3 arena game for mobile</title>
-<meta name="description" content="Battle Arena Masters is a fast 3v3 arena game for your phone. Ten heroes, 4–6 minute matches, one tower to win. Join the closed Android playtest.">
+<meta name="description" content="Battle Arena Masters is a fast 3v3 arena game for your phone. Eleven heroes, 4–6 minute matches, one tower to win. Join the closed Android playtest.">
 <meta property="og:title" content="Battle Arena Masters">
 <meta property="og:description" content="Three heroes per side. One tower to take down. Join the closed Android playtest.">
 <meta property="og:url" content="https://battlearenamasters.com/">
@@ -106,6 +106,13 @@ section.band{padding-block:84px}
 h2{margin:0 0 14px;font-family:var(--display);font-weight:900;font-size:clamp(28px,4vw,42px);line-height:1.15;text-wrap:balance}
 .intro{max-width:62ch;color:var(--muted);margin:0 0 40px;font-size:18px}
 
+/* gameplay video */
+section.watch{padding-block:56px 24px;text-align:center}
+.watch h2{margin-bottom:24px}
+.watch figure{margin:0 auto;width:min(380px,100%);border-radius:18px;overflow:hidden;border:1px solid var(--gold);background:var(--stone-2);box-shadow:0 0 0 6px rgba(233,188,92,.08),0 18px 40px rgba(0,0,0,.45)}
+.watch video{display:block;width:100%;height:auto;max-height:78vh;object-fit:contain;background:#000}
+.watch figcaption{padding:10px 14px;font-size:14px;font-weight:800;color:var(--muted)}
+
 /* how it plays */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .step{background:var(--stone-2);border:1px solid var(--line);border-radius:16px;padding:26px 24px;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -132,9 +139,10 @@ h2{margin:0 0 14px;font-family:var(--display);font-weight:900;font-size:clamp(28
 
 /* heroes */
 .heroes-band{background:linear-gradient(180deg,var(--night),var(--stone) 30%,var(--stone))}
-.roster{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
-@media (max-width:1000px){.roster{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:620px){.roster{grid-template-columns:repeat(2,1fr)}}
+.roster{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+.roster .card{flex:0 0 calc((100% - 3*14px)/4)}
+@media (max-width:1000px){.roster .card{flex-basis:calc((100% - 2*14px)/3)}}
+@media (max-width:620px){.roster .card{flex-basis:calc((100% - 14px)/2)}}
 .card{position:relative;background:var(--stone-2);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-width:0;transition:border-color .15s,transform .15s}
 .card:hover{border-color:var(--gold);transform:translateY(-3px)}
 @media (prefers-reduced-motion:reduce){.card{transition:none}.card:hover{transform:none}}
@@ -199,7 +207,7 @@ footer a:hover{color:var(--gold-hi)}
     <div class="inner">
       <img class="logo" src="assets/logo-bam.webp" srcset="assets/logo-bam-640.webp 640w, assets/logo-bam.webp 900w" sizes="(max-width:760px) 92vw, 620px" alt="BAM, Battle Arena Masters" width="900" height="380" fetchpriority="high">
       <h1>Three heroes per side. One tower to take down.</h1>
-      <p class="lead">Battle Arena Masters is a 3v3 mobile MOBA built on positioning. Ten heroes, 4–6 minute matches, one tower to take down.</p>
+      <p class="lead">Battle Arena Masters is a 3v3 mobile MOBA built on positioning. Eleven heroes, 4–6 minute matches, one tower to take down.</p>
       <div class="ctas" data-when="no-play">
         <a class="btn btn-gold big" href="https://discord.gg/geJVGJtuXx" data-link="discord"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Get the test link on Discord</a>
         <a class="btn btn-ghost" href="#playtest">How the playtest works</a>
@@ -210,7 +218,7 @@ footer a:hover{color:var(--gold-hi)}
         <a class="btn btn-ghost" href="https://discord.gg/geJVGJtuXx" data-link="discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.3 15.3 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.8 16.8 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Join our Discord</a>
       </div>
       <ul class="badges"><li>Closed Android playtest</li><li>Free</li><li class="hot">About 20 spots</li></ul>
-      <a class="peek" href="#play">See BAM in action <span aria-hidden="true">↓</span></a>
+      <a class="peek" href="#watch">See BAM in action <span aria-hidden="true">↓</span></a>
     </div>
   </section>
 
@@ -218,10 +226,24 @@ footer a:hover{color:var(--gold-hi)}
     <div class="inner">
       <div class="fact"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="7" r="3.2"/><circle cx="5" cy="9" r="2.4"/><circle cx="19" cy="9" r="2.4"/><path d="M6.5 20c0-3.4 2.5-6 5.5-6s5.5 2.6 5.5 6zM0 20c0-2.6 1.9-4.6 4.4-4.6 1 0 1.9.3 2.6.8A7.6 7.6 0 0 0 5 20zm24 0h-5a7.6 7.6 0 0 0-2-3.8c.7-.5 1.6-.8 2.6-.8 2.5 0 4.4 2 4.4 4.6z"/></g></svg><b>3v3</b><span>team battles</span></div>
       <div class="fact"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 6.5V12l3.5 2.5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/></svg><b>4–6 min</b><span>per match</span></div>
-      <div class="fact"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 4 5v6.5c0 5 3.4 9.4 8 10.5 4.6-1.1 8-5.5 8-10.5V5l-8-3zm0 4.2 1.5 3.1 3.4.5-2.5 2.4.6 3.4-3-1.6-3 1.6.6-3.4-2.5-2.4 3.4-.5z"/></svg><b>10</b><span>unique heroes</span></div>
+      <div class="fact"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 4 5v6.5c0 5 3.4 9.4 8 10.5 4.6-1.1 8-5.5 8-10.5V5l-8-3zm0 4.2 1.5 3.1 3.4.5-2.5 2.4.6 3.4-3-1.6-3 1.6.6-3.4-2.5-2.4 3.4-.5z"/></svg><b>11</b><span>unique heroes</span></div>
       <div class="fact"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h2.5v2H9V3h2.2v2h1.6V3H15v2h1.5V3H19v5l-2 2v8h2v3H5v-3h2v-8L5 8zm5.5 9v6h3v-6a1.5 1.5 0 0 0-3 0z"/></svg><b>1</b><span>tower to win</span></div>
     </div>
   </div>
+
+  <section class="band watch" id="watch">
+    <div class="inner">
+      <p class="eyebrow">Gameplay</p>
+      <h2>Watch a match</h2>
+      <figure>
+        <video id="gameplay" autoplay muted loop playsinline controls preload="metadata" poster="assets/shot2.webp" width="1080" height="1920" aria-label="A real BAM match against bots">
+          <source src="assets/gameplay.webm" type="video/webm">
+          <source src="assets/gameplay.mp4" type="video/mp4">
+        </video>
+        <figcaption>A real match, straight from the game</figcaption>
+      </figure>
+    </div>
+  </section>
 
   <section class="band" id="play">
     <div class="inner">
@@ -229,7 +251,7 @@ footer a:hover{color:var(--gold-hi)}
       <h2>Easy to learn. Hard to master.</h2>
       <p class="intro">You won't spend the match tapping on targets. Your hero attacks on its own. Your job is the part that matters: where you stand, which fights you take, and when you fire your special.</p>
       <div class="steps">
-        <div class="step"><div class="n">1</div><h3>Pick your hero</h3><p>Ten heroes, each with a clear job. Hook enemies, shake the ground, shield friends or line up the perfect shot.</p><span class="tag">Tank · Fighter · Marksman · Assassin · Mage · Siege · Support</span></div>
+        <div class="step"><div class="n">1</div><h3>Pick your hero</h3><p>Eleven heroes, each with a clear job. Hook enemies, shake the ground, shield friends or line up the perfect shot.</p><span class="tag">Tank · Fighter · Marksman · Assassin · Mage · Support</span></div>
         <div class="step"><div class="n">2</div><h3>Move and position</h3><p>Your hero attacks a random enemy in range. Stand close to the one you want to hit, and stay away from the ones you don't.</p><span class="tag">One thumb on the joystick</span></div>
         <div class="step"><div class="n">3</div><h3>Time your special</h3><p>Tap and it picks a target for you, or drag to aim it yourself. The right special at the right moment wins the fight.</p><span class="tag">Tap to auto-target · Drag to aim</span></div>
       </div>
@@ -250,18 +272,19 @@ footer a:hover{color:var(--gold-hi)}
     <div class="inner">
       <p class="eyebrow">The roster</p>
       <h2>Meet the heroes</h2>
-      <p class="intro">Every hero has a special and a passive trait that make them play in their own way. Learn one in a match. Master all ten and how they work together.</p>
+      <p class="intro">Every hero has a special and a passive trait that make them play in their own way. Learn one in a match. Master all eleven and how they work together.</p>
       <div class="roster">
-        <article class="card"><img src="assets/knut.webp" alt="Knut" loading="lazy"><div class="b"><span class="role">Tank</span><h3>Knut</h3><p>A walrus harbour guard whose anchor drags fleeing enemies right back to his team.</p><span class="sp">Anchor Throw</span></div></article>
-        <article class="card"><img src="assets/oaken.webp" alt="Oaken" loading="lazy"><div class="b"><span class="role">Tank</span><h3>Oaken</h3><p>A living fortress who shakes the ground. Slam around him, or send a quake down a line and knock enemies back.</p><span class="sp">Worldbreaker</span></div></article>
-        <article class="card"><img src="assets/fenn.webp" alt="Fenn" loading="lazy"><div class="b"><span class="role">Fighter</span><h3>Fenn</h3><p>A frontier hunter who never fights alone. His spirit wolf runs down anyone who flees.</p><span class="sp">Call of the Pack</span></div></article>
-        <article class="card"><img src="assets/tyra.webp" alt="Tyra" loading="lazy"><div class="b"><span class="role">Marksman</span><h3>Tyra</h3><p>A calm woodland archer. Hold your ground, wait for the opening, land one heavy bolt.</p><span class="sp">Arrow Volley · Pinpoint Bolt</span></div></article>
-        <article class="card"><img src="assets/tikta.webp" alt="Tikta" loading="lazy"><div class="b"><span class="role">Assassin</span><h3>Tikta</h3><p>Quick and venomous. Four poisoned needles finish off anyone already hurt.</p><span class="sp">Needle Storm · Venom Spike</span></div></article>
-        <article class="card"><img src="assets/bram.webp" alt="Bram" loading="lazy"><div class="b"><span class="role">Marksman</span><h3>Bram</h3><p>A boar blacksmith whose thrown hammer bounces from enemy to enemy.</p><span class="sp">Hammer Throw · Anvil Drop</span></div></article>
-        <article class="card"><img src="assets/blast.webp" alt="Blast" loading="lazy"><div class="b"><span class="role">Mage</span><h3>Blast</h3><p>A grinning goblin with too many bombs, turning the arena into fire and smoke.</p><span class="sp">Supernova · Inferno Lane</span></div></article>
-        <article class="card"><img src="assets/kelva.webp" alt="Kelva" loading="lazy"><div class="b"><span class="role">Mage</span><h3>Kelva</h3><p>A quiet mage under a giant bell. Her ringing wave slows enemies and protects friends.</p><span class="sp">Resonance Wave · Sanctuary Chime</span></div></article>
-        <article class="card"><img src="assets/hilde.webp" alt="Hilde" loading="lazy"><div class="b"><span class="role">Siege</span><h3>Hilde</h3><p>A crafty engineer whose powder kegs crack towers and blast enemies into walls.</p><span class="sp">Powder Keg</span></div></article>
-        <article class="card"><img src="assets/moa.webp" alt="Moa" loading="lazy"><div class="b"><span class="role">Support</span><h3>Moa</h3><p>A jungle priestess who saves friends at the last second with golden honey shields.</p><span class="sp">Honey Guard · Honey Field</span></div></article>
+        <article class="card"><img src="assets/tyra.webp" alt="Tyra" loading="lazy" width="400" height="308"><div class="b"><span class="role">Marksman</span><h3>Tyra</h3><p>A calm woodland archer. Hold your ground, wait for the opening, land one heavy bolt.</p><span class="sp">Pinpoint Bolt · Featherstep</span></div></article>
+        <article class="card"><img src="assets/kugg.webp" alt="Kugg" loading="lazy" width="400" height="308"><div class="b"><span class="role">Marksman</span><h3>Kugg</h3><p>A rune golem who plants his feet and turns into a cannon. Every hit loads another shot.</p><span class="sp">Anchor · Spark Shot</span></div></article>
+        <article class="card"><img src="assets/bram.webp" alt="Bram" loading="lazy" width="400" height="308"><div class="b"><span class="role">Marksman</span><h3>Bram</h3><p>A boar blacksmith whose hammer flies through every enemy in a line. Keep hitting one target and each hit lands harder.</p><span class="sp">Hammer Line · Focus</span></div></article>
+        <article class="card"><img src="assets/fenn.webp" alt="Fenn" loading="lazy" width="400" height="308"><div class="b"><span class="role">Assassin</span><h3>Fenn</h3><p>A spectral knight who fades into a ghost, leaves a decoy behind and strikes from nowhere.</p><span class="sp">Spectral Veil · Phantom Step</span></div></article>
+        <article class="card"><img src="assets/ragn.webp" alt="Ragn" loading="lazy" width="400" height="308"><div class="b"><span class="role">Fighter</span><h3>Ragn</h3><p>A werewolf who leaps onto an enemy, stuns it and shoves it away from its friends.</p><span class="sp">Moon Leap · Wolf Run</span></div></article>
+        <article class="card"><img src="assets/nassla.webp" alt="Nässla" loading="lazy" width="400" height="308"><div class="b"><span class="role">Mage</span><h3>Nässla</h3><p>A swamp witch whose thorn thicket poisons and slows enemies, and heals friends standing in it.</p><span class="sp">Thorn Thicket · Healing Sap</span></div></article>
+        <article class="card"><img src="assets/moa.webp" alt="Moa" loading="lazy" width="400" height="308"><div class="b"><span class="role">Support</span><h3>Moa</h3><p>A jungle priestess who saves friends at the last second with golden honey shields.</p><span class="sp">Honey Rush · Queen’s Instinct</span></div></article>
+        <article class="card"><img src="assets/knut.webp" alt="Knut" loading="lazy" width="400" height="308"><div class="b"><span class="role">Tank</span><h3>Knut</h3><p>A walrus harbour guard whose anchor drags fleeing enemies right back to his team.</p><span class="sp">Anchor Throw · Anchor Drag</span></div></article>
+        <article class="card"><img src="assets/tikta.webp" alt="Tikta" loading="lazy" width="400" height="308"><div class="b"><span class="role">Assassin</span><h3>Tikta</h3><p>Quick and venomous. Four poisoned needles finish off anyone already hurt.</p><span class="sp">Needle Storm · Deathmark</span></div></article>
+        <article class="card"><img src="assets/blast.webp" alt="Blast" loading="lazy" width="400" height="308"><div class="b"><span class="role">Mage</span><h3>Blast</h3><p>A grinning goblin with too many bombs, turning the arena into fire and smoke.</p><span class="sp">Supernova · Ignite</span></div></article>
+        <article class="card"><img src="assets/bonk.webp" alt="Bonk" loading="lazy" width="400" height="308"><div class="b"><span class="role">Fighter</span><h3>Bonk</h3><p>A caveman with a huge club. He slams the ground to stun everyone around him, or rolls a boulder down a line.</p><span class="sp">Ground Slam · Heavy Club</span></div></article>
       </div>
     </div>
   </section>
@@ -300,7 +323,7 @@ footer a:hover{color:var(--gold-hi)}
       <div class="faq">
         <details open><summary>What is Battle Arena Masters?</summary><p>A fast 3v3 arena game for mobile. Two teams of three heroes fight to destroy each other's tower.</p></details>
         <details><summary>How long is a match?</summary><p>Usually 4 to 6 minutes. A match ends when one team destroys the other team's tower.</p></details>
-        <details><summary>How long does it take to learn?</summary><p>You'll know the basics after a match or two: move, tap your special, or drag it to aim. Mastering all ten heroes takes a lot longer.</p></details>
+        <details><summary>How long does it take to learn?</summary><p>You'll know the basics after a match or two: move, tap your special, or drag it to aim. Mastering all eleven heroes takes a lot longer.</p></details>
         <details><summary>Do I have to aim every attack?</summary><p>No. Your hero attacks a random enemy in range on its own. You decide where to stand and when to use your special.</p></details>
         <details><summary>When can I play?</summary><p data-when="no-play">The Android playtest opens soon. The test link will be posted here and in our Discord first.</p><p data-when="play" hidden>Now, on Android. Follow the <a href="#playtest">steps under Playtest</a>: join the tester group with your Gmail, then open the test link on your Android phone and install.</p></details>
         <details><summary>Is it on iPhone?</summary><p>Not yet. We're starting with Android. Join the Discord to hear when that changes.</p></details>
@@ -330,6 +353,14 @@ var LINKS = {
   discord: "https://discord.gg/geJVGJtuXx",   // Discord invite, e.g. https://discord.gg/...
   manual: false  // true = testers are added to the Play test by hand (internal test), so show the "wait" step
 };
+(function () {
+  var v = document.getElementById("gameplay"), sec = document.getElementById("watch");
+  if (!v) return;
+  var srcs = v.querySelectorAll("source"), failed = 0;
+  function gone() { sec.hidden = true; var peek = document.querySelector(".peek"); if (peek) peek.href = "#play"; }
+  srcs.forEach(function (s) { s.addEventListener("error", function () { if (++failed === srcs.length) gone(); }); });
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { v.removeAttribute("autoplay"); v.pause(); }
+})();
 document.querySelectorAll("[data-when]").forEach(function (el) {
   var w = el.dataset.when, on = w === "no-play" ? !LINKS.play : !!LINKS[w];
   el.hidden = !on;
