@@ -86,7 +86,7 @@ namespace BAM.Sim
                 spots &= !b.Walkable(h, px, py) && !b.Walkable(h, px + 0.8f, py) && !b.Walkable(h, px, py - 0.8f);
                 free &= b.Walkable(h, px + 1, py) && b.Walkable(h, px - 1, py) && map.PadAt(px + 1, py) < 0 && map.Free(px, py, h.R);
                 Place(h, px - 2, py);
-                steps &= !b.ClearWalk(h, px + 2, py) && b.ClearWalk(h, px - 2, py - 2);
+                steps &= !b.ClearWalk(h, px + 1, py) && b.ClearWalk(h, px - 4, py); // the pads sit one tile from the right edge, by the wall bar's end, since 2026-11-15
             }
             Check(spots, "FIX-87: a pad tile (and 0.4 round it) is no spot for a bot");
             Check(free, "FIX-87: one tile beside the pad is free, and the pad tile itself is open ground to the rules");

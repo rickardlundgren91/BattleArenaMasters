@@ -112,7 +112,7 @@ namespace BAM.Sim
             // one foe beside the pad (in her reach as she is thrown), one beside the landing spot (in reach as she lands)
             bool Beside(Unit e, float x, float y)
             {
-                foreach (float dx in new[] { 1.5f, -1.5f, 2f, -2f }) foreach (float dy in new[] { 0f, 1f, -1f })
+                foreach (float dx in new[] { 1.5f, -1.5f, 2f, -2f, -3f /* the pads sit by the right edge since 2026-11-15 */ }) foreach (float dy in new[] { 0f, 1f, -1f })
                     if (m.Map.Free(x + dx, y + dy, e.R) && !m.Map.InGrass(x + dx, y + dy)) { m.Still(e, x + dx, y + dy); return true; }
                 return false;
             }

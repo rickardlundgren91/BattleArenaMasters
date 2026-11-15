@@ -59,7 +59,7 @@ namespace BAM.Sim
             "ggg....2.......", // 4
             "ggg....1.......", // 5
             "ggg............", // 6
-            "ggg........J...", // 7  the pad throws you to row 13, over the wall bar into the grass
+            "ggg..........J.", // 7  the pad throws you to row 13, over the wall bar into the grass. Column 11 -> 13 (Rickard 2026-11-15: "flytta jump paden så den inte ligger inom tornets range"): its centre is 6.3 tiles from the tower, its nearest corner 5.7, out of the 4.8 reach
             "ggg............", // 8
             "ggg.......####.", // 9  the wall bar
             "ggg........gggg", // 10

@@ -135,7 +135,10 @@ namespace BAM.Sim
         };
         public static UnitDef Minion(MinionKind k) => Minions[(int)k];
 
-        public static readonly UnitDef Tower = U(UnitKind.Tower, MinionKind.Melee, 0.55f, 0, 1400, 25, 0.75f, 4.25f, 0, 10, 0, ProjKind.TowerShot);
+        // range 4.25 -> 4.8 (Rickard 2026-11-15: Tyra's 4.4 shot the tower from outside its reach). A hero hits the tower within its
+        // range + the tower's 0.55, the tower hits a hero within its range + the hero's radius: Tyra (r 0.25) hit from 4.95 and was
+        // reached at 4.5; now at 5.05. Every hero's plain auto is inside the reach again (an anchored Kugg's 8 is not)
+        public static readonly UnitDef Tower = U(UnitKind.Tower, MinionKind.Melee, 0.55f, 0, 1400, 25, 0.75f, 4.8f, 0, 10, 0, ProjKind.TowerShot);
 
         /// <summary>The team stars (1-3 after hero kills): +health, +damage, -attack cooldown.</summary>
         public static readonly float[] StarHp = { 0, 0.03f, 0.06f, 0.09f };
