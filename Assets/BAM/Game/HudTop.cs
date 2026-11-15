@@ -28,6 +28,7 @@ namespace BAM.Game
         static readonly Color TowerHitGlow = new Color(1f, 0.16f, 0.12f, 0.9f), TowerHitEdge = new Color(1f, 0.3f, 0.24f, 1f), TowerHitBack = new Color(0.55f, 0.02f, 0.02f, 0.78f);
         static readonly Color BarBack = new Color(0f, 0f, 0f, 0.58f);
         const float TowerFlashTime = 0.5f, TowerFlashGap = 1f; // the flash fades in 0.5 s and starts again at most once a second
+        static readonly Color StarOn = Hex(0xf4f6ff), StarOff = new Color(10f / 255f, 16f / 255f, 40f / 255f, 0.5f), StarGold = Hex(0xffc531);
         static readonly Color TextShadow = new Color(5f / 255f, 12f / 255f, 40f / 255f, 0.55f);
         static string[] intStrings;
 
@@ -35,9 +36,10 @@ namespace BAM.Game
         Image stripFill, stripGold, stripGoldInner, pillFill, pillGold;
         Text timeText, levelText, ownKills, foeKills;
         Image levelBack, levelFill;
+        readonly Image[] stars = new Image[6], starGlyphs = new Image[6];
         readonly Portrait[] portraits = new Portrait[6];
         readonly TowerBar[] bars = new TowerBar[2];
-        int shownSeconds, shownLevel, shownK0, shownK1;
+        int shownSeconds, shownLevel, shownK0, shownK1, shownS0, shownS1;
         bool shownClock;
         Vector2 laidOut;
 
@@ -96,7 +98,7 @@ namespace BAM.Game
         void BeginTop()
         {
             topRoot.gameObject.SetActive(!tutorial);
-            shownSeconds = shownLevel = shownK0 = shownK1 = -1;
+            shownSeconds = shownLevel = shownK0 = shownK1 = shownS0 = shownS1 = -1;
             // the burn/poison/heal sums hold the last match's units: drop them, or one stray number pops over the new match
             for (int i = 0; i < tickSums.Length; i++) if (tickSums[i] != null) { tickSums[i].Unit = null; tickSums[i].Sum = 0f; }
             shownClock = false; laidOut = Vector2.zero;
@@ -104,8 +106,9 @@ namespace BAM.Game
             timeText.gameObject.SetActive(false); LayoutPillText();
             int[] count = new int[2];
             for (int i = 0; i < portraits.Length; i++) { portraits[i].Unit = null; portraits[i].Root.gameObject.SetActive(false); }
-            // HERO TEST: no portraits, no clock or kills (the old Hud hides them there); the tower bars stay
+            // HERO TEST: no portraits, no clock, kills or stars (the old Hud hides them there); the tower bars stay
             pill.gameObject.SetActive(!m.HeroTest);
+            for (int i = 0; i < stars.Length; i++) stars[i].gameObject.SetActive(!m.HeroTest && !m.NoStars);
             for (int i = 0; i < m.Heroes.Count && !m.HeroTest; i++)
             {
                 var h = m.Heroes[i];
@@ -314,8 +317,18 @@ namespace BAM.Game
             int own = m.Player.Team, foe = Teams.Other(own);
             if (m.Kills[own] != shownK0) { shownK0 = m.Kills[own]; ownKills.text = Int(shownK0); }
             if (m.Kills[foe] != shownK1) { shownK1 = m.Kills[foe]; foeKills.text = Int(shownK1); }
-            // the team star bonus (m.Stars) still works in the sim; its three 1.4 mm pips under each tower bar were never explained
-            // and are gone from the HUD (review 2026-11-13 nr 10)
+            // the team star bonus (m.Stars): three pips under each tower bar, gold while lit. Back 15 nov (Rickard: "stjärnorna fungerar
+            // inte längre" after review 2026-11-13 nr 10 took them off), half again as big as before so they read on a phone
+            if (m.Stars[own] != shownS0 || m.Stars[foe] != shownS1)
+            {
+                shownS0 = m.Stars[own]; shownS1 = m.Stars[foe];
+                for (int i = 0; i < 3; i++)
+                {
+                    bool a = i < shownS0, b = i < shownS1;
+                    stars[i].color = a ? StarOn : StarOff; starGlyphs[i].enabled = a;
+                    stars[3 + i].color = b ? StarOn : StarOff; starGlyphs[3 + i].enabled = b;
+                }
+            }
             Bar(bars[0], m.Towers[own], dt);
             Bar(bars[1], m.Towers[foe], dt);
             for (int i = 0; i < portraits.Length; i++) PortraitFrame(portraits[i], i < 3 ? TopOwn : TopFoe);
@@ -438,6 +451,16 @@ namespace BAM.Game
             levelFill.fillMethod = Image.FillMethod.Horizontal;
             levelFill.fillOrigin = (int)Image.OriginHorizontal.Left;
 
+            for (int i = 0; i < 6; i++)
+            {
+                var s = Circle(topRoot, "Star", 10f, StarOff);
+                stars[i] = s.GetComponent<Image>();
+                var g = UiKit.Fill(s, StarGold);
+                g.sprite = StarSprite;
+                UiKit.Stretch(g.rectTransform, -2, -2, -2, -2);
+                g.enabled = false;
+                starGlyphs[i] = g;
+            }
             BuildKillFeed();
         }
 
@@ -462,7 +485,7 @@ namespace BAM.Game
         static void Edge(Image img) { img.raycastTarget = false; }
 
         // Sizes as the old HudGlass.cs, in fractions of the frame's width W and height H, top-left origin.
-        float gM, gS, gPad, gH, gW;
+        float gM, gS, gPad, gH, gStarD, gW;
         Rect gStrip, gPill;
 
         void LayoutGlass(float W, float H)
@@ -472,6 +495,7 @@ namespace BAM.Game
             gStrip = new Rect(W * 0.02f, gM, W * 0.96f, gH);
             float pw = W * 0.22f;
             gPill = new Rect(W / 2f - pw / 2f, gM, pw, gH);
+            gStarD = Mathf.Max(10f, W * 0.03f); // was max(7, 0.02 W) before 13 nov: too small to notice
 
             Pill(strip, stripFill, gStrip);
             RoundRing(stripGold, gH * 0.5f, 1.5f);
@@ -508,6 +532,15 @@ namespace BAM.Game
                 Corners(b.Glow, bh / 2f + 3f);
                 RoundRing(b.Edge, bh / 2f, 1f);
                 b.Percent.fontSize = Mathf.RoundToInt(Mathf.Max(12f, bh * 1.1f)); // was 0.86 of the bar: a third bigger, "100%" still fits (review 2026-11-13 nr 7)
+                // the star pips just under the bar, from the portraits' side
+                float sd = gStarD, gp = sd * 0.35f, sy = gM + gH + sd * 0.75f, sx = dir < 0 ? r.x : r.x + r.width;
+                for (int s = 0; s < 3; s++)
+                {
+                    var st = stars[i * 3 + s].rectTransform;
+                    st.sizeDelta = new Vector2(sd, sd);
+                    st.anchorMin = st.anchorMax = new Vector2(0f, 1f);
+                    st.anchoredPosition = new Vector2(sx - dir * (sd / 2f + s * (sd + gp)), -sy);
+                }
             }
         }
 
@@ -655,7 +688,58 @@ namespace BAM.Game
             return b;
         }
 
-        // point in polygon, for the textures HudHeroTest and HudSpell draw
+        // the old drawStar: a five-pointed gold star with a dark edge, drawn once into a small texture
+        static Sprite starSprite;
+        static Sprite StarSprite
+        {
+            get
+            {
+                if (starSprite != null) return starSprite;
+                const int n = 64;
+                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "BAM.Hud.Star", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var px = new Color32[n * n];
+                var pts = new Vector2[10];
+                for (int i = 0; i < 10; i++)
+                {
+                    float a = Mathf.PI / 2f + i * Mathf.PI / 5f, rr = i % 2 == 1 ? 0.45f : 1f;
+                    pts[i] = new Vector2(Mathf.Cos(a) * rr, Mathf.Sin(a) * rr) * 0.42f * n + new Vector2(n / 2f, n / 2f);
+                }
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        // 4x4 samples: inside the star (white, tinted gold by the image) or within the dark edge
+                        int inside = 0, edge = 0;
+                        for (int sy = 0; sy < 4; sy++)
+                            for (int sx = 0; sx < 4; sx++)
+                            {
+                                var q = new Vector2(x + (sx + 0.5f) / 4f, y + (sy + 0.5f) / 4f);
+                                if (Inside(pts, q)) inside++;
+                                else if (EdgeDist(pts, q) < n * 0.05f) edge++;
+                            }
+                        float a = (inside + edge) / 16f, w = inside + edge > 0 ? inside / (float)(inside + edge) : 0f;
+                        byte c = (byte)Mathf.RoundToInt(Mathf.Lerp(0.12f, 1f, w) * 255f);
+                        px[y * n + x] = new Color32(c, c, c, (byte)Mathf.RoundToInt(a * 255f));
+                    }
+                tex.SetPixels32(px);
+                tex.Apply(false, true);
+                starSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+                return starSprite;
+            }
+        }
+
+        static float EdgeDist(Vector2[] poly, Vector2 p)
+        {
+            float best = float.MaxValue;
+            for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+            {
+                Vector2 a = poly[j], b = poly[i], ab = b - a;
+                float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / Mathf.Max(1e-6f, ab.sqrMagnitude));
+                best = Mathf.Min(best, (a + ab * t - p).magnitude);
+            }
+            return best;
+        }
+
+        // point in polygon, for the textures HudHeroTest, HudSpell and the star pips draw
         static bool Inside(Vector2[] poly, Vector2 p)
         {
             bool c = false;
