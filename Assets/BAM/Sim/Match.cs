@@ -50,6 +50,9 @@ namespace BAM.Sim
         public SpellId Spell = SpellId.Blink;
         /// <summary>The player's name, shown over the hero (online). Only for the HUD: the rules never read it.</summary>
         public string Name;
+        /// <summary>The look the player wears (HeroSkins: 0 plain, 1.. a skin), the same on every phone. Only for the pictures:
+        /// the rules never read it (Rickard 2026-11-15: skins seen by the other players online).</summary>
+        public int Skin;
     }
 
     /// <summary>The player's controls for one tick, in map space (x right, y down the map).</summary>

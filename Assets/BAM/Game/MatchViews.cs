@@ -290,14 +290,24 @@ namespace BAM.Game
         static readonly string[] heroVoice = System.Enum.GetNames(typeof(HeroId));
         static string HeroVoice(HeroId h) => (int)h < heroVoice.Length ? heroVoice[(int)h] : null;
 
+        int SkinOf(Unit u)
+        {
+            var who = u.IsClone ? u.Owner : u;
+            if (who == null) return 0;
+            if (m.Player != null && who == m.Player) return HeroSkins.Chosen(u.Hero);
+            var seats = m.Config.Seats;
+            return seats != null && who.Seat >= 0 && who.Seat < seats.Length ? HeroSkins.Valid(u.Hero, seats[who.Seat].Skin) : 0;
+        }
+
         UnitRec AddUnit(Unit u)
         {
             UnitView v;
             switch (u.Kind)
             {
                 case UnitKind.Hero:
-                    // the player's own hero, and Fenn's decoy of it, wear the skin picked on Home (HeroSkins, kept on this phone only)
-                    v = ArtKit.CreateHero(u.Hero, Side(u.Team), m.Player != null && (u == m.Player || (u.IsClone && u.Owner == m.Player)) ? HeroSkins.Chosen(u.Hero) : 0);
+                    // the player's own hero wears the skin picked on Home, every other player's hero online the one its phone sent
+                    // (SeatConfig.Skin); Fenn's decoy wears its owner's; bots their plain body (Rickard 2026-11-15)
+                    v = ArtKit.CreateHero(u.Hero, Side(u.Team), SkinOf(u));
                     if (!u.IsClone) BamAudio.Preload(SfxId.HeroDeath, HeroVoice(u.Hero)); // its own death sound is ready before it dies
                     break;
                 case UnitKind.Tower: v = ArtKit.CreateTower(Side(u.Team)); break;

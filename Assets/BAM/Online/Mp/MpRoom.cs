@@ -42,6 +42,9 @@ namespace BAM.Online.Mp
             public string Name = "", PlayerId = "", Party = "";
             public int Side; // ONLINE MATCH: 0 the host's group, 1 the group that joined
             public HeroId Hero; public SpellId Spell = SpellId.Blink;
+            /// <summary>The look worn on Hero (HeroSkins: 0 plain), sent by the member's own phone, which only sends a look its player
+            /// may wear; the others draw the hero in it (Rickard 2026-11-15). Cosmetic: the rules never read it.</summary>
+            public int Skin;
             public bool InMatch, Loaded;
             public float Ping = -1;
             public long Behind = -1; // host, in a match: first frame this guest has not been sent (its link was full), -1 = up to date
@@ -109,6 +112,19 @@ namespace BAM.Online.Mp
         public static bool CanStart => IsHost && State == Phase.Lobby && Members.Count >= 2 && Members.Count <= RoomCap;
         public static string MyName => !string.IsNullOrEmpty(Account.Name) ? Account.Name : "Player";
         static HeroId MyHero => HeroCatalog.Clean(BamSettings.LastHero);
+        static int MySkin(HeroId hero) => BamSettings.SkinOf != null ? Mathf.Clamp(BamSettings.SkinOf(hero), 0, 255) : 0;
+
+        static MpRoom() { BamSettings.SkinPicked += SkinPicked; }
+
+        // a skin picked on Home while in a room: the others see it at once (and in the next match)
+        static void SkinPicked()
+        {
+            var me = Me;
+            if (me == null || State != Phase.Lobby) return;
+            int skin = MySkin(me.Hero);
+            if (skin == me.Skin) return;
+            Pick(me.Hero);
+        }
 
         // ---------------------------------------------------------------- the buttons
 
@@ -121,7 +137,7 @@ namespace BAM.Online.Mp
             if (mode == Together || mode == Versus) Mode = mode;
             IsHost = true; MyId = 0; nextId = 1; State = Phase.Connecting; Status = "Making a room…"; Diff = BamSettings.LastDifficulty;
             Size = BamSettings.TeamSize; Map = BamSettings.LastMap;
-            Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell });
+            Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Skin = MySkin(MyHero), Spell = BamSettings.Spell });
             relay = new MpRelay(true, null);
             Wire();
             relay.Start();
@@ -262,7 +278,7 @@ namespace BAM.Online.Mp
         static void QuickHost()
         {
             IsHost = true; MyId = 0; nextId = 1; mergeT = MergeEvery; otherParty = null; Diff = BamSettings.LastDifficulty;
-            Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell, Party = myParty });
+            Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Skin = MySkin(MyHero), Spell = BamSettings.Spell, Party = myParty });
             relay = new MpRelay(true, null) { Quick = true };
             Wire();
             relay.Start();
@@ -369,9 +385,9 @@ namespace BAM.Online.Mp
         {
             BamSettings.LastHero = (int)hero;
             var me = Me; if (me == null) return;
-            me.Hero = hero; me.Spell = BamSettings.Spell;
+            me.Hero = hero; me.Spell = BamSettings.Spell; me.Skin = MySkin(hero);
             if (IsHost) SendRoom();
-            else { w.Begin(MpMsg.Pick); w.U8((int)hero); w.U8((int)me.Spell); relay?.Send(w); Changed?.Invoke(); }
+            else { w.Begin(MpMsg.Pick); w.U8((int)hero); w.U8((int)me.Spell); w.U8(me.Skin); relay?.Send(w); Changed?.Invoke(); }
         }
 
         /// <summary>Host: START.</summary>
@@ -381,17 +397,19 @@ namespace BAM.Online.Mp
             int seed = UnityEngine.Random.Range(1, int.MaxValue);
             var diff = Diff;
             var seats = new SeatConfig[Members.Count];
+            var host = Me; if (host != null) host.Skin = MySkin(host.Hero); // the host's own look as it is now
             for (int i = 0; i < Members.Count; i++)
             {
                 var m = Members[i];
                 m.Seat = i; m.InMatch = true; m.Loaded = m.Conn < 0; m.Behind = -1; m.DropPending = false;
-                seats[i] = new SeatConfig { Hero = m.Hero, Team = Quick ? TeamOf(m.Side, Versus) : TeamOf(i, Mode), Spell = m.Spell, Name = m.Name };
+                seats[i] = new SeatConfig { Hero = m.Hero, Team = Quick ? TeamOf(m.Side, Versus) : TeamOf(i, Mode), Spell = m.Spell, Name = m.Name, Skin = m.Skin };
             }
             for (int i = 1; i < Members.Count; i++)
             {
                 w.Begin(MpMsg.Start); w.I32(seed); w.U8((int)diff); w.U8(Mode); w.U8(seats.Length);
                 for (int s = 0; s < seats.Length; s++) { w.U8((int)seats[s].Hero); w.U8(seats[s].Team); w.U8((int)seats[s].Spell); w.Str(Members[s].Name); }
                 w.U8(i); w.U8(Size); w.U8((int)Map);
+                for (int s = 0; s < seats.Length; s++) w.U8(seats[s].Skin); // last, after the 2v2 fields: every seat's look
                 relay.SendTo(Members[i].Conn, w);
             }
             relay.Flush(); // out now, not with the next frame's sends after this phone has built its scene (bug review NET-6)
@@ -521,7 +539,7 @@ namespace BAM.Online.Mp
             {
                 if (IsHost) return;
                 w.Begin(MpMsg.Hello); w.I32(MpMsg.Protocol); w.Str(Application.version); w.Str(MyPlayerId); w.Str(MyName); w.U8((int)MyHero); w.U8((int)BamSettings.Spell);
-                w.Str(Quick ? myParty : ""); w.U8(Quick ? partySize : 1);
+                w.Str(Quick ? myParty : ""); w.U8(Quick ? partySize : 1); w.U8(MySkin(MyHero));
                 relay.Send(w);
             };
             relay.OnDisconnect = OnDisconnect;
@@ -573,7 +591,7 @@ namespace BAM.Online.Mp
                 case MpMsg.Hello:
                 {
                     int proto = r.I32(); string version = r.Str(), pid = r.Str(), name = r.Str(); int hero = r.U8(), spell = r.U8();
-                    string party = r.Str(); int psize = Math.Max(1, r.U8());
+                    string party = r.Str(); int psize = Math.Max(1, r.U8()); int skin = r.U8();
                     if (string.IsNullOrEmpty(party)) party = pid;
                     string no = proto != MpMsg.Protocol || version != Application.version ? "Your game and your friend's are different versions. Update both from Google Play."
                         : State == Phase.Match ? "A match is being played in that room. Try again when it is over."
@@ -592,14 +610,14 @@ namespace BAM.Online.Mp
                     }
                     if (no != null) { w.Begin(MpMsg.Busy); w.Str(no); relay.SendTo(conn, w); relay.Kick(conn); return; }
                     if (m == null) { m = new Member { Id = nextId++, Conn = conn, Party = party, Side = side }; Members.Add(m); }
-                    m.PlayerId = pid; m.Name = MpPresence.CleanName(name); m.Hero = HeroCatalog.Clean(hero); m.Spell = (SpellId)spell;
+                    m.PlayerId = pid; m.Name = MpPresence.CleanName(name); m.Hero = HeroCatalog.Clean(hero); m.Spell = (SpellId)spell; m.Skin = skin;
                     w.Begin(MpMsg.Welcome); w.U8(m.Id); relay.SendTo(conn, w);
                     SendRoom();
                     return;
                 }
                 case MpMsg.Pick:
                     if (m == null) return;
-                    m.Hero = HeroCatalog.Clean(r.U8()); m.Spell = (SpellId)r.U8();
+                    m.Hero = HeroCatalog.Clean(r.U8()); m.Spell = (SpellId)r.U8(); m.Skin = r.U8();
                     SendRoom();
                     return;
                 case MpMsg.Bye:
@@ -631,6 +649,7 @@ namespace BAM.Online.Mp
                         Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = HeroCatalog.Clean(r.U8()), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
                     bool q = r.U8() == 1; int ps = r.U8(); Diff = (Difficulty)Math.Min(r.U8(), (int)Difficulty.Ultra);
                     Size = r.U8() == 2 ? 2 : 3; Map = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
+                    foreach (var mm in Members) mm.Skin = r.U8(); // last: every member's look, in the same order
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
                     Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
                     Changed?.Invoke();
@@ -644,6 +663,7 @@ namespace BAM.Online.Mp
                     for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = HeroCatalog.Clean(r.U8()), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }
                     int mine = r.U8();
                     int size = r.U8() == 2 ? 2 : 3; var map = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
+                    for (int s = 0; s < n; s++) seats[s].Skin = r.U8();
                     if (mine <= 0 || mine >= n) return;
                     // still playing on with bots after the host left a match (its app in the background, EXIT GAME): the host came
                     // back and started a new one. Do not tear this phone's match down (it would count as a quit); our seat is a bot there
@@ -676,6 +696,7 @@ namespace BAM.Online.Mp
             w.Begin(MpMsg.Room); w.U8(Mode); w.U8(Members.Count);
             foreach (var m in Members) { w.U8(m.Id); w.Str(m.Name); w.U8((int)m.Hero); w.U8((int)m.Spell); w.U8(m.InMatch ? 1 : 0); w.U16(Mathf.Clamp((int)m.Ping, 0, 65535)); w.U8(m.Side); }
             w.U8(Quick ? 1 : 0); w.U8(partySize); w.U8((int)Diff); w.U8(Size); w.U8((int)Map);
+            foreach (var m in Members) w.U8(m.Skin); // last: every member's look (Rickard 2026-11-15)
             Broadcast(w, false);
             Changed?.Invoke();
         }

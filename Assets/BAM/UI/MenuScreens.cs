@@ -120,10 +120,10 @@ namespace BAM.UI
         int measureAt;
 
         /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback). mine: in this player's own skin
-        /// (HeroSkins); a party member's hero on Home shows its plain body (skins are not sent online yet).</summary>
-        public bool Show(HeroId id, bool mine = true)
+        /// (HeroSkins); else in other, the skin a party member's phone sent (Rickard 2026-11-15).</summary>
+        public bool Show(HeroId id, bool mine = true, int other = 0)
         {
-            int skin = mine ? HeroSkins.Chosen(id) : 0;
+            int skin = mine ? HeroSkins.Chosen(id) : HeroSkins.Valid(id, other);
             if (hasHero && id == shownId && skin == shownSkin) return true;
             Setup();
             if (hasHero) { ArtKit.Release(view); view = null; hasHero = false; }

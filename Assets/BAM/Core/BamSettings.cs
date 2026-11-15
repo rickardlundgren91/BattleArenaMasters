@@ -27,6 +27,13 @@ namespace BAM.Core
         /// <summary>Raised after any setting changed (on the main thread).</summary>
         public static event Action Changed;
 
+        /// <summary>The skin this player wears on a hero (BAM.Art HeroSkins.Chosen: only a look the player may wear, gold skins
+        /// bought); null = none. Online sends it to the other phones, so they see the player's skin too (Rickard 2026-11-15).</summary>
+        public static Func<BAM.Sim.HeroId, int> SkinOf;
+        /// <summary>Raised when the player picked another skin (HeroSkins.Choose), so a room can tell the others.</summary>
+        public static event Action SkinPicked;
+        public static void RaiseSkinPicked() => SkinPicked?.Invoke();
+
         public static float SfxVolume
         {
             get { Load(); return sfxVolume; }

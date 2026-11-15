@@ -27,7 +27,7 @@ namespace BAM.Online.UI
             {
                 if (m.Id == MpRoom.MyId) continue;
                 if (party.Count >= party.Mates.Length) break;
-                party.Mates[party.Count++] = new PartyMate { Name = m.Name, Hero = m.Hero, Ready = !m.InMatch };
+                party.Mates[party.Count++] = new PartyMate { Name = m.Name, Hero = m.Hero, Skin = m.Skin, Ready = !m.InMatch };
             }
             return party;
         }

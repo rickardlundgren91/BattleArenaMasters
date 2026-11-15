@@ -170,7 +170,7 @@ namespace BAM.UI
                 for (int i = 0; i < p.Count && i < 2; i++)
                 {
                     var a = p.Mates[i]; var b = shownMates[i];
-                    if (a.Name != b.Name || a.Hero != b.Hero || a.Ready != b.Ready) return true;
+                    if (a.Name != b.Name || a.Hero != b.Hero || a.Skin != b.Skin || a.Ready != b.Ready) return true;
                 }
                 return false;
             }
@@ -193,7 +193,7 @@ namespace BAM.UI
                     s.NotReady.SetActive(!m.Ready);
                     readyFrontOf[i].SetActive(m.Ready);
                     notFrontOf[i].SetActive(!m.Ready);
-                    if (!s.Stage.Show(m.Hero, false)) s.Stage.Picture.enabled = false;
+                    if (!s.Stage.Show(m.Hero, false, m.Skin)) s.Stage.Picture.enabled = false;
                     s.Stage.Frame();
                 }
                 if (myTag != null) myTag.gameObject.SetActive(shownCount > 0); // alone (ONE_PLAY): no plate, the name is in the top bar

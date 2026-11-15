@@ -94,6 +94,8 @@ namespace BAM.UI
     {
         public string Name;
         public BAM.Sim.HeroId Hero;
+        /// <summary>The skin the mate wears on Hero (HeroSkins; 0 the plain body).</summary>
+        public int Skin;
         /// <summary>Back on Home (not still in the last match): the ring is mint, else grey.</summary>
         public bool Ready;
     }
