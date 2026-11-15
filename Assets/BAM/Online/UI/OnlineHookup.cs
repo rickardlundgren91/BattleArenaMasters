@@ -52,6 +52,8 @@ namespace BAM.Online.UI
             OnlineHooks.LeaveParty = OnlineMenu.LeaveParty;
             OnlineHooks.PartyBots = OnlineMenu.PartyBots;
             OnlineHooks.PartyMode = OnlineMenu.PartyMode;
+            OnlineHooks.PartySize = OnlineMenu.PartySize;
+            OnlineHooks.PartyMap = OnlineMenu.PartyMap;
             OnlineHooks.Paint = OnlineUi.Paint;
         }
 

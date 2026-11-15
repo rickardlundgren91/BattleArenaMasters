@@ -199,6 +199,7 @@ namespace BAM.Game
                 HeroTest = setup.HeroTest && !setup.Tutorial,
                 HeroTestLevel = setup.Level > 0 ? setup.Level : 1,
                 Map = setup.Tutorial || setup.HeroTest ? MapId.Runes : setup.Map,
+                TeamSize = setup.TeamSize == 2 && !setup.Tutorial && !setup.HeroTest ? 2 : 3,
             };
             if (net != null) { seed = cfg.Seed; netInputs = new PlayerInput[Match.MaxSeats]; netStatus = null; }
             Coords.Turned = net != null && net.Turned;

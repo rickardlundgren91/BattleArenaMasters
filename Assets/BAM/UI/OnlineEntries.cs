@@ -185,10 +185,15 @@ namespace BAM.UI
         static void BuildOnlineRows()
         {
             var list = new System.Collections.Generic.List<RectTransform>();
-            if (OnlineHooks.OnlineMatch != null) list.Add(OnlineRow("ONLINE MATCH", "Quick match against another player", true, OnlineHooks.OnlineMatch));
+            if (OnlineHooks.OnlineMatch != null) list.Add(OnlineRow("ONLINE MATCH", OnlineMatchLine, true, OnlineHooks.OnlineMatch, out onlineMatchLine));
             // PLAY WITH FRIENDS is gone from the sheet (Rickard 2026-10-31): Home's + INVITE beside the hero does the same
             onlineRows = list.ToArray();
         }
+
+        static Text onlineMatchLine;
+        // the queue plays the 3V3 / 2V2 picked beside "Choose mode" (Rickard 2026-11-15)
+        static string OnlineMatchLine => "Quick " + BamSettings.TeamSize + "v" + BamSettings.TeamSize + " against other players";
+        static void RefreshOnlineRows() { if (onlineMatchLine != null) onlineMatchLine.text = OnlineMatchLine; }
 
         /// <summary>The cards under the modes, from y down; returns the y under them.</summary>
         static float LayoutOnlineRows(float y)
@@ -198,7 +203,7 @@ namespace BAM.UI
         }
 
         // the old SERVER row: a card like a mode not chosen (quiet gold line, dim icon, chevron) that acts at once
-        static RectTransform OnlineRow(string title, string sub, bool swords, Action act)
+        static RectTransform OnlineRow(string title, string sub, bool swords, Action act, out Text subText)
         {
             var rt = UiKit.NewRect(title, modeSheet);
             var fill = Pic(rt, "Fill", UiKit.Rounded, new Color(1, 1, 1, 0.04f));
@@ -218,7 +223,7 @@ namespace BAM.UI
             var name = UiKit.Label(rt, title, Mathf.RoundToInt(4.4f * Cw), TextAnchor.MiddleLeft, HubText);
             name.horizontalOverflow = HorizontalWrapMode.Overflow;
             Mid(name.rectTransform, 0, 0.5f, tx + 30 * Cw, 2.3f * Cw, 60 * Cw, 6 * Cw);
-            var line = Treb(rt, sub, 2.9f, new Color32(0xc6, 0xca, 0xe6, 0xff));
+            var line = subText = Treb(rt, sub, 2.9f, new Color32(0xc6, 0xca, 0xe6, 0xff));
             Mid(line.rectTransform, 0, 0.5f, tx + 30 * Cw, -2.9f * Cw, 60 * Cw, 5 * Cw);
             var chev = UiKit.NewRect("Chevron", rt);
             Mid(chev, 1, 0.5f, -6 * Cw, 0, 3 * Cw, 3 * Cw);

@@ -22,7 +22,7 @@ namespace BAM.Core
         static bool leftHanded, tutorialDone, tutorialCard, tutorialSkipped, musicOn, vibration, hitVibration, hardOpen;
         static int fps;
         static Consent consent;
-        static int lastHero, lastDifficulty, spell, lastMap;
+        static int lastHero, lastDifficulty, spell, lastMap, teamSize;
 
         /// <summary>Raised after any setting changed (on the main thread).</summary>
         public static event Action Changed;
@@ -131,6 +131,13 @@ namespace BAM.Core
             set { Load(); if (lastMap == (int)value) return; lastMap = (int)value; PlayerPrefs.SetInt(Key + "map", lastMap); Commit(); }
         }
 
+        /// <summary>Heroes per team CLASSIC and the online queue play: 3 (3v3) or 2 (2v2, Rickard 2026-11-15: "lägg in 2v2 mode").</summary>
+        public static int TeamSize
+        {
+            get { Load(); return teamSize; }
+            set { Load(); int v = value == 2 ? 2 : 3; if (teamSize == v) return; teamSize = v; PlayerPrefs.SetInt(Key + "teamsize", v); Commit(); }
+        }
+
         public static BAM.Sim.Difficulty LastDifficulty
         {
             get { Load(); return OpenLevel((BAM.Sim.Difficulty)lastDifficulty); }
@@ -211,6 +218,7 @@ namespace BAM.Core
             }
             hardOpen = PlayerPrefs.GetInt(Key + "hardopen", 0) == 1;
             // Grove is CLASSIC's map until a player picks RUNES, so every tester tries it (Rickard 2026-11-13: "gör grove till standard")
+            teamSize = PlayerPrefs.GetInt(Key + "teamsize", 3) == 2 ? 2 : 3;
             lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Grove), (int)BAM.Sim.MapId.Runes, (int)BAM.Sim.MapId.Grove);
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
         }

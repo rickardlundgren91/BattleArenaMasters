@@ -22,7 +22,7 @@ namespace BAM.Online.UI
         internal static PartyView Party()
         {
             if (MpRoom.State == MpRoom.Phase.Off || MpRoom.Quick) return null;
-            party.Leader = MpRoom.IsHost; party.Mode = MpRoom.Mode; party.Bots = MpRoom.Diff; party.Count = 0;
+            party.Leader = MpRoom.IsHost; party.Mode = MpRoom.Mode; party.Bots = MpRoom.Diff; party.Size = MpRoom.Size; party.Map = MpRoom.Map; party.Count = 0;
             foreach (var m in MpRoom.Members)
             {
                 if (m.Id == MpRoom.MyId) continue;
@@ -52,7 +52,7 @@ namespace BAM.Online.UI
                 MpRoom.Leave();
                 return false;
             }
-            if (MpRoom.Members.Count > MpRoom.Capacity(MpRoom.Mode)) { Toast("Too many players to play together: pick AGAINST EACH OTHER in MODES"); return true; }
+            if (MpRoom.Members.Count > MpRoom.Capacity(MpRoom.Mode)) { Toast("Too many players to play together: pick AGAINST EACH OTHER" + (MpRoom.Size == 2 ? " or 3V3" : "") + " in MODES"); return true; }
             foreach (var m in MpRoom.Members)
                 if (m.InMatch) { startWhenBack = true; Toast("Starting when everyone is back on Home"); return true; }
             MpRoom.StartMatch();
@@ -70,6 +70,18 @@ namespace BAM.Online.UI
             if (!MpRoom.IsHost) { Toast(LeaderName + " picks the mode"); return; }
             if (MpRoom.Members.Count > MpRoom.Capacity(mode)) { Toast("Too many players to play together"); return; }
             MpRoom.SetMode(mode);
+        }
+
+        internal static void PartySize(int size)
+        {
+            if (!MpRoom.IsHost) { Toast(LeaderName + " picks 3v3 or 2v2"); return; }
+            if (!MpRoom.SetSize(size)) Toast("Too many players for 2v2");
+        }
+
+        internal static void PartyMap(MapId map)
+        {
+            if (!MpRoom.IsHost) { Toast(LeaderName + " picks the map"); return; }
+            MpRoom.SetMap(map);
         }
 
         internal static void LeaveParty() { Close(); Go("leaveparty"); }

@@ -56,6 +56,9 @@ namespace BAM.UI
         /// <summary>The party's bots and mode, from the mode sheet (only the leader can change them).</summary>
         public static Action<BAM.Sim.Difficulty> PartyBots;
         public static Action<int> PartyMode;
+        /// <summary>The party's team size (2 or 3) and map, from the mode sheet (only the leader can change them).</summary>
+        public static Action<int> PartySize;
+        public static Action<BAM.Sim.MapId> PartyMap;
         /// <summary>A small picture the online side draws with the old menu code into the given rect: "tag0" (the player's name tag
         /// with crown and pencil), "tag1", "tag2" (the party members' name tags) and "leave" (the LEAVE PARTY pill).</summary>
         public static Func<RectTransform, string, RectTransform> Paint;
@@ -79,6 +82,9 @@ namespace BAM.UI
         /// <summary>0 together against bots, 1 against each other.</summary>
         public int Mode;
         public BAM.Sim.Difficulty Bots;
+        /// <summary>Heroes per team: 3 (3v3) or 2 (2v2).</summary>
+        public int Size = 3;
+        public BAM.Sim.MapId Map;
         /// <summary>How many of Mates are filled (0 to 2).</summary>
         public int Count;
         public readonly PartyMate[] Mates = new PartyMate[2];

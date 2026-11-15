@@ -13,7 +13,8 @@ namespace BAM.Core
         public bool HeroTest;   // HERO TEST: Hero against dummies, never ends (Reset/Exit on its bar)
         public int Level;       // HERO TEST: the fixed level (1 if 0)
         public IMatchNet Net;   // an online match (BAM.Online); null = offline
-        public MapId Map;       // the arena: CLASSIC's MAP pick (BamSettings.LastMap), Runes in the tutorial, HERO TEST and online
+        public MapId Map;       // the arena: CLASSIC's MAP pick (BamSettings.LastMap), Runes in the tutorial and HERO TEST; online the room's (Net.Config)
+        public int TeamSize;    // heroes per team: 2 (2v2) or 3 (3v3); 0 = 3. Online the room's (Net.Config)
     }
 
     /// <summary>What the result screen and analytics get when a match ends.</summary>

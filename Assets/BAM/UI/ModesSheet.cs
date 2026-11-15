@@ -14,7 +14,10 @@ namespace BAM.UI
     // list's entry); RANKED is not in BAM. 2026-10-31 (Rickard's pick on a card): TRAINING and HERO TEST share one card, PRACTICE,
     // which opens TUTORIAL / HERO TEST under it the way CLASSIC opens its BOT DIFFICULTY; Home still plays the one picked.
     // 2026-11-13 (Rickard: "lägg in grove som en valbar match precis som den vanliga kartan"): CLASSIC has a MAP row under
-    // BOT DIFFICULTY, RUNES or GROVE (the old sheet's map pick), and Grove left PRACTICE; a party plays Runes (online is Runes only). Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
+    // BOT DIFFICULTY, RUNES or GROVE (the old sheet's map pick), and Grove left PRACTICE. Online builds add ONLINE MATCH under them (OnlineEntries.cs); friends are invited from Home.
+    // 2026-11-15 (Rickard: "lägg in 2v2 mode och lägg in grove mapen som val på både 3v3 och 2v2", "gör även så att man kan köra 2v2
+    // med vänner och mot andra"): 3V3 / 2V2 beside "Choose mode" counts for CLASSIC, ONLINE MATCH and a party; a party has the MAP
+    // row too (the leader's pick, MpRoom.Map), with PARTY under it. ONLINE MATCH plays Runes.
     public static partial class Screens
     {
         enum Mode { Classic, Training, HeroTest }
@@ -30,12 +33,12 @@ namespace BAM.UI
         // (full review 2026-11-13 nr 129: a look at PRACTICE made Home's PLAY start the tutorial after the sheet closed)
         static Mode sheetMode = Mode.Classic;
 
-        sealed class ModeCard { public Mode Id; public RectTransform Rect; public CanvasGroup Icon; public GameObject On, Off, Tick, Chevron; public Image Fill; }
+        sealed class ModeCard { public Mode Id; public RectTransform Rect; public CanvasGroup Icon; public GameObject On, Off, Tick, Chevron; public Image Fill; public Text Sub; }
 
         static readonly ModeCard[] modeCards = new ModeCard[2];
         static RectTransform modeSheet, modeExpand, modeSheetPlay;
         static Image modeScrim;
-        static HubChoice modeDifficulty, modeParty, modeMap;
+        static HubChoice modeDifficulty, modeParty, modeMap, modeSize;
         static Text diffLabel;
         static GameObject hardLock, ultraLock; // the padlock and the progress under a locked Hard / Ultra (nr 130)
         static Text hardLockText, ultraLockText;
@@ -48,7 +51,10 @@ namespace BAM.UI
         static string ModeTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : m == Mode.HeroTest ? "HERO TEST" : "TUTORIAL";
         // the sheet's two cards: CLASSIC, and PRACTICE for both Training and HeroTest
         static string CardTitle(Mode m) => m == Mode.Classic ? "CLASSIC" : "PRACTICE";
-        static string CardSub(Mode m) => m == Mode.Classic ? "3v3 against bots" : "Tutorial or any hero";
+        static string CardSub(Mode m) => m == Mode.Classic ? SizeNow + "v" + SizeNow + " against bots" : "Tutorial or any hero";
+        /// <summary>Heroes per team the sheet plays now: the party's (its leader picks), else the player's 3V3 / 2V2.</summary>
+        static int SizeNow { get { var p = Party(); return p != null ? p.Size : BamSettings.TeamSize; } }
+        static MapId MapNow { get { var p = Party(); return p != null ? p.Map : BamSettings.LastMap; } }
 
         // what Home's PLAY and the sheet's PLAY start (HubPlayNow)
         static void PlayMode()
@@ -64,10 +70,10 @@ namespace BAM.UI
 
         static PartyView Party() => CurrentParty();
         const float PartyRowH = 17.5f * Cw; // the MAP row has the same height and place: MAP alone, PARTY in a party
-        static float ExpNow => ExpH + PartyRowH;
+        static float ExpNow => ExpH + PartyRowH + (Party() != null ? PartyRowH : 0); // MAP, and PARTY under it in a party
 
         static string PlaySubFor(Mode m, bool withDifficulty) =>
-            m == Mode.Classic ? "3V3 · VS BOTS" + (BamSettings.LastMap == MapId.Grove ? " · GROVE" : "") + (withDifficulty ? " · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant() : "") : ModeTitle(m);
+            m == Mode.Classic ? SizeNow + "V" + SizeNow + " · VS BOTS" + (BamSettings.LastMap == MapId.Grove ? " · GROVE" : "") + (withDifficulty ? " · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant() : "") : ModeTitle(m);
 
         static void BuildModes()
         {
@@ -108,6 +114,19 @@ namespace BAM.UI
             var title = UiKit.Label(modeSheet, "Choose mode", Mathf.RoundToInt(5.6f * Cw), TextAnchor.MiddleLeft, HubText);
             title.horizontalOverflow = HorizontalWrapMode.Overflow;
             Stretched(title.rectTransform, SheetX, 6 * Cw + 3.5f * Cw - 4 * Cw, SheetX, 8 * Cw);
+
+            // 3V3 or 2V2 on the title's right (Rickard 2026-11-15): CLASSIC, ONLINE MATCH and a party play it; in a party the leader picks
+            var sizeRow = UiKit.NewRect("Teams", modeSheet);
+            Stretched(sizeRow, SheetX, 6 * Cw + 3.5f * Cw - 4 * Cw, SheetX, 8 * Cw);
+            modeSize = new HubChoice(sizeRow, new[] { "3V3", "2V2" }, i =>
+            {
+                int n = i == 1 ? 2 : 3;
+                if (TestParty != null) TestParty.Size = n;
+                else if (Party() != null) OnlineHooks.PartySize?.Invoke(n);
+                else BamSettings.TeamSize = n;
+                RefreshHome();
+                RefreshModes();
+            });
 
             for (int i = 0; i < SheetModes.Length; i++) modeCards[i] = BuildModeCard(SheetModes[i]);
             BuildOnlineRows();
@@ -152,7 +171,7 @@ namespace BAM.UI
                 RefreshModes();
             }, true);
 
-            // alone, under BOT DIFFICULTY: the MAP, RUNES (the first arena) or GROVE (the second); a party plays Runes
+            // under BOT DIFFICULTY: the MAP, RUNES (the first arena) or GROVE (the second); in a party the leader's pick for everyone
             modeMapRow = UiKit.NewRect("Map", modeExpand);
             var mapLabel = Treb(modeMapRow, "MAP", 2.7f, UiKit.TextDim);
             Stretched(mapLabel.rectTransform, 0, 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
@@ -160,7 +179,10 @@ namespace BAM.UI
             Stretched(msegs, 0, 4.5f * Cw, 0, 12 * Cw);
             modeMap = new HubChoice(msegs, new[] { "RUNES", "GROVE" }, i =>
             {
-                BamSettings.LastMap = i == 1 ? MapId.Grove : MapId.Runes;
+                var map = i == 1 ? MapId.Grove : MapId.Runes;
+                if (TestParty != null) TestParty.Map = map;
+                else if (Party() != null) OnlineHooks.PartyMap?.Invoke(map);
+                else BamSettings.LastMap = map;
                 RefreshHome();
                 RefreshModes();
             }, true);
@@ -248,7 +270,7 @@ namespace BAM.UI
             var name = UiKit.Label(head, CardTitle(m), Mathf.RoundToInt(4.4f * Cw), TextAnchor.MiddleLeft, HubText);
             name.horizontalOverflow = HorizontalWrapMode.Overflow;
             Mid(name.rectTransform, 0, 0.5f, tx + 30 * Cw, 2.3f * Cw, 60 * Cw, 6 * Cw);
-            var sub = Treb(head, CardSub(m), 2.9f, new Color32(0xc6, 0xca, 0xe6, 0xff));
+            var sub = c.Sub = Treb(head, CardSub(m), 2.9f, new Color32(0xc6, 0xca, 0xe6, 0xff));
             Mid(sub.rectTransform, 0, 0.5f, tx + 30 * Cw, -2.9f * Cw, 60 * Cw, 5 * Cw);
             var tick = UiKit.NewRect("Tick", head);
             Mid(tick, 1, 0.5f, -6 * Cw, 0, 4 * Cw, 4 * Cw);
@@ -350,10 +372,12 @@ namespace BAM.UI
             modeDifficulty.Set((int)(party != null ? party.Bots : BamSettings.LastDifficulty));
             // Ultra opens after 30 wins against Hard bots (Rickard 2026-10-31)
             diffLabel.text = "BOT DIFFICULTY"; // a locked level is dimmed with its padlock and progress; tapping it tells how to open it (ShowHint)
+            modeSize.Set(SizeNow == 2 ? 1 : 0);
+            modeMap.Set(MapNow == MapId.Grove ? 1 : 0); Stretched(modeMapRow, 0, ExpH, 0, PartyRowH);
             modePartyRow.gameObject.SetActive(party != null);
-            if (party != null) { modeParty.Set(party.Mode); Stretched(modePartyRow, 0, ExpH, 0, PartyRowH); }
-            modeMapRow.gameObject.SetActive(party == null);
-            if (party == null) { modeMap.Set(BamSettings.LastMap == MapId.Grove ? 1 : 0); Stretched(modeMapRow, 0, ExpH, 0, PartyRowH); }
+            if (party != null) { modeParty.Set(party.Mode); Stretched(modePartyRow, 0, ExpH + PartyRowH, 0, PartyRowH); }
+            for (int i = 0; i < modeCards.Length; i++) if (modeCards[i].Sub != null) modeCards[i].Sub.text = CardSub(modeCards[i].Id);
+            RefreshOnlineRows();
             float expH = ExpNow;
             float y = 6 * Cw + 11 * Cw;
             for (int i = 0; i < modeCards.Length; i++)

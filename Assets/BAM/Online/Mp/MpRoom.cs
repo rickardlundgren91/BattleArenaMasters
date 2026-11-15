@@ -56,6 +56,11 @@ namespace BAM.Online.Mp
         public static int Mode { get; private set; } = Together;
         /// <summary>The bots' level in this room: the host picks it in the room and everyone sees it (Rickard 2026-10-30).</summary>
         public static Difficulty Diff { get; private set; } = Difficulty.Normal;
+        /// <summary>Heroes per team in this room: 3 (3v3) or 2 (2v2, Rickard 2026-11-15: "gör även så att man kan köra 2v2 med vänner
+        /// och mot andra"). The leader picks it for a party; ONLINE MATCH looks only for lobbies of the same size (MpRelay.QuickTag).</summary>
+        public static int Size { get; private set; } = 3;
+        /// <summary>The arena of this room's matches: the leader's MAP pick for a party; ONLINE MATCH plays Runes.</summary>
+        public static MapId Map { get; private set; } = MapId.Runes;
         public static readonly List<Member> Members = new List<Member>(MpRelay.MaxPlayers);
         public static int MyId { get; private set; }
         public static Member Me { get { foreach (var m in Members) if (m.Id == MyId) return m; return null; } }
@@ -72,7 +77,7 @@ namespace BAM.Online.Mp
         static int nextId = 1;
         static float pingT, loadT;
 
-        public static int Capacity(int mode) => mode == Together ? 3 : MpRelay.MaxPlayers;
+        public static int Capacity(int mode) => mode == Together ? Size : 2 * Size;
         /// <summary>ONLINE MATCH: two strangers against each other, bots fill; the room closes after the match.</summary>
         public static bool Quick { get; private set; }
         /// <summary>When the search began (Time.realtimeSinceStartup), for "Looking… 12 s".</summary>
@@ -91,8 +96,8 @@ namespace BAM.Online.Mp
         public static void ClearQuickError() { if (QuickError == null) return; QuickError = null; Changed?.Invoke(); }
         /// <summary>The side (0 or 1) this phone is on in an ONLINE MATCH lobby.</summary>
         public static int MySide { get { var me = Me; return me != null ? me.Side : 0; } }
-        static int RoomCap => Quick ? MpRelay.MaxPlayers : Capacity(Mode);
-        public const int MaxGroup = 3;
+        static int RoomCap => Quick ? 2 * Size : Capacity(Mode);
+        public static int MaxGroup => Size;
         const float QuickStartDelay = 2f, MergeEvery = 3f, PartyWait = 10f;
         static string myParty = "", otherParty; static int partySize = 1, otherSize; static float claimT;
         static int quickTok, quickTries; static float startT = -1, mergeT;
@@ -112,6 +117,7 @@ namespace BAM.Online.Mp
             Leave(); QuickError = null;
             if (mode == Together || mode == Versus) Mode = mode;
             IsHost = true; MyId = 0; nextId = 1; State = Phase.Connecting; Status = "Making a room…"; Diff = BamSettings.LastDifficulty;
+            Size = BamSettings.TeamSize; Map = BamSettings.LastMap;
             Members.Add(new Member { Id = 0, Name = MyName, Hero = MyHero, Spell = BamSettings.Spell });
             relay = new MpRelay(true, null);
             Wire();
@@ -167,6 +173,7 @@ namespace BAM.Online.Mp
             }
             Leave(); QuickError = null;
             Quick = true; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
+            Size = BamSettings.TeamSize; Map = MapId.Runes; // a stranger's lobby of the same size (MpRelay.QuickTag); ONLINE MATCH plays Runes
             myParty = MyPlayerId; partySize = 1;
             MpRunner.Ensure();
             QuickFind();
@@ -178,7 +185,7 @@ namespace BAM.Online.Mp
             if (IsHost && Quick && partySize > 1 && myParty == MyPlayerId && otherParty == null && relay != null && State == Phase.Lobby)
             {
                 ++quickTok; Quick = false; myParty = ""; partySize = 1; startT = -1;
-                relay.Quick = false; relay.SetOpen(false); Status = ""; SendRoom();
+                relay.Quick = false; relay.SetOpen(false); Status = ""; Map = BamSettings.LastMap; SendRoom();
                 return;
             }
             Leave();
@@ -188,6 +195,7 @@ namespace BAM.Online.Mp
         static async void GroupMatch()
         {
             Quick = true; QuickError = null; Mode = Versus; quickTries = 0; tried.Clear(); SearchSince = Time.realtimeSinceStartup;
+            Map = MapId.Runes; // the room's team size stays: the group looks for a lobby of that size
             myParty = MyPlayerId; partySize = Members.Count; otherParty = null; startT = -1;
             foreach (var m in Members) { m.Party = myParty; m.Side = 0; }
             Status = ""; SendRoom();
@@ -303,6 +311,25 @@ namespace BAM.Online.Mp
             Diff = d; BamSettings.LastDifficulty = d; SendRoom();
         }
 
+        /// <summary>Host: 3v3 or 2v2 for the next match (refused while the room holds more players than it fits).</summary>
+        public static bool SetSize(int size)
+        {
+            size = size == 2 ? 2 : 3;
+            if (!IsHost || Quick) return false;
+            if (size == Size) return true;
+            int was = Size; Size = size;
+            if (Members.Count > Capacity(Mode)) { Size = was; return false; }
+            BamSettings.TeamSize = size; SendRoom();
+            return true;
+        }
+
+        /// <summary>Host: the arena for the next match.</summary>
+        public static void SetMap(MapId map)
+        {
+            if (!IsHost || Quick || map == Map) return;
+            Map = map; BamSettings.LastMap = map; SendRoom();
+        }
+
         public static void SetMode(int mode)
         {
             if (!IsHost || mode == Mode || Members.Count > Capacity(mode)) return;
@@ -336,24 +363,24 @@ namespace BAM.Online.Mp
             {
                 w.Begin(MpMsg.Start); w.I32(seed); w.U8((int)diff); w.U8(Mode); w.U8(seats.Length);
                 for (int s = 0; s < seats.Length; s++) { w.U8((int)seats[s].Hero); w.U8(seats[s].Team); w.U8((int)seats[s].Spell); w.Str(Members[s].Name); }
-                w.U8(i);
+                w.U8(i); w.U8(Size); w.U8((int)Map);
                 relay.SendTo(Members[i].Conn, w);
             }
             relay.Flush(); // out now, not with the next frame's sends after this phone has built its scene (bug review NET-6)
             loadT = 0;
-            Begin(seed, diff, seats, 0);
+            Begin(seed, diff, seats, 0, Size, Map);
         }
 
-        static void Begin(int seed, Difficulty diff, SeatConfig[] seats, int mySeat)
+        static void Begin(int seed, Difficulty diff, SeatConfig[] seats, int mySeat, int size, MapId map)
         {
-            var cfg = new MatchConfig { Seats = seats, LocalSeat = mySeat, Seed = seed, Difficulty = diff, PlayerHero = seats[mySeat].Hero, PlayerSpell = seats[mySeat].Spell };
+            var cfg = new MatchConfig { Seats = seats, LocalSeat = mySeat, Seed = seed, Difficulty = diff, PlayerHero = seats[mySeat].Hero, PlayerSpell = seats[mySeat].Spell, TeamSize = size, Map = map };
             net = new MpMatchNet(IsHost, cfg, Mode == Versus && seats[mySeat].Team != Teams.Player);
             if (IsHost) net.Lockstep.Send = SendFrames;
             else net.Lockstep.Send = m => relay?.Send(m);
             State = Phase.Match; Status = ""; WantPage = false; QuickJoining = false; hostHeardT = framesHeardT = Time.realtimeSinceStartup;
-            Debug.Log("[BAM.Online] online match: " + seats.Length + " players, " + ModeNames[Mode] + ", seat " + mySeat + ", seed " + seed);
+            Debug.Log("[BAM.Online] online match: " + seats.Length + " players, " + ModeNames[Mode] + ", " + size + "v" + size + ", " + map + ", seat " + mySeat + ", seed " + seed);
             Changed?.Invoke();
-            Flow.Game?.StartMatch(new MatchSetup { Hero = seats[mySeat].Hero, Difficulty = diff, Seed = seed, Net = net });
+            Flow.Game?.StartMatch(new MatchSetup { Hero = seats[mySeat].Hero, Difficulty = diff, Seed = seed, Net = net, TeamSize = size, Map = map });
             if (!IsHost) { w.Begin(MpMsg.Loaded); relay?.Send(w); }
         }
 
@@ -529,7 +556,7 @@ namespace BAM.Online.Mp
                         // ONLINE MATCH: the first group to come claims this lobby, later ones look elsewhere
                         if (otherParty == null)
                         {
-                            if (psize > MaxGroup || CountSide(0) + psize > MpRelay.MaxPlayers) no = "That match is full.";
+                            if (psize > MaxGroup || CountSide(0) + psize > 2 * Size) no = "That match is full.";
                             else { otherParty = party; otherSize = psize; claimT = 0; startT = -1; relay.SetOpen(false); }
                         }
                         else if (party != otherParty || CountSide(1) >= otherSize) no = "That match is full.";
@@ -575,6 +602,7 @@ namespace BAM.Online.Mp
                     for (int i = 0; i < n; i++)
                         Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = HeroCatalog.Clean(r.U8()), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
                     bool q = r.U8() == 1; int ps = r.U8(); Diff = (Difficulty)Math.Min(r.U8(), (int)Difficulty.Ultra);
+                    Size = r.U8() == 2 ? 2 : 3; Map = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
                     Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
                     Changed?.Invoke();
@@ -587,11 +615,12 @@ namespace BAM.Online.Mp
                     var seats = new SeatConfig[n];
                     for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = HeroCatalog.Clean(r.U8()), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }
                     int mine = r.U8();
+                    int size = r.U8() == 2 ? 2 : 3; var map = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
                     if (mine <= 0 || mine >= n) return;
                     // still playing on with bots after the host left a match (its app in the background, EXIT GAME): the host came
                     // back and started a new one. Do not tear this phone's match down (it would count as a quit); our seat is a bot there
                     if (net != null) { w.Begin(MpMsg.LeftMatch); relay?.Send(w); return; }
-                    Begin(seed, diff, seats, mine);
+                    Begin(seed, diff, seats, mine, size, map);
                     return;
                 }
                 case MpMsg.Frames: framesHeardT = Time.realtimeSinceStartup; net?.Lockstep.OnFrames(ref r); return;
@@ -618,7 +647,7 @@ namespace BAM.Online.Mp
             if (!IsHost) return;
             w.Begin(MpMsg.Room); w.U8(Mode); w.U8(Members.Count);
             foreach (var m in Members) { w.U8(m.Id); w.Str(m.Name); w.U8((int)m.Hero); w.U8((int)m.Spell); w.U8(m.InMatch ? 1 : 0); w.U16(Mathf.Clamp((int)m.Ping, 0, 65535)); w.U8(m.Side); }
-            w.U8(Quick ? 1 : 0); w.U8(partySize); w.U8((int)Diff);
+            w.U8(Quick ? 1 : 0); w.U8(partySize); w.U8((int)Diff); w.U8(Size); w.U8((int)Map);
             Broadcast(w, false);
             Changed?.Invoke();
         }

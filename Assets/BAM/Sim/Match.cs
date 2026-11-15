@@ -20,7 +20,7 @@ namespace BAM.Sim
         /// <summary>Headless tests with PlayerIsBot: that bot counts as the human, so the bots play as they do against a person
         /// (team play with the leader, slower reactions, held specials; Bots/BotTeam.cs).</summary>
         public bool BotIsHuman;
-        /// <summary>Optional fixed line-ups: 2 allies and 3 enemies. Null = drawn from the other heroes with the seed.</summary>
+        /// <summary>Optional fixed line-ups: 2 allies and 3 enemies (2v2: 1 and 2). Null = drawn from the other heroes with the seed.</summary>
         public HeroId[] Allies, Enemies;
         /// <summary>Test matches: every hero at slot i of its team's spawn (left to right) instead of the player in the middle.</summary>
         public bool SlotOrder;
@@ -35,8 +35,11 @@ namespace BAM.Sim
         /// <summary>With Seats: the seat this phone plays. Only Player (camera, HUD, marker) follows it; the rules never read it,
         /// so every phone runs the very same match.</summary>
         public int LocalSeat;
-        /// <summary>The arena (Arena.cs). Online and the guided match always play Runes.</summary>
+        /// <summary>The arena (Arena.cs). The guided match always plays Runes; online the room's pick (MpRoom.Map).</summary>
         public MapId Map = MapId.Runes;
+        /// <summary>Heroes per team: 3 (3v3) or 2 (2v2, Rickard 2026-11-15: "lägg in 2v2 mode"), vs bots and online alike.
+        /// A 2v2 team stands on its spawn's middle and left slots.</summary>
+        public int TeamSize = 3;
     }
 
     /// <summary>One human of an online match.</summary>
@@ -129,7 +132,7 @@ namespace BAM.Sim
         Match(MatchConfig cfg)
         {
             Config = cfg;
-            Map = cfg.Tutorial && cfg.Island ? IslandMap() : new Arena(cfg.Tutorial || cfg.Seats != null ? MapId.Runes : cfg.Map);
+            Map = cfg.Tutorial && cfg.Island ? IslandMap() : new Arena(cfg.Tutorial ? MapId.Runes : cfg.Map);
             Rng = new Rng(cfg.Seed);
             Time = -Rules.Countdown;
             State = MatchState.Countdown;
@@ -144,16 +147,17 @@ namespace BAM.Sim
             var pool = new List<HeroId>(7);
             foreach (var id in HeroCatalog.GameIds) if (id != cfg.PlayerHero) pool.Add(id);
             for (int i = pool.Count - 1; i > 0; i--) { int j = Rng.Int(i + 1); var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
-            var allies = cfg.Allies ?? new[] { pool[0], pool[1] };
-            var enemies = cfg.Enemies ?? new[] { pool[2], pool[3], pool[4] };
+            int size = Size;
+            var allies = cfg.Allies ?? (size == 2 ? new[] { pool[0] } : new[] { pool[0], pool[1] });
+            var enemies = cfg.Enemies ?? (size == 2 ? new[] { pool[1], pool[2] } : new[] { pool[2], pool[3], pool[4] });
             var allyTier = Defs.Tier(cfg.AllyDifficulty ?? cfg.Difficulty);
             var enemyTier = Defs.Tier(cfg.Difficulty);
-            int[] mid = { 1, 0, 2 }; // the player in the middle, as in the old game
+            int[] mid = Places; // the player in the middle, as in the old game (2v2: the outer two)
             if (TopFirst) TeamOfEnemies(enemies, enemyTier);
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < size && i <= allies.Length; i++)
             {
                 var id = i == 0 ? cfg.PlayerHero : allies[i - 1];
-                int s = cfg.SlotOrder ? i : mid[i];
+                int s = cfg.SlotOrder && size == 3 ? i : mid[i];
                 var h = NewHero(id, Teams.Player, Map.SpawnX[0][s], Map.SpawnY[0][s]);
                 if (i == 0) { h.IsPlayer = true; Player = h; if (cfg.PlayerIsBot) h.Bot = new BotBrain(h, allyTier, this); }
                 else h.Bot = new BotBrain(h, allyTier, this);
@@ -165,9 +169,11 @@ namespace BAM.Sim
 
         void TeamOfEnemies(HeroId[] enemies, BotTier enemyTier)
         {
-            for (int i = 0; i < enemies.Length && i < 3; i++)
+            int size = Size;
+            for (int i = 0; i < enemies.Length && i < size; i++)
             {
-                var h = NewHero(enemies[i], Teams.Enemy, Map.SpawnX[1][i], Map.SpawnY[1][i]);
+                int s = size == 2 ? Places[i] : i;
+                var h = NewHero(enemies[i], Teams.Enemy, Map.SpawnX[1][s], Map.SpawnY[1][s]);
                 h.Bot = new BotBrain(h, enemyTier, this);
             }
         }
@@ -175,6 +181,13 @@ namespace BAM.Sim
         /// <summary>Which team's units come first in Units this match (heroes, then each wave). Whoever is updated last each tick
         /// acts on the other team's fresh moves and wins ties, which gave the top team 55 % of mirror matches (bug review nr 11):
         /// the seed picks the order, so neither side has it every match. From the seed, so it needs no state of its own.</summary>
+        /// <summary>Heroes per team this match (MatchConfig.TeamSize: 2 or 3; HERO TEST and the guided match keep their own).</summary>
+        public int Size => Config.TeamSize == 2 ? 2 : 3;
+        // each team's spawn slot per place, the first in the middle: 3v3 then left and right, 2v2 then left (the two outer slots
+        // gave the top team 57 % of 800 headless Silver matches, middle + left 51 %)
+        static readonly int[] Mid3 = { 1, 0, 2 }, Two = { 1, 0 };
+        int[] Places => Size == 2 ? Two : Mid3;
+
         bool TopFirst => !Config.Tutorial && ((uint)Config.Seed * 2654435761u >> 31) != 0;
 
         // offline the player is seat 0
@@ -199,18 +212,18 @@ namespace BAM.Sim
             for (int i = pool.Count - 1; i > 0; i--) { int j = Rng.Int(i + 1); var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
             var tier = Defs.Tier(Config.Difficulty);
             var bySeat = new Unit[seats.Length];
-            int[] mid = { 1, 0, 2 };
+            int[] mid = Places; int size = Size;
             int next = 0;
             for (int tt = 0; tt < 2; tt++)
             {
                 int team = TopFirst ? 1 - tt : tt, place = 0;
-                for (int s = 0; s < seats.Length && place < 3; s++)
+                for (int s = 0; s < seats.Length && place < size; s++)
                 {
                     if (seats[s].Team != team) continue;
                     var h = NewHero(seats[s].Hero, team, Map.SpawnX[team][mid[place]], Map.SpawnY[team][mid[place]]);
                     h.Seat = s; bySeat[s] = h; place++;
                 }
-                for (; place < 3; place++)
+                for (; place < size; place++)
                 {
                     var id = pool.Count > 0 ? pool[next++ % pool.Count] : HeroId.Bram;
                     var h = NewHero(id, team, Map.SpawnX[team][mid[place]], Map.SpawnY[team][mid[place]]);

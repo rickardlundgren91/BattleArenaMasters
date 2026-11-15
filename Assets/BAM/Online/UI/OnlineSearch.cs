@@ -134,13 +134,13 @@ namespace BAM.Online.UI
             return y - y0;
         }
 
-        // three places a side; the other side is "?" until someone is in
+        // three places a side (two in 2v2); the other side is "?" until someone is in
         static float SearchTeams(float x, float y, float w, int mySide, bool found, bool draw)
         {
             float vsW = 30, s = Math.Min(46, (w - vsW - 10 * 2) / 6f), gap = (w - vsW - 6 * s) / 6f;
             if (!draw) return s + 22;
-            int a = 0, b = 0;
-            float left = x + gap / 2, right = x + w / 2 + vsW / 2 + gap / 2;
+            int a = 0, b = 0, n = preview > 0 ? 3 : MpRoom.Size; // places a side: the room's team size (2v2 or 3v3)
+            float left = x + gap / 2 + (3 - n) * (s + gap) / 2, right = x + w / 2 + vsW / 2 + gap / 2 + (3 - n) * (s + gap) / 2;
             // me first, then my group, then the others
             var me = MpRoom.Me;
             var myHero = me != null ? me.Hero : HeroCatalog.Clean(BamSettings.LastHero);
@@ -149,11 +149,11 @@ namespace BAM.Online.UI
             foreach (var m in MpRoom.Members)
             {
                 if (m.Id == MpRoom.MyId) continue;
-                if (m.Side == mySide) { if (a < 3) Place(left + a * (s + gap), y, s, m.Hero, m.Name, HUB_ACCENT, false); a++; }
-                else { if (b < 3) Place(right + b * (s + gap), y, s, m.Hero, m.Name, "#ff8a6b", false); b++; }
+                if (m.Side == mySide) { if (a < n) Place(left + a * (s + gap), y, s, m.Hero, m.Name, HUB_ACCENT, false); a++; }
+                else { if (b < n) Place(right + b * (s + gap), y, s, m.Hero, m.Name, "#ff8a6b", false); b++; }
             }
-            for (; a < 3; a++) Place(left + a * (s + gap), y, s, null, "Bot", "#4a5088", false);
-            for (; b < 3; b++) Place(right + b * (s + gap), y, s, null, found ? "Bot" : "?", found ? "#4a5088" : "#ff8a6b", !found);
+            for (; a < n; a++) Place(left + a * (s + gap), y, s, null, "Bot", "#4a5088", false);
+            for (; b < n; b++) Place(right + b * (s + gap), y, s, null, found ? "Bot" : "?", found ? "#4a5088" : "#ff8a6b", !found);
             Text("VS", x + w / 2, y + s / 2, Lil(18), "#ffb43a", "center", shadow: "#5a2a00", sh: 1.5f);
             return s + 22;
         }

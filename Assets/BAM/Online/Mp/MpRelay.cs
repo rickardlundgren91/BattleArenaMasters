@@ -40,7 +40,8 @@ namespace BAM.Online.Mp
         public const int MaxPlayers = 6;
         /// <summary>Only phones with the same messages and the same rules meet (a balance change between versions would desync).</summary>
         internal static string Tag(string kind) => "bam" + kind + "-" + MpMsg.Protocol + "-" + Application.version;
-        internal static string QuickTag => Tag("q");
+        // ONLINE MATCH: 3v3 and 2v2 queue apart (2v2: Rickard 2026-11-15), each lobby tagged with its room's team size
+        internal static string QuickTag => Tag(MpRoom.Size == 2 ? "q2" : "q");
 
         readonly bool host;
         NetworkDriver driver; NetworkPipeline rel; bool bound;

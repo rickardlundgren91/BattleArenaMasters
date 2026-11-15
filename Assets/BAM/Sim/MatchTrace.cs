@@ -135,7 +135,7 @@ namespace BAM.Sim
         static void WriteConfig(BinaryWriter w, MatchConfig c)
         {
             w.Write(c.Seed); w.Write((byte)c.PlayerHero); w.Write((byte)c.Difficulty); w.Write(c.AllyDifficulty.HasValue ? (byte)c.AllyDifficulty.Value : (byte)255);
-            w.Write((byte)((c.Tutorial ? 1 : 0) | (c.Island ? 2 : 0) | (c.PlayerIsBot ? 4 : 0) | (c.BotIsHuman ? 8 : 0) | (c.SlotOrder ? 16 : 0) | (c.HeroTest ? 32 : 0)));
+            w.Write((byte)((c.Tutorial ? 1 : 0) | (c.Island ? 2 : 0) | (c.PlayerIsBot ? 4 : 0) | (c.BotIsHuman ? 8 : 0) | (c.SlotOrder ? 16 : 0) | (c.HeroTest ? 32 : 0) | (c.TeamSize == 2 ? 64 : 0))); // 64: 2v2 (an older trace has 0: 3v3)
             Ids(w, c.Allies); Ids(w, c.Enemies);
             w.Write((byte)c.PlayerSpell); w.Write(c.HeroTestLevel);
             if (c.Seats == null) w.Write((byte)255);
@@ -147,7 +147,7 @@ namespace BAM.Sim
             var c = new MatchConfig { Seed = r.ReadInt32(), PlayerHero = (HeroId)r.ReadByte(), Difficulty = (Difficulty)r.ReadByte() };
             int ad = r.ReadByte(); c.AllyDifficulty = ad == 255 ? (Difficulty?)null : (Difficulty)ad;
             int f = r.ReadByte();
-            c.Tutorial = (f & 1) != 0; c.Island = (f & 2) != 0; c.PlayerIsBot = (f & 4) != 0; c.BotIsHuman = (f & 8) != 0; c.SlotOrder = (f & 16) != 0; c.HeroTest = (f & 32) != 0;
+            c.Tutorial = (f & 1) != 0; c.Island = (f & 2) != 0; c.PlayerIsBot = (f & 4) != 0; c.BotIsHuman = (f & 8) != 0; c.SlotOrder = (f & 16) != 0; c.HeroTest = (f & 32) != 0; c.TeamSize = (f & 64) != 0 ? 2 : 3;
             c.Allies = ReadIds(r); c.Enemies = ReadIds(r);
             c.PlayerSpell = (SpellId)r.ReadByte(); c.HeroTestLevel = r.ReadInt32();
             int n = r.ReadByte();

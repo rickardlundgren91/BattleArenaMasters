@@ -66,9 +66,14 @@ namespace BAM.Online.UI
             }
         }
 
-        static string ModeLine(int mode, int players) => mode == MpRoom.Together
-            ? "You " + (players <= 2 ? "two" : "three") + " on one team" + (players < 3 ? " + " + (3 - players) + " bot" + (players == 2 ? "" : "s") : "") + " against 3 bots"
-            : "Two teams of three, the empty places filled with bots";
+        // the room's team size (MpRoom.Size: 3v3 or 2v2, Rickard 2026-11-15)
+        static string ModeLine(int mode, int players)
+        {
+            int n = MpRoom.Size;
+            return mode == MpRoom.Together
+                ? "You " + (players <= 2 ? "two" : "three") + " on one team" + (players < n ? " + " + (n - players) + " bot" + (n - players == 1 ? "" : "s") : "") + " against " + n + " bots"
+                : "Two teams of " + (n == 2 ? "two" : "three") + ", the empty places filled with bots";
+        }
 
         static void ModeButtons(float x, float y, float w, int mode, Action<int> pick, bool draw)
         {

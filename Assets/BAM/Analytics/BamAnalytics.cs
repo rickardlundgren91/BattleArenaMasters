@@ -71,8 +71,10 @@ namespace BAM.Analytics
             Sdk.ItemPicked(Item(item), hero.ToString(), level, Mode(setup, online), (float)Math.Round(offerSeconds, 1));
         }
 
+        // 2v2 (Rickard 2026-11-15) adds "_2v2": classic_2v2, grove_2v2, online_2v2
         static string Mode(MatchSetup setup, bool online) =>
-            online ? "online" : setup.Map != BAM.Sim.MapId.Runes && !setup.Tutorial ? setup.Map.ToString().ToLowerInvariant() : "classic";
+            (online ? "online" : setup.Map != BAM.Sim.MapId.Runes && !setup.Tutorial ? setup.Map.ToString().ToLowerInvariant() : "classic")
+            + (setup.TeamSize == 2 && !setup.Tutorial && !setup.HeroTest ? "_2v2" : "");
         static string Item(BAM.Sim.ItemId id) => id == BAM.Sim.ItemId.None ? "none" : id.ToString();
 
         public static void TutorialStep(int step, string name)
