@@ -14,7 +14,7 @@ namespace BAM.Sim
             TiktaPastMinions();
             BotDragChecks();
             Check(HeroCatalog.Get(HeroId.Nassla).SpecialText.EndsWith(HeroInfo.DragLine), "NASSLA text: the hold card says a drag aims the thicket");
-            Check(HeroCatalog.Get(HeroId.Blast).SpecialText.Contains("1 s after the tap") && Math.Abs(TeleTime(HeroId.Blast) + BlastS.Delay - 1f) < 1e-4f, "BLAST text: the bomb explodes 1 s after the tap (warning + fuse)");
+            Check(HeroCatalog.Get(HeroId.Blast).SpecialText.Contains("0.8 s after the tap") && Math.Abs(TeleTime(HeroId.Blast) + BlastS.Delay - 0.8f) < 1e-4f, "BLAST text: the bomb explodes 0.8 s after the tap (warning + fuse)");
         }
 
         /// <summary>Ragn's red ring lies on his landing spot for the whole leap, not only for the 0.3 s warning before it.</summary>

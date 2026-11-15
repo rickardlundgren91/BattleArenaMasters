@@ -757,7 +757,7 @@ namespace BAM.Game
                         ArtKit.PlayVolleyDraw(Coords.Of(a), Coords.World(e.X, e.Y) - Coords.Of(a), a.Range, TyraS.VolleyWindup);
                     }
                     // Blast's bomb (his drag since 2026-10-30) is a ground fuse in the rules; draw the lob onto it so the throw is seen
-                    if ((HeroId)e.Kind == HeroId.Blast && e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, 0.45f);
+                    if ((HeroId)e.Kind == HeroId.Blast && e.Big) LobGhost(a, Coords.World(e.X, e.Y), ProjKind.BlastBomb, BlastS.Delay * 0.9f); // lands just before it goes off (0.27 s since 2026-11-15)
                     // so are Hilde's kegs: the big one (drag) and the small quick one (tap)
                     // Bram's Anvil Drop: his hammer goes up high and comes down on the red circle as it lands (BRAM-04)
                     // thrown higher (2 -> 3 tiles) and with his gold ring closing in on the landing spot (Rickard 2026-10-30 "måste synas mer")

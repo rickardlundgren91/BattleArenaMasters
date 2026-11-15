@@ -9,7 +9,7 @@ namespace BAM.Sim
         Hook,        // Knut drag: flies out and comes back on its chain, pulls the first enemy it touches
         Needle,      // Tikta tap: homes in on its target
         NeedleLine,  // Tikta drag: straight, stops in the first enemy
-        Bomb,        // Blast tap: a fuse circle for 0.5 s, then the blast
+        Bomb,        // Blast bomb: a fuse circle for BlastS.Delay (0.3 s), then the blast
         FireLane,    // Blast drag: a burning strip for 2 s
         HoneyField,  // Moa drag: a shield circle for 2 s
         WarnLine,    // a red warning line before a shot (bots dodge it)
