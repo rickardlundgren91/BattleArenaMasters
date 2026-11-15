@@ -1061,6 +1061,9 @@ namespace BAM.Art
                     // Bonk (Rickard 2026-10-26: "slå sin enorma klubba kraftigt slag som gör aoe i marken och sprickor och damm"), in
                     // his own pictures: the ground cracks open (held, then fading over ~2 s), his dust ring rolls out to the true
                     // radius with a slower second one behind it, dust puffs kicked up and stone chips thrown. size = the hit radius
+                    // Bonk's own club (auto and Ground Slam) is lighter on dust: one dust ring, 3-4 thin short puffs instead of ~10 thick
+                    // ones, so the target stays visible (Rickard 15 nov: "bonk har för mycket rök när han slår"); Kugg, Ragn and knocks as before
+                    bool bonkLight = hero == (int)HeroId.Bonk;
                     Flash(p + Vector3.up * 0.25f, 0.2f * size, 0.7f * size, new Color(1f, 0.95f, 0.85f, 0.85f), 0.08f);
                     Ring(p, 0.3f * size, 1.15f * size, new Color(1f, 1f, 1f, 0.6f), 0.18f, 0.6f); // a fast white punch past the edge
                     if (bCrack != null) Emit1(bCrack, new Vector3(p.x, 0.03f, p.z), Color.white, 2.6f * 0.95f * size, 2.2f, Random.value * 360f); // rim at 0.76 of the picture
@@ -1068,11 +1071,12 @@ namespace BAM.Art
                     if (bShock != null)
                     {
                         // the dust ring's middle sits at 0.64 of the picture's half width: sized so it lands on the radius
-                        Emit1(bShock, new Vector3(p.x, 0.07f, p.z), Color.white, 3.1f * size, 0.6f, Random.value * 360f);
-                        Emit1(bShock, new Vector3(p.x, 0.06f, p.z), new Color(1f, 1f, 1f, 0.55f), 3.1f * size, 1.1f, Random.value * 360f); // the slower one ends on the radius too (BONK-06: it rolled 0.3 past the hit)
+                        Emit1(bShock, new Vector3(p.x, 0.07f, p.z), bonkLight ? new Color(1f, 1f, 1f, 0.7f) : Color.white, 3.1f * size, 0.6f, Random.value * 360f);
+                        if (!bonkLight) Emit1(bShock, new Vector3(p.x, 0.06f, p.z), new Color(1f, 1f, 1f, 0.55f), 3.1f * size, 1.1f, Random.value * 360f); // the slower one ends on the radius too (BONK-06: it rolled 0.3 past the hit)
                     }
                     else Ring(p, 0.25f * size, size, new Color(0.92f, 0.82f, 0.62f, 0.9f), 0.32f, 1.1f);
-                    if (bDust != null) Burst(bDust, p + Vector3.up * 0.2f, 6 + Mathf.RoundToInt(3f * size), new Color32(255, 250, 240, 235), 0.75f * size, 2.4f * size, 1f, 0.5f, 0.45f * size);
+                    if (bDust != null && bonkLight) Burst(bDust, p + Vector3.up * 0.2f, 2 + Mathf.RoundToInt(size), new Color32(255, 250, 240, 150), 0.55f * size, 2f * size, 0.55f, 0.4f, 0.35f * size);
+                    else if (bDust != null) Burst(bDust, p + Vector3.up * 0.2f, 6 + Mathf.RoundToInt(3f * size), new Color32(255, 250, 240, 235), 0.75f * size, 2.4f * size, 1f, 0.5f, 0.45f * size);
                     else Dust(p + Vector3.up * 0.15f, 10, C(Pal.Ground, 220), 0.55f * size, 2.2f * size, 0.9f, 0.6f, 0.5f * size);
                     if (bRocks != null) Burst(bRocks, p + Vector3.up * 0.25f, 7 + Mathf.RoundToInt(3f * size), new Color32(255, 255, 255, 255), 0.26f + 0.05f * size, 4f + size, 0.8f, 3.8f, 0.35f * size);
                     else Chunks(p + Vector3.up * 0.2f, 7 + Mathf.RoundToInt(3f * size), C(Pal.Rock), 0.13f + 0.03f * size, 4f + size, 0.7f, 3.5f, 0.4f * size);
