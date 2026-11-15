@@ -183,6 +183,9 @@ namespace BAM.Sim
     /// health.</summary>
     public static class TiktaS
     {
+        /// <summary>How far her one-tap special looks for a target and her needle line flies: 10 % past her attack ring (Defs range 2.35;
+        /// Rickard 2026-11-15 "lite längre range special tikta"). Her auto attack keeps 2.35.</summary>
+        public const float TapReach = 2.6f;
         public const float Reach = 2.9f, Interval = 0.2f, DamageCoeff = 1.4f, Speed = 16, LineReach = 5, LineHitbox = 0.2f; // needles 1.2 -> 1.5 (Rickard 2026-11-02 "buffa henne lite": one-tap Tikta 43 % on Hard bots); 1.5 -> 1.4 when she walks in her warning (testers Alex/Øli 2026-11-05, Rickard 2026-11-09: bots 1600 matches Normal 50.7, Hard 48.8 %)
         public const int Count = 4;
         public const float PoisonPerSecond = 0.1f, PoisonDuration = 2;

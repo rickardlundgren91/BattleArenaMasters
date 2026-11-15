@@ -46,7 +46,7 @@ namespace BAM.Sim
         /// 2026-11-03 "den går att aktivera för lång range": his tap is back to his ring too, the hook still flies the full
         /// KnutS.HookDistance (7). Tyra's bolt still flies on until it hits something; Tikta's needles stop at the ring.</summary>
         public static float TapReach(HeroId id) => id == HeroId.Bonk ? BonkS.SlamRadiusOneTap : id == HeroId.Kugg ? KuggS.TapReach
-            : id == HeroId.Ragn ? RagnS.LeapReach : id == HeroId.Ravna ? RavnaS.FlockReach : Defs.Hero(id).Range; // Ragn's leap and Ravna's flock reach further than their claws (Hero8.cs)
+            : id == HeroId.Ragn ? RagnS.LeapReach : id == HeroId.Ravna ? RavnaS.FlockReach : id == HeroId.Tikta ? TiktaS.TapReach : Defs.Hero(id).Range; // Ragn's leap and Ravna's flock reach further than their claws (Hero8.cs), Tikta's needles a little further than her daggers (TiktaS.TapReach)
 
         /// <summary>How far Tikta's needle line flies: her ring in the one-tap game (TapReach), TiktaS.LineReach for the old drag.</summary>
         float NeedleReach => OneTap ? TapReach(HeroId.Tikta) : TiktaS.LineReach;
