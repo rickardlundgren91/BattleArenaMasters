@@ -23,6 +23,7 @@ namespace BAM.Online.Mp
         // after ~5 s with frames to spare; the game catches up one tick at a time (Excess). Costs a few ticks of extra delay.
         const int MinBuffer = 2, MaxBuffer = 10, ShrinkAfter = 300;
         int buffer = 3, calm, spare = int.MaxValue;
+        long waitBuilt = -1; int waitDry; // while refilling: the frame count last seen and the ticks since it last grew
         const int Cap = 2048;                 // frames kept: a guest further behind than this (34 s) has lost the match anyway
         const int MaxPresses = 4;
 
@@ -298,7 +299,18 @@ namespace BAM.Online.Mp
                 else if (!solo && !Predicting)
                 {
                     long have = built - stepped;
-                    if (waiting) { if (have < buffer) return false; waiting = false; calm = 0; spare = int.MaxValue; }
+                    // refilling the buffer: but when no frame has come for twice the buffer, the host has stopped (the match ended there,
+                    // or it stalls): play what is in hand. Holding them kept the guest a few ticks short of the end for good (mptest
+                    // "2 vs": seat 1 stepped 21595 of 21600; in the game the host stops at Over, so the guest's result never came).
+                    if (waiting)
+                    {
+                        if (have < buffer)
+                        {
+                            if (built != waitBuilt) { waitBuilt = built; waitDry = 0; return false; }
+                            if (have <= 0 || ++waitDry < 2 * buffer) return false;
+                        }
+                        waiting = false; calm = 0; spare = int.MaxValue; waitBuilt = -1;
+                    }
                     if (have <= 0) { waiting = true; if (buffer < MaxBuffer) buffer++; return false; }
                     // a long calm with frames to spare all along: keep one less in hand (less delay)
                     if (have - 1 < spare) spare = (int)(have - 1);
