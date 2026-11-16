@@ -78,6 +78,7 @@ namespace BAM.Game
             if (inMatch || BamSettings.TutorialDone) yield break; // the player was quicker
             yield return new WaitForEndOfFrame();
             var home = ScreenCapture.CaptureScreenshotAsTexture();
+            BamSettings.TutorialOffered = true; // only this once by itself (Boot.Start)
             StartMatch(new MatchSetup { Hero = HeroId.Tyra, Difficulty = Difficulty.Easy, Tutorial = true });
             hud.Dissolve(home);
         }
@@ -122,9 +123,15 @@ namespace BAM.Game
         {
             BamSettings.TutorialDone = false;
             BamSettings.TutorialCard = false;
+            BamSettings.TutorialOffered = false;
             Debug.Log("[BAM.Game] The next Play is a first start: the guided match by itself, PLAY FIRST MATCH at its end.");
         }
 #endif
+
+        /// <summary>Boot: the guided match started by itself last time and was left without Skip or Pause > Home (the app was
+        /// closed, or Play stopped in the Editor). It counts as skipped, so this start lands on Home with the "Tutorial skipped" card
+        /// instead of starting the guided match again (Rickard 2026-11-16).</summary>
+        public static void TutorialLeftLastTime() => TutorialFinished(true);
 
         // The first time only (the old NewPlayer.FinishTutorial and FirstPicks): the card on Home, and the first match is Tyra
         // against Easy bots unless the player has already picked something. skipped: Skip or Pause > Home before the tower fell, so

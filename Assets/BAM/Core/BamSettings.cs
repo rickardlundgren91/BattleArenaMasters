@@ -96,6 +96,15 @@ namespace BAM.Core
             set { Load(); if (tutorialDone == value) return; tutorialDone = value; PlayerPrefs.SetInt(Key + "tut", value ? 1 : 0); Commit(); }
         }
 
+        /// <summary>The guided match has started by itself once (Boot's first start). It never starts by itself again: a player who
+        /// left it without Skip or Pause > Home (closed the app, or stopped Play in the Editor) lands on Home next time, with the
+        /// "Tutorial skipped" card (Rickard 2026-11-16: "När jag öppnar spelet så startar det ofta ett game direkt. Sluta med det").</summary>
+        public static bool TutorialOffered
+        {
+            get => PlayerPrefs.GetInt(Key + "tutoff", 0) == 1;
+            set { PlayerPrefs.SetInt(Key + "tutoff", value ? 1 : 0); PlayerPrefs.Save(); }
+        }
+
         /// <summary>The card on Home after the first finished (or skipped) tutorial, "Tutorial done · Next: your first match"
         /// (the old HubTutCard): a tap on it or the first finished bot match takes it away.</summary>
         public static bool TutorialCard

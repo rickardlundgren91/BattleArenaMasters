@@ -41,9 +41,11 @@ namespace BAM.Game
             Flow.Game = flow;
             Flow.Booted?.Invoke(); // online (BAM_ONLINE builds): sign-in and the online pages
 
-            // the very first start goes straight into the guided match (GameFlow.StartFirstTutorial), with a Skip button
+            // the very first start goes straight into the guided match (GameFlow.StartFirstTutorial), with a Skip button. Only
+            // once: if it was left by closing the app (or stopping Play), later starts land on Home (Rickard 2026-11-16)
             Screens.ShowConsentIfNeeded(() =>
             {
+                if (!BamSettings.TutorialDone && BamSettings.TutorialOffered) GameFlow.TutorialLeftLastTime();
                 Screens.ShowMainMenu();
                 if (!BamSettings.TutorialDone) flow.StartFirstTutorial();
             });
