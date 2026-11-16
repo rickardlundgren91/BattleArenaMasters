@@ -100,6 +100,7 @@ namespace BAM.Sim
             if (!tgt.Alive || amount <= 0) return 0;
             if (tgt.Has(St.Invulnerable) || tgt.Has(St.Untargetable)) return 0;
             var att = src != null ? (src.Owner ?? src) : null;
+            if (tgt.Kind == UnitKind.Hero && att != null && att.Kind == UnitKind.Hero && att.Bot != null) amount *= att.Bot.Tier.HeroDmg; // Easy bots hit heroes softer (Defs.Bronze)
             if (tgt.Kind == UnitKind.Hero) tgt.LastHurt = Time;
             // a dead attacker (a shot that lands after its shooter died, a burn or poison tick of his) is not revealed: he came back
             // from the respawn lit and "in a fight" (full review 2026-11-09 nr 76, 66). Hitting Fenn's decoy reveals nobody.

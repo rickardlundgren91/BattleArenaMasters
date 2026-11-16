@@ -47,6 +47,8 @@ namespace BAM.Sim
         public float AimLead, AimNoise;
         /// <summary>V3 = the newer bot brain (every tier above Bronze in the old game).</summary>
         public bool V3;
+        /// <summary>The share of its damage a bot's hero deals to heroes (Combat.DealDamage): Easy 0.85, the rest 1.</summary>
+        public float HeroDmg = 1;
     }
 
     public static class Defs
@@ -160,7 +162,9 @@ namespace BAM.Sim
         // health instead of 35 % (beginners leave too late). Bot lab, 2000 matches per row on both maps, a bot in the player's seat as the
         // person: one that plays like the old Easy won 53 -> 69 % (dies 2.8 -> 2.4 a match), a slower beginner 40 -> 55 % (4.2 -> 3.9).
         // Normal, Hard and Ultra are untouched.
-        public static readonly BotTier Bronze = T("Bronze", 0.25f, 0.4f, 0.5f, 0.7f, 0, 3, 3, false, new[] { 1.2f, 1.7f, 2.4f }, 1, 2, 0.2f, 0.9f);
+        // Easy bots also hit heroes 15 % softer, both teams (Rickard 2026-11-16 on a card): the slower beginner 55 -> 62 %, deaths 3.9 -> 3.6.
+        public static readonly BotTier Bronze = WithHeroDmg(T("Bronze", 0.25f, 0.4f, 0.5f, 0.7f, 0, 3, 3, false, new[] { 1.2f, 1.7f, 2.4f }, 1, 2, 0.2f, 0.9f), 0.85f);
+        static BotTier WithHeroDmg(BotTier t, float k) { t.HeroDmg = k; return t; }
         public static readonly BotTier Silver = T("Silver", 0.2f, 0.6f, 0.6f, 0.7f, 2, 3, 2, false, new[] { 0.5f, 0.7f, 1f }, 1, 4, 0.5f, 0.5f);
         public static readonly BotTier Gold = T("Gold", 0.4f, 0.6f, 0.6f, 0.7f, 2.5f, 3, 2, true, new[] { 0.4f, 0.6f, 0.9f }, 1, 5, 0.75f, 0.35f);
         public static readonly BotTier Platinum = T("Platinum", 0.5f, 0.6f, 0.69f, 0.8f, 3, 3, 2, true, new[] { 0.333f, 0.5f, 0.75f }, 1, 7, 0.9f, 0.25f);
