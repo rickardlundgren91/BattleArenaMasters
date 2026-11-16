@@ -152,7 +152,7 @@ namespace BAM.Sim
         public bool IsRealHero => Kind == UnitKind.Hero && !IsClone;
         /// <summary>Minions and Fenn's wolf (a tower shoots these first, a hero at a tower needs one of these of its own).</summary>
         public bool IsMinionLike => Kind == UnitKind.Minion || Kind == UnitKind.Wolf;
-        public float Range => HDef != null ? HDef.Range + (KuggShots > 0 ? KuggS.RangeBonus : 0) : UDef.Range; // Kugg's Anchor (Hero7.cs)
+        public float Range => HDef != null ? HDef.Range + (KuggShots > 0 ? KuggS.RangeBonus : 0) - (Hero == HeroId.Fenn && !IsClone && Has(St.Veil) ? FennS.VeilRangeCut : 0) : UDef.Range; // Kugg's Anchor (Hero7.cs), Fenn's Veil (Heroes.cs)
         public float BaseSpeed => HDef != null ? HDef.Speed : UDef.Speed;
         public bool SpecialReady => HDef != null && Charge >= (Hero == HeroId.Kugg ? KuggS.MinShots : HDef.MaxCharge); // Kugg anchors from 2 stocks (Hero7.cs)
         public float Charge01 => HDef != null ? Math.Min(1, Charge / HDef.MaxCharge) : 0;

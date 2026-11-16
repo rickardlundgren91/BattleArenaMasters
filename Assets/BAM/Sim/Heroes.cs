@@ -69,8 +69,11 @@ namespace BAM.Sim
         internal const float VeilEngage = 3.5f;
         /// <summary>A veiled bot Fenn strikes an enemy hero in reach only with at least this share of his health (else he runs).</summary>
         internal const float BotStrikeHp = 0.4f;
-        /// <summary>Hits to charge the Veil (the wolf took 5).</summary>
-        public const int VeilCharge = 4;
+        /// <summary>Hits to charge the Veil (the wolf took 5); 4 -> 6 from tester feedback "Fenn is OP" (Rickard 2026-11-16 on a card).</summary>
+        public const int VeilCharge = 6;
+        /// <summary>How much shorter Fenn's reach is while veiled (tiles off his sword's 3.0): the Shadow Strike, a veiled bot's swing and
+        /// his white ring (Unit.Range), so he must walk closer to strike out of the Veil (tester feedback 2026-11-16).</summary>
+        public const float VeilRangeCut = 0.5f; // 3.0 -> 2.5 while veiled (Rickard 2026-11-16 on a card; Hard bots: Fenn 46 % -> 36 % with the 6 hits)
     }
 
     /// <summary>Tyra, Pinpoint Bolt (the drag): a short draw, then a heavy bolt that flies on until it hits something: the first
@@ -260,9 +263,9 @@ namespace BAM.Sim
         }
 
         /// <summary>A ground special's landing point: aimK of the reach the aimed way, at least minDist tiles out, inside the map.</summary>
-        void AimPoint(Unit h, float ang, float k, float reach, out float x, out float y, float minDist = 1.5f)
+        void AimPoint(Unit h, float ang, float k, float reach, out float x, out float y, float minDist = 1.5f, float cap = float.MaxValue)
         {
-            float d = Math.Min(reach, Math.Max(minDist, k * reach));
+            float d = Math.Min(Math.Min(reach, cap), Math.Max(minDist, k * reach));
             x = SimMath.Clamp(h.X + SimMath.Cos(ang) * d, 0.5f, Map.W - 0.5f);
             y = SimMath.Clamp(h.Y + SimMath.Sin(ang) * d, 0.5f, Map.H - 0.5f);
         }
@@ -503,7 +506,7 @@ namespace BAM.Sim
 
         /// <summary>The spot a dragged Shadow Strike aims at: share k of the reach Fenn's drag has (FennS.ThrowReach), which the
         /// one-tap game's DragShare caps at his own reach (Range), so a full drag points at the edge of his white ring.</summary>
-        public void StrikeAimPoint(Unit h, float ang, float k, out float x, out float y) => AimPoint(h, ang, k, FennS.ThrowReach, out x, out y, 0);
+        public void StrikeAimPoint(Unit h, float ang, float k, out float x, out float y) => AimPoint(h, ang, k, FennS.ThrowReach, out x, out y, 0, h.Range);
 
         /// <summary>Whom a dragged Shadow Strike hits: of the enemy heroes and minions in his reach that his team sees with a clear
         /// line (never a tower), the one nearest the aimed spot; null when nobody is in reach.</summary>
