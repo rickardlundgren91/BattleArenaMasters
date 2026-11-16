@@ -131,7 +131,8 @@ namespace BAM.Game
                 }
                 o.Name.color = mine ? Color.white : u.Team == m.Player.Team ? NameAlly : NameFoe;
                 o.Name.rectTransform.sizeDelta = new Vector2(ts * 4f, ts * 0.5f);
-                o.Name.rectTransform.anchoredPosition = new Vector2(o.NameX, size * 0.17f);
+                // a little more air between the name and the bar (0.17 -> 0.2, Rickard 2026-11-16 "någon pixel för nära")
+                o.Name.rectTransform.anchoredPosition = new Vector2(o.NameX, size * 0.2f);
                 {
                     float ew = Mathf.Max(1f, ts * 0.035f);
                     o.NameEdge.effectDistance = new Vector2(ew, -ew);
@@ -241,9 +242,9 @@ namespace BAM.Game
         }
 
         // The stack over a hero's bar, in tiles of the screen up from the bar's centre (Rickard 2026-11-03 "lite mycket överlapp"):
-        // the name from 0.18 to NameTop, then the crossed-out eye or the poison bubbles (StatusFx puts them there), then the
+        // the name from 0.21 to NameTop, then the crossed-out eye or the poison bubbles (StatusFx puts them there), then the
         // rising numbers (HudTop.PlaceFloat), so nothing lies on anything else
-        const float NameTop = 0.5f, EyeTop = 1.24f, BubblesTop = 1.02f;
+        const float NameTop = 0.53f, EyeTop = 1.27f, BubblesTop = 1.02f;
 
         /// <summary>One tile in canvas units (the camera frames MatchCamera's TilesAcross over the standing frame).</summary>
         float OverheadTile() => cam.PixelsPerTile * (Screen.width > 1f ? canvasRect.rect.width / Screen.width : 1f);

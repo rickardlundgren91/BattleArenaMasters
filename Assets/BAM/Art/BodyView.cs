@@ -565,7 +565,8 @@ namespace BAM.Art
             decalR.receiveShadows = false;
 
             // no level badge by the hero bars (Rickard 2026-10-28 "Lvl siffran behövs inte bredvid namnet"); the HUD top still shows it
-            bar = new HealthBar(transform, d.BarWidth, d.Height + 0.28f, d.BarThick);
+            // the bar (and the name over it) 0.33 over the head, was 0.28: Rickard 2026-11-16 "Namnet ligger någon pixel för nära huvudet"
+            bar = new HealthBar(transform, d.BarWidth, d.Height + 0.33f, d.BarThick);
             status = new StatusFx(transform, d.Radius, d.Height);
             ResetState();
         }
