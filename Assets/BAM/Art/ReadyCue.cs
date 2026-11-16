@@ -5,7 +5,7 @@ namespace BAM.Art
 {
     /// <summary>
     /// The special-ready cue on the hero itself (Rickard 2026-11-16, after Tikta's glowing wings: "Tänk om varje hero hade något
-    /// speciellt likt tikta som aktiveras när ens special är redo"; his cards: every hero, seen on enemies too, always on the menu
+    /// speciellt likt tikta som aktiveras när ens special är redo"; his cards: every hero, seen on enemies too; not on the menu
     /// stages). One look per hero, on a part it already wears or holds, in its own colours, made of small glows and motes only (no
     /// smoke, no fog, no text):
     /// - Tikta: her glowing wings beat faster and wider and shine brighter (HeldGear.ReadyBoost), teal and violet motes off them.
@@ -37,10 +37,9 @@ namespace BAM.Art
         {
             if (HeroIndex < 0 || anim == null || !anim.isHuman) return;
             var h = (HeroId)HeroIndex;
-            // on the menu stages always, but not Tyra: her quiver's sparkles blinked on Home (Rickard 2026-11-16 "tyras pilar blinkar i
-            // huvudmenyn, bort med det"), and not Fenn: his ghost light and specks looked bad up close on Home (Rickard 2026-11-16 "bort
-            // med partiklar från fenn phantom från menyn som med tyra"); in a match both keep it
-            bool on = (readyCue || Preview && h != HeroId.Tyra && h != HeroId.Fenn) && !dead;
+            // only in a match: the menu stages show none (Rickard 2026-11-16, first Tyra and Fenn, then "ta bort alla sånna partikel
+            // punkter från alla hjältar i menyn")
+            bool on = readyCue && !Preview && !dead;
             if (on && !Preview && marker == UnitMarker.Enemy && CueBehind(h))
             {   // behind them: the enemy's cue shows only while its back is turned to the camera
                 Vector3 cf = ArtDriver.CamRot * Vector3.forward, f = transform.forward;
