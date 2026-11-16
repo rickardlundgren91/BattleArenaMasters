@@ -23,7 +23,7 @@ namespace BAM.Game
     ///
     /// The polish round of 2026-11-16 (Rickard 2026-11-15 "sätt en annan på item systemet och dett ui med mera"; the web build
     /// played in phone format first, findings in bam-work/items/polish/README.md), all of it display only:
-    ///  - the cards are solid (they were see-through over the lane) and a two line name no longer runs into the rarity word;
+    ///  - a two line name no longer runs into the rarity word (the cards were also made solid then, which did not last: see below);
     ///  - the title counts the choices ("1 OF 2"), so a new player sees that a second one comes;
     ///  - taking a card is an event: the card pops and flashes, the other two fall away, its icon flies down to its place beside
     ///    the SPECIAL and lands with a ring in its rarity's colour (it was: the cards vanished and a small icon was there);
@@ -35,12 +35,22 @@ namespace BAM.Game
     /// Not kept: the two item places as empty rings with their level ("LV 6", "LV 10") from the match's start. Rickard saw the
     /// picture and said no (2026-11-16, a card: "Nej, som förut"), so nothing about items shows by the SPECIAL before the first
     /// choice arrives.
+    ///
+    /// The cards are a dark glass and a fifth smaller since Rickard played with the solid ones (2026-11-16: "kan vi göra korten i
+    /// items valet lite genomskinliga eller alternativt mindre så man ser vad som händer"). The match goes on under the cards,
+    /// and solid they hid five tiles of the lane straight ahead of the player's hero. Both of his ways, each a little: the body
+    /// lets the lane, the heroes and the health bars show through (CardBody) with a dark edge round every word, and the cards are
+    /// 0.41 W tall (0.5 W) with a smaller icon and a lower title, so they end a tile higher above the hero.
     /// </summary>
     sealed partial class Hud
     {
-        // solid navy, as the menus' panels and the picture Rickard said yes to (bam-work/items/item-pick-mock.png). It was a 0.9
-        // "glass", which in this project's linear colour space let the lane, the names and the health bars show through the words
-        static readonly Color CardBody = new Color(0.047f, 0.063f, 0.165f, 1f), CardText = new Color(0.86f, 0.89f, 0.98f, 1f);
+        // the menus' navy as a dark glass. This project blends in linear light, where an alpha lets far more through than the
+        // number says: at 0.8 what is behind a card shows at about half its brightness, enough to follow a fight under the cards
+        // (Rickard 2026-11-16, see the summary). The first cards' 0.9 let a third through under small words with no edge, which
+        // the lane's names and health bars ran into; the solid ones after them hid the fight. Now every word on the glass has a
+        // dark edge (BuildItems). The title's pill stays solid: it is small and holds the one line that says what this is
+        static readonly Color CardBody = new Color(0.047f, 0.063f, 0.165f, 0.8f), TitleBody = new Color(0.047f, 0.063f, 0.165f, 1f);
+        static readonly Color CardText = new Color(0.86f, 0.89f, 0.98f, 1f);
         // the ITEM button: gold with dark letters (as the menus' gold badges), so it reads as something to collect among the dark controls
         static readonly Color ItemGold = Hex(0xf2b632), ItemGoldRim = Hex(0xffe9a8);
         // rarity colours for the card's edge, glow and rarity word (common, rare, epic, legendary)
@@ -139,7 +149,7 @@ namespace BAM.Game
             offerTitleRt = UiKit.NewRect("Title", offerRoot);
             offerTitleRt.anchorMin = offerTitleRt.anchorMax = offerTitleRt.pivot = new Vector2(0.5f, 0.5f);
             offerTitleLook = offerTitleRt.gameObject.AddComponent<CanvasGroup>(); offerTitleLook.blocksRaycasts = false;
-            var pill = UiKit.Fill(offerTitleRt, CardBody, UiKit.Rounded); pill.type = Image.Type.Sliced; pill.raycastTarget = false;
+            var pill = UiKit.Fill(offerTitleRt, TitleBody, UiKit.Rounded); pill.type = Image.Type.Sliced; pill.raycastTarget = false;
             var pillEdge = UiKit.Fill(offerTitleRt, UiKit.Trim, UiKit.Ring); pillEdge.type = Image.Type.Sliced; pillEdge.raycastTarget = false;
             offerTitle = UiKit.Label(offerTitleRt, "CHOOSE AN ITEM", 30, TextAnchor.MiddleCenter, UiKit.Gold);
             offerTitle.fontStyle = FontStyle.Bold; offerTitle.raycastTarget = false;
@@ -163,11 +173,13 @@ namespace BAM.Game
                 nm.fontStyle = FontStyle.Bold; nm.raycastTarget = false; nm.horizontalOverflow = HorizontalWrapMode.Wrap; nm.verticalOverflow = VerticalWrapMode.Truncate;
                 nm.resizeTextForBestFit = true; nm.lineSpacing = 0.9f;
                 UiKit.AddOutline(nm, 2); TopCentre(nm.rectTransform);
+                // the rarity word and the line are edged dark as the name is, so they read over whatever moves behind the glass
                 var rw = offerRarity[i] = UiKit.Label(card, "", 22, TextAnchor.MiddleCenter, Color.white);
-                rw.fontStyle = FontStyle.Bold; rw.raycastTarget = false; TopCentre(rw.rectTransform);
+                rw.fontStyle = FontStyle.Bold; rw.raycastTarget = false; UiKit.AddOutline(rw, 1.5f); TopCentre(rw.rectTransform);
                 var tx = offerText[i] = UiKit.Label(card, "", 26, TextAnchor.UpperCenter, CardText);
                 tx.raycastTarget = false; tx.horizontalOverflow = HorizontalWrapMode.Wrap; tx.verticalOverflow = VerticalWrapMode.Truncate;
-                tx.resizeTextForBestFit = true; tx.lineSpacing = 0.95f; tx.supportRichText = true; TopCentre(tx.rectTransform);
+                tx.resizeTextForBestFit = true; tx.lineSpacing = 0.95f; tx.supportRichText = true;
+                UiKit.AddOutline(tx, 1.5f); TopCentre(tx.rectTransform);
                 // the white flash over the card as it is taken (and a faint one while a finger rests on it)
                 var fl = offerFlash[i] = UiKit.Fill(card, Color.clear, UiKit.Rounded); fl.type = Image.Type.Sliced; fl.raycastTarget = false;
             }
@@ -423,11 +435,13 @@ namespace BAM.Game
             if (!show) { offerShownCount = -1; offerPressed = -1; return; }
             var p = m.Player;
             float W = SafeW, now = Time.unscaledTime;
-            // the cards: 0.29 W wide with 0.025 W between, 0.5 W tall, the title 0.42 W under the safe area's top (under the score, the
-            // team portraits, the kill feed and the menu and heart buttons), so they cover only the field's upper half and never a control
-            float cw = W * 0.29f, gap = W * 0.025f, ch = W * 0.5f, titleH = W * 0.075f;
-            float top = safe.rect.yMax - W * 0.42f, cardsY = top - titleH - W * 0.02f - ch / 2f, cx = safe.rect.center.x;
-            float pad = W * 0.018f, ir = W * 0.17f; // the card's top margin and its icon
+            // the cards: 0.29 W wide with 0.025 W between, 0.41 W tall, the title 0.42 W under the safe area's top (under the score, the
+            // team portraits, the kill feed and the menu and heart buttons), so they cover only the field's upper half and never a
+            // control. Until 2026-11-16 they were 0.5 W tall under a 0.075 W title and ended 0.105 W (a good tile) lower, close over
+            // the player's hero. The room came from the icon (it was 0.17 W) and the margins; the words kept nearly all their size
+            float cw = W * 0.29f, gap = W * 0.025f, ch = W * 0.41f, titleH = W * 0.064f;
+            float top = safe.rect.yMax - W * 0.42f, cardsY = top - titleH - W * 0.016f - ch / 2f, cx = safe.rect.center.x;
+            float pad = W * 0.013f, ir = W * 0.115f; // the card's top margin and its icon
             if (!PickFxOn)
             {   // what the cards say (not while a taken card plays out: the rules may already offer the next three)
                 int n = p.OfferCount;
@@ -457,27 +471,29 @@ namespace BAM.Game
             if (offerLaidW != W)
             {   // sizes follow the screen: laid out again only when it changes
                 offerLaidW = W;
-                offerTitleRt.sizeDelta = new Vector2(W * 0.5f, titleH);
-                offerTitle.fontSize = Mathf.RoundToInt(W * 0.042f);
-                int nameMax = Mathf.RoundToInt(W * 0.044f), textMax = Mathf.RoundToInt(W * 0.036f);
+                offerTitleRt.sizeDelta = new Vector2(W * 0.44f, titleH);
+                offerTitle.fontSize = Mathf.RoundToInt(W * 0.037f);
+                int nameMax = Mathf.RoundToInt(W * 0.04f), textMax = Mathf.RoundToInt(W * 0.034f);
                 for (int i = 0; i < ItemS.Choices; i++)
                 {
                     offerCard[i].sizeDelta = new Vector2(cw, ch);
-                    // the rarity's tint behind the icon: the card's top two fifths
-                    offerGlow[i].rectTransform.anchorMin = new Vector2(0f, 0.6f); offerGlow[i].rectTransform.anchorMax = Vector2.one;
+                    // the rarity's tint behind the icon: from the card's top to 0.008 W under the icon (a third of the card)
+                    offerGlow[i].rectTransform.anchorMin = new Vector2(0f, 1f - (pad + ir + W * 0.008f) / ch); offerGlow[i].rectTransform.anchorMax = Vector2.one;
                     offerGlow[i].rectTransform.offsetMin = new Vector2(W * 0.008f, 0f); offerGlow[i].rectTransform.offsetMax = new Vector2(-W * 0.008f, -W * 0.008f);
                     UiKit.Stretch(offerEdge[i].rectTransform);
                     offerIcon[i].rectTransform.sizeDelta = new Vector2(ir, ir); offerIcon[i].rectTransform.anchoredPosition = new Vector2(0f, -pad - ir / 2f);
-                    // the name: room for two full lines (0.1 W; it was 0.085 W, where "Crushing Spanner" ran into the rarity word),
-                    // 0.009 W under the icon so a two-line name stays clear of the tint's lower edge
-                    float y = -pad - ir - W * 0.009f, nh = W * 0.1f;
+                    // the name: room for two full lines at its size (0.086 W; with too little room "Crushing Spanner" ran into the
+                    // rarity word, 2026-11-15), 0.011 W under the icon so a two-line name stays clear of the tint's lower edge
+                    float y = -pad - ir - W * 0.011f, nh = W * 0.086f;
                     var nr = offerName[i].rectTransform; nr.sizeDelta = new Vector2(cw - W * 0.02f, nh); nr.anchoredPosition = new Vector2(0f, y - nh / 2f);
                     offerName[i].resizeTextMaxSize = nameMax; offerName[i].resizeTextMinSize = Mathf.RoundToInt(nameMax * 0.6f); offerName[i].fontSize = nameMax;
-                    y -= nh + W * 0.004f;
-                    var rr = offerRarity[i].rectTransform; rr.sizeDelta = new Vector2(cw, W * 0.03f); rr.anchoredPosition = new Vector2(0f, y - W * 0.015f);
-                    offerRarity[i].fontSize = Mathf.RoundToInt(W * 0.026f);
-                    y -= W * 0.036f;
-                    float th = ch + y - W * 0.015f; // what is left down to the card's bottom edge
+                    y -= nh + W * 0.002f;
+                    var rr = offerRarity[i].rectTransform; rr.sizeDelta = new Vector2(cw, W * 0.027f); rr.anchoredPosition = new Vector2(0f, y - W * 0.0135f);
+                    offerRarity[i].fontSize = Mathf.RoundToInt(W * 0.024f);
+                    y -= W * 0.031f;
+                    // what is left down to the card's bottom edge: 0.14 W, which holds the longest rule's four lines at about 0.031 W
+                    // (0.033 W on the taller card)
+                    float th = ch + y - W * 0.012f;
                     var tr = offerText[i].rectTransform; tr.sizeDelta = new Vector2(cw - W * 0.03f, th); tr.anchoredPosition = new Vector2(0f, y - th / 2f);
                     offerText[i].resizeTextMaxSize = textMax; offerText[i].resizeTextMinSize = Mathf.RoundToInt(textMax * 0.7f); offerText[i].fontSize = textMax;
                 }
@@ -581,7 +597,7 @@ namespace BAM.Game
             WholeCards();
         }
 
-        // the cards as they are before a pick: opaque, taking fingers, their icons in place
+        // the cards as they are before a pick: fully shown, taking fingers, their icons in place
         void WholeCards()
         {
             for (int i = 0; i < ItemS.Choices; i++)
