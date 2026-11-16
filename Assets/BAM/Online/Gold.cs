@@ -18,6 +18,14 @@ namespace BAM.Online
     {
         // keep equal to Cloud/Scripts/ReportMatch.js and BuySkin.js
         public const int FirstWin = 100, Goal = 50, LevelUp = 100, SkinPrice = 1500;
+        /// <summary>Levels 15, 20, 25 and 30 give MilestoneGold instead of LevelUp (Rickard 2026-11-16 on a card: "Ja, 500 guld på
+        /// milstolparna"), so the long road from level 10 to 30 has goals too.</summary>
+        public const int MilestoneGold = 500, MilestoneFrom = 15, MilestoneStep = 5;
+        public static bool IsMilestone(int level) => level >= MilestoneFrom && (level - MilestoneFrom) % MilestoneStep == 0;
+        /// <summary>The gold for reaching this level.</summary>
+        public static int ForLevel(int level) => level <= 1 ? 0 : IsMilestone(level) ? MilestoneGold : LevelUp;
+        /// <summary>The gold for every level from `from` (not counted) up to `to`.</summary>
+        public static int ForLevels(int from, int to) { int g = 0; for (int l = from + 1; l <= to; l++) g += ForLevel(l); return g; }
         /// <summary>The skin gold buys: the hero's first skin (HeroSkins 1). The others wait for real-money purchases.</summary>
         public const int GoldSkin = 1;
         /// <summary>Skins after the gold one show "COMING SOON" and cannot be worn until purchases exist.</summary>
@@ -50,7 +58,7 @@ namespace BAM.Online
         /// <summary>The gold one counted match gives, added to t (called by Progress.Apply after XP and level).</summary>
         internal static void Apply(Totals t, long day, bool won, int kills, string hero, bool firstWin, int levelBefore, int levelAfter)
         {
-            if (levelAfter > levelBefore) t.gold += LevelUp * (levelAfter - levelBefore);
+            if (levelAfter > levelBefore) t.gold += ForLevels(levelBefore, levelAfter);
             if (firstWin) t.gold += FirstWin;
             if (day > t.gDay) { t.gDay = day; t.gm = t.gw = t.gk = t.gh = t.gDone = 0; }
             if (day != t.gDay) return; // a late match from an earlier day: its goals are gone

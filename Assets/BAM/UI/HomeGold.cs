@@ -111,7 +111,7 @@ namespace BAM.UI
                 foreach (var g in goals)
                     Row((g.Done ? "✓  " : "    ") + g.Text + "   " + g.Have + "/" + g.Need + "   <color=#" + GoldHex + ">+50</color>", g.Done ? doneBack : dark);
             var left = TimeSpan.FromSeconds(86400 - DateTimeOffset.UtcNow.ToUnixTimeSeconds() % 86400);
-            Row("<color=#8a90b8>New goals in " + (int)left.TotalHours + "h " + left.Minutes + "m  ·  new level +100</color>", dark);
+            Row("<color=#8a90b8>New goals in " + (int)left.TotalHours + "h " + left.Minutes + "m  ·  level +100, 15/20/25/30 +500</color>", dark);
             homeGoalList.sizeDelta = new Vector2(w, y * (rowH + gap));
         }
 

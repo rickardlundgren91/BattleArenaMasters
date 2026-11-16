@@ -19,7 +19,7 @@ module.exports = async ({ params, context, logger }) => {
   const row = got.data.results.find(r => r.key === "bam-progress");
   if (!row || !row.value) return { ok: false, reason: "Not enough gold" };
   const t = row.value;
-  if (t.gold === undefined) t.gold = GOLD_LEVEL * (levelOf(t.xp || 0) - 1);   // an account from before gold
+  if (t.gold === undefined) { let g = 0; for (let l = 2; l <= levelOf(t.xp || 0); l++) g += l >= 15 && (l - 15) % 5 === 0 ? 500 : GOLD_LEVEL; t.gold = g; }   // an account from before gold (levels 15/20/25/30: 500)
   if (!Array.isArray(t.skins)) t.skins = [];
   if (t.skins.includes(hero)) return { ok: true, totals: t };
   if (t.gold < SKIN_PRICE) return { ok: false, reason: "Not enough gold", totals: t };

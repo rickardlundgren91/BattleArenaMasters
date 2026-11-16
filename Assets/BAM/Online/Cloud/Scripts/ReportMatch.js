@@ -71,7 +71,10 @@ async function sweepPvp(data, projectId, now) {
 const HEROES = ["Bram", "Fenn", "Tyra", "Moa", "Knut", "Tikta", "Blast", "Bonk", "Kugg", "Hilde", "Oaken", "Ragn", "Nassla", "Ravna"], LEVELS = ["Easy", "Normal", "Hard", "Ultra"];
 
 // keep equal to Gold.cs (and BuySkin.js)
-const GOLD_FIRST_WIN = 100, GOLD_GOAL = 50, GOLD_LEVEL = 100;
+const GOLD_FIRST_WIN = 100, GOLD_GOAL = 50, GOLD_LEVEL = 100, GOLD_MILESTONE = 500;
+// levels 15, 20, 25 and 30 give 500 instead of 100 (Rickard 2026-11-16, card "Ja, 500 guld på milstolparna")
+const goldForLevel = l => l <= 1 ? 0 : (l >= 15 && (l - 15) % 5 === 0 ? GOLD_MILESTONE : GOLD_LEVEL);
+function goldForLevels(from, to) { let g = 0; for (let l = from + 1; l <= to; l++) g += goldForLevel(l); return g; }
 const GOAL_TARGET = [3, 2, 10, 1], GOAL_HEROES = ["Tyra", "Kugg", "Bram", "Fenn", "Ragn", "Nassla"];
 /// The day's three goals (all four kinds but one: 0 play, 1 win, 2 kills, 3 a match with one hero) and that hero, from the day alone.
 function dayGoals(day) {
@@ -79,7 +82,7 @@ function dayGoals(day) {
   return { goals: [0, 1, 2, 3].filter(g => g !== skip), hero: GOAL_HEROES[Math.floor(h / 256) % GOAL_HEROES.length] };
 }
 function applyGold(t, day, won, kills, hero, firstWin, levelBefore, levelAfter) {
-  if (levelAfter > levelBefore) t.gold += GOLD_LEVEL * (levelAfter - levelBefore);
+  if (levelAfter > levelBefore) t.gold += goldForLevels(levelBefore, levelAfter);
   if (firstWin) t.gold += GOLD_FIRST_WIN;
   if (day > t.gDay) { t.gDay = day; t.gm = t.gw = t.gk = t.gh = t.gDone = 0; }
   if (day !== t.gDay) return;
@@ -114,7 +117,7 @@ module.exports = async ({ params, context, logger }) => {
   const now = Math.floor(Date.now() / 1000), today = Math.floor(now / 86400);
   let changed = false;
   if (old && old.rs !== SEASON) { t.rating = 0; t.rs = SEASON; t.pend = 0; seen.wait = []; changed = true; }
-  if (old && old.gold === undefined) { t.gold = GOLD_LEVEL * (levelOf(t.xp) - 1); changed = true; }   // levels from before gold
+  if (old && old.gold === undefined) { t.gold = goldForLevels(1, levelOf(t.xp)); changed = true; }   // levels from before gold
 
   // the other team's entry: its players may date the match a day either side of ours (midnight, clocks), so all three are read
   const otherSide = async (vs, team, day) => {
