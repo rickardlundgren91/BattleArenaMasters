@@ -24,6 +24,8 @@ namespace BAM.Art
         internal bool IsHero;
         /// <summary>HeroId of a hero view (also menu previews), else -1; set by ArtKit.Body.</summary>
         internal int HeroIndex = -1;
+        /// <summary>The look (HeroSkins) this body was built in; 0 = the plain body.</summary>
+        internal int Skin;
         /// <summary>Heroes in the match now, for the bushes (BushField). Kept by OnEnable/OnDisable, so pooled views drop out.</summary>
         internal static readonly List<BodyView> Heroes = new List<BodyView>(8);
         internal bool IsDead => dead;
@@ -1054,6 +1056,7 @@ namespace BAM.Art
             // there too; Kugg's fist stayed in his head on Home, Rickard 2026-11-11)
             if (imported && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
             if (imported && !dead && HeroIndex == (int)HeroId.Kugg) KuggGuard();
+            if (imported && !dead && HeroIndex == (int)HeroId.Kugg) KuggSmoke(dt);
             // Blast's remake (V2): his clips, made on his old body, throw the big new head back and round (Rickard 2026-11-14: "hans
             // huvud är vikt bakåt", still after a fixed 25-degree nod); the head is held on the chest as it sits in the bind pose,
             // mostly, after the Animator, in the menu and in a match
@@ -1684,6 +1687,26 @@ namespace BAM.Art
             up.rotation = Quaternion.FromToRotation(b - a, elbow - a) * up.rotation;
             Vector3 lp = lo.position;
             lo.rotation = Quaternion.FromToRotation(hand.position - lp, a + dir * d - lp) * lo.rotation;
+        }
+
+        // Rune smoke from Kugg's chimney (Rickard 2026-11-16 picked "Båda": the smoke and the back cog, Weapons.MakeV2): a ring
+        // rises from the chimney top now and then, faster while he shoots, on the menu stage and in a match, in the look's colour
+        // (plain turquoise, Molten lava orange, Jade green). The chimney top is measured on the round V3 body from his upper chest,
+        // in shares of his height: x to his right, y up, z forward.
+        static readonly Vector3 KuggChimney = new Vector3(-0.169f, 0.327f, -0.199f);
+        static readonly Color32[] KuggSmokeColor = { new Color32(60, 230, 210, 170), new Color32(255, 140, 40, 170), new Color32(70, 220, 130, 170) };
+        float kuggSmokeT;
+        void KuggSmoke(float dt)
+        {
+            if (!renderersOn || vis < 0.3f || anim == null || !anim.isHuman) return;
+            if ((kuggSmokeT -= dt) > 0f) return;
+            kuggSmokeT = (gearAtk > 0.1f ? 0.15f : 0.5f) * (ArtKit.High ? 1f : 1.6f);
+            Transform chest = anim.GetBoneTransform(HumanBodyBones.UpperChest);
+            if (chest == null) chest = anim.GetBoneTransform(HumanBodyBones.Chest);
+            if (chest == null) return;
+            Vector3 p = chest.position + anim.transform.rotation * KuggChimney * ShownHeight;
+            Color32 c = KuggSmokeColor[Mathf.Clamp(Skin, 0, KuggSmokeColor.Length - 1)];
+            Fx.Bubbles(p, 1, c, 0.22f, 0.25f, 1.2f, 0.8f, 0.03f);
         }
 
         void KuggAim()

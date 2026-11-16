@@ -208,6 +208,9 @@ namespace BAM.Art
         /// <summary>Degrees a wing beats up and down about the hero's forward axis at its root (0 = none): slow and small at rest,
         /// wider and faster on the move. Negative for a left wing, so both beat up together.</summary>
         public float Flap;
+        /// <summary>Degrees a second the part turns about the hero's forward axis through its origin (Kugg's back cog, Rickard
+        /// 2026-11-16); 0 = still. A turning part does not sway.</summary>
+        public float Spin;
     }
 
     /// <summary>
@@ -517,17 +520,17 @@ namespace BAM.Art
                 new WornDef { Model = "v2_bram_apronflap", Bone = Hips, From = LLeg, To = RLeg, Wide = 1.9f, At = new Vector3(0f, 0.04f, 0.06f), Flat = 0.7f, Sway = 8f, Front = true },
             };
 
-            // Kugg (no weapon until now: the cannon was his arm): the rune cannon as a sleeve over his right forearm, muzzle past the
-            // fist where his shot leaves (1.46 forearms from the elbow, BodyView.MuzzleAt); the rune-engine backpack and the short cape
-            // on his back. The cape is a stiff part, so it gets a small spring
+            // Kugg: since the cannon-arm bodies (2026-11-16, Rickard's pick "Ny kanonarm i Tripo") his right forearm and hand ARE the
+            // cannon, built into the body and its two skins, so the separate v2_kugg_cannon sleeve (buried inside the round V3's thick
+            // forearm) is gone, as are the backpack and cape (buried in the ball, 2026-11-15). The back cog (Rickard 2026-11-16 picked
+            // "Båda" on the card: rune smoke from the chimney, BodyView.KuggSmoke, and a glowing cog on his back, visible from behind
+            // like Ravna's mask): his Tripo cog, origin at its centre, on the middle of the ball's back, turning slowly; each skin
+            // has its own (SkinGear: v2s_kugg_<skin>_gear). Without the cog's prop nothing is put on him.
             g[(int)HeroId.Kugg] = new GearDef
             {
                 Worn = new[]
                 {
-                    new WornDef { Model = "v2_kugg_cannon", Bone = HumanBodyBones.RightLowerArm, From = HumanBodyBones.RightLowerArm, To = HumanBodyBones.RightHand, Along = true, Wide = 1.46f },
-                    // no backpack or cape since the round V3 body (2026-11-14): measured on it, both sat wholly inside the ball (its back
-                    // is 0.21 behind the shoulders, the pack reached 0.15, the cape 0.14), and the ball has its own chimney
-                    // (Rickard 2026-11-15: "majoriteten buggar" in the menus)
+                    new WornDef { Model = "v2_kugg_gear", Bone = Chest, From = LArm, To = RArm, Height = 0.4f, At = new Vector3(0f, -0.175f, -0.265f), Spin = 20f },
                 },
             };
 
@@ -1030,6 +1033,12 @@ namespace BAM.Art
                     // up and down about the root, the beat's low point at the rest pose's line: a wider beat on the move
                     float beat = dead ? 0f : w.Flap * Mathf.Lerp(0.45f, 1f, mv) * (0.5f + 0.5f * Mathf.Sin(flapPhase));
                     t.localRotation = wornRest[i] * Quaternion.AngleAxis(beat, flapAx[i]);
+                    continue;
+                }
+                if (w.Spin != 0f)
+                {   // about the hero's forward, in the part's own frame at rest
+                    Vector3 ax = Quaternion.Inverse(wornRest[i]) * (wornB[i].RootL * Vector3.forward);
+                    t.localRotation = wornRest[i] * Quaternion.AngleAxis(dead ? 0f : swayClock * w.Spin, ax);
                     continue;
                 }
                 float max = worn[i].Sway;

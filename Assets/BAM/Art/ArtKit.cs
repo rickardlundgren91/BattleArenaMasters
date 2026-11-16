@@ -398,6 +398,7 @@ namespace BAM.Art
                 if (!preview && kindKey >= 10 && kindKey < 20) v.MinionLook(team); // CreateMinion's keys; kept with the view in its pool
             }
             v.InPool = false;
+            v.Skin = Mathf.Clamp(skin, 0, 7); // the look it was built in (Kugg's chimney smoke takes its colour)
             v.IsHero = !preview && kindKey >= HeroKey && kindKey < PreviewKey;
             v.HeroIndex = kindKey >= HeroKey && kindKey < PreviewKey ? kindKey - HeroKey : kindKey >= PreviewKey && kindKey < PreviewKey + 100 ? kindKey - PreviewKey : -1;
             v.gameObject.SetActive(true);
