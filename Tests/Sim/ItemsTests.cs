@@ -2,7 +2,7 @@ using System;
 
 namespace BAM.Sim
 {
-    // The six match items (Items.cs; Rickard 2026-11-11): offers at levels 6 and 12, the picks, and each item's rule.
+    // The six match items (Items.cs; Rickard 2026-11-11): offers at the two offer levels (ItemS.OfferLevels), the picks, and each item's rule.
     public sealed partial class Match
     {
         static Match ItemMatch(int seed)
@@ -38,12 +38,14 @@ namespace BAM.Sim
             Check(p.ItemCount == 1 && p.Items[0].Id == want && p.OfferCount == 0, "ItemPick 2 takes the second item");
             m.Step(in pick);
             Check(p.ItemCount == 1, "a pick with no offer does nothing");
-            m.Time = Rules.SecondsPerLevel * 11; m.Step(in none); // straight to level 12
-            Check(p.OfferCount == 3 && !p.HasItem(p.Offer[0]) && !p.HasItem(p.Offer[1]) && !p.HasItem(p.Offer[2]), "level 12: a new offer without the item already held");
+            m.Time = Rules.SecondsPerLevel * (ItemS.OfferLevels[1] - 1) - 1f; m.Step(in none); // a second before the second offer level
+            Check(p.OfferCount == 0 && m.Level == ItemS.OfferLevels[1] - 1, $"no offer before the second offer level (level {m.Level}, offers {p.OfferCount})");
+            m.Time = Rules.SecondsPerLevel * (ItemS.OfferLevels[1] - 1); m.Step(in none); // straight to the second offer level
+            Check(m.Level == ItemS.OfferLevels[1] && p.OfferCount == 3 && !p.HasItem(p.Offer[0]) && !p.HasItem(p.Offer[1]) && !p.HasItem(p.Offer[2]), $"level {ItemS.OfferLevels[1]}: a new offer without the item already held");
             for (int k = 0; k < 60 * 5; k++) { p.Hp = p.MaxHp; m.Step(in none); }
             botsWith = 0; for (int i = 0; i < m.Heroes.Count; i++) if (m.Heroes[i] != p && m.Heroes[i].ItemCount == 2 && m.Heroes[i].Items[0].Id != m.Heroes[i].Items[1].Id) botsWith++;
-            Check(botsWith == 5, $"every bot holds two different items after level 12 ({botsWith}/5)");
-            // a queued offer: a hero that never picked at 6 gets the level-12 offer after its first pick
+            Check(botsWith == 5, $"every bot holds two different items after the second offer ({botsWith}/5)");
+            // a queued offer: a hero that never picked at 6 gets the second offer after its first pick
             var q = ItemMatch(22); var qp = q.Player;
             q.Time = Rules.SecondsPerLevel * 11; q.Step(in none); // from level 1 straight to 12: both offers
             Check(qp.OfferCount == 3 && qp.OfferQueued == 1, "an unpicked offer queues the next");

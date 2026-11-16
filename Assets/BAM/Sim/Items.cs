@@ -23,8 +23,11 @@ namespace BAM.Sim
     /// <summary>Every item number, in one place (the old game's item data, Speltest SimItemsV2.AddItemsV2).</summary>
     public static class ItemS
     {
-        /// <summary>A choice of three at these match levels (Rickard 2026-11-11: "välja av tre items lvl 6 och lvl 12").</summary>
-        public static readonly int[] OfferLevels = { 6, 12 };
+        /// <summary>A choice of three at these match levels (Rickard 2026-11-11: "välja av tre items lvl 6 och lvl 12"). The second
+        /// one moved from 12 (2:56) to 10 (2:24) on Rickard's choice of 2026-11-16 (a card: "Level 10 (2:24)"): at 12 it came so
+        /// late that against Easy bots it was held under 30 s in two matches of five and never came in almost one of five; at 10
+        /// the win rates and the match length are the same (12 000 bot matches, bam-work/items/polish/README.md).</summary>
+        public static readonly int[] OfferLevels = { 6, 10 };
         public const int Choices = 3;
         /// <summary>A bot takes its pick 1-4 s after the offer (the old game's timer).</summary>
         public const float BotPickMin = 1, BotPickMax = 4;

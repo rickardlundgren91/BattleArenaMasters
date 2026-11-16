@@ -54,7 +54,7 @@ namespace BAM.Sim
             HtOffers();
         }
 
-        // the player's item choices for the level set with Lv (one from 6, a second queued behind it from 12), as a match that had
+        // the player's item choices for the level set with Lv (one from 6, a second queued behind it from 10: ItemS.OfferLevels), as a match that had
         // climbed to that level would have given them; the level never changes here, so ItemLevelUp never runs
         void HtOffers()
         {

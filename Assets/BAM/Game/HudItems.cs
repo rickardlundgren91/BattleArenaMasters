@@ -31,13 +31,13 @@ namespace BAM.Game
     ///    tap fell through to the field);
     ///  - the ITEM button is gold and swells a ring when a choice arrives; the tutorial's gold arrow bounces over it until the
     ///    player has used it twice;
-    ///  - the two places show from the match's start as empty rings with the level that fills them ("LV 6", "LV 12"), so the
+    ///  - the two places show from the match's start as empty rings with the level that fills them ("LV 6", "LV 10"), so the
     ///    player sees that items come and when (ItemSlotsFromStart: one switch, Rickard's yes or no is asked for).
     /// The score sheet lists every hero's items (HudScore.cs).
     /// </summary>
     sealed partial class Hud
     {
-        /// <summary>The two item places show from the match's start as empty rings with their level ("LV 6", "LV 12"), and the
+        /// <summary>The two item places show from the match's start as empty rings with their level ("LV 6", "LV 10"), and the
         /// ITEM button sits on the place it fills. Off: nothing shows before the first choice (as it was before 2026-11-16).
         /// On for now so Rickard sees it in the game; his yes or no is asked for on a card in the item polish thread.</summary>
         internal static readonly bool ItemSlotsFromStart = true;

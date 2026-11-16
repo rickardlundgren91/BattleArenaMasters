@@ -369,7 +369,7 @@ namespace BAM.Sim
                 Level = lvl;
                 for (int i = 0; i < Units.Count; i++) if (Units[i].Kind == UnitKind.Hero) Units[i].SetLevel(lvl);
                 Emit(EventType.LevelUp, null, null, lvl);
-                if (lvl > oldLvl) ItemLevelUp(oldLvl, lvl); // a choice of three items at levels 6 and 12 (Items.cs)
+                if (lvl > oldLvl) ItemLevelUp(oldLvl, lvl); // a choice of three items at the offer levels (ItemS.OfferLevels, Items.cs)
             }
             BotItemPicks();
             if (Tut == null && !Config.HeroTest) WaveT -= dt;

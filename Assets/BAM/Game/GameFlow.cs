@@ -576,7 +576,7 @@ namespace BAM.Game
             BamAnalytics.MatchEnded(setup, Result(quit && !over));
         }
 
-        // The analytics' itemPicked: each item the player takes (level 6 and 12), once, with how long its choice of three stood
+        // The analytics' itemPicked: each item the player takes (at ItemS.OfferLevels), once, with how long its choice of three stood
         // in match seconds (a pause does not count), so the reports show which items are taken and how long the cards cover the
         // lane (full review 2026-11-13 nr 110, 123). Only counts up: a correction of the predicted online match cannot send one twice.
         int itemsLogged;
