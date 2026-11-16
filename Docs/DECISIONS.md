@@ -5,7 +5,7 @@ before going beyond it.
 
 ## Game
 - 3v3 against bots (offline). Since 0.2 (2026-10-27) also online (Google Play Games sign-in, Unity Lobby + Relay, lockstep): PLAY WITH FRIENDS by invite, online-now list, ONLINE MATCH queue (group 1-3 vs 1-3, bots fill), friends and blocking. One map: BAM_OriginalArena_v1_2 (15 x 35 tiles, mirrored, one tower per team, middle rocks).
-- Heroes: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk (playable); Hilde and Oaken coming (`HeroCatalog.Coming`). Unlock by level: Bram/Fenn/Tyra at start, Moa 2, Knut 4, Tikta 6, Blast 8, Bonk 10, heroes 9/10 at 12/14.
+- Heroes: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk (playable); Hilde and Oaken coming (`HeroCatalog.Coming`). Unlock by level: Tyra/Knut/Fenn at start (Knut swapped with Bram 2026-11-16), Moa 2, Bram 4, Tikta 6, Blast 8, Bonk 10, heroes 9/10 at 12/14.
 - Special: tap = automatic target, drag = aim. All passives in.
 - Auto attacks: D1 (random valid target among all reachable visible enemies), line of sight (no shots over walls).
 - Minions, towers, match rules and grass as in the old game. No buff/core spots, no items.

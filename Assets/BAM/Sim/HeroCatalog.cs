@@ -150,14 +150,12 @@ namespace BAM.Sim
                 SpecialName = "Anchor", SpecialDesc = "Tap: drives his heel spikes into the ground and becomes a cannon. He cannot walk, but his reach grows to 8 tiles and he fires faster. Each hit loads a shot, up to 6, and he can anchor once 2 are loaded: he fires them all (or 10 s pass), then pulls the spikes up again.",
                 PassiveName = "Spark Shot", PassiveDesc = "Every 7.5 to 15 s his cannon fires by itself at a random enemy within 8 tiles for 35% of his attack.",
                 Difficulty = 3 },
-            // Hammer Line + Focus = ABC2's Silver (Rickard 2026-11-11, card "Silver (Marksman)"); the anvil texts stay for BramS.Silver = false
-            new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
-                SpecialName = BramS.Silver ? "Hammer Line" : "Hammer Throw", SpecialDesc = BramS.Silver ? "Charges his hammer for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes. Walls stop it; a stun while he charges cuts it."
-                    : "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
-                OneTapName = BramS.Silver ? "Hammer Line" : "Anvil Drop", OneTapDesc = BramS.Silver ? "Tap: aims at a random enemy in reach, charges for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes."
-                    : "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
-                PassiveName = BramS.Silver ? "Focus" : "Backlash", PassiveDesc = BramS.Silver ? "Each attack in a row on the same target hits 10% harder, up to 80%. A new target starts again."
-                    : "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
+            // Knut, the tank, open from the start in Bram's place so the first heroes cover every play style (Rickard 2026-11-16, card
+            // "Ja, byt Bram och Knut": three marksmen and no tank before); Bram opens at level 4 instead
+            new HeroInfo { Id = HeroId.Knut, Name = "Knut", Title = "The Anchor", Role = "Tank", Ranged = false,
+                SpecialName = "Anchor Throw", SpecialDesc = "Tap: slams his anchor into the ground, hurting and slowing every enemy around him. Drag: throws the anchor where you aim; it flies past minions and pulls the first enemy hero it hits to him and stuns it.",
+                OneTapDesc = "Tap: throws his anchor at a random enemy in reach, minions too. It flies past minions, pulls the first enemy hero it hits to him and stuns it.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
+                PassiveName = "Anchor Drag", PassiveDesc = "His attacks slow the target.",
                 Difficulty = 2 },
             new HeroInfo { Id = HeroId.Fenn, Name = "Fenn", Title = FennS.Veil ? "The Spectral Knight" : "Pack Runner", Role = FennS.Veil ? "Assassin" : "Fighter", Ranged = false,
                 // Spectral Veil = ABC2's Omega (Ignus Fatuus), Rickard 2026-11-11; a spectral knight assassin ("fenn spectral knight,
@@ -198,10 +196,14 @@ namespace BAM.Sim
                 OneTapDesc = "Tap: a honey field on a random ally hero near her, or on herself when no ally is close. Each ally hero in it gets a shield and runs faster for a moment; the shield blocks stuns and slows.",
                 PassiveName = "Queen's Instinct", PassiveDesc = "When an enemy would drop an ally near her below 25% health, she shields that ally. Every 22 s.",
                 Difficulty = 1 },
-            new HeroInfo { Id = HeroId.Knut, Name = "Knut", Title = "The Anchor", Role = "Tank", Ranged = false,
-                SpecialName = "Anchor Throw", SpecialDesc = "Tap: slams his anchor into the ground, hurting and slowing every enemy around him. Drag: throws the anchor where you aim; it flies past minions and pulls the first enemy hero it hits to him and stuns it.",
-                OneTapDesc = "Tap: throws his anchor at a random enemy in reach, minions too. It flies past minions, pulls the first enemy hero it hits to him and stuns it.", // any enemy in reach since 2026-11-03 (OneTap.TryTapSpecial, no hero first; bug review round 3)
-                PassiveName = "Anchor Drag", PassiveDesc = "His attacks slow the target.",
+            // Hammer Line + Focus = ABC2's Silver (Rickard 2026-11-11, card "Silver (Marksman)"); the anvil texts stay for BramS.Silver = false
+            new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
+                SpecialName = BramS.Silver ? "Hammer Line" : "Hammer Throw", SpecialDesc = BramS.Silver ? "Charges his hammer for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes. Walls stop it; a stun while he charges cuts it."
+                    : "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
+                OneTapName = BramS.Silver ? "Hammer Line" : "Anvil Drop", OneTapDesc = BramS.Silver ? "Tap: aims at a random enemy in reach, charges for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes."
+                    : "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
+                PassiveName = BramS.Silver ? "Focus" : "Backlash", PassiveDesc = BramS.Silver ? "Each attack in a row on the same target hits 10% harder, up to 80%. A new target starts again."
+                    : "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",
                 Difficulty = 2 },
             new HeroInfo { Id = HeroId.Tikta, Name = "Tikta", Title = "The Needle Wing", Role = "Assassin", Ranged = false,
                 SpecialName = "Needle Storm", SpecialDesc = "Fires four poison needles at random nearby enemies, minions too. Drag to fire them all in one straight line.",
