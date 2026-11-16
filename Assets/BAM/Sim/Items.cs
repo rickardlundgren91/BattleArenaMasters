@@ -31,6 +31,15 @@ namespace BAM.Sim
         public const int Choices = 3;
         /// <summary>A bot takes its pick 1-4 s after the offer (the old game's timer).</summary>
         public const float BotPickMin = 1, BotPickMax = 4;
+        /// <summary>A card's worth to a bot: how often the holder's team won in 12 000 bot matches where every bot picked at random
+        /// (bot lab 2026-11-16, Normal/Gold/Hard on both maps, ±0.6-1.9). Real players' picks in 0.4.1 agree at both ends: they took
+        /// Parascythe and Rally Beacon nearly every time and Crushing Spanner and Steadfast Charm one time in ten. Hard and Ultra bots
+        /// take the card worth most (BotTables.BestCard): that team won 55.9 % against random pickers (4000 Hard matches).</summary>
+        public static float BotWorth(ItemId id) => id switch
+        {
+            ItemId.Lifesteal => 54.1f, ItemId.Rally => 52.8f, ItemId.HeroDmg => 51.2f, ItemId.Thread => 51.0f, ItemId.Boots => 50.6f,
+            ItemId.MinionDmg => 49.9f, ItemId.Mark => 49.5f, ItemId.Fang => 49.4f, ItemId.Charm => 49.2f, ItemId.TowerDmg => 49.1f, _ => 50f,
+        };
         /// <summary>The odds per rarity (common, rare, epic, legendary), from the old game's itemData.rarityOdds.</summary>
         public static readonly float[] RarityOdds = { 55, 25, 15, 5 };
 
@@ -191,8 +200,8 @@ namespace BAM.Sim
             if (h.OfferQueued > 0) { h.OfferQueued--; RollOffer(h); }
         }
 
-        /// <summary>Bots (and a seat a bot took over) pick at random 1-4 s after the offer, as in the old game (Items V2 have no
-        /// rising worth by rarity). Runs for dead heroes too, so a bot that died meanwhile still gets its item.</summary>
+        /// <summary>Bots (and a seat a bot took over) pick 1-4 s after the offer, as in the old game: Easy and Normal at random, Hard and
+        /// Ultra the card worth most to bots (BotCard). Runs for dead heroes too, so a bot that died meanwhile still gets its item.</summary>
         void BotItemPicks()
         {
             if (!ItemsOn) return;
@@ -201,8 +210,17 @@ namespace BAM.Sim
                 var h = Heroes[i];
                 if (h.OfferCount == 0 || h.Bot == null) continue;
                 if (float.IsNaN(h.BotPickAt)) { h.BotPickAt = Time + Rng.Range(ItemS.BotPickMin, ItemS.BotPickMax); continue; }
-                if (Time >= h.BotPickAt) PickItem(h, Rng.Int(h.OfferCount));
+                if (Time >= h.BotPickAt) PickItem(h, BotCard(h));
             }
+        }
+
+        /// <summary>The card a bot takes: at random (a beginner's pick), or from Hard up the one worth most to bots (ItemS.BotWorth).</summary>
+        int BotCard(Unit h)
+        {
+            if (!BotTables.BestCard[BotTables.Index(h.Bot.Tier)]) return Rng.Int(h.OfferCount);
+            int b = 0;
+            for (int i = 1; i < h.OfferCount; i++) if (ItemS.BotWorth(h.Offer[i]) > ItemS.BotWorth(h.Offer[b])) b = i;
+            return b;
         }
 
         // ---------- every tick, per living hero ----------

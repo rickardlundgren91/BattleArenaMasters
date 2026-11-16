@@ -65,6 +65,9 @@ namespace BAM.Sim
         internal static readonly float[] HuntR = { 7, 8, 9, 10, 10 };
         internal static readonly float[] HuntAhead = { 0, 2, 2.5f, 3, 3 };
         internal static readonly float[] HuntEdge = { 0, 1.6f, 1.45f, 1.3f, 1.3f };
+        // item cards (Items.cs BotCard; real players' 0.4.1 picks and 12 000 bot matches, 2026-11-16): the levels that take the card worth
+        // most to bots (ItemS.BotWorth) instead of a random one. Easy and Normal pick at random, like a beginner.
+        internal static readonly bool[] BestCard = { false, false, true, true, true };
         // team play with the human (old SimTeamplay.cs)
         internal const float TeamJoinR = 12, TeamFightT = 2, TeamReach = 6, TeamStayHp = 0.5f, TeamJoinHp = 0.45f, TeamLowHp = 0.3f,
             TeamFollowR = 5, TeamFollowStop = 2.5f, TeamIntentR = 8, TeamIntentKeep = 1.5f, TeamLeash = 10, TeamBackR = 8,

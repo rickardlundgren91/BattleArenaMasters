@@ -45,6 +45,11 @@ namespace BAM.Sim
             for (int k = 0; k < 60 * 5; k++) { p.Hp = p.MaxHp; m.Step(in none); }
             botsWith = 0; for (int i = 0; i < m.Heroes.Count; i++) if (m.Heroes[i] != p && m.Heroes[i].ItemCount == 2 && m.Heroes[i].Items[0].Id != m.Heroes[i].Items[1].Id) botsWith++;
             Check(botsWith == 5, $"every bot holds two different items after the second offer ({botsWith}/5)");
+            // Hard and Ultra bots take the card worth most to bots (ItemS.BotWorth, 2026-11-16); Easy and Normal pick at random
+            var hb = ItemMatch(23); var hbot = hb.HeroOf(1);
+            hbot.Offer[0] = ItemId.TowerDmg; hbot.Offer[1] = ItemId.Lifesteal; hbot.Offer[2] = ItemId.Charm; hbot.OfferCount = 3; hbot.BotPickAt = float.NaN;
+            for (int k = 0; k < 60 * 5; k++) hb.Step(in none);
+            Check(hbot.ItemCount == 1 && hbot.Items[0].Id == ItemId.Lifesteal, $"a Hard bot takes Parascythe over Crushing Spanner and Steadfast Charm ({(hbot.ItemCount > 0 ? hbot.Items[0].Id : ItemId.None)})");
             // a queued offer: a hero that never picked at 6 gets the second offer after its first pick
             var q = ItemMatch(22); var qp = q.Player;
             q.Time = Rules.SecondsPerLevel * 11; q.Step(in none); // from level 1 straight to 12: both offers
