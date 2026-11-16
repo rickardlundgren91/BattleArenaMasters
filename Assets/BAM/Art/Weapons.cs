@@ -522,6 +522,10 @@ namespace BAM.Art
             {
                 new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = BonkPeltWide, At = BonkPeltAt, Flat = 0.8f, Sway = 8f },
                 new WornDef { Model = "v2_bonk_necklace", Bone = Chest, From = LArm, To = RArm, Wide = 1.0f, At = new Vector3(0f, 0f, 0.04f), Turn = new Vector3(25f, 0f, 0f) },
+                // a sabre-tooth skull on the pelt between his shoulder blades, staring back, so he is known from behind and from the
+                // match camera (Rickard's card 2026-11-16, "C: Ny Tripo-skalle på ryggen", after Ravna's mask seen from behind); made
+                // facing +z, so turned round; rigid, like the necklace. His skins have their own looks and go without it (SkinGear)
+                new WornDef { Model = "v2_bonk_skull", Bone = Chest, From = LArm, To = RArm, Height = 0.24f, At = new Vector3(0f, -0.2f, -0.15f), Yaw = 180f },
             };
 
             // Bram: the new throwing hammer (still on his shoulder at rest); the rack of three spare hammers on his back (made facing
