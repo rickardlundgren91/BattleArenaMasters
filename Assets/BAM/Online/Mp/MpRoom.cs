@@ -524,7 +524,22 @@ namespace BAM.Online.Mp
             }
             if (!p) hostHeardT = framesHeardT = Time.realtimeSinceStartup; // this phone slept itself: the host's silence was ours
             relay?.Pause(p);
+            // Rickard 2026-11-16 (phone): "man kommer direkt in i 3v3" with bots when he opened the game. The ONLINE MATCH queue
+            // went on counting while the app was in the background, so on the way back its 12 s (BotFillAfter) were long gone and
+            // OnlineSearch started a bot match at once. Back after more than a moment: the search is called off, and Home stays.
+            if (p) { pausedAt = Time.realtimeSinceStartup; return; }
+            float away = pausedAt < 0 ? 0 : Time.realtimeSinceStartup - pausedAt;
+            pausedAt = -1;
+            if (away > AwayCancels && Quick && State != Phase.Match && !QuickJoining && otherParty == null)
+            {
+                Debug.Log("[BAM.Online] queue: the app was away " + Mathf.RoundToInt(away) + " s, search called off");
+                CancelSearch();
+            }
         }
+
+        static float pausedAt = -1;
+        // a glance at a notification keeps the search; longer away calls it off
+        const float AwayCancels = 3f;
 
         /// <summary>For the HUD: who the host is still waiting for.</summary>
         internal static string Waiting()
