@@ -454,6 +454,11 @@ namespace BAM.Art
             f.Weapons[0].Socket = Vector3.zero;
             f.Weapons[0].NoFingerThumb = Vector3.zero;
             f.Shield.Model = "v2_fenn_shield";
+            // menu screenshots 2026-11-16: his old tuned grip 0.2 sat on the V2 swords' crossguards (handle 0..0.2, 0.28 on the skins),
+            // so the fist held the guard with the whole handle below it; 0.12 is mid-handle on all three. The round V2 shield at the old
+            // 0.5 of his height hid him from helmet to thighs on Home; 0.4 shows his chest and face
+            f.Weapons[0].Grip = 0.12f;
+            f.Shield.Dia = 0.4f;
             f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.42f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f } };
 
             // Tyra: her new longbow in the left fist (turned a quarter in the conversion so its belly faces as the old bow's did), the
