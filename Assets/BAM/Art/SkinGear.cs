@@ -68,7 +68,10 @@ namespace BAM.Art
                     if (m != null) { g.Weapons[i].Model = m; used.Add(m); }
                 }
             }
-            if (plain.Shield != null)
+            // Fenn's Phantom look is a hooded duelist with no shield (Rickard 2026-11-16: "ha phantom som skin på fenn"): he drops the
+            // knight's shield instead of keeping the plain one
+            if (plain.Shield != null && hero == HeroId.Fenn && skin == "Phantom") g.Shield = null;
+            else if (plain.Shield != null)
             {
                 g.Shield = Clone(plain.Shield);
                 string m = SkinModel(hero, skin, g.Shield.Model);
