@@ -1057,6 +1057,7 @@ namespace BAM.Art
             if (imported && !dead && HeroIndex == (int)HeroId.Nassla) ArmsOut(NasslaArmOut);
             if (imported && !dead && HeroIndex == (int)HeroId.Kugg) KuggGuard();
             if (imported && !dead && HeroIndex == (int)HeroId.Kugg) KuggSmoke(dt);
+            if (imported) ReadyCueTick(dt); // the special-ready cue on the hero (ReadyCue.cs)
             // Blast's remake (V2): his clips, made on his old body, throw the big new head back and round (Rickard 2026-11-14: "hans
             // huvud är vikt bakåt", still after a fixed 25-degree nod); the head is held on the chest as it sits in the bind pose,
             // mostly, after the Animator, in the menu and in a match
@@ -1700,7 +1701,7 @@ namespace BAM.Art
         {
             if (!renderersOn || vis < 0.3f || anim == null || !anim.isHuman) return;
             if ((kuggSmokeT -= dt) > 0f) return;
-            kuggSmokeT = (gearAtk > 0.1f ? 0.15f : 0.5f) * (ArtKit.High ? 1f : 1.6f);
+            kuggSmokeT = (gearAtk > 0.1f ? 0.15f : 0.5f) * (ArtKit.High ? 1f : 1.6f) * (1f - 0.5f * cueW); // twice as often with the special ready (ReadyCue.cs)
             Transform chest = anim.GetBoneTransform(HumanBodyBones.UpperChest);
             if (chest == null) chest = anim.GetBoneTransform(HumanBodyBones.Chest);
             if (chest == null) return;

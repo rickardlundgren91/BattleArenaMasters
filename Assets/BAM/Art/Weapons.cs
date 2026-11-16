@@ -799,7 +799,12 @@ namespace BAM.Art
         const float DeathLetGo = 0.25f;
         float figH;
         // worn parts (GearDef.Worn): their transforms, rest turns and swing springs
-        WornDef[] worn; Transform[] wornT; Quaternion[] wornRest; Vector3[] swayAx, flapAx; float[] swayA, swayV; float swayClock, flapPhase;
+        WornDef[] worn; Transform[] wornT; Quaternion[] wornRest; Vector3[] swayAx, flapAx; float[] swayA, swayV; float swayClock, flapPhase, spinClock;
+        // the special-ready cue (BodyView ReadyCue.cs, Rickard 2026-11-16): wings beat faster and wider, a back cog turns faster and
+        // the glowing parts (Tikta's wings) shine brighter while it is 1; eased by the view, 0 = as before
+        internal float ReadyBoost;
+        readonly List<Material> wornGlow = new List<Material>();
+        float glowShown = -1f;
         // thrown: when the weapon leaves the hand, how long it stays away, and whether a weapon that is not Thrown goes too (Throw)
         float hideIn = -1f, backIn = -1f, awayFor = AwayFor;
         bool hideHeld;
@@ -932,7 +937,7 @@ namespace BAM.Art
                 if (mesh == null || bone == null) continue;
                 var go = new GameObject("Worn " + w.Model);
                 Renderer wr = MakeRenderer(go, mesh, w.Model, rends, op, fd, w.Glow);
-                if (w.Glow) wr.receiveShadows = false;
+                if (w.Glow) { wr.receiveShadows = false; wornGlow.Add(wr.sharedMaterial); }
                 Transform t = go.transform;
                 t.SetParent(bone, false);
                 Transform fa = w.From != HumanBodyBones.LastBone ? an.GetBoneTransform(w.From) : null;
@@ -1053,7 +1058,15 @@ namespace BAM.Art
             if (wornT == null || dt <= 0f) return;
             swayClock += dt;
             float mv = dead ? 0f : Mathf.Clamp01(moveW);
-            flapPhase += dt * 2f * Mathf.PI * Mathf.Lerp(0.9f, 3.2f, mv); // wing beats a second: a slow fan at rest, quick on the move
+            float rb = dead ? 0f : Mathf.Clamp01(ReadyBoost);
+            flapPhase += dt * 2f * Mathf.PI * Mathf.Lerp(0.9f, 3.2f, mv) * (1f + 0.9f * rb); // wing beats a second: a slow fan at rest, quick on the move; quicker with the special ready
+            spinClock += dt * (1f + 3f * rb); // a back cog turns four times as fast with the special ready
+            if (Mathf.Abs(rb - glowShown) > 0.01f)
+            {   // glowing parts: a little see-through at rest, full and over-bright with the special ready
+                glowShown = rb;
+                float k = 1f + 0.6f * rb;
+                foreach (Material m in wornGlow) if (m != null) m.SetColor(ArtMaterials.BaseColor, new Color(k, k, k, Mathf.Lerp(GlowAlpha, 1f, rb)));
+            }
             for (int i = 0; i < wornT.Length; i++)
             {
                 Transform t = wornT[i];
@@ -1063,14 +1076,14 @@ namespace BAM.Art
                 if (w.Flap != 0f)
                 {
                     // up and down about the root, the beat's low point at the rest pose's line: a wider beat on the move
-                    float beat = dead ? 0f : w.Flap * Mathf.Lerp(0.45f, 1f, mv) * (0.5f + 0.5f * Mathf.Sin(flapPhase));
+                    float beat = dead ? 0f : w.Flap * Mathf.Lerp(0.45f, 1f, mv) * (1f + 0.4f * rb) * (0.5f + 0.5f * Mathf.Sin(flapPhase));
                     t.localRotation = wornRest[i] * Quaternion.AngleAxis(beat, flapAx[i]);
                     continue;
                 }
                 if (w.Spin != 0f)
                 {   // about the hero's forward, in the part's own frame at rest
                     Vector3 ax = Quaternion.Inverse(wornRest[i]) * (wornB[i].RootL * Vector3.forward);
-                    t.localRotation = wornRest[i] * Quaternion.AngleAxis(dead ? 0f : swayClock * w.Spin, ax);
+                    t.localRotation = wornRest[i] * Quaternion.AngleAxis(dead ? 0f : spinClock * w.Spin, ax);
                     // about its middle: a Props mesh's origin is its bottom (SkinParts), so the middle is kept where it sits at rest
                     Vector3 mid = Vector3.Scale(t.localScale, new Vector3(0f, wornB[i].MeshY * 0.5f, 0f));
                     t.localPosition = wornB[i].Pos + wornRest[i] * mid - t.localRotation * mid;
@@ -1698,6 +1711,30 @@ namespace BAM.Art
 
         internal int WeaponCount => wT.Length;
         internal Transform WeaponT(int i) => wT[i];
+        /// <summary>The worn part whose prop name ends in "_" + slot (v2_bonk_skull, v2s_tyra_sunhawk_quiver: "skull", "quiver"),
+        /// -1 without one (a skin that goes without it, or a part skinned to the body).</summary>
+        internal int FindWorn(string slot)
+        {
+            if (worn == null) return -1;
+            string end = "_" + slot;
+            for (int i = 0; i < worn.Length; i++)
+                if (wornT[i] != null && worn[i].Model != null && worn[i].Model.EndsWith(end, System.StringComparison.OrdinalIgnoreCase)) return i;
+            return -1;
+        }
+        /// <summary>A point on worn part i now (world space): frac is a share of its mesh's half size from the mesh's middle, in the
+        /// mesh's own axes (0,1,0 = the middle of its top).</summary>
+        internal bool WornPoint(int i, Vector3 frac, out Vector3 at)
+        {
+            at = Vector3.zero;
+            if (i < 0 || wornT == null || i >= wornT.Length || wornT[i] == null) return false;
+            MeshFilter mf = wornT[i].GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return false;
+            Bounds b = mf.sharedMesh.bounds;
+            at = wornT[i].TransformPoint(b.center + Vector3.Scale(b.extents, frac));
+            return true;
+        }
+        /// <summary>Whether held weapon i has a model and is in the hand now, not away in a throw.</summary>
+        internal bool WeaponShown(int i) => wT != null && i < wT.Length && wT[i] != null && backIn < 0f;
         internal Transform HandT(int i) => hand[i];
         internal WeaponDef Def(int i) => defs[i];
         /// <summary>The run hold's flat side the idle voted for (the tuner's flip turns the other way from it).</summary>

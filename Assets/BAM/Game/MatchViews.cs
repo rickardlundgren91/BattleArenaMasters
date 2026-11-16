@@ -48,6 +48,7 @@ namespace BAM.Game
             public int Level;
             public float MaxHp = -1f, Energy = -2f; // shown on the bar: the notches' max health, the special charge row
             public bool Ready;
+            public bool Cue;
             public StatusFlags Flags;
             public float Channel = -1f;    // the recall channel shown, -1 none
             public bool Sprint, Four;
@@ -1316,6 +1317,10 @@ namespace BAM.Game
                 bool foeRow = u.Team != Mine;
                 float en = foeRow ? -1f : who.Charge01; bool ready = !foeRow && who.SpecialReady;
                 if (Mathf.Abs(en - r.Energy) > 0.002f || ready != r.Ready) { r.Energy = en; r.Ready = ready; v.SetEnergy(en, ready); }
+                // the special-ready look on the model itself, on every hero, enemies too (Rickard 2026-11-16, ReadyCue.cs); a decoy
+                // shows its owner's, so it still reads exactly like Fenn
+                bool cue = who.Alive && who.SpecialReady;
+                if (cue != r.Cue) { r.Cue = cue; v.SetReadyCue(cue); }
             }
 
             var flags = u.Flags;

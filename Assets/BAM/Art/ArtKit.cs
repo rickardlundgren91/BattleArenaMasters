@@ -79,6 +79,9 @@ namespace BAM.Art
         public virtual void SetMaxHp(float maxHp) { }
         /// <summary>A hero's special charge as the thin row under its bar (MLBB's mana row): 0..1, below 0 = no row.</summary>
         public virtual void SetEnergy(float charge01, bool ready) { }
+        /// <summary>The hero's special is ready: its own look on the model turns on (ReadyCue.cs: Tikta's wings beat faster and shine,
+        /// Moa's staff glows, ...). Every hero, enemies too; the menu stages show it always.</summary>
+        public virtual void SetReadyCue(bool on) { }
         /// <summary>Status effects to show (stun stars, slow, burn, shield bubble, ...).</summary>
         public abstract void SetStatus(StatusFlags flags);
         /// <summary>1 = fully visible, about 0.5 = your own unit hidden in grass, 0 = not visible to the player (hide everything).</summary>
