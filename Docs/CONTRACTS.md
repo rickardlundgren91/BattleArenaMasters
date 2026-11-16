@@ -115,8 +115,10 @@ at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, 
   rating 0-10 and MVP (SimScore.cs); PLAY AGAIN -> `Flow.Game.RestartMatch()`, HOME -> `Flow.Game.QuitToMenu()`. The game calls
   `Screens.CountEvents(match)` after every `Match.Step` so the ratings count damage, damage taken, heals and shields.
   `ShowResult(result)` without the match (and the guided match) shows the old small card: portrait, name, K/D/A.
-- Hint bubble (`ShowHint`/`HideHint`) for the guided match's island half; the arena half draws its own line, arrows and end
-  screen in the HUD (Game/HudTutorial.cs) and shows no result card.
+- The guided match draws its own guide card, arrows and end screen in the HUD, in both halves (Game/HudTutorial.cs), and
+  shows no result card. Its end screen's PLAY FIRST MATCH (the first time through only, Rickard 2026-11-16) goes straight
+  into the first match with `Screens.PlayBotMatch()`, as Home's PLAY would start it; its Home / CONTINUE goes to
+  `ShowMainMenu()`. The hint bubble (`ShowHint`/`HideHint`) is not used by it any more.
 - `UiKit` is the shared look (Lilita One, colours, buttons, panels, safe area). The HUD in BAM.Game uses it.
 - `Screens.IsBlockingInput` is true while any menu or dialog is open.
 - Android back: outside a match the UI handles it; in a match the game calls `Screens.HandleBack()` and opens pause only

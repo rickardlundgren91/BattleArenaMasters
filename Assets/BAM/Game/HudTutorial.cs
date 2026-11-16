@@ -6,44 +6,81 @@ using UnityEngine.UI;
 namespace BAM.Game
 {
     /// <summary>
-    /// The guided match's own screen, copied from the old game (ABC2 Hud.cs drawTutHUD, drawTutWorld, drawTutTowerBar,
-    /// drawTutSkip, drawTutEnd and HudTutorialIsland.drawTutDissolve; Rickard 2026-10-26 "alla"):
+    /// The guided match's own screen. It began as a copy of the old game's (ABC2 Hud.cs drawTutHUD, drawTutWorld, drawTutTowerBar,
+    /// drawTutSkip, drawTutEnd and HudTutorialIsland.drawTutDissolve; Rickard 2026-10-26 "alla") and was made one piece in the
+    /// tutorial review of 2026-11-15 (Rickard: "snygg, sammanhängande och lärorik"), after a look at how Brawl Stars, Mobile
+    /// Legends, Wild Rift and Pokémon Unite teach their first minutes:
+    /// - ONE guide card at the top in both halves (the island had a card in the sky, the arena a pill): Tyra's portrait and name,
+    ///   one short line of at most two rows with the words to notice coloured, and a row of ten dots, one per lesson, so the
+    ///   player sees how far it is. A finished lesson fills its dot with a pop and a ding, and while no new line is up the card
+    ///   says a word of praise ("NICE!").
+    /// - One mark at a time for where to look: a gold ring on the ground with a bouncing arrow, an arrow over a unit, a soft
+    ///   trail of gold lights up the lane (the arena), an arrow over the joystick until it is first used, over SPECIAL only when
+    ///   a tap would hit, over BLINK when it is asked for and over the FOCUS dots (HudFocus.cs).
     /// - Skip, small and quiet in the top right corner in both halves: the tutorial counts as done, then Home.
-    /// - The arena half: DESTROY THE / ENEMY TOWER while the camera rests on the tower, then one short line in a navy pill at the
-    ///   top, a soft trail of gold lights up the lane to the next landmark (the ring, the target, Knut, the tower), a gold arrow
-    ///   over the joystick in moment 1, over SPECIAL when it is ready for the tap and the drag (with a pulsing ring) and over BLINK, "+ CHARGE" flying from Tyra into
-    ///   the button on every confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED!
-    ///   Great job! You're ready for BAM! with Tap to continue (no VICTORY, no result card).
+    /// - The arena half: DESTROY THE / ENEMY TOWER over Tyra's landing, "+ CHARGE" flying from Tyra into the button on every
+    ///   confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED! with the ten dots
+    ///   and, the first time, a big PLAY FIRST MATCH (straight into the first match) over a small Home; a replay gets CONTINUE.
     /// - The very first start: a picture of Home zooms in and fades into the island (Dissolve).
     /// Everything is placed in the safe area's own units, as the old code drew in the frame's W and H.
     /// </summary>
     sealed partial class Hud
     {
-        const float TutDissolveTime = 1.6f, TutLineY = 0.165f, TutLineH = 0.05f, TutOverBanner = 1f, TutOverTap = 2.2f;
+        const float TutDissolveTime = 1.6f, TutOverBanner = 1f, TutOverTap = 2.2f;
         const float ChargeFlight = 0.65f, ChargeArrive = 0.15f;
+        // the card: a word of praise stays this long after a lesson (while no line is up), and the card fades in and out this fast
+        const float PraiseTime = 0.9f, CardFade = 0.15f, DotPop = 0.45f;
         const int TrailDots = 28;
         static readonly Color TutGold = Hex(0xffcf4a), ChargeGold = Hex(0xffc94a), ChargeEdge = Hex(0x3a1a00), TowerRed = Hex(0xff3b4e);
-        static readonly Color TowerOff = new Color(0.25f, 0.12f, 0.2f, 1f), TutPillFill = new Color(14f / 255f, 20f / 255f, 58f / 255f, 0.86f);
+        static readonly Color TowerOff = new Color(0.25f, 0.12f, 0.2f, 1f), CardFill = new Color(14f / 255f, 20f / 255f, 58f / 255f, 0.88f);
+        static readonly Color DotTodo = new Color(1f, 1f, 1f, 0.22f);
+        // Tyra's face in her 400 x 308 portrait (x 137-307, y 18-188 from the top): the top strip's cut shows her to the waist,
+        // too small to know at the card's size
+        static readonly Rect CardFace = new Rect(0.3425f, 0.39f, 0.425f, 0.552f);
+        // one word per finished lesson, in lesson order (Tutorial.Lesson): the island's five, the arena's five. None where the
+        // next line comes at once (the special is charged: "tap it!") or the end screen follows (the tower)
+        static readonly string[] Praise = { "NICE!", "GOOD HIT!", "SNEAKY!", "GOT IT!", "PERFECT!", null, "BOOM!", "NICE DASH!", "GREAT SHOT!", null };
 
-        RectTransform tutSkip, tutPill, tutBar, tutEnd, joyArrow, specialArrow, blinkArrow;
-        CanvasGroup tutPillGroup, tutOpenGroup, joyArrowGroup, specialArrowGroup, blinkArrowGroup; // the arrows' groups kept, not looked up every frame (full review 2026-11-09 nr 90)
-        Image tutPillEdge, tutPillPlate, specialPulse, chargeRing, tutEndDim;
-        Text tutPillText, tutOpen1, tutOpen2, tutEnd1, tutEnd2, tutEnd3, tutEndTap, tutSkipText;
+        RectTransform tutSkip, tutBar, tutEnd, joyArrow, specialArrow, blinkArrow;
+        CanvasGroup tutOpenGroup, joyArrowGroup, specialArrowGroup, blinkArrowGroup; // the arrows' groups kept, not looked up every frame (full review 2026-11-09 nr 90)
+        Image specialPulse, chargeRing, tutEndDim;
+        Text tutOpen1, tutOpen2, tutEnd1, tutEnd2, tutSkipText;
         readonly Text[] chargeTexts = new Text[8];
         readonly Image[] towerBlocks = new Image[Tutorial.TowerHits], towerShine = new Image[Tutorial.TowerHits];
         readonly Image[] trailGlow = new Image[TrailDots], trailCore = new Image[TrailDots];
         Image towerBack, tutSkipPlate;
-        Button tutEndButton;
         RawImage dissolve;
         float dissolveAt = -1f;
-        string pillShown, islandSrc;
-        Text islandLine, islandWho;
-        RectTransform islandPanel, islandTab;
-        CanvasGroup islandGroup;
-        Image islandPlate, islandEdge, islandShadow, islandSheen, islandTabPlate, tutPillShadow, tutPillSheen;
-        float islandShownAt, pillShownAt;
-        // healing: green "+N" over Tyra on every regen tick, and a soft green glow round him while the heal moment lasts
-        float lastTutHp = -1f;
+
+        // the guide card
+        RectTransform card, cardTab, cardFace, cardDots;
+        CanvasGroup cardGroup;
+        Image cardPlate, cardEdge, cardShadow, cardSheen, cardTabPlate, cardDotsPlate, cardDotsEdge;
+        RawImage cardPic;
+        Text cardLine, cardPraise, cardWho;
+        readonly Image[] cardDot = new Image[Tutorial.AllLessons];
+        string cardSrc;             // what the card says now: the line's or the praise's own string
+        string cardLineSrc;         // the line (with its | marks) the card's text is to show, and whether it is a tip
+        bool cardLineTip;
+        string cardBuiltSrc;        // what cardLine's text was last built from, for which width (LayCard)
+        float cardBuiltW;
+        bool cardHasFace;
+        float cardShownAt, cardTextAt, cardAlpha;
+        float cardLaidW = -1f, cardLaidH, cardLaidTop; // what the card was last laid out for (LayCard)
+
+        // the end screen
+        readonly Image[] endDot = new Image[Tutorial.AllLessons];
+        Button tutEndPlay, tutEndHome;
+        Text tutEndPlayText, tutEndHomeText;
+        CanvasGroup tutEndButtons;
+
+        // the first time through (the tutorial was not done when this half began): the end offers the first match
+        bool tutFirst;
+        // the player has moved the stick in this half: the arrow over the joystick has done its job
+        bool joyUsed;
+        int lastLesson;
+
+        // healing: a soft green glow round Tyra's feet while the heal moment lasts
         bool landPending;
         Image healGlow, healRing;
         static readonly Color HealGreen = Hex(0x5dff8a), TabTeal = Hex(0x13a89e);
@@ -83,6 +120,17 @@ namespace BAM.Game
             dissolve.texture = null;
         }
 
+        // ---------------------------------------------------------------- after every tick
+
+        // a finished lesson: a ding (its dot pops on the card, CardDots). Not for the last one: the tower's fall is loud enough
+        void TutorialAfterStep()
+        {
+            var tu = m.Tut;
+            if (tu == null || tu.Lesson == lastLesson) return;
+            if (tu.Lesson > lastLesson && !tu.Done) BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.UiConfirm, 0.7f);
+            lastLesson = tu.Lesson;
+        }
+
         // ---------------------------------------------------------------- every frame
 
         void TutorialFrame(bool hidden)
@@ -97,18 +145,19 @@ namespace BAM.Game
             var tu = m.Tut;
             bool on = tu != null && !hidden;
             float over = flow.OverSeconds;
-            bool skip = on && m.State == MatchState.Play && !tu.Done && !tu.Jumping;
-            if (tutSkip.gameObject.activeSelf != skip) tutSkip.gameObject.SetActive(skip);
+            // the lessons run: both halves, not during the pad's flight or once the tower has fallen
+            bool lesson = on && m.State == MatchState.Play && !tu.Done && !tu.Jumping;
+            if (tutSkip.gameObject.activeSelf != lesson) tutSkip.gameObject.SetActive(lesson);
             bool arena = on && !island;
             Vector2 size = safe.rect.size;
             float W = size.x, H = size.y;
             if (W < 1f) return;
             float t = m.Time;
             var p = m.Player;
-            bool play = arena && m.State == MatchState.Play && !tu.Done;
+            bool play = arena && lesson;
 
             // the skip button at the old W*0.8..0.95, but a little higher (H*0.03..0.07) so it clears the pause button under it
-            if (skip) { Top(tutSkip, W * 0.875f, H * 0.05f, W * 0.15f, H * 0.04f, W, H); tutSkipText.fontSize = Mathf.RoundToInt(W * 0.034f); Corners(tutSkipPlate, H * 0.02f); }
+            if (lesson) { Top(tutSkip, W * 0.875f, H * 0.05f, W * 0.15f, H * 0.04f, W, H); tutSkipText.fontSize = Mathf.RoundToInt(W * 0.034f); Corners(tutSkipPlate, H * 0.02f); }
 
             // the opening title, fading in over 0.3 s and out over the last 0.4 s of the opening
             bool opening = play && tu.Opening;
@@ -121,31 +170,19 @@ namespace BAM.Game
                 Title(tutOpen2, fs, H * 0.6f + fs * 1.1f, W, H);
             }
 
-            // the one line in a pill at the top, fading in
-            string line = play && !opening ? tu.Line : null;
-            if (tutPill.gameObject.activeSelf != (line != null)) tutPill.gameObject.SetActive(line != null);
-            if (line != null)
-            {
-                float fs = Mathf.Round(W * 0.05f), ph = H * TutLineH;
-                tutPillText.fontSize = Mathf.RoundToInt(fs);
-                if (!ReferenceEquals(line, pillShown)) { pillShown = line; tutPillText.text = line; pillShownAt = Time.unscaledTime; }
-                float pw = Mathf.Min(W - 32f, tutPillText.preferredWidth + fs * 1.6f);
-                Top(tutPill, W * 0.5f, H * TutLineY, pw, ph, W, H);
-                Corners(tutPillPlate, ph / 2f); Corners(tutPillShadow, ph / 2f); Corners(tutPillSheen, ph * 0.3f);
-                RoundRing(tutPillEdge, ph / 2f, 2.5f * W / 400f);
-                tutPillShadow.rectTransform.anchoredPosition = new Vector2(0f, -fs * 0.18f);
-                tutPillSheen.rectTransform.sizeDelta = new Vector2(-ph * 0.8f, -ph * 0.6f);
-                tutPillSheen.rectTransform.anchoredPosition = new Vector2(0f, ph * 0.2f);
-                Pop(tutPill, tutPillGroup, pillShownAt);
-            }
+            GuideCard(lesson && !opening, tu, W, H);
 
-            // the arrows over the joystick (moment 1) and over SPECIAL when it is ready (moment 3), and SPECIAL's gold pulse
-            bool joyOn = play && !opening && tu.Step == Tutorial.StepMove;
+            // The arrows over the controls, each only while its line is up and the press would do something: the joystick until
+            // the stick is first moved (the island's first line), SPECIAL when a tap has somebody to hit (never over a grey
+            // button, bug review 2026-11-02 nr 13), BLINK once Knut's anchor has done its part
+            bool lineUp = lesson && !opening && tu.Line != null;
+            bool joyOn = lineUp && island && tu.Step == Tutorial.IslandWalk && !joyUsed;
             Arrow(joyArrow, joyArrowGroup, joyOn, joyOn ? Local(RectTransformUtility.WorldToScreenPoint(null, joy.Base.position)) : Vector2.zero, JoystickZone.Radius * 1.25f);
-            bool spOn = play && (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow) && !tu.BurstDone && p.Alive && p.SpecialReady
-                && (tu.Step != Tutorial.StepSpecial || tu.Line != null); // with its line: not over a grey button (bug review 2026-11-02, nr 13)
+            bool spOn = lineUp && play && p.Alive && p.SpecialReady
+                && (tu.Step == Tutorial.StepFight || (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow) && !tu.BurstDone)
+                && (!m.OneTap || m.TapHasTarget(p));
             Arrow(specialArrow, specialArrowGroup, spOn, spOn ? Local(RectTransformUtility.WorldToScreenPoint(null, specialRoot.position)) : Vector2.zero, SpecialButton.Radius);
-            bool blinkOn = play && tu.Step == Tutorial.StepBlink && p.Alive && m.SpellReady(p) && spellRoot.gameObject.activeSelf;
+            bool blinkOn = lineUp && play && tu.Step == Tutorial.StepBlink && tu.BlinkAsked && p.Alive && m.SpellReady(p) && spellRoot.gameObject.activeSelf;
             Arrow(blinkArrow, blinkArrowGroup, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR);
             if (specialPulse.enabled != spOn) specialPulse.enabled = spOn;
             if (spOn)
@@ -155,7 +192,6 @@ namespace BAM.Game
                 specialPulse.rectTransform.sizeDelta = Vector2.one * 2f * SpecialButton.Radius * (1.12f + 0.1f * k);
             }
 
-            IslandLine(on && island, tu, W, H);
             HealFrame(play, tu, p);
             ChargeFly(play, p, W, H);
             Trail(play && !opening, tu, p);
@@ -163,72 +199,201 @@ namespace BAM.Game
             TutorialEnd(arena && over >= 0f && tu.Done, over, W, H);
         }
 
-        // The island's line (Rickard 2026-10-26: the bubble covered the action, then "snyggare text"): a dark navy card with a
-        // soft drop shadow, a gold edge and a faint sheen, in the sky above the island (its top at 0.25 H), the marked words red
-        // (teal for a tip), and the speaker on a teal tab over its top left edge, as a speaker in MLBB's tutorial. It pops in.
-        void IslandLine(bool on, Tutorial tu, float W, float H)
+        // The marks on the ground and over units, both halves: the gold ring to walk into with its bouncing arrow (the island's
+        // rings; the arena's spot to wait at outside the tower's reach), the arrow over the unit to look at, the boost pad.
+        void TutMarks(bool hidden)
         {
-            string src = on ? tu.LineMarked ?? tu.Line : null;
-            bool show = src != null;
-            if (islandPanel.gameObject.activeSelf != show) islandPanel.gameObject.SetActive(show);
-            if (!show) { islandSrc = null; return; }
-            float fs = Mathf.Round(W * 0.048f), pad = fs * 0.75f, w = W * 0.88f;
-            if (!ReferenceEquals(src, islandSrc))
+            var tut = m.Tut;
+            bool on = !hidden && tut != null && m.State == MatchState.Play && !tut.Done;
+            if (marks != null)
             {
-                islandSrc = src;
-                islandShownAt = Time.unscaledTime;
-                sb.Length = 0;
-                bool open = false;
-                for (int i = 0; i < src.Length; i++)
-                {
-                    char c = src[i];
-                    if (c != '|') { sb.Append(c); continue; }
-                    sb.Append(open ? "</color>" : tu.LineTip ? "<color=#7fe8d8>" : "<color=#ff6b78>");
-                    open = !open;
-                }
-                if (open) sb.Append("</color>");
-                islandLine.text = sb.ToString();
-                islandWho.text = tu.Speaker ?? "";
-                islandTab.gameObject.SetActive(!string.IsNullOrEmpty(tu.Speaker));
+                marks.Hide();
+                if (on && island && tut.PadOn && !tut.Jumping) marks.ShowCircle(Coords.World(tut.PadX, tut.PadY), 0.55f + 0.05f * Mathf.Sin(Time.unscaledTime * 5f), true);
             }
-            islandLine.fontSize = Mathf.RoundToInt(fs);
-            islandLine.rectTransform.offsetMin = new Vector2(pad, pad * 0.8f);
-            islandLine.rectTransform.offsetMax = new Vector2(-pad, -pad * 0.9f);
-            islandPanel.sizeDelta = new Vector2(w, 10f);
-            float th = islandLine.cachedTextGeneratorForLayout.GetPreferredHeight(islandLine.text,
-                islandLine.GetGenerationSettings(new Vector2(w - 2f * pad, 0f))) / islandLine.pixelsPerUnit;
-            float h = th + pad * 1.7f;
-            islandPanel.sizeDelta = new Vector2(w, h);
-            islandPanel.anchoredPosition = new Vector2(0f, H / 2f - H * 0.25f - h / 2f);
-            float r = Mathf.Min(h / 2f, fs * 0.9f);
-            Corners(islandPlate, r); Corners(islandShadow, r); Corners(islandSheen, r * 0.8f);
-            RoundRing(islandEdge, r, Mathf.Max(2f, W * 0.005f));
-            islandShadow.rectTransform.anchoredPosition = new Vector2(0f, -fs * 0.18f);
-            islandSheen.rectTransform.sizeDelta = new Vector2(-pad * 0.6f, -h * 0.55f);
-            islandSheen.rectTransform.anchoredPosition = new Vector2(0f, h * 0.2f);
-            // the speaker tab: the speaker's name on teal, half over the card's top edge
-            islandWho.fontSize = Mathf.RoundToInt(fs * 0.62f);
-            float tw = islandWho.preferredWidth + fs * 1.1f, tab = fs * 1.15f;
-            islandTab.sizeDelta = new Vector2(tw, tab);
-            islandTab.anchoredPosition = new Vector2(pad + tw / 2f, tab * 0.2f); // mostly above the card, over its edge
-            Corners(islandTabPlate, tab / 2f);
-            Pop(islandPanel, islandGroup, islandShownAt);
+            bool ring = on && tut.RingOn;
+            rings.SetGoal(ring, ring ? Coords.World(tut.RingX, tut.RingY) : Vector3.zero);
+            bool point = on && tut.PointAt != null && tut.PointAt.Alive;
+            Chevron(pointChevron, point, point ? views.DrawnAt(tut.PointAt) + Vector3.up * 1.4f : Vector3.zero);
+            // one arrow at a time: the ring's waits while the joystick's is up (the very first line)
+            bool ringArrow = ring && tut.ArrowOnRing && !(island && tut.Step == Tutorial.IslandWalk && !joyUsed);
+            Chevron(ringChevron, ringArrow, ringArrow ? Coords.World(tut.RingX, tut.RingY) + Vector3.up * 0.9f : Vector3.zero);
         }
 
-        // a new line springs in: from 0.85 of its size with a little overshoot, fading in over 0.2 s
-        static void Pop(RectTransform rt, CanvasGroup g, float at)
+        // The guide card (Rickard 2026-10-26: the old bubble covered the action, then "snyggare text"; 2026-11-15 one card for
+        // both halves): a dark navy card with a soft drop shadow, a gold edge and a faint sheen under the pause button, never over
+        // the island or the fight; the guide's face in a gold ring at its left with her name on a teal tab over it, the line
+        // beside her with the marked words red (teal for a tip), and the lessons' dots on its top edge at the right.
+        void GuideCard(bool on, Tutorial tu, float W, float H)
         {
-            float k = Mathf.Clamp01((Time.unscaledTime - at) / 0.32f);
-            float sc = k >= 1f ? 1f : 1f - 0.15f * Mathf.Cos(k * Mathf.PI * 1.5f) * (1f - k);
-            rt.localScale = Vector3.one * sc;
-            g.alpha = Mathf.Clamp01((Time.unscaledTime - at) / 0.2f);
+            string src = on ? tu.LineMarked ?? tu.Line : null;
+            bool praise = false;
+            if (on && src == null && tu.Lesson > 0 && tu.Lesson <= Praise.Length && m.Time >= tu.LessonAt && m.Time - tu.LessonAt < PraiseTime)
+            {
+                src = Praise[tu.Lesson - 1];
+                praise = src != null;
+            }
+            bool show = src != null;
+            float now = Time.unscaledTime;
+            bool wasHidden = cardAlpha <= 0f;
+            cardAlpha = Mathf.MoveTowards(cardAlpha, show ? 1f : 0f, Time.unscaledDeltaTime / CardFade);
+            bool active = show || cardAlpha > 0f;
+            if (card.gameObject.activeSelf != active) card.gameObject.SetActive(active);
+            if (!active) { cardSrc = null; return; }
+
+            bool lay = false;
+            if (show && !ReferenceEquals(src, cardSrc))
+            {
+                if (wasHidden) cardShownAt = now;
+                cardSrc = src; cardTextAt = now;
+                if (cardLine.gameObject.activeSelf == praise) cardLine.gameObject.SetActive(!praise);
+                if (cardPraise.gameObject.activeSelf != praise) cardPraise.gameObject.SetActive(praise);
+                if (praise) cardPraise.text = src;
+                else
+                {
+                    cardLineSrc = src; cardLineTip = tu.LineTip;
+                    cardWho.text = tu.Speaker ?? "";
+                    cardTab.gameObject.SetActive(!string.IsNullOrEmpty(tu.Speaker));
+                    lay = true; // a new line: its rows and its height are measured again
+                }
+            }
+            // under the pause button (its ring's lower edge, HudCenter.cs), with room for the dots that sit on the card's edge
+            float top = Mathf.Max(H * 0.105f, pauseRoot.sizeDelta.y - pauseRoot.anchoredPosition.y + W * 0.03f);
+            if (lay || W != cardLaidW || H != cardLaidH || top != cardLaidTop)
+            {
+                cardLaidW = W; cardLaidH = H; cardLaidTop = top;
+                LayCard(tu, W, H, top);
+            }
+
+            // every frame only what moves: a new line settles in from a little small and the word of praise lands from big, the
+            // dots, and the whole card springing in (from 0.85 of its size with a little overshoot) and fading
+            float tk = Mathf.Clamp01((now - cardTextAt) / 0.22f), back = (1f - tk) * (1f - tk);
+            cardLine.rectTransform.localScale = Vector3.one * (1f - 0.06f * back);
+            cardPraise.rectTransform.localScale = Vector3.one * (1f + 0.35f * back);
+            CardDots(tu);
+            float ck = Mathf.Clamp01((now - cardShownAt) / 0.32f);
+            card.localScale = Vector3.one * (ck >= 1f ? 1f : 1f - 0.15f * Mathf.Cos(ck * Mathf.PI * 1.5f) * (1f - ck));
+            cardGroup.alpha = cardAlpha;
+        }
+
+        // The card's sizes and places: only when its line, the screen or the pause button's place changed, not every frame.
+        void LayCard(Tutorial tu, float W, float H, float top)
+        {
+            float fs = Mathf.Round(W * 0.048f), pad = fs * 0.75f, w = W * 0.9f;
+            float pd = fs * 2.7f, inset = pad * 0.62f;                               // her face's width, and its gap to the card's edge
+            float textL = cardHasFace ? inset + pd + inset : pad, textR = inset;     // the text's right margin is the face's left one
+            cardLine.fontSize = Mathf.RoundToInt(fs);
+            cardPraise.fontSize = Mathf.RoundToInt(fs * 1.4f);
+            cardWho.fontSize = Mathf.RoundToInt(fs * 0.62f);
+            float tw = w - textL - textR;
+            if (cardLineSrc != null && (!ReferenceEquals(cardLineSrc, cardBuiltSrc) || tw != cardBuiltW))
+            {
+                cardBuiltSrc = cardLineSrc; cardBuiltW = tw;
+                cardLine.text = LineText(cardLineSrc, cardLineTip, tw);
+            }
+            // two rows of text at least, so the card keeps its size from line to line (every line is written to fit two)
+            var settings = cardLine.GetGenerationSettings(new Vector2(tw, 0f));
+            var gen = cardLine.cachedTextGeneratorForLayout;
+            float unit = Mathf.Max(0.01f, cardLine.pixelsPerUnit);
+            float th = Mathf.Max(gen.GetPreferredHeight("A\nA", settings), gen.GetPreferredHeight(cardLine.text, settings)) / unit;
+            float h = th + pad * 1.7f;
+            card.sizeDelta = new Vector2(w, h);
+            card.anchoredPosition = new Vector2(0f, H / 2f - top - h / 2f);
+            float r = Mathf.Min(h / 2f, fs * 0.9f);
+            Corners(cardPlate, r); Corners(cardShadow, r); Corners(cardSheen, r * 0.8f);
+            RoundRing(cardEdge, r, Mathf.Max(2f, W * 0.005f));
+            cardShadow.rectTransform.anchoredPosition = new Vector2(0f, -fs * 0.18f);
+            cardSheen.rectTransform.sizeDelta = new Vector2(-pad * 0.6f, -h * 0.55f);
+            cardSheen.rectTransform.anchoredPosition = new Vector2(0f, h * 0.2f);
+            // her face at the left, the line (or the word of praise) beside it
+            if (cardHasFace)
+            {
+                cardFace.sizeDelta = new Vector2(pd, pd);
+                cardFace.anchoredPosition = new Vector2(inset + pd / 2f, 0f);
+            }
+            cardLine.rectTransform.offsetMin = new Vector2(textL, pad * 0.8f);
+            cardLine.rectTransform.offsetMax = new Vector2(-textR, -pad * 0.9f);
+            cardPraise.rectTransform.offsetMin = new Vector2(textL, 0f);
+            cardPraise.rectTransform.offsetMax = new Vector2(-textR, 0f);
+            // the speaker tab: her name on teal, over the card's top edge above her face
+            float tabW = cardWho.preferredWidth + fs * 1.1f, tab = fs * 1.1f;
+            cardTab.sizeDelta = new Vector2(tabW, tab);
+            cardTab.anchoredPosition = new Vector2(cardHasFace ? Mathf.Max(inset + pd / 2f, pad * 0.4f + tabW / 2f) : pad + tabW / 2f, tab * 0.12f);
+            Corners(cardTabPlate, tab / 2f);
+            // the lessons' dots in a small plate on the top edge at the right, a wider gap between the island's five and the arena's
+            int n = Mathf.Min(tu.Lessons, cardDot.Length);
+            if (cardDots.gameObject.activeSelf != n > 0) cardDots.gameObject.SetActive(n > 0);
+            float d = W * 0.017f, g = W * 0.009f, mid = W * 0.012f, side = W * 0.02f, dh = d + W * 0.022f;
+            cardDots.sizeDelta = new Vector2(n * d + (n - 1) * g + (n > Tutorial.IslandLessons ? mid : 0f) + 2f * side, dh);
+            cardDots.anchoredPosition = new Vector2(-pad * 1.5f, 0f);
+            Corners(cardDotsPlate, dh / 2f);
+            RoundRing(cardDotsEdge, dh / 2f, Mathf.Max(1.5f, W * 0.0035f));
+            for (int i = 0; i < cardDot.Length; i++)
+            {
+                var img = cardDot[i];
+                if (img.enabled != i < n) img.enabled = i < n;
+                img.rectTransform.sizeDelta = new Vector2(d, d);
+                img.rectTransform.anchoredPosition = new Vector2(side + d / 2f + i * (d + g) + (i >= Tutorial.IslandLessons ? mid : 0f), 0f);
+            }
+        }
+
+        // The line as the card shows it: the |marked| words coloured (red, teal for a tip), and a line that needs two rows broken
+        // by hand: at a sentence's end (. ! ? :) when both rows fit, else where the two rows are most even. Unity's own wrap fills
+        // the first row and leaves the rest, which put a last word alone on its row ("Three enemies! Stand in the gold / ring.").
+        // A line that fits one row, or needs three, is left to Unity. Run only when the line or the card's width changes.
+        string LineText(string src, bool tip, float width)
+        {
+            int cut = -1;
+            var gen = cardLine.cachedTextGeneratorForLayout;
+            var settings = cardLine.GetGenerationSettings(Vector2.zero);
+            float fit = width * 0.99f * cardLine.pixelsPerUnit; // the generator measures in pixels
+            if (gen.GetPreferredWidth(Unmarked(src, 0, src.Length), settings) > fit)
+            {
+                float best = float.MaxValue;
+                for (int i = 1; i < src.Length - 1; i++)
+                {
+                    if (src[i] != ' ') continue;
+                    float l = gen.GetPreferredWidth(Unmarked(src, 0, i), settings), r = gen.GetPreferredWidth(Unmarked(src, i + 1, src.Length), settings);
+                    if (l > fit || r > fit) continue;
+                    char end = src[i - 1] == '|' && i > 1 ? src[i - 2] : src[i - 1]; // the first row's last character (a mark may close after it)
+                    float cost = Mathf.Max(l, r) - (end == '.' || end == '!' || end == '?' || end == ':' ? fit : 0f);
+                    if (cost < best) { best = cost; cut = i; }
+                }
+            }
+            sb.Length = 0;
+            bool open = false;
+            for (int i = 0; i < src.Length; i++)
+            {
+                char c = src[i];
+                if (c != '|') { sb.Append(i == cut ? '\n' : c); continue; }
+                sb.Append(open ? "</color>" : tip ? "<color=#7fe8d8>" : "<color=#ff6b78>");
+                open = !open;
+            }
+            if (open) sb.Append("</color>");
+            return sb.ToString();
+        }
+
+        // src from..to (to not included) without its | marks
+        static string Unmarked(string src, int from, int to) => src.Substring(from, to - from).Replace("|", "");
+
+        // The lessons' dots: gold when done (the newest pops), the one in hand white and breathing, the rest faint.
+        void CardDots(Tutorial tu)
+        {
+            int n = Mathf.Min(tu.Lessons, cardDot.Length);
+            float pop = Mathf.Clamp01((m.Time - tu.LessonAt) / DotPop);
+            float breathe = 1.2f + 0.12f * Mathf.Sin(Time.unscaledTime * 5f);
+            for (int i = 0; i < n; i++)
+            {
+                bool done = i < tu.Lesson, cur = i == tu.Lesson;
+                cardDot[i].color = done ? TutGold : cur ? Color.white : DotTodo;
+                float sc = cur ? breathe : done && i == tu.Lesson - 1 && pop < 1f && m.Time >= tu.LessonAt ? 1f + 0.9f * Mathf.Sin(pop * Mathf.PI) : 1f;
+                cardDot[i].rectTransform.localScale = new Vector3(sc, sc, 1f);
+            }
         }
 
         // Healing shows (Rickard 2026-10-26: "ingen reg syntes"): the green "+N" comes from the HUD's heal numbers (OnHeal, as in
         // every match, so it is not doubled here), and in the heal moment a soft green glow breathes round her feet while she is below full.
         void HealFrame(bool play, Tutorial tu, Unit p)
         {
-            lastTutHp = p.Alive ? p.Hp : -1f;
             bool glow = play && p.Alive && tu.Step == Tutorial.StepHeal && p.Hp < p.MaxHp - 0.5f;
             if (healGlow.enabled != glow) { healGlow.enabled = glow; healRing.enabled = glow; }
             if (!glow) return;
@@ -274,18 +439,18 @@ namespace BAM.Game
             }
         }
 
-        // a soft trail of gold lights from Tyra up the lane to the next landmark, each swelling as a wave runs along it; none once
-        // the landmark is in her reach
+        // A soft trail of gold lights from Tyra up the lane to the next landmark, each swelling as a wave runs along it: to the
+        // gold ring when one is up (the spot to wait at outside the tower's reach), else to Tutorial.Goal (the nearest enemy
+        // minion, Knut, the tower); none once the landmark is in her reach.
         void Trail(bool play, Tutorial tu, Unit p)
         {
             int n = 0;
             if (play && p.Alive)
             {
-                float tx = 0f, ty = 0f, stop = 0.6f; bool any = false;
-                Unit goal = null;
-                if (tu.Step == Tutorial.StepMove) { tx = Tutorial.MarkX; ty = Tutorial.MarkY; any = true; }
-                else goal = tu.Goal; // the nearest enemy minion, Knut or the tower (Tutorial.cs)
-                if (goal != null && goal.Alive && SimMath.Hypot(goal.X - p.X, goal.Y - p.Y) > p.Range + goal.R)
+                float tx = 0f, ty = 0f, stop = 0.7f; bool any = false;
+                Unit goal = tu.Goal;
+                if (tu.RingOn) { tx = tu.RingX; ty = tu.RingY; any = true; }
+                else if (goal != null && goal.Alive && SimMath.Hypot(goal.X - p.X, goal.Y - p.Y) > p.Range + goal.R)
                 {
                     tx = goal.X; ty = goal.Y; stop = p.Range * 0.8f; any = true;
                 }
@@ -308,13 +473,6 @@ namespace BAM.Game
                 }
             }
             for (int i = n; i < TrailDots; i++) { if (trailGlow[i].enabled) trailGlow[i].enabled = false; if (trailCore[i].enabled) trailCore[i].enabled = false; }
-            // moment 1's spot on the lane: the same gold goal spot as the island's (MatchRings), Rickard 2026-11-02 "tydligare"
-            if (!island)
-            {
-                if (marks != null) marks.Hide();
-                bool spot = play && tu.Step == Tutorial.StepMove;
-                rings.SetGoal(spot, spot ? Coords.World(Tutorial.MarkX, Tutorial.MarkY) : Vector3.zero);
-            }
         }
 
         static void Dot(Image img, Vector2 at, float w, Color c)
@@ -354,24 +512,48 @@ namespace BAM.Game
             }
         }
 
-        // the end: the tower falls, then TOWER DESTROYED! and two lines; after 2.2 s a tap goes on to Home
+        // The end: the tower falls, then TOWER DESTROYED! over the ten dots lighting up one by one and one line; after 2.2 s the
+        // buttons. The first time a big PLAY FIRST MATCH goes straight into the first match (Rickard 2026-11-16; Home is where a
+        // new player can lose the way, and Pokémon Unite follows its first lesson with a whole match against bots), with a small
+        // Home under it; a replay from the menus gets one CONTINUE back to Home.
         void TutorialEnd(bool on, float o, float W, float H)
         {
             on = on && o > TutOverBanner;
             if (tutEnd.gameObject.activeSelf != on) tutEnd.gameObject.SetActive(on);
             if (!on) return;
-            float k = Mathf.Clamp01((o - TutOverBanner) / 0.35f), k2 = Mathf.Clamp01((o - TutOverBanner - 0.6f) / 0.35f);
+            float k = Mathf.Clamp01((o - TutOverBanner) / 0.35f), k2 = Mathf.Clamp01((o - TutOverBanner - 0.9f) / 0.35f);
             tutEndDim.color = new Color(0.04f, 0.06f, 0.16f, 0.55f * k);
             float fs = W * 0.095f;
             Title(tutEnd1, fs * (1f + 0.25f * (1f - k)), H * 0.4f, W, H);
             Fade(tutEnd1, k);
-            Title(tutEnd2, W * 0.055f, H * 0.48f, W, H);
-            Title(tutEnd3, W * 0.055f, H * 0.48f + W * 0.075f, W, H);
-            Fade(tutEnd2, k2); Fade(tutEnd3, k2);
+            int n = endDot.Length;
+            float d = W * 0.024f, g = W * 0.014f, mid = W * 0.02f, row = n * d + (n - 1) * g + mid;
+            for (int i = 0; i < n; i++)
+            {
+                float dk = Mathf.Clamp01((o - TutOverBanner - 0.3f - i * 0.05f) / 0.18f);
+                var rt = endDot[i].rectTransform;
+                rt.sizeDelta = new Vector2(d, d);
+                rt.anchoredPosition = new Vector2(-row / 2f + d / 2f + i * (d + g) + (i >= Tutorial.IslandLessons ? mid : 0f), H / 2f - H * 0.435f);
+                float sc = 1f + 0.8f * Mathf.Sin(dk * Mathf.PI);
+                rt.localScale = new Vector3(sc, sc, 1f);
+                endDot[i].color = new Color(TutGold.r, TutGold.g, TutGold.b, dk);
+            }
+            Title(tutEnd2, W * 0.052f, H * 0.49f, W, H);
+            Fade(tutEnd2, k2);
             bool tap = o > TutOverTap;
-            if (tutEndTap.gameObject.activeSelf != tap) tutEndTap.gameObject.SetActive(tap);
-            if (tap) Title(tutEndTap, W * 0.045f, H * 0.86f, W, H);
-            tutEndButton.interactable = tap;
+            if (tutEndButtons.gameObject.activeSelf != tap) tutEndButtons.gameObject.SetActive(tap);
+            if (!tap) return;
+            tutEndButtons.alpha = Mathf.Clamp01((o - TutOverTap) / 0.25f);
+            float bw = W * 0.74f, bh = W * 0.16f, by = H * 0.6f;
+            Top((RectTransform)tutEndPlay.transform, W * 0.5f, by + bh / 2f, bw, bh, W, H);
+            tutEndPlayText.fontSize = Mathf.RoundToInt(W * 0.068f);
+            if (tutEndHome.gameObject.activeSelf != tutFirst) tutEndHome.gameObject.SetActive(tutFirst);
+            if (tutFirst)
+            {
+                float hw = W * 0.34f, hh = W * 0.105f;
+                Top((RectTransform)tutEndHome.transform, W * 0.5f, by + bh + W * 0.05f + hh / 2f, hw, hh, W, H);
+                tutEndHomeText.fontSize = Mathf.RoundToInt(W * 0.045f);
+            }
         }
 
         static void Fade(Text t, float a) { var c = t.color; if (c.a != a) { c.a = a; t.color = c; } }
@@ -483,7 +665,7 @@ namespace BAM.Game
             chargeRing.sprite = UiKit.CircleRing;
             chargeRing.enabled = false;
 
-            // the opening title, the line's pill, the arrows and "+ CHARGE"
+            // the opening title, the guide card, the arrows and "+ CHARGE"
             var opening = CentredRect("Opening", safe);
             tutOpenGroup = opening.gameObject.AddComponent<CanvasGroup>();
             tutOpenGroup.blocksRaycasts = false;
@@ -491,26 +673,7 @@ namespace BAM.Game
             tutOpen2 = Centred(opening, "ENEMY TOWER", TutGold, 7);
             tutOpen1.gameObject.SetActive(false); tutOpen2.gameObject.SetActive(false);
 
-            tutPill = CentredRect("Line", safe);
-            tutPillGroup = tutPill.gameObject.AddComponent<CanvasGroup>();
-            tutPillGroup.blocksRaycasts = false;
-            tutPillShadow = UiKit.Fill(tutPill, new Color(0f, 0f, 0.05f, 0.4f), UiKit.Rounded);
-            tutPillShadow.type = Image.Type.Sliced;
-            tutPillShadow.raycastTarget = false;
-            tutPillPlate = UiKit.Fill(tutPill, TutPillFill, UiKit.Rounded);
-            tutPillPlate.type = Image.Type.Sliced;
-            tutPillPlate.raycastTarget = false;
-            tutPillSheen = UiKit.Fill(tutPill, new Color(1f, 1f, 1f, 0.07f), UiKit.Rounded);
-            tutPillSheen.type = Image.Type.Sliced;
-            tutPillSheen.raycastTarget = false;
-            tutPillEdge = UiKit.Fill(tutPill, new Color(1f, 207f / 255f, 74f / 255f, 0.85f));
-            tutPillEdge.raycastTarget = false;
-            tutPillText = UiKit.Label(tutPill, "", 40, TextAnchor.MiddleCenter, Color.white);
-            tutPillText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            tutPillText.raycastTarget = false;
-            UiKit.Stretch(tutPillText.rectTransform);
-            TextDepth(tutPillText);
-            tutPill.gameObject.SetActive(false);
+            BuildCard();
 
             joyArrow = MakeChevron(safe);
             joyArrowGroup = joyArrow.gameObject.AddComponent<CanvasGroup>(); joyArrowGroup.blocksRaycasts = false;
@@ -526,34 +689,6 @@ namespace BAM.Game
                 c.gameObject.SetActive(false);
                 chargeTexts[i] = c;
             }
-
-            // the island's line: no box, so it never hides what the hero is doing
-            islandPanel = CentredRect("IslandLine", safe);
-            islandGroup = islandPanel.gameObject.AddComponent<CanvasGroup>();
-            islandGroup.blocksRaycasts = false;
-            islandShadow = Sliced(islandPanel, new Color(0f, 0f, 0.05f, 0.4f));
-            islandPlate = Sliced(islandPanel, new Color(14f / 255f, 20f / 255f, 58f / 255f, 0.84f));
-            islandSheen = Sliced(islandPanel, new Color(1f, 1f, 1f, 0.07f));
-            islandEdge = UiKit.Fill(islandPanel, new Color(1f, 207f / 255f, 74f / 255f, 0.8f));
-            islandEdge.raycastTarget = false;
-            islandLine = UiKit.Label(islandPanel, "", 40, TextAnchor.MiddleCenter, Color.white);
-            UiKit.Stretch(islandLine.rectTransform);
-            islandLine.horizontalOverflow = HorizontalWrapMode.Wrap;
-            islandLine.verticalOverflow = VerticalWrapMode.Overflow;
-            islandLine.supportRichText = true;
-            islandLine.raycastTarget = false;
-            islandLine.lineSpacing = 1.05f;
-            TextDepth(islandLine);
-            islandTab = UiKit.NewRect("Speaker", islandPanel);
-            islandTab.anchorMin = islandTab.anchorMax = new Vector2(0f, 1f);
-            islandTab.pivot = new Vector2(0.5f, 0.5f);
-            islandTabPlate = Sliced(islandTab, TabTeal);
-            islandWho = UiKit.Label(islandTab, "", 28, TextAnchor.MiddleCenter, Color.white);
-            UiKit.Stretch(islandWho.rectTransform);
-            islandWho.horizontalOverflow = HorizontalWrapMode.Overflow;
-            islandWho.raycastTarget = false;
-            TextDepth(islandWho);
-            islandPanel.gameObject.SetActive(false);
 
             // the heal glow round Tyra's feet, under the controls
             healGlow = Plain(world, "HealGlow", Color.clear);
@@ -576,21 +711,7 @@ namespace BAM.Game
             UiKit.Stretch(tutSkipText.rectTransform);
             tutSkip.gameObject.SetActive(false);
 
-            // the end: a dim screen with the words, and a tap anywhere after 2.2 s goes on
-            tutEnd = UiKit.NewRect("TutorialEnd", safe);
-            UiKit.Stretch(tutEnd);
-            tutEndDim = UiKit.Fill(tutEnd, Color.clear);
-            UiKit.Stretch(tutEndDim.rectTransform, -2000, -400, -2000, -400); // past the safe area's edges too, and a foldable's sides
-            tutEndDim.raycastTarget = true;
-            tutEndButton = tutEnd.gameObject.AddComponent<Button>();
-            tutEndButton.targetGraphic = tutEndDim;
-            tutEndButton.transition = Selectable.Transition.None;
-            tutEndButton.onClick.AddListener(() => { BAM.Audio.BamAudio.Play(BAM.Audio.SfxId.UiConfirm); flow.FinishTutorial(); });
-            tutEnd1 = Centred(tutEnd, "TOWER DESTROYED!", TutGold, 7);
-            tutEnd2 = Centred(tutEnd, "Great job!", Color.white, 5);
-            tutEnd3 = Centred(tutEnd, "You're ready for BAM!", Color.white, 5);
-            tutEndTap = Centred(tutEnd, "Tap to continue", Color.white, 4);
-            tutEnd.gameObject.SetActive(false);
+            BuildTutorialEnd();
 
             // the picture of Home over everything at the very first start
             var pic = UiKit.NewRect("Dissolve", canvasRect);
@@ -601,16 +722,144 @@ namespace BAM.Game
             pic.pivot = new Vector2(0.5f, 0.4f); // it grows towards the hero on Home's platform
         }
 
+        void BuildCard()
+        {
+            card = CentredRect("GuideCard", safe);
+            cardGroup = card.gameObject.AddComponent<CanvasGroup>();
+            cardGroup.blocksRaycasts = false;
+            cardShadow = Sliced(card, new Color(0f, 0f, 0.05f, 0.4f));
+            cardPlate = Sliced(card, CardFill);
+            cardSheen = Sliced(card, new Color(1f, 1f, 1f, 0.07f));
+            cardEdge = UiKit.Fill(card, new Color(TutGold.r, TutGold.g, TutGold.b, 0.85f));
+            cardEdge.raycastTarget = false;
+
+            // the guide's face: her portrait cut round, in a gold ring (the top strip's portraits, HudTop.MakePortrait)
+            cardFace = UiKit.NewRect("Face", card);
+            cardFace.anchorMin = cardFace.anchorMax = new Vector2(0f, 0.5f);
+            cardFace.pivot = new Vector2(0.5f, 0.5f);
+            var mask = UiKit.Fill(cardFace, PortraitBack, UiKit.Circle);
+            mask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+            var picRt = UiKit.NewRect("Pic", mask.transform);
+            UiKit.Stretch(picRt);
+            cardPic = picRt.gameObject.AddComponent<RawImage>();
+            cardPic.raycastTarget = false;
+            cardPic.uvRect = CardFace;
+            var faceEdge = UiKit.Fill(cardFace, TutGold, UiKit.CircleRing);
+            UiKit.Stretch(faceEdge.rectTransform, -1.5f, -1.5f, -1.5f, -1.5f);
+
+            cardLine = UiKit.Label(card, "", 40, TextAnchor.MiddleLeft, Color.white);
+            UiKit.Stretch(cardLine.rectTransform);
+            cardLine.horizontalOverflow = HorizontalWrapMode.Wrap;
+            cardLine.verticalOverflow = VerticalWrapMode.Overflow;
+            cardLine.supportRichText = true;
+            cardLine.raycastTarget = false;
+            cardLine.lineSpacing = 1.05f;
+            TextDepth(cardLine);
+            cardPraise = UiKit.Label(card, "", 56, TextAnchor.MiddleCenter, TutGold);
+            UiKit.Stretch(cardPraise.rectTransform);
+            cardPraise.horizontalOverflow = HorizontalWrapMode.Overflow;
+            cardPraise.verticalOverflow = VerticalWrapMode.Overflow;
+            cardPraise.raycastTarget = false;
+            TextDepth(cardPraise);
+            cardPraise.gameObject.SetActive(false);
+
+            cardTab = UiKit.NewRect("Speaker", card);
+            cardTab.anchorMin = cardTab.anchorMax = new Vector2(0f, 1f);
+            cardTab.pivot = new Vector2(0.5f, 0.5f);
+            cardTabPlate = Sliced(cardTab, TabTeal);
+            cardWho = UiKit.Label(cardTab, "", 28, TextAnchor.MiddleCenter, Color.white);
+            UiKit.Stretch(cardWho.rectTransform);
+            cardWho.horizontalOverflow = HorizontalWrapMode.Overflow;
+            cardWho.raycastTarget = false;
+            TextDepth(cardWho);
+
+            cardDots = UiKit.NewRect("Lessons", card);
+            cardDots.anchorMin = cardDots.anchorMax = new Vector2(1f, 1f);
+            cardDots.pivot = new Vector2(1f, 0.5f);
+            cardDotsPlate = Sliced(cardDots, new Color(CardFill.r, CardFill.g, CardFill.b, 0.97f));
+            cardDotsEdge = UiKit.Fill(cardDots, new Color(TutGold.r, TutGold.g, TutGold.b, 0.85f));
+            cardDotsEdge.raycastTarget = false;
+            for (int i = 0; i < cardDot.Length; i++)
+            {
+                var d = UiKit.NewRect("Dot", cardDots);
+                d.anchorMin = d.anchorMax = new Vector2(0f, 0.5f);
+                d.pivot = new Vector2(0.5f, 0.5f);
+                cardDot[i] = d.gameObject.AddComponent<Image>();
+                cardDot[i].sprite = UiKit.Circle;
+                cardDot[i].raycastTarget = false;
+            }
+            card.gameObject.SetActive(false);
+        }
+
+        // the end: a dim screen that takes every touch, the words, the dots and the buttons (the menus' own, UiKit.Button)
+        void BuildTutorialEnd()
+        {
+            tutEnd = UiKit.NewRect("TutorialEnd", safe);
+            UiKit.Stretch(tutEnd);
+            tutEndDim = UiKit.Fill(tutEnd, Color.clear);
+            UiKit.Stretch(tutEndDim.rectTransform, -2000, -400, -2000, -400); // past the safe area's edges too, and a foldable's sides
+            tutEndDim.raycastTarget = true;
+            tutEnd1 = Centred(tutEnd, "TOWER DESTROYED!", TutGold, 7);
+            for (int i = 0; i < endDot.Length; i++)
+            {
+                endDot[i] = Plain(tutEnd, "Dot", Color.clear);
+                endDot[i].sprite = UiKit.Circle;
+                endDot[i].enabled = true;
+            }
+            tutEnd2 = Centred(tutEnd, "", Color.white, 5);
+            var buttons = UiKit.NewRect("Buttons", tutEnd);
+            UiKit.Stretch(buttons);
+            tutEndButtons = buttons.gameObject.AddComponent<CanvasGroup>();
+            tutEndPlay = UiKit.Button(buttons, "PLAY FIRST MATCH", () => { if (tutFirst) flow.FinishTutorialAndPlay(); else flow.FinishTutorial(); }, UiKit.Orange, BAM.Audio.SfxId.UiConfirm, 72);
+            tutEndPlayText = UiKit.ButtonText(tutEndPlay);
+            UiKit.AddOutline(tutEndPlayText, 2); // the burnt orange edge PLAY's text has on Home
+            PlayLook(tutEndPlay);
+            tutEndHome = UiKit.Button(buttons, "Home", () => flow.FinishTutorial(), UiKit.Muted, BAM.Audio.SfxId.UiTap, 48);
+            tutEndHomeText = UiKit.ButtonText(tutEndHome);
+            buttons.gameObject.SetActive(false);
+            tutEnd.gameObject.SetActive(false);
+        }
+
+        // The big button wears Home's PLAY look: Rickard's own orange button picture on its face (Home's and the Modes sheet's
+        // PLAY, HomeScreen.BuildPlay); without the picture it stays the menus' plain orange.
+        static void PlayLook(Button b)
+        {
+            var tex = Resources.Load<Texture2D>("BAM/Menu/menu_btn_orange");
+            var face = b.targetGraphic;
+            if (tex == null || face == null) return;
+            face.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+            var art = UiKit.NewRect("Art", face.transform);
+            UiKit.Stretch(art);
+            art.SetAsFirstSibling(); // under the button's gloss and words
+            var raw = art.gameObject.AddComponent<RawImage>();
+            raw.texture = tex;
+            raw.raycastTarget = false;
+        }
+
         void BeginTutorial()
         {
-            pillShown = null; islandSrc = null;
+            // the first time through: asked here, in both halves, because the tutorial counts as done the moment the tower falls
+            tutFirst = tutorial && !BAM.Core.BamSettings.TutorialDone;
+            joyUsed = false;
+            lastLesson = m.Tut != null ? m.Tut.Lesson : 0;
+            cardSrc = cardLineSrc = cardBuiltSrc = null; cardAlpha = 0f; cardLaidW = -1f;
             landPending = m.Tut != null && !m.Tut.Island;
-            islandPanel.gameObject.SetActive(false); lastTutHp = -1f;
+            card.gameObject.SetActive(false);
+            if (tutorial)
+            {
+                // the guide's face (the hero played, Tyra): the card does without it if her picture is missing
+                var face = Resources.Load<Texture2D>("BAM/Menu/portrait_" + HeroCatalog.FileName(HeroCatalog.Get(m.Player.Hero).Name));
+                cardHasFace = face != null;
+                cardPic.texture = face;
+                cardFace.gameObject.SetActive(cardHasFace);
+                tutEndPlayText.text = tutFirst ? "PLAY FIRST MATCH" : "CONTINUE";
+                tutEnd2.text = tutFirst ? "You're ready for your first match!" : "Well played!";
+            }
             healGlow.enabled = healRing.enabled = false;
             tutSkip.gameObject.SetActive(false);
-            tutPill.gameObject.SetActive(false);
             tutBar.gameObject.SetActive(false);
             tutEnd.gameObject.SetActive(false);
+            tutEndButtons.gameObject.SetActive(false);
             joyArrow.gameObject.SetActive(false);
             specialArrow.gameObject.SetActive(false);
             blinkArrow.gameObject.SetActive(false);

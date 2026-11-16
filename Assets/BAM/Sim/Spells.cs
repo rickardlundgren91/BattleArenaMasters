@@ -79,7 +79,7 @@ namespace BAM.Sim
             {
                 case SpellId.Blink:
                 {
-                    float a = float.IsNaN(ang) ? h.Facing : ang;
+                    float a = float.IsNaN(ang) ? (Tut != null ? TutBlinkAngle(h) : h.Facing) : ang; // the guided match: away from Knut (Tutorial.cs)
                     BlinkPoint(h, a, k, out float x, out float y);
                     if (SimMath.Hypot(x - h.X, y - h.Y) < 0.5f) return false; // against a wall
                     LoseShots(h); // the shots on their way miss: a blink gets you out of them (Combat.cs)

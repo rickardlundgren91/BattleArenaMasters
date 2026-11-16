@@ -92,7 +92,7 @@ namespace BAM.Game
             Screens.ShowMainMenu();
         }
 
-        /// <summary>A tap on the guided match's end screen (TOWER DESTROYED!): Home, with the "Tutorial done" card.</summary>
+        /// <summary>Home or CONTINUE on the guided match's end screen (TOWER DESTROYED!): Home, with the "Tutorial done" card.</summary>
         public void FinishTutorial()
         {
             if (!inMatch || !TutorialEnd) return;
@@ -101,6 +101,30 @@ namespace BAM.Game
             Teardown();
             Screens.ShowMainMenu();
         }
+
+        /// <summary>PLAY FIRST MATCH on the guided match's end screen, the first time through only (Rickard 2026-11-16): straight
+        /// into the first match as Home's PLAY would start it (Tyra against Easy bots unless the player had picked something), with
+        /// no stop on Home, where a new player can lose the way. The "Tutorial done" card waits on Home if that match is left.</summary>
+        public void FinishTutorialAndPlay()
+        {
+            if (!inMatch || !TutorialEnd) return;
+            TutorialFinished(false);
+            SendEnd(false);
+            Teardown();
+            Screens.PlayBotMatch();
+        }
+
+#if UNITY_EDITOR
+        // Editor only: the next Play is a first start again (the guided match starts by itself with Home's picture fading into
+        // the island, and its end offers PLAY FIRST MATCH), without clearing any other setting.
+        [UnityEditor.MenuItem("BAM/Test Tutorial/Next Play is a first start")]
+        static void TestFirstStart()
+        {
+            BamSettings.TutorialDone = false;
+            BamSettings.TutorialCard = false;
+            Debug.Log("[BAM.Game] The next Play is a first start: the guided match by itself, PLAY FIRST MATCH at its end.");
+        }
+#endif
 
         // The first time only (the old NewPlayer.FinishTutorial and FirstPicks): the card on Home, and the first match is Tyra
         // against Easy bots unless the player has already picked something. skipped: Skip or Pause > Home before the tower fell, so

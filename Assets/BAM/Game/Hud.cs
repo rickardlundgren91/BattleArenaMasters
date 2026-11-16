@@ -187,6 +187,7 @@ namespace BAM.Game
                 float ky = (kb.wKey.isPressed || kb.upArrowKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);
                 if (kx != 0f || ky != 0f) v = new Vector2(kx, ky).normalized;
             }
+            if (v.sqrMagnitude > 0.01f) joyUsed = true; // the guided match's arrow over the joystick has done its job (HudTutorial.cs)
             // screen up is up the map, which is -y in map space (online on the top team the camera is turned: Coords.Screen)
             v = Coords.Screen(v);
             input.MoveX = v.x;
@@ -272,6 +273,7 @@ namespace BAM.Game
                 string name = lastTutStep >= 0 && lastTutStep < names.Length ? names[lastTutStep] : "step";
                 BamAnalytics.TutorialStep(island ? lastTutStep : IslandStepNames.Length + lastTutStep, name);
             }
+            TutorialAfterStep(); // a finished lesson's ding (HudTutorial.cs)
         }
 
         // ---------------------------------------------------------------- every frame
@@ -304,8 +306,8 @@ namespace BAM.Game
             FocusFrame(hidden); // the FOCUS dots under SPECIAL (HudFocus.cs)
             Aim(hidden);
             Hint(hidden);
-            IslandMarks(hidden);
-            TutorialFrame(hidden); // the arena half's line, arrows, "+ CHARGE", tower blocks and end; Skip (HudTutorial.cs)
+            TutMarks(hidden); // the guided match's gold ring, boost pad and bouncing arrows (HudTutorial.cs)
+            TutorialFrame(hidden); // its guide card, arrows, "+ CHARGE", tower blocks and end; Skip (HudTutorial.cs)
             Fade();
             Fps(dt);
             joy.Rest();
@@ -564,25 +566,6 @@ namespace BAM.Game
             if (open) sb.Append(MarkEnd);
             hintRich = sb.ToString();
             return hintRich;
-        }
-
-        // The island's ground ring, boost pad and bouncing chevrons.
-        void IslandMarks(bool hidden)
-        {
-            var tut = m.Tut;
-            bool on = !hidden && island;
-            if (marks != null)
-            {
-                marks.Hide();
-                if (on)
-                {
-                    float pulse = Mathf.Sin(Time.unscaledTime * 5f);
-                    if (tut.PadOn && !tut.Jumping) marks.ShowCircle(Coords.World(tut.PadX, tut.PadY), 0.55f + 0.05f * pulse, true);
-                }
-            }
-            rings.SetGoal(on && tut.RingOn, on ? Coords.World(tut.RingX, tut.RingY) : Vector3.zero);
-            Chevron(pointChevron, on && tut.PointAt != null && tut.PointAt.Alive, on && tut.PointAt != null ? views.DrawnAt(tut.PointAt) + Vector3.up * 1.4f : Vector3.zero);
-            Chevron(ringChevron, on && tut.RingOn && tut.ArrowOnRing, on ? Coords.World(tut.RingX, tut.RingY) + Vector3.up * 0.9f : Vector3.zero);
         }
 
         void Chevron(RectTransform c, bool show, Vector3 world)

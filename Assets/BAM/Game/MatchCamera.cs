@@ -26,8 +26,13 @@ namespace BAM.Game
         static readonly float Pitch = Mathf.Asin(0.82f) * Mathf.Rad2Deg;
         const float Lead = 1.2f;        // the focus sits this far ahead of the hero, so more of the way forward is seen
         const float Over = 3f;          // the focus may pass the map edge by this much (the hero is not stuck under the buttons)
-        // the guided match: the enemy tower's foot this high on screen (share from the top), Tyra at most this low
-        const float TutTowerAt = 0.27f, TutHeroAt = 0.75f;
+        // the guided match: Tyra at most this low on screen (share from the top), and the enemy tower's foot TutTowerDown frame
+        // widths from the top (never above TutTowerMin or below TutTowerMax of the height): the guide card (HudTutorial.cs) is
+        // laid out by the width, so the whole tower with its bar stands clear under the card on a long phone and on a short one.
+        // It was 0.27 of the height on every screen, which put the tower's top behind the card. Tyra was at most 0.75 down:
+        // at 0.78 (between the joystick and SPECIAL) a 9:19 phone shows the tower clear of the card from her landing on;
+        // on a shorter screen it comes out from under the card once she has walked a few tiles up the lane.
+        const float TutHeroAt = 0.78f, TutTowerDown = 0.72f, TutTowerMin = 0.27f, TutTowerMax = 0.42f;
 
         static readonly Color IslandSky = new Color32(0x79, 0xb9, 0xee, 0xff);
         readonly Camera cam;
@@ -191,7 +196,8 @@ namespace BAM.Game
             speed = opening ? 2.5f : 4f;
             // the opening: rest on the tower a little above the middle, then glide down the lane to Tyra
             if (tut.Step == Tutorial.StepMove && m.Time < Tutorial.OpenHold) return new Vector3(m.Map.W * 0.5f, 0f, towerZ - 0.1f * viewH);
-            float onTower = towerZ - (0.5f - TutTowerAt) * viewH;
+            float towerAt = frame.height > 1f ? Mathf.Clamp(TutTowerDown * frame.width / frame.height, TutTowerMin, TutTowerMax) : TutTowerMin;
+            float onTower = towerZ - (0.5f - towerAt) * viewH;
             float lead = hero.z + (TutHeroAt - 0.5f) * viewH;
             return new Vector3(hero.x, 0f, Mathf.Max(hero.z + Lead, Mathf.Min(onTower, lead)));
         }

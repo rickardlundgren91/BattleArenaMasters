@@ -79,8 +79,9 @@ namespace BAM.Game
             int n = !hidden && !heroTest && m.State == MatchState.Play && p != null && p.Alive ? m.FocusTargets(p) : 0;
             bool show = n > 0;
             if (focusRoot.gameObject.activeSelf != show) focusRoot.gameObject.SetActive(show);
-            // the island's Focus step: the gold arrow points at the dots while Tyra shows it
-            bool arrow = !hidden && island && m.Tut != null && m.Tut.Step == Tutorial.IslandFocus && m.Tut.Line != null && show;
+            // the island's Focus step: the gold arrow points at the dots while Tyra's line names them (not while it still sends
+            // her into the ring: one thing to look at at a time)
+            bool arrow = !hidden && m.Tut != null && m.Tut.FocusShown && show;
             Vector2 c = Vector2.zero;
             float w = 0f;
             if (show || arrow)

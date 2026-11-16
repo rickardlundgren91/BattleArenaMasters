@@ -61,18 +61,9 @@ namespace BAM.Art.Editor
             "ggg.........ggg", "ggg.........ggg", "...............", "...............", "...##.....##...", "...##.....##...",
         };
 
-        // The guided match's training island (Sim TutorialIsland.cs IslandMap), built beside the arena at x + IslandX.
+        // The guided match's training island (Sim TutorialIsland.cs IslandMap: the round platform, then the bridge on rows
+        // 17-19 and nothing below it since 2026-11-16), built beside the arena at x + IslandX.
         const float IslandX = 40f;
-        static readonly string[] IslandLower =
-        {
-            "     ...     ", "     ...     ", "     ...     ", "             ", "             ",
-            "  .........  ", "  .........  ", "  .........  ", "  .........  ", "  .... ....  ",
-            "  .........  ", "ggg.......ggg", "gg#.......ggg", "ggg.......#gg", "ggg.......#gg",
-            "ggg.......#gg", "g...........g", "g...........g", "g...........g", "g...........g",
-            "g...........g", "g...........g", "gg#.......ggg", "gg#.......ggg", "gg#.......ggg",
-            "ggg.......#gg", "ggg.......ggg", "  .........  ", "  .... ....  ", "  .........  ",
-            "  .........  ", "  .........  ", "  .........  ",
-        };
         GameObject island;
 
         static readonly HeroId[] heroes = { HeroId.Bram, HeroId.Fenn, HeroId.Tyra, HeroId.Moa, HeroId.Knut, HeroId.Tikta, HeroId.Blast };
@@ -167,8 +158,8 @@ namespace BAM.Art.Editor
             aim = ArtKit.CreateAim();
 
             focus = new[] { new Vector3(7.5f, 0f, 9f), new Vector3(7.5f, 0f, 13f), new Vector3(7.5f, 0f, 17f), new Vector3(7.5f, 0f, 21.5f), new Vector3(7.5f, 0f, 25f), new Vector3(7.5f, 0f, 17.5f),
-                new Vector3(IslandX + 6.5f, 0f, 50f - 11.4f), new Vector3(IslandX + 6.5f, 0f, 50f - 24f) };
-            focusName = new[] { "Heroes", "Minions, wolf", "Projectiles", "Zones", "Effects", "Whole map", "Island", "Island bridge, lane" };
+                new Vector3(IslandX + 6.5f, 0f, 50f - 11.4f), new Vector3(IslandX + 6.5f, 0f, 50f - 18.5f) };
+            focusName = new[] { "Heroes", "Minions, wolf", "Projectiles", "Zones", "Effects", "Whole map", "Island", "Island bridge" };
             Debug.Log("[BAM.Art] Preview ready. Buttons top left; the Scene view works too.");
         }
 
@@ -187,11 +178,7 @@ namespace BAM.Art.Editor
                         bool neck = y == 16 && x >= 5 && x <= 7;
                         t = d > 5.25f && !neck ? (byte)0 : d > 4f && Mathf.Abs(dx) > 2.6f && Mathf.Abs(dy) > 2.6f ? (byte)2 : (byte)1;
                     }
-                    else
-                    {
-                        char ch = IslandLower[y - 17][x];
-                        t = ch == ' ' ? (byte)0 : ch == 'g' ? (byte)2 : ch == '#' ? (byte)3 : (byte)1;
-                    }
+                    else t = y <= 19 && x >= 5 && x <= 7 ? (byte)1 : (byte)0; // the bridge
                     tiles[y * w + x] = t;
                 }
             island = ArtKit.BuildArena(new ArenaInfo { Width = w, Height = h, Tiles = tiles, Rocks = new Vector3[0], Island = true, LaneRises = rise });

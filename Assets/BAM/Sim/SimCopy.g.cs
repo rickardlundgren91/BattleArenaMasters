@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "be40fc8172878535";
+            Generated = true; GeneratedHash = "97f8f54f66ff82c1";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -499,7 +499,9 @@ namespace BAM.Sim
             Goal = __m.Map(__s.Goal);
             Guard = __m.Map(__s.Guard);
             GuardDir = __s.GuardDir;
+            HelpAt = __s.HelpAt;
             Helpers = __s.Helpers;
+            Hid = __s.Hid;
             HitAt = __s.HitAt;
             HookAt = __s.HookAt;
             Hooked = __s.Hooked;
@@ -510,17 +512,19 @@ namespace BAM.Sim
             LastCharge = __s.LastCharge;
             Leader = __m.Map(__s.Leader);
             Leave = __s.Leave;
+            Lesson = __s.Lesson;
+            LessonAt = __s.LessonAt;
+            Lessons = __s.Lessons;
             Line = __s.Line;
             LineMarked = __s.LineMarked;
             LineTip = __s.LineTip;
-            Lx = __s.Lx;
-            Ly = __s.Ly;
             __m.ListMap(Minions, __s.Minions);
-            Moved = __s.Moved;
+            OnYouT = __s.OnYouT;
             Opening = __s.Opening;
             PadOn = __s.PadOn;
             PadX = __s.PadX;
             PadY = __s.PadY;
+            Part = __s.Part;
             Pause = __s.Pause;
             PointAt = __m.Map(__s.PointAt);
             PressAimed = __s.PressAimed;
@@ -537,6 +541,8 @@ namespace BAM.Sim
             Tower = __m.Map(__s.Tower);
             TowerHitAt = __s.TowerHitAt;
             TowerHitCount = __s.TowerHitCount;
+            TowerSay = __s.TowerSay;
+            TowerSayT = __s.TowerSayT;
             WaveAt = __s.WaveAt;
         }
     }

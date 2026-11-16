@@ -119,9 +119,9 @@ namespace BAM.Sim
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
                 if (Tut != null) TutSawHit(src, tgt, kind); // the guided match's special lessons (Tutorial.cs)
-                if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy))
+                if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy || tgt == Tut.Guard))
                 {
-                    amount = TutDamage(src, tgt, amount, kind);
+                    amount = TutDamage(src, tgt, amount, kind); // the tower's six hits, Knut's finishing special (Tutorial.cs)
                     if (amount <= 0) return 0; // a hit the tutorial zeroes is no fight: it neither stops regen nor counts as combat
                 }
             }

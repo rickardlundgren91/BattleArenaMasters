@@ -5,6 +5,8 @@ namespace BAM.Sim
     // Full review 2026-11-13 nr 111: in the guided match's arena half Knut (380 hp) could fall to Tyra's double damage before his
     // hook lesson was over. "He pulled you in! Tap BLINK to dash away!" then stood over an empty lane and the "Now take Knut down!"
     // moment was skipped. Knut now cannot drop below 40 % before the fight moment, as Tyra cannot (Tutorial.cs TutKnutFloor).
+    // Since the tutorial review of 2026-11-15 the line is "Now finish him with your SPECIAL!" and only her special takes him down
+    // in the fight moment (TutorialV3Tests.cs has the rest of the new flow).
     public sealed partial class Match
     {
         static void Review1113()
@@ -25,8 +27,8 @@ namespace BAM.Sim
             // a player who taps SPECIAL whenever it is ready and never presses BLINK
             PlayerInput Attack() { var i = PlayerInput.None; if (p.SpecialReady) i.Special = true; return i; }
             float t0 = m.Time;
-            while (m.Time - t0 < 20f && !(tu.Step == Tutorial.StepBlink && tu.Line != null)) m.Step(Attack());
-            Check(tu.Step == Tutorial.StepBlink && tu.Line != null, $"REVIEW 13 NOV: the BLINK line comes up (step {tu.Step}, line '{tu.Line}')");
+            while (m.Time - t0 < 20f && !(tu.Step == Tutorial.StepBlink && tu.Hooked && tu.Line != null)) m.Step(Attack());
+            Check(tu.Step == Tutorial.StepBlink && tu.Hooked && tu.Line != null && tu.Line.Contains("BLINK"), $"REVIEW 13 NOV: the BLINK line comes up (step {tu.Step}, line '{tu.Line}')");
 
             // the player waits 12 s with the line up: Knut stays on his feet, so the line never stands over an empty lane
             bool lineWithoutKnut = false, knutFell = false;
@@ -48,9 +50,9 @@ namespace BAM.Sim
             while (m.Time - t0 < 30f && k.Alive)
             {
                 m.Step(Attack());
-                if (tu.Step == Tutorial.StepFight && tu.Line == LineFight) fightLine = true;
+                if (tu.Step == Tutorial.StepFight && tu.LineMarked == LineFight) fightLine = true;
             }
-            Check(fightLine, "REVIEW 13 NOV: \"Now take Knut down!\" shows after the BLINK");
+            Check(fightLine, "REVIEW 13 NOV: \"Now finish him with your SPECIAL!\" shows after the BLINK");
             Check(!k.Alive, $"REVIEW 13 NOV: Knut falls in the fight moment (hp {k.Hp:0})");
             t0 = m.Time;
             while (m.Time - t0 < 3f && tu.Step == Tutorial.StepFight) m.Step(Attack());
