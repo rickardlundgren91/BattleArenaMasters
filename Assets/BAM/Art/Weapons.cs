@@ -568,9 +568,19 @@ namespace BAM.Art
             // neither built in)
             GearDef n = g[(int)HeroId.Nassla];
             n.Weapons[0].Model = "v2_nassla_staff";
+            // On the menu stages she stands with the staff upright beside her right side as a walking staff (Rickard 2026-11-16:
+            // "majoriteten buggar"; Unity MCP pictures of Home and the hero page: in Moa's borrowed idle the fist's own grip pointed
+            // it into the screen, only the root ball showing in her fist, or lying level out to her side on Glowcap). The old
+            // body's Turn (22, 6.6, -70, tuned on the 0.4.0 staff in her old fist) tipped the V2 staff over, so it is left out;
+            // the match holds it by the fist's own grip (GripLockFull) as before. Tune with BAM > Art > Weapon Tuner ("Nassla V2").
+            n.Weapons[0].Turn = Vector3.zero;
+            n.Weapons[0].Menu = new Hold { Up = 84f, Out = 60f };
             n.Worn = new[]
             {
-                new WornDef { Model = "v2_nassla_cap", Bone = Head, From = Head, Height = 0.14f, At = new Vector3(0f, 0.11f, 0f) },
+                // her mushroom cap as big as on her own picture (portrait_nassla), down over her hair to the brow: at 0.14 high and
+                // 0.11 over the head joint it sat small and high on top of her hair like a party hat (same pictures; Blender check
+                // of 0.21 / 0.085 on her V2 body, bam-work/nassla-detail/cap_fore_efter.png). Her skins' caps go on the same spot
+                new WornDef { Model = "v2_nassla_cap", Bone = Head, From = Head, Height = 0.21f, At = new Vector3(0f, 0.085f, 0f) },
                 new WornDef { Model = "v2_nassla_basket", Bone = Chest, From = LArm, To = RArm, Height = 0.22f, At = new Vector3(0f, -0.16f, -0.09f) },
             };
 
