@@ -275,6 +275,9 @@ namespace BAM.UI
             {
                 float top = Mathf.Min(ArtKit.GearTopOf(view) - Spot.y, 1.6f * heroHeight);
                 if (top > gearTop + 0.001f) { gearTop = top; Frame(); }
+                // only round Kugg is fitted across (what it was made for): Knut's baked width came out far too wide and drew him at about
+                // half size on Home (Rickard 2026-11-16 "knut är liten dvärg nu bara i menyn", "fortfarande för liten" after a rebuild)
+                if (bodyHalfW <= 0f && shownId != HeroId.Kugg) bodyHalfW = 0.001f;
                 if (bodyHalfW <= 0f)
                 {
                     bodyHalfW = Mathf.Max(0.001f, Mathf.Min(BodyHalfWidth(), 1.2f * heroHeight));
