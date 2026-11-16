@@ -522,7 +522,14 @@ namespace BAM.Art
 
             // Bram: the new throwing hammer (still on his shoulder at rest); the rack of three spare hammers on his back (made facing
             // +z, so turned round), the boar pauldron on his left shoulder and the leather apron flap over his thighs, swinging forward
-            GearDef br = g[(int)HeroId.Bram];
+            // The hold is the code's own shoulder carry (Make: grip at the end of the shaft, the head standing up behind his head), not
+            // Rickard's tuned old-body numbers that MakeV2 copies over: those (grip halfway up the shaft, Turn 30/-152/-46) were tuned
+            // on the old hammer, whose head was 70 % of its length wide; on the V2 body and hammer they held the head across his chest
+            // and in front of his face on Home and the hero page (menu screenshots 2026-11-16, Rickard 2026-11-15: "majoriteten
+            // buggar" in the menus). Tune further with BAM > Art > Weapon Tuner "Bram V2"; his old-body "Bram" entry is unchanged
+            GearDef br = g[(int)HeroId.Bram], brCode = Make()[(int)HeroId.Bram];
+            br.Weapons[0] = brCode.Weapons[0];
+            br.CarryAt = brCode.CarryAt; br.Elbow = brCode.Elbow; br.CarryOut = brCode.CarryOut; br.ArmSpread = brCode.ArmSpread;
             br.Weapons[0].Model = "v2_bram_hammer";
             br.Worn = new[]
             {
