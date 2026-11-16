@@ -9,8 +9,9 @@ namespace BAM.Art
     /// island textures (Resources/BAMArt/Island, Gemini 2026-10-18): the platform picture on one round mesh (rows 0-16),
     /// its painted cliff under the rim, the bridge (rows 17-19; a lane below it too if the map has one) with the same cliff
     /// under every edge that faces the void, the boost pad on the bridge's last row (the game's own jump pad, Arena.JumpPad),
-    /// two braziers and small floating islets, over a plain, light cloud sea far below.
-    /// Built once by Arena.Build when ArenaInfo.Island is set; only the bridge's rise moves afterwards.
+    /// two braziers and small floating islets, in the sky of Home's own painting (tut_sky, a picture held behind everything;
+    /// a plain cloud sea far below stands in without it).
+    /// Built once by Arena.Build when ArenaInfo.Island is set; only the bridge's rise and the sky move afterwards.
     /// </summary>
     static class Island
     {
@@ -20,6 +21,7 @@ namespace BAM.Art
         // where the platform picture lies, in tiles (0.9 times the old first island, so it all fits one screen)
         const float DiscX0 = 0.65f, DiscY0 = 5.91f, DiscW = 11.52f, DiscH = 10.98f;
         const float CliffDepth = 3.2f, CloudY = -14f;
+        const float SkyAspect = 768f / 960f;              // tut_sky.jpg's own shape (Unity imports it square, so it is not asked)
         internal const float RiseDepth = 3f;
         static readonly Color CloudSea = new Color32(0xe4, 0xf0, 0xfa, 0xff);
 
@@ -50,7 +52,7 @@ namespace BAM.Art
             if (cliffDisc != null) { cliffDisc.wrapModeU = TextureWrapMode.Repeat; cliffDisc.wrapModeV = TextureWrapMode.Clamp; }
             if (cliffLane != null) { cliffLane.wrapModeU = TextureWrapMode.Repeat; cliffLane.wrapModeV = TextureWrapMode.Clamp; }
 
-            CloudPlane(root, info);
+            Sky(root, CloudPlane(root, info));
             Platform(root, info, disc, cliffDisc);
             Props(root, info);
             Lane(root, info, cliffLane, stone, moss, bridge);
@@ -75,18 +77,42 @@ namespace BAM.Art
 
         // ------------------------------------------------------------------ sky
 
-        // The plain, light cloud sea far below: all there is round the island. For some hours of 2026-11-16 Home's own
-        // painting, blurred, stood behind the island instead (tut_sky.jpg, which Rickard had picked on a card); when he saw
-        // it in the game he wrote "jag gillade förra bakgrunden i tutorial bättre tror jag", so the picture and its code
-        // are gone again (they are in the history, commit 805126a).
-        static void CloudPlane(GameObject root, ArenaInfo info)
+        // The plain cloud sea far below: all there was round the island until 2026-11-16 (a white screen with an island on it).
+        // Now it only stands in where the sky picture cannot be shown (IslandSky).
+        static GameObject CloudPlane(GameObject root, ArenaInfo info)
         {
             var mb = new MeshBuilder();
             float w = info.Width, h = info.Height;
             mb.Color(Pal.White).Face(new Vector3(-80f, CloudY, -80f), new Vector3(-80f, CloudY, h + 80f), new Vector3(w + 80f, CloudY, h + 80f), new Vector3(w + 80f, CloudY, -80f));
             var m = Textured(ArtMaterials.Unlit, Texture2D.whiteTexture);
             m.SetColor(ArtMaterials.BaseColor, CloudSea);
-            Arena.Add(root, "Cloud sea", mb.ToMesh("Island cloud sea"), m, false);
+            return Arena.Add(root, "Cloud sea", mb.ToMesh("Island cloud sea"), m, false);
+        }
+
+        // The sky all round the island: Home's own painting, blurred (tut_sky.jpg, cut from Rickard's home_bg; Rickard
+        // 2026-11-16: "Ja, Home-himlen (suddig)"), so the island floats in the same sky the game opens on and the first
+        // start's picture of Home fades into it. One picture filling the view, far behind everything, held to the camera.
+        // He has seen both in the game and chose this one: the same afternoon he had the plain cloud sea back for three
+        // hours ("jag gillade förra bakgrunden i tutorial bättre tror jag", commit e1e204a), played that too and wrote
+        // "nja den nya bakgrunden va bättre ändå". So the picture stays; do not take it away again without his word.
+        static void Sky(GameObject root, GameObject clouds)
+        {
+            var tex = Resources.Load<Texture2D>("BAMArt/Island/tut_sky"); // without it the cloud sea stays, as before
+            if (tex == null) return;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            // a unit square facing the camera it is turned with (IslandSky)
+            var v = new List<Vector3> { new Vector3(-0.5f, -0.5f, 0f), new Vector3(-0.5f, 0.5f, 0f), new Vector3(0.5f, 0.5f, 0f), new Vector3(0.5f, -0.5f, 0f) };
+            var n = new List<Vector3> { Vector3.back, Vector3.back, Vector3.back, Vector3.back };
+            var uv = new List<Vector2> { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+            var t = new List<int>(6);
+            Quad(t, 0, 1, 2, 3, false);
+            var go = Arena.Add(root, "Sky", Build("Island sky", v, n, uv, t), Textured(ArtMaterials.Unlit, tex), false);
+            Moving(go);
+            var sky = go.AddComponent<IslandSky>();
+            sky.Picture = go.GetComponent<MeshRenderer>();
+            sky.Clouds = clouds.GetComponent<MeshRenderer>();
+            sky.Aspect = SkyAspect;
+            sky.Picture.enabled = false; // until its first frame has placed it
         }
 
         // ------------------------------------------------------------------ the round platform
@@ -312,6 +338,31 @@ namespace BAM.Art
             if (n != null) m.SetNormals(n); else m.RecalculateNormals();
             m.RecalculateBounds();
             return m;
+        }
+    }
+
+    /// <summary>The island's sky picture, held to the match's camera: every frame it is put far behind everything, turned with
+    /// the camera and sized to cover the view (its sides cut on a phone, its top and bottom on a wide screen), so the sky
+    /// stands still while the island moves and shakes in front of it. The match's camera looks straight (orthographic); for
+    /// any other camera (the Art Preview's) the picture hides and the plain cloud sea shows instead.</summary>
+    sealed class IslandSky : MonoBehaviour
+    {
+        public MeshRenderer Picture, Clouds;
+        public float Aspect = 1f; // the picture's width over its height
+        Camera cam;
+
+        void LateUpdate() // after GameFlow.Update has placed and shaken the camera
+        {
+            if (cam == null) cam = Camera.main;
+            bool on = cam != null && cam.orthographic;
+            if (Picture.enabled != on) Picture.enabled = on;
+            if (Clouds != null && Clouds.enabled == on) Clouds.enabled = !on;
+            if (!on) return;
+            float vh = 2f * cam.orthographicSize, vw = vh * cam.aspect;
+            float w = Mathf.Max(vw, vh * Aspect) * 1.02f; // a hair over, so no edge ever shows
+            var t = cam.transform;
+            transform.SetPositionAndRotation(t.position + t.forward * (cam.farClipPlane * 0.9f), t.rotation);
+            transform.localScale = new Vector3(w, w / Aspect, 1f);
         }
     }
 
