@@ -518,7 +518,7 @@ namespace BAM.Art
             // his neck, 1.0 spans wide and tipped 25 degrees so its front drops onto his chest, shows the cord and the fangs
             GearDef bo = g[(int)HeroId.Bonk];
             bo.Weapons[0].Model = "v2_bonk_club";
-            bo.Weapons[0].Len = 1.0f; // the new Tripo club (16 Nov) is slimmer than the old one, and Rickard wants it longer: as tall as he is
+            bo.Weapons[0].Len = 1.2f; // the Tripo club (16 Nov) with its head swelled fat in v2_bonk_club.bytes; Rickard: "längre klubba och tjockare där uppe, riktigt tjock"
             bo.Worn = new[]
             {
                 new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = BonkPeltWide, At = BonkPeltAt, Flat = 0.8f, Sway = 8f },
