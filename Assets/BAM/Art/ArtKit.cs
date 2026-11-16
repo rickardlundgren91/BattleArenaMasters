@@ -379,6 +379,7 @@ namespace BAM.Art
         {
             Init();
             team = team == 1 ? 1 : 0;
+            int heroIndex = kindKey >= HeroKey && kindKey < PreviewKey ? kindKey - HeroKey : kindKey >= PreviewKey && kindKey < PreviewKey + 100 ? kindKey - PreviewKey : -1;
             int key = kindKey * 2 + team + 100000 * Mathf.Clamp(skin, 0, 7); // a skin's views are built with its body: their own pool
             if (!bodyPools.TryGetValue(key, out Stack<BodyView> pool)) { pool = new Stack<BodyView>(); bodyPools[key] = pool; }
             BodyView v;
@@ -394,13 +395,14 @@ namespace BAM.Art
                 v = go.AddComponent<BodyView>();
                 v.Pool = pool;
                 v.Preview = preview;
+                v.HeroIndex = heroIndex; // before Build: it picks hero-only setup by it (Blast V2's head hold was never measured)
                 v.Build(def, team);
                 if (!preview && kindKey >= 10 && kindKey < 20) v.MinionLook(team); // CreateMinion's keys; kept with the view in its pool
             }
             v.InPool = false;
             v.Skin = Mathf.Clamp(skin, 0, 7); // the look it was built in (Kugg's chimney smoke takes its colour)
             v.IsHero = !preview && kindKey >= HeroKey && kindKey < PreviewKey;
-            v.HeroIndex = kindKey >= HeroKey && kindKey < PreviewKey ? kindKey - HeroKey : kindKey >= PreviewKey && kindKey < PreviewKey + 100 ? kindKey - PreviewKey : -1;
+            v.HeroIndex = heroIndex;
             v.gameObject.SetActive(true);
             if (v.IsHero && !BodyView.Heroes.Contains(v)) BodyView.Heroes.Add(v); // a new view was enabled before IsHero was set
             return v;
