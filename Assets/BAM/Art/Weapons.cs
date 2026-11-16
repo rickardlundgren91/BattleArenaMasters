@@ -595,7 +595,9 @@ namespace BAM.Art
             {
                 new WornDef { Model = "v2_ravna_mantle", Bone = Chest, From = LArm, To = RArm, Height = 0.55f, At = new Vector3(0f, 0.03f, -0.05f), Flat = 0.8f, Sway = 20f },
                 new WornDef { Model = "v2_ravna_mask", Bone = Head, From = Head, Height = 0.16f, At = new Vector3(0f, 0.06f, 0f) },
-                new WornDef { Model = "v2_ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = LArm, Height = 0.1f, At = new Vector3(-0.015f, 0.04f, -0.015f) },
+                // the crow on top of her left shoulder, between the neck and the shoulder ball, feet in the mantle's feathers: at x -0.015
+                // (out past the shoulder ball) and 0.04 up it stood outside her on the mantle's edge (Rickard 2026-11-16 "Fågeln utanför")
+                new WornDef { Model = "v2_ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = LArm, Height = 0.1f, At = new Vector3(0.035f, 0.025f, -0.01f) },
             };
 
             // only the twelve remade heroes have a V2 body
