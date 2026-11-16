@@ -33,6 +33,9 @@ namespace BAM.Game
         // at 0.78 (between the joystick and SPECIAL) a 9:19 phone shows the tower clear of the card from her landing on;
         // on a shorter screen it comes out from under the card once she has walked a few tiles up the lane.
         const float TutHeroAt = 0.78f, TutTowerDown = 0.72f, TutTowerMin = 0.27f, TutTowerMax = 0.42f;
+        // the guided match's drag lesson: Fenn (Tutorial.PointAt) is kept at least TutLookIn tiles in from the frame's sides, Tyra
+        // TutHeroIn (she comes first)
+        const float TutLookIn = 1.2f, TutHeroIn = 1f;
 
         static readonly Color IslandSky = new Color32(0x79, 0xb9, 0xee, 0xff);
         readonly Camera cam;
@@ -199,7 +202,17 @@ namespace BAM.Game
             float towerAt = frame.height > 1f ? Mathf.Clamp(TutTowerDown * frame.width / frame.height, TutTowerMin, TutTowerMax) : TutTowerMin;
             float onTower = towerZ - (0.5f - towerAt) * viewH;
             float lead = hero.z + (TutHeroAt - 0.5f) * viewH;
-            return new Vector3(hero.x, 0f, Mathf.Max(hero.z + Lead, Mathf.Min(onTower, lead)));
+            // the drag lesson: Fenn, whom the arrow is over, stays in the picture though Tyra walks off to the other side (a way in
+            // from the frame's edge, for him and the arrow); never at the cost of Tyra herself
+            float x = hero.x;
+            var look = tut.PointAt;
+            if (look != null && look.Alive)
+            {
+                float half = TilesAcross * 0.5f;
+                x = Mathf.Clamp(x, look.X - (half - TutLookIn), look.X + (half - TutLookIn));
+                x = Mathf.Clamp(x, hero.x - (half - TutHeroIn), hero.x + (half - TutHeroIn));
+            }
+            return new Vector3(x, 0f, Mathf.Max(hero.z + Lead, Mathf.Min(onTower, lead)));
         }
 
         // the focus lands FocusDown of the way down the frame: the camera sits a little above it along its own up

@@ -16,8 +16,8 @@ namespace BAM.Sim
             Check(tu != null && !tu.Island && k != null, "REVIEW 13 NOV: the arena half of the guided match has Knut");
             if (tu == null || k == null) return;
 
-            // the end of moment 3 as UpdateTutorial runs it: Knut becomes a real enemy and Tyra's special is full; no minions, so
-            // every hit of hers goes to him
+            // straight to Knut's lessons, past the drag lesson on Fenn (TutorialV3Tests.cs plays that): Knut becomes a real enemy
+            // and Tyra's special is full; no minions, so every hit of hers goes to him
             foreach (var u in m.Units) if (u.Kind == UnitKind.Minion) u.Alive = false;
             m.TutNext(Tutorial.StepThrow); m.StartFight(); p.Charge = p.HDef.MaxCharge;
             if (m.OneTap) { tu.Burst = true; tu.BurstAt = m.Time; }

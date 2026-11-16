@@ -46,7 +46,7 @@ namespace BAM.Game
         readonly Image[] cancelCross = new Image[2];
         SpecialButton special;
         JoystickZone joy;
-        AimView aim, marks;
+        AimView aim;
         AimIndicator aimLook;
         Image fade;
         RectTransform canvasRect, pointChevron, ringChevron;
@@ -87,7 +87,6 @@ namespace BAM.Game
             heroTest = m.HeroTest;
             if (!built) Build();
             specialRoot.gameObject.SetActive(!island); // no special on the training island
-            marks = tutorial ? ArtKit.CreateAim() : null;
             fadeInAt = -1f;
             SetFade(0f);
             hintSource = null;
@@ -139,8 +138,6 @@ namespace BAM.Game
             aimLook = null;
             if (aim != null) ArtKit.Release(aim);
             aim = null;
-            if (marks != null) ArtKit.Release(marks);
-            marks = null;
             rings.End();
             if (introRoot != null) ShowIntro(false);
             StopDissolve();
@@ -212,6 +209,9 @@ namespace BAM.Game
             if (m == null || !m.Player.Alive) return;
             // after the hold card has shown, letting go only hides it (Rickard 2026-10-26: reading must not cast); Space has no hold
             if (!fromKey && m.Tut == null && Time.unscaledTime - special.PressedAt >= HoldTime) return;
+            // the guided match's drag lesson takes no tap (Tutorial.DragAsked): the button shakes, and the rules are told (they fire
+            // nothing), so the line turns to how a drag is made
+            if (m.Tut != null && m.Tut.DragAsked) { Denied(); Queue(float.NaN, 0f); return; }
             if (m.Player.VeilStrikeReady) { if (m.VeilStrikeHasTarget(m.Player)) Queue(float.NaN, 0f); else Denied(); return; } // veiled Fenn: SPECIAL is the Shadow Strike
             if (!m.Player.SpecialReady) { Denied(); return; }
             if (m.OneTap && !m.TapHasTarget(m.Player)) { Denied(); return; } // the button is grey (OneTap.cs)
@@ -347,10 +347,12 @@ namespace BAM.Game
         void Special()
         {
             var p = m.Player;
-            // one-tap special: charged but nobody in reach shows as not ready, grey (Rickard 2026-11-01)
-            bool ready = p.Alive && p.SpecialReady && (!m.OneTap || m.TapHasTarget(p)) || p.Alive && m.VeilStrikeHasTarget(p); // veiled Fenn: lit with an enemy to strike
-            // one tap + drag aim (tester Ski 2026-11-07): a tap rolls the random target, a drag aims by hand; not in the guided match
-            // (it teaches the tap only) and not for Bonk's slam or Kugg's turret, which have nothing to aim (Match.CanDragAim)
+            // one-tap special: charged but nobody in reach shows as not ready, grey (Rickard 2026-11-01). The guided match's drag
+            // lesson lights it all the same: the drag it asks for needs nobody in the ring (Tutorial.DragAsked)
+            bool ready = p.Alive && p.SpecialReady && (!m.OneTap || m.TapHasTarget(p) || m.Tut != null && m.Tut.DragAsked)
+                || p.Alive && m.VeilStrikeHasTarget(p); // veiled Fenn: lit with an enemy to strike
+            // one tap + drag aim (tester Ski 2026-11-07): a tap rolls the random target, a drag aims by hand; in the guided match
+            // from its drag lesson on (Match.DragAimOn) and not for Bonk's slam or Kugg's turret, which have nothing to aim (Match.CanDragAim)
             if (m.OneTap) special.NoDrag = !(m.DragAimOn && m.DragAimNow(p)); // veiled Fenn's strike drags too (Match.DragAimNow)
             // the Glass HUD's button (Hud.cs 739-749, HudGlass.drawGlassSpecialRim): a dark disc, brown when ready, an orange
             // charge ring, and when ready an orange ring breathing just outside it (sin 3.5 t)
@@ -498,11 +500,14 @@ namespace BAM.Game
             aim.Hide();
             aimLook.Hide();
             rings.SetAim(false, default);
-            if (hidden || !p.Alive || m.State != MatchState.Play || !special.Dragging) return;
+            // the guided match's drag lesson shows the drag by itself while no finger is on the button (HudTutorial.cs DragGhost):
+            // the same aim, a little fainter, without the hit marks
+            bool ghost = !special.Dragging && ghostAim > 0f;
+            if (hidden || !p.Alive || m.State != MatchState.Play || !special.Dragging && !ghost) return;
             Vector3 hero = views.DrawnAt(p);
-            bool ready = p.SpecialReady || m.VeilStrikeHasTarget(p), cancel = special.OverCancel; // veiled Fenn: his strike, not the charge
+            bool ready = p.SpecialReady || m.VeilStrikeHasTarget(p), cancel = !ghost && special.OverCancel; // veiled Fenn: his strike, not the charge
             float dt = Time.unscaledDeltaTime;
-            Vector2 o = special.Offset;
+            Vector2 o = ghost ? ghostOffset : special.Offset;
             // what the rules would do if let go now (Sim Aim.cs: wall cuts, the map edge, Fenn's flight; Precision AIM-01..06, BRAM-02),
             // drawn from where the hero is drawn; the cast gets the same angle and share (OnAimed)
             // the cast's angle and share are rounded to the wire's 9 bytes before the rules see them, online (MpInput) and offline alike
@@ -515,8 +520,8 @@ namespace BAM.Game
             if (a.Shape == AimShape.Line)
             {
                 if (p.Hero != HeroId.Tyra) aimLook.Range(hero, m.DragRing(p.Hero), ready, cancel); // Tyra's bolt has no reach: it flies until it hits something
-                aimLook.Line(hero, dir, a.Length, a.Half, a.Tip, a.Back, ready, cancel, dt);
-                if (!cancel) rings.SetAim(true, a);
+                aimLook.Line(hero, dir, a.Length, a.Half, a.Tip, a.Back, ready, cancel, dt, ghost ? ghostAim : 1f);
+                if (!cancel && !ghost) rings.SetAim(true, a);
             }
             else if (a.Shape == AimShape.Circle)
             {

@@ -37,7 +37,8 @@ namespace BAM.Art
         public bool Turned;
         /// <summary>The painted ground picture in Resources/BAMArt/Arena (null = the BAM arena's T_BAM_ArenaGround_v1_2 when the size fits).</summary>
         public string Ground;
-        /// <summary>Jump pads (the second map): x, z = the pad's world centre; the landing spot in PadTo.</summary>
+        /// <summary>Jump pads (the second map; the training island's boost pad once its bridge is shown): x, z = the pad's world
+        /// centre; the landing spot in PadTo (on the island only the way it throws: no landing ring is drawn there).</summary>
         public Vector3[] Pads, PadTo;
 
         public int Tile(int tx, int ty) => Tiles[ty * Width + tx];

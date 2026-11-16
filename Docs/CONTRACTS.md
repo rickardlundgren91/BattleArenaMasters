@@ -118,7 +118,10 @@ at `Resources/BAM/Sfx/<SfxId name>` (.wav/.mp3/.ogg) replaces that synth sound, 
 - The guided match draws its own guide card, arrows and end screen in the HUD, in both halves (Game/HudTutorial.cs), and
   shows no result card. Its end screen's PLAY FIRST MATCH (the first time through only, Rickard 2026-11-16) goes straight
   into the first match with `Screens.PlayBotMatch()`, as Home's PLAY would start it; its Home / CONTINUE goes to
-  `ShowMainMenu()`. The hint bubble (`ShowHint`/`HideHint`) is not used by it any more.
+  `ShowMainMenu()`. The hint bubble (`ShowHint`/`HideHint`) is not used by it any more. Its drag lesson (Rickard
+  2026-11-16) is the rules' `Tutorial.DragAsked`: while that is true the HUD lights SPECIAL though nobody may be in the
+  ring, shows the drag by itself over the button (HudTutorial.cs `DragGhost`) and passes a tap on to the rules, which
+  fire nothing for it. A drag aims in the guided match from that lesson on only (`Match.DragAimOn`, `Tutorial.DragOn`).
 - `UiKit` is the shared look (Lilita One, colours, buttons, panels, safe area). The HUD in BAM.Game uses it.
 - `Screens.IsBlockingInput` is true while any menu or dialog is open.
 - Android back: outside a match the UI handles it; in a match the game calls `Screens.HandleBack()` and opens pause only

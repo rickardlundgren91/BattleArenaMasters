@@ -8,8 +8,9 @@ namespace BAM.Art
     /// The guided match's round training island (the old game's View3DMapTutorial.cs), drawn with Rickard's own painted
     /// island textures (Resources/BAMArt/Island, Gemini 2026-10-18): the platform picture on one round mesh (rows 0-16),
     /// its painted cliff under the rim, the bridge (rows 17-19; a lane below it too if the map has one) with the same cliff
-    /// under every edge that faces the void, two braziers and small floating islets, in the sky of Home's own painting
-    /// (tut_sky, a picture held behind everything; a plain cloud sea far below stands in without it).
+    /// under every edge that faces the void, the boost pad on the bridge's last row (the game's own jump pad, Arena.JumpPad),
+    /// two braziers and small floating islets, in the sky of Home's own painting (tut_sky, a picture held behind everything;
+    /// a plain cloud sea far below stands in without it).
     /// Built once by Arena.Build when ArenaInfo.Island is set; only the bridge's rise and the sky move afterwards.
     /// </summary>
     static class Island
@@ -221,7 +222,8 @@ namespace BAM.Art
 
             var stoneB = new MeshBuilder { WorldUV = 4f };    // about one flagstone per tile
             var mossB = new MeshBuilder { WorldUV = 3.5f };
-            var solid = new MeshBuilder();                     // curbs, bushes (palette)
+            var solid = new MeshBuilder();                     // curbs, bushes, the boost pad (palette)
+            var padMarks = new MeshBuilder();                  // the pad's soft shadow on the bridge
             var block = Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_Block");
             var wallB = new MeshBuilder { WorldUV = 2f };
             var bv = new List<Vector3>(); var bn = new List<Vector3>(); var bu = new List<Vector2>(); var bt = new List<int>();
@@ -273,11 +275,18 @@ namespace BAM.Art
                 }
             if (!any) { Object.Destroy(lane); return; }
 
+            // The boost pad (Rickard 2026-11-16, of the line "Hop on the boost pad": "Ingen jump pad"; only a gold ring lay
+            // there): the game's own jump pad, the one the second map has, so the first pad a player meets looks like every
+            // later one. It stands on the bridge and rises with it; its chevrons point the way it throws, out over the sky.
+            if (info.Pads != null)
+                for (int i = 0; i < info.Pads.Length; i++) Arena.JumpPad(solid, padMarks, info.Pads[i], info.PadTo[i], false);
+
             if (stoneB.VertexCount > 0) Moving(Arena.Add(lane, "Lane stone", stoneB.ToMesh("Island lane stone"), Textured(ArtMaterials.Unlit, stone), false));
             if (mossB.VertexCount > 0) Moving(Arena.Add(lane, "Lane moss", mossB.ToMesh("Island lane moss"), Textured(ArtMaterials.Unlit, moss), false));
             if (bv.Count > 0) Moving(Arena.Add(lane, "Bridge", Build("Island bridge", bv, bn, bu, bt), Textured(ArtMaterials.Unlit, bridge), false));
             if (wallB.VertexCount > 0) Moving(Arena.Add(lane, "Lane walls", wallB.ToMesh("Island lane walls"), Textured(ArtMaterials.Lit, block), true));
             if (solid.VertexCount > 0) Moving(Arena.Add(lane, "Lane solid", solid.ToMesh("Island lane solid"), ArtMaterials.Lit, true));
+            if (padMarks.VertexCount > 0) Moving(Arena.Add(lane, "Lane marks", padMarks.ToMesh("Island lane marks"), Arena.MarksMaterial(), false));
             if (cv.Count > 0 && cliff != null) Moving(Arena.Add(lane, "Lane cliff", Build("Island lane cliff", cv, null, cu, ct), Textured(ArtMaterials.LitClip, cliff), true));
 
             if (info.LaneRises)

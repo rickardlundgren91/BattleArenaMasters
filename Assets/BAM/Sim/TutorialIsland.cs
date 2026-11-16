@@ -35,7 +35,7 @@ namespace BAM.Sim
         const float IslandFirstPause = 1.8f, IslandStepPause = 0.65f, IslandFadeOut = 0.6f;
         const int IslandPadTx = IslandBridgeX0 + 1, IslandPadTy = 19;
         // the old gamedata pad: a push of (0, 3.6) at speed 12, flown at half speed for its length + 0.8
-        const float IslandJumpDist = 3.6f + 0.8f, IslandJumpSpeed = 6f;
+        const float IslandJumpDist = Tutorial.PadThrow, IslandJumpSpeed = 6f;
         // Lesson 1's ring: left of the platform's middle, 3.4 tiles from where Tyra starts. From it the first minion (far edge)
         // is about 6 tiles away, out of her reach of 4.4 + its radius, so she has to walk it into her white ring herself (it
         // used to walk past her in the middle and fall without a touch).

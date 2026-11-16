@@ -11,15 +11,19 @@ namespace BAM.Game
     /// tutorial review of 2026-11-15 (Rickard: "snygg, sammanhängande och lärorik"), after a look at how Brawl Stars, Mobile
     /// Legends, Wild Rift and Pokémon Unite teach their first minutes:
     /// - ONE guide card at the top in both halves (the island had a card in the sky, the arena a pill): Tyra's portrait and name,
-    ///   one short line of at most two rows with the words to notice coloured, and a row of ten dots, one per lesson, so the
+    ///   one short line of at most two rows with the words to notice coloured, and a row of dots, one per lesson, so the
     ///   player sees how far it is. A finished lesson fills its dot with a pop and a ding, and while no new line is up the card
     ///   says a word of praise ("NICE!").
     /// - One mark at a time for where to look: a gold ring on the ground with a bouncing arrow, an arrow over a unit, a soft
     ///   trail of gold lights up the lane (the arena), an arrow over the joystick until it is first used, over SPECIAL only when
     ///   a tap would hit, over BLINK when it is asked for and over the FOCUS dots (HudFocus.cs).
+    /// - The drag lesson (Rickard 2026-11-16: "Sen har vi inte lärt spelaren att man kan dra skillen"): the drag is shown, not
+    ///   only named. While it is asked for and no finger is on the button, a finger's dot lands on SPECIAL, slides out the way
+    ///   Fenn stands and lets go, over and over, and the aim line shows from Tyra through him as it would for a real finger
+    ///   there (DragGhost).
     /// - Skip, small and quiet in the top right corner in both halves: the tutorial counts as done, then Home.
     /// - The arena half: DESTROY THE / ENEMY TOWER over Tyra's landing, "+ CHARGE" flying from Tyra into the button on every
-    ///   confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED! with the ten dots
+    ///   confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED! with the dots
     ///   and, the first time, a big PLAY FIRST MATCH (straight into the first match) over a small Home; a replay gets CONTINUE.
     /// - The very first start: a picture of Home zooms in and fades into the island (Dissolve).
     /// Everything is placed in the safe area's own units, as the old code drew in the frame's W and H.
@@ -37,13 +41,19 @@ namespace BAM.Game
         // Tyra's face in her 400 x 308 portrait (x 137-307, y 18-188 from the top): the top strip's cut shows her to the waist,
         // too small to know at the card's size
         static readonly Rect CardFace = new Rect(0.3425f, 0.39f, 0.425f, 0.552f);
-        // one word per finished lesson, in lesson order (Tutorial.Lesson): the island's five, the arena's five. None where the
+        // one word per finished lesson, in lesson order (Tutorial.Lesson): the island's five, the arena's six. None where the
         // next line comes at once (the special is charged: "tap it!") or the end screen follows (the tower)
-        static readonly string[] Praise = { "NICE!", "GOOD HIT!", "SNEAKY!", "GOT IT!", "PERFECT!", null, "BOOM!", "NICE DASH!", "GREAT SHOT!", null };
+        static readonly string[] Praise = { "NICE!", "GOOD HIT!", "SNEAKY!", "GOT IT!", "PERFECT!", null, "BOOM!", "BULLSEYE!", "NICE DASH!", "GREAT SHOT!", null };
+        // the drag lesson's demonstration: seconds a round, and how far the finger slides from the button's centre, in its radii
+        // (a real drag aims from 0.5, SpecialButton.DragStart); GhostMin: never shorter than this, so its aim line shows whole
+        const float GhostPeriod = 2.1f, GhostReach = 1.55f, GhostMin = 0.8f;
 
         RectTransform tutSkip, tutBar, tutEnd, joyArrow, specialArrow, blinkArrow;
         CanvasGroup tutOpenGroup, joyArrowGroup, specialArrowGroup, blinkArrowGroup; // the arrows' groups kept, not looked up every frame (full review 2026-11-09 nr 90)
-        Image specialPulse, chargeRing, tutEndDim;
+        Image specialPulse, chargeRing, tutEndDim, ghostDot, ghostStreak;
+        Vector2 ghostOffset;    // the demonstration's finger now, from the button's centre in canvas units (Hud.Aim aims by it)
+        float ghostAim;         // how strongly its aim line shows, 0 = no demonstration now
+        float ghostAt = -1f;    // when it began (unscaled time)
         Text tutOpen1, tutOpen2, tutEnd1, tutEnd2, tutSkipText;
         readonly Text[] chargeTexts = new Text[8];
         readonly Image[] towerBlocks = new Image[Tutorial.TowerHits], towerShine = new Image[Tutorial.TowerHits];
@@ -179,13 +189,17 @@ namespace BAM.Game
             bool joyOn = lineUp && island && tu.Step == Tutorial.IslandWalk && !joyUsed;
             Arrow(joyArrow, joyArrowGroup, joyOn, joyOn ? Local(RectTransformUtility.WorldToScreenPoint(null, joy.Base.position)) : Vector2.zero, JoystickZone.Radius * 1.25f);
             bool spOn = lineUp && play && p.Alive && p.SpecialReady
-                && (tu.Step == Tutorial.StepFight || (tu.Step == Tutorial.StepSpecial || tu.Step == Tutorial.StepThrow) && !tu.BurstDone)
+                && (tu.Step == Tutorial.StepFight || tu.Step == Tutorial.StepSpecial && !tu.BurstDone)
                 && (!m.OneTap || m.TapHasTarget(p));
+            // the drag lesson has no arrow over SPECIAL: the drag itself is shown there until a finger lands on the button
+            bool dragOn = lineUp && play && tu.DragAsked && !special.Pressed;
+            DragGhost(dragOn, tu, p);
             Arrow(specialArrow, specialArrowGroup, spOn, spOn ? Local(RectTransformUtility.WorldToScreenPoint(null, specialRoot.position)) : Vector2.zero, SpecialButton.Radius);
             bool blinkOn = lineUp && play && tu.Step == Tutorial.StepBlink && tu.BlinkAsked && p.Alive && m.SpellReady(p) && spellRoot.gameObject.activeSelf;
             Arrow(blinkArrow, blinkArrowGroup, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR);
-            if (specialPulse.enabled != spOn) specialPulse.enabled = spOn;
-            if (spOn)
+            bool pulseOn = spOn || dragOn;
+            if (specialPulse.enabled != pulseOn) specialPulse.enabled = pulseOn;
+            if (pulseOn)
             {
                 float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f);
                 specialPulse.color = new Color(1f, 0.86f, 0.4f, 0.45f + 0.45f * k);
@@ -200,20 +214,26 @@ namespace BAM.Game
         }
 
         // The marks on the ground and over units, both halves: the gold ring to walk into with its bouncing arrow (the island's
-        // rings; the arena's spot to wait at outside the tower's reach), the arrow over the unit to look at, the boost pad.
+        // rings, the last of them round the boost pad; the arena's spot to wait at outside the tower's reach) and the arrow
+        // over the unit to look at. The pad itself is drawn on the bridge since 2026-11-16 (Art Island.cs): until then a white
+        // circle from here was all there was of it.
         void TutMarks(bool hidden)
         {
             var tut = m.Tut;
             bool on = !hidden && tut != null && m.State == MatchState.Play && !tut.Done;
-            if (marks != null)
-            {
-                marks.Hide();
-                if (on && island && tut.PadOn && !tut.Jumping) marks.ShowCircle(Coords.World(tut.PadX, tut.PadY), 0.55f + 0.05f * Mathf.Sin(Time.unscaledTime * 5f), true);
-            }
             bool ring = on && tut.RingOn;
             rings.SetGoal(ring, ring ? Coords.World(tut.RingX, tut.RingY) : Vector3.zero);
             bool point = on && tut.PointAt != null && tut.PointAt.Alive;
-            Chevron(pointChevron, point, point ? views.DrawnAt(tut.PointAt) + Vector3.up * 1.4f : Vector3.zero);
+            Vector3 over = Vector3.zero;
+            if (point)
+            {
+                // over a minion's head; a hero (the drag lesson's Fenn) is taller and has his health bar and his name there:
+                // over the name (HudOverhead.cs puts it just above the bar)
+                var u = tut.PointAt;
+                over = u.Kind != UnitKind.Hero ? views.DrawnAt(u) + Vector3.up * 1.4f
+                    : views.BarOf(u, out Vector3 bar, out _) ? bar + Vector3.up * 0.9f : views.DrawnAt(u) + Vector3.up * 3f;
+            }
+            Chevron(pointChevron, point, over);
             // one arrow at a time: the ring's waits while the joystick's is up (the very first line)
             bool ringArrow = ring && tut.ArrowOnRing && !(island && tut.Step == Tutorial.IslandWalk && !joyUsed);
             Chevron(ringChevron, ringArrow, ringArrow ? Coords.World(tut.RingX, tut.RingY) + Vector3.up * 0.9f : Vector3.zero);
@@ -390,6 +410,54 @@ namespace BAM.Game
             }
         }
 
+        // The drag lesson's demonstration, a round every GhostPeriod s while the drag is asked for and no finger is on the button:
+        // a finger's dot (the real drag's own, Hud.DragMarks) lands on SPECIAL, rests, slides out the way Fenn stands from Tyra
+        // with a gold streak behind it, holds there and lets go. Hud.Aim draws the aim line for it from ghostOffset, as it
+        // would for a real finger there, so the player sees what the slide does on the ground: the line from Tyra through Fenn.
+        void DragGhost(bool on, Tutorial tu, Unit p)
+        {
+            var f = on ? tu.Hider : null;
+            on = f != null && f.Alive && p.Alive;
+            if (ghostDot.enabled != on) { ghostDot.enabled = on; ghostStreak.enabled = on; }
+            if (!on) { ghostAim = 0f; ghostAt = -1f; return; }
+            float now = Time.unscaledTime, R = SpecialButton.Radius;
+            if (ghostAt < 0f) ghostAt = now;
+            // the way Fenn stands from Tyra as a direction on the screen (what Coords.ScreenAngle turns back into the map's angle)
+            Vector2 dir = new Vector2(f.X - p.X, -(f.Y - p.Y) * Coords.DepthOnScreen);
+            dir = dir.sqrMagnitude > 1e-6f ? dir.normalized : Vector2.up;
+            float k = (now - ghostAt) % GhostPeriod / GhostPeriod;
+            // a round: the finger lands (to 0.1), rests, slides out (0.2 to 0.55), holds on him, lets go (0.8 to 0.9), a pause
+            float land = Mathf.Clamp01(k / 0.1f), slide = Mathf.Clamp01((k - 0.2f) / 0.35f), gone = Mathf.Clamp01((k - 0.8f) / 0.1f);
+            slide = slide * slide * (3f - 2f * slide);
+            float dist = slide * GhostRoom(dir, R), a = land * (1f - gone);
+            ghostOffset = dir * dist;
+            // the line comes as a real drag's does, once the finger is past the drag's start, and goes when it lets go
+            ghostAim = 0.85f * Mathf.Clamp01((dist - SpecialButton.DragStart) / (0.25f * R)) * (1f - gone);
+            var dot = ghostDot.rectTransform;
+            dot.anchoredPosition = ghostOffset;
+            dot.localScale = Vector3.one * (1.3f - 0.3f * land + 0.5f * gone); // it lands from a little big and swells as it lets go
+            ghostDot.color = new Color(1f, 1f, 1f, 0.9f * a);
+            var streak = ghostStreak.rectTransform;
+            streak.sizeDelta = new Vector2(Mathf.Max(1f, dist), 0.2f * R); // from the button's centre (its pivot) to the dot
+            streak.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            ghostStreak.color = new Color(TutGold.r, TutGold.g, TutGold.b, 0.6f * a * Mathf.Clamp01(dist / (0.3f * R)));
+        }
+
+        // How far the demonstration's finger slides along dir, in canvas units: GhostReach radii, but it stops short of the
+        // screen's edge, so the dot stays whole on the screen when Fenn stands the way the button's own corner lies (Tyra has
+        // walked up past him, or round him; the left-handed layout mirrors the button).
+        float GhostRoom(Vector2 dir, float R)
+        {
+            var cr = canvasRect.rect;
+            Vector2 c = specialRoot.rect.center;
+            Vector2 lo = (Vector2)specialRoot.InverseTransformPoint(canvasRect.TransformPoint(cr.min)) - c;
+            Vector2 hi = (Vector2)specialRoot.InverseTransformPoint(canvasRect.TransformPoint(cr.max)) - c;
+            float air = 0.32f * R + 12f, room = GhostReach * R; // the dot's own radius and a little air
+            if (dir.x > 1e-3f) room = Mathf.Min(room, (hi.x - air) / dir.x); else if (dir.x < -1e-3f) room = Mathf.Min(room, (lo.x + air) / dir.x);
+            if (dir.y > 1e-3f) room = Mathf.Min(room, (hi.y - air) / dir.y); else if (dir.y < -1e-3f) room = Mathf.Min(room, (lo.y + air) / dir.y);
+            return Mathf.Max(room, GhostMin * R);
+        }
+
         // Healing shows (Rickard 2026-10-26: "ingen reg syntes"): the green "+N" comes from the HUD's heal numbers (OnHeal, as in
         // every match, so it is not doubled here), and in the heal moment a soft green glow breathes round her feet while she is below full.
         void HealFrame(bool play, Tutorial tu, Unit p)
@@ -512,7 +580,7 @@ namespace BAM.Game
             }
         }
 
-        // The end: the tower falls, then TOWER DESTROYED! over the ten dots lighting up one by one and one line; after 2.2 s the
+        // The end: the tower falls, then TOWER DESTROYED! over the lessons' dots lighting up one by one and one line; after 2.2 s the
         // buttons. The first time a big PLAY FIRST MATCH goes straight into the first match (Rickard 2026-11-16; Home is where a
         // new player can lose the way, and Pokémon Unite follows its first lesson with a whole match against bots), with a small
         // Home under it; a replay from the menus gets one CONTINUE back to Home.
@@ -664,6 +732,22 @@ namespace BAM.Game
             chargeRing = Circle(specialRoot, "TutCharge", 2f * SpecialButton.Radius, Color.clear).GetComponent<Image>();
             chargeRing.sprite = UiKit.CircleRing;
             chargeRing.enabled = false;
+            // the drag lesson's demonstration: a gold streak from the button's centre and the finger's dot at its end, the size of
+            // the real drag's dot (Hud.cs "Finger")
+            var streak = UiKit.NewRect("TutDragStreak", specialRoot);
+            streak.anchorMin = streak.anchorMax = new Vector2(0.5f, 0.5f);
+            streak.pivot = new Vector2(0f, 0.5f);
+            streak.anchoredPosition = Vector2.zero;
+            ghostStreak = streak.gameObject.AddComponent<Image>();
+            ghostStreak.sprite = UiKit.Rounded;
+            ghostStreak.type = Image.Type.Sliced;
+            ghostStreak.color = Color.clear;
+            ghostStreak.raycastTarget = false;
+            Corners(ghostStreak, 0.1f * SpecialButton.Radius);
+            ghostStreak.enabled = false;
+            ghostDot = Circle(specialRoot, "TutDragFinger", 0.64f * SpecialButton.Radius, Color.clear).GetComponent<Image>();
+            ghostDot.raycastTarget = false;
+            ghostDot.enabled = false;
 
             // the opening title, the guide card, the arrows and "+ CHARGE"
             var opening = CentredRect("Opening", safe);
@@ -864,6 +948,7 @@ namespace BAM.Game
             specialArrow.gameObject.SetActive(false);
             blinkArrow.gameObject.SetActive(false);
             specialPulse.enabled = chargeRing.enabled = false;
+            ghostDot.enabled = ghostStreak.enabled = false; ghostAim = 0f; ghostAt = -1f;
             for (int i = 0; i < chargeTexts.Length; i++) chargeTexts[i].gameObject.SetActive(false);
             for (int i = 0; i < TrailDots; i++) trailGlow[i].enabled = trailCore[i].enabled = false;
         }

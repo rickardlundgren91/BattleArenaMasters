@@ -152,6 +152,13 @@ namespace BAM.Game
             info.Island = Island;
             info.Turned = Coords.Turned;
             info.LaneRises = Island && rebuild; // the opened bridge and lane rise into place
+            if (Island && bridgeShown)
+            {
+                // the island's boost pad stands on the bridge's last row and throws on down the map, out over the sky (TutorialIsland.cs)
+                var tu = m.Tut;
+                info.Pads = new[] { Coords.World(tu.PadX, tu.PadY) };
+                info.PadTo = new[] { Coords.World(tu.PadX, tu.PadY + Tutorial.PadThrow) };
+            }
             arena = ArtKit.BuildArena(info);
         }
 
@@ -1253,6 +1260,7 @@ namespace BAM.Game
             bool jump = (u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY) > 4f;
             Vector3 pos = jump ? Coords.Of(u) : Coords.Lerp(u.PX, u.PY, u.X, u.Y, alpha);
             pos.y += u.JumpLift * PadArcH; // a jump pad's throw flies in an arc
+            if (u == m.Player && m.Tut != null) pos.y += m.Tut.JumpArc * PadArcH; // and so does the island's boost pad's (TutorialIsland.cs)
             if (u.Kind != UnitKind.Tower) pos.y += TowerFootLift(pos); // stands on the tower's stone foot, not in it
             if (r.JoltT > 0f)
             {

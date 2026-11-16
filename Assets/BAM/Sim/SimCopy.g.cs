@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "97f8f54f66ff82c1";
+            Generated = true; GeneratedHash = "bb5437080dbb78a0";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -493,6 +493,12 @@ namespace BAM.Sim
             SimMirror.Arr(ChargeTimes, __s.ChargeTimes);
             Done = __s.Done;
             DoneAt = __s.DoneAt;
+            DragAsked = __s.DragAsked;
+            DragMissed = __s.DragMissed;
+            DragOn = __s.DragOn;
+            DragShown = __s.DragShown;
+            DragT = __s.DragT;
+            DragTaps = __s.DragTaps;
             Dummy = __m.Map(__s.Dummy);
             Fade = __s.Fade;
             Gained = __s.Gained;
@@ -502,6 +508,13 @@ namespace BAM.Sim
             HelpAt = __s.HelpAt;
             Helpers = __s.Helpers;
             Hid = __s.Hid;
+            Hider = __m.Map(__s.Hider);
+            HiderOut = __s.HiderOut;
+            HiderVia = __s.HiderVia;
+            HiderViaX = __s.HiderViaX;
+            HiderViaY = __s.HiderViaY;
+            HiderX = __s.HiderX;
+            HiderY = __s.HiderY;
             HitAt = __s.HitAt;
             HookAt = __s.HookAt;
             Hooked = __s.Hooked;

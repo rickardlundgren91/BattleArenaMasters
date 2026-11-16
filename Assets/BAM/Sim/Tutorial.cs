@@ -5,16 +5,19 @@ namespace BAM.Sim
     /// <summary>
     /// The guided first match's arena half: a real small first battle with Tyra, as on the island (Rickard 2026-10-29: "andra delen
     /// är inte bra"; he chose a real fight over the old walk past target boards). The boost pad throws Tyra onto the lane of the real
-    /// arena, two of her minions walk with her and a small enemy wave comes down. Five lessons, each done by the player, one short
+    /// arena, two of her minions walk with her and a small enemy wave comes down. Six lessons, each done by the player, one short
     /// line at a time on the same guide card as the island's (tutorial review 2026-11-15: the lines did not match what happened,
     /// Knut, the heal and the tower asked nothing of the player and the tower never shot):
     /// 1 follow the minions into the wave (Tyra attacks by herself; her hits charge the special), 2 TAP the special when it is
-    /// ready (an auto-aimed bolt), 3 Knut comes down the lane, throws his anchor and pulls Tyra in: BLINK gets her away (with the
-    /// joystick at rest it dashes away from him), 4 the special is full again: it finishes Knut (he cannot fall to anything else);
-    /// a moment of the real regen follows, 5 the enemy tower shoots from now on, at the first enemy inside its ring: her minions
-    /// go in first, and only while it is busy with them can Tyra hurt it; it falls to exactly TowerHits of her auto attacks.
-    /// The old drag game (Rules.OneTapSpecial off) keeps its aimed bolt at Knut between 2 and 3. No failure: Tyra never drops
-    /// below 40 %. The match screen reads this.
+    /// ready (an auto-aimed bolt), 3 Fenn steps out of the side grass, most often outside her white ring, where no tap reaches:
+    /// a DRAG of the special aims it by hand, as far as it flies (Rickard 2026-11-16: "Sen har vi inte lärt spelaren att man kan
+    /// dra skillen. Gör så att fenn dyker upp från buskarna och man får lära sig på honom"), 4 Knut comes down the lane, throws
+    /// his anchor and pulls Tyra in: BLINK gets her away (with the joystick at rest it dashes away from him), 5 the special is
+    /// full again: it finishes Knut (he cannot fall to anything else); a moment of the real regen follows, 6 the enemy tower
+    /// shoots from now on, at the first enemy inside its ring: her minions go in first, and only while it is busy with them can
+    /// Tyra hurt it; it falls to exactly TowerHits of her auto attacks.
+    /// No failure: Tyra never drops below 40 %, and for a player who never makes the drag the game makes the shot in the end
+    /// (TutDragMercy). The match screen reads this.
     /// </summary>
     public sealed partial class Tutorial
     {
@@ -24,8 +27,8 @@ namespace BAM.Sim
         public const int TowerHits = 6;
         public const float BurstDelay = 0.15f;
         /// <summary>The whole guided match's lessons, one dot each on the guide card: the island's five (walk, attack, grass, Focus,
-        /// one target) and the arena's five (charge, special, Blink, Knut, the tower).</summary>
-        public const int IslandLessons = 5, ArenaLessons = 5, AllLessons = IslandLessons + ArenaLessons;
+        /// one target) and the arena's six (charge, the tapped special, the dragged special, Blink, Knut, the tower).</summary>
+        public const int IslandLessons = 5, ArenaLessons = 6, AllLessons = IslandLessons + ArenaLessons;
         /// <summary>StepTower's line: wait for the minions, go (the tower is busy with them), or it shoots you.</summary>
         public const int TowerWait = 0, TowerGo = 1, TowerYou = 2;
 
@@ -35,9 +38,10 @@ namespace BAM.Sim
         public string Line;
         /// <summary>The first OpeningTime s: the title over Tyra's landing.</summary>
         public bool Opening;
-        /// <summary>Dummy: no practice target any more (null; kept for the screens). Guard: Knut. Goal: what the gold trail leads
-        /// to now (the nearest enemy minion, Knut, the tower), null = nothing (or the ring, when RingOn).</summary>
-        public Unit Dummy, Guard, Tower, Goal;
+        /// <summary>Dummy: no practice target any more (null; kept for the screens). Guard: Knut. Hider: Fenn, who waits hidden in
+        /// the side grass until the drag lesson (StepThrow). Goal: what the gold trail leads to now (the nearest enemy minion,
+        /// Knut, the tower), null = nothing (or the ring, when RingOn).</summary>
+        public Unit Dummy, Guard, Hider, Tower, Goal;
         public float HitAt = -99;
         /// <summary>The battle spell (Blink) is on: from moment 5 (Match.SpellsOn).</summary>
         public bool SpellOn;
@@ -51,8 +55,13 @@ namespace BAM.Sim
         /// <summary>Confirmed hits on the tower so far (its bar is TowerHits blocks) and when the last one landed.</summary>
         public int TowerHitsTaken => TowerHitCount;
         public float LastTowerHit => TowerHitAt;
-        /// <summary>The current moment's special lesson is done (the tap hit something; the aimed bolt hit Knut).</summary>
+        /// <summary>The current moment's special lesson is done (the tap hit something; the aimed bolt hit Fenn).</summary>
         public bool BurstDone => Burst;
+        /// <summary>The drag lesson asks for the drag now: Fenn stands out of the grass and the special is ready. The screen then
+        /// shows the drag over the SPECIAL button and lights the button though nobody may be in the ring; a tap fires nothing.</summary>
+        public bool DragAsked;
+        /// <summary>A drag aims the special from the drag lesson on (Match.DragAimOn); the lessons before it know the tap alone.</summary>
+        public bool DragOn;
         /// <summary>Lessons done so far in the whole guided match, of Lessons (the arena half starts at IslandLessons): the guide
         /// card's dots. LessonAt: when the last one was done (Match.Time of this half), for the card's word of praise.</summary>
         public int Lesson, Lessons;
@@ -68,6 +77,11 @@ namespace BAM.Sim
         internal float Hid, HelpAt = -1, OnYouT, TowerSayT;
         internal int Gained, TowerHitCount, Part;
         internal bool Burst, PressAimed, Hooked, Pulled, Helpers;
+        // the drag lesson: where Fenn stands for it and the corner he walks round on his way out, whether he stands there, how long
+        // the drag has been asked for, the taps it got instead, whether an aimed bolt missed him, and whether the game had to show it
+        internal float HiderX, HiderY, HiderViaX, HiderViaY, DragT;
+        internal int DragTaps;
+        internal bool HiderVia, HiderOut, DragMissed, DragShown;
 
         // ---------- the training island (the first half, Tyra; TutorialIsland.cs). Unused in the arena half but where noted. ----------
         public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandFocus = 3, IslandTarget = 4, IslandPad = 5;
@@ -96,6 +110,11 @@ namespace BAM.Sim
         /// <summary>The pad threw Tyra: she flies (St.Casting) and the picture fades, Fade 0..1.</summary>
         public bool Jumping;
         public float Fade;
+        /// <summary>How far the pad throws her (the old gamedata pad: a push of 3.6 flown for its length + 0.8).</summary>
+        public const float PadThrow = 3.6f + 0.8f;
+        /// <summary>The flight's arc, 0..1 (up and down again over PadThrow), as Unit.JumpLift for the arena's pads: only the
+        /// picture lifts her, the rules know no heights. The picture has faded before she is down.</summary>
+        public float JumpArc => Jumping ? (float)Math.Sin(Math.PI * Math.Max(0, Math.Min(1, 1 - JumpLeft / PadThrow))) : 0;
         /// <summary>The leader of the three (taking it down takes down the other two).</summary>
         public Unit Leader;
 
@@ -121,9 +140,22 @@ namespace BAM.Sim
         // nor does Knut drop below 40 % before the fight moment: his hook and the BLINK come first (full review 2026-11-13 nr 111);
         // in the fight moment only Tyra's special finishes him, her other hits stop at 15 %
         const float TutKnutFloor = 0.4f, TutKnutLast = 0.15f;
-        const float TutHookAfter = 0.6f;  // old drag game: Knut throws his anchor this long after Tyra's aimed bolt hit him
-        // one tap: Knut walks down the lane and throws his anchor from this far (it flies 7), or after TutHookWait s at the latest
+        const float TutHookAfter = 0.6f;  // Knut is on his way at the earliest this long after the aimed bolt took Fenn
+        // Knut walks down the lane and throws his anchor from this far (it flies 7), or after TutHookWait s at the latest
         const float TutHookFrom = 4.2f, TutHookWait = 4f;
+        // The drag lesson. Fenn waits hidden deep in the left side tuft (rows 11-13; seen only from Rules.GrassSight tiles), walks
+        // out round the wall's end (TutHiderVia) and stands in front of it, up the lane from where the wave was fought: from the
+        // lane's middle below row 14 that is outside Tyra's reach (4.4 + his 0.4), where a tap has nobody to pick and only the
+        // drag gets there. With Tyra on the map's right side he comes out of the right tuft, mirrored, so he is on her screen
+        // (11 tiles across). Her other hits never take him below TutHiderFloor; her own aimed bolt takes all of him.
+        const float TutHideX = 1.3f, TutHideY = 12.3f, TutHiderViaX = 4.5f, TutHiderViaY = 11.5f, TutHiderX = 4.7f, TutHiderY = 10f;
+        const float TutHiderRightFrom = 8.9f, TutHiderPace = 1f, TutHiderFloor = 0.5f;
+        // his walk out takes about 2 s; held up (Tyra herself in his way), he counts as out where he stands after this long
+        const float TutHiderWalkMax = 3.5f;
+        // the line turns to how a drag is made after this long with no aimed bolt (or at the first tap), and after TutDragMercy s
+        // of asking the game makes the shot itself, so that nobody is left standing at this lesson (new players stalled at the old
+        // drag step, 2026-11-01); that dot fills without a word of praise
+        const float TutDragSlow = 10f, TutDragMercy = 30f;
         /// <summary>Where the guided match's Knut stops walking at Tyra and stands to swing: his reach, a little inside.</summary>
         static float TutKnutStop(Unit k, Unit p) => (k.Range + p.R) * 0.9f;
         // after Knut: no heal moment when Tyra is this whole; else it lasts until she is back at TutHealedEnough (at least
@@ -138,8 +170,11 @@ namespace BAM.Sim
         // every line fits two rows of the guide card, which breaks it at a sentence's end when both rows fit and else where the
         // rows are most even (Hud.LineText; measured with the card's font, bam-work/tutorial/README.md)
         const string LineMove = "Follow your |minions|! Every hit |charges| your SPECIAL.",
-            LineSpecial = "|SPECIAL| is ready: |tap| it!", LineSpecialNear = "|SPECIAL| is ready! Get an enemy in your white ring.", LineThrow = "An enemy hero! |DRAG| SPECIAL to aim at Knut!",
-            LineKnut = "An enemy hero: |Knut|! Watch out for his hook.",
+            LineSpecial = "|SPECIAL| is ready: |tap| it!", LineSpecialNear = "|SPECIAL| is ready! Get an enemy in your white ring.",
+            LineDrag = "|Fenn| was hiding in the grass! |Drag| SPECIAL to aim at him.",
+            LineDragHow = "Press and |hold| SPECIAL. |Slide| toward Fenn and let go!",
+            LineDragMiss = "Missed! Slide again. Let go when the |line| is on Fenn.",
+            LineKnut = "Now |Knut| is coming! Watch out for his hook.",
             LineBlink = "He pulled you in! Steer away and tap |BLINK| to dash.", LineBlinkMissed = "Steer away and tap |BLINK| to dash!",
             LineFight = "Now finish him with your |SPECIAL|!",
             LineHeal = "Knut is down! You |heal| when you stop fighting.",
@@ -175,6 +210,11 @@ namespace BAM.Sim
             k.Dummy = true;
             AddStatus(k, St.Disarm, 1e9f); AddStatus(k, St.Untargetable, 1e9f);
             tu.Guard = k;
+            // Fenn: hidden in the side grass until the drag lesson, the same way (no bot, no attacks, never a target before it)
+            var f = NewHero(HeroId.Fenn, Teams.Enemy, TutHideX, TutHideY);
+            f.Dummy = true; f.Facing = 0;
+            AddStatus(f, St.Disarm, 1e9f); AddStatus(f, St.Untargetable, 1e9f);
+            tu.Hider = f;
             RefreshTutorial();
         }
 
@@ -245,12 +285,17 @@ namespace BAM.Sim
                 // one tap: "tap it" only while the tap has a target, never over a grey button (a tap there only shakes the button);
                 // with nobody in reach the line says so and the gold trail leads to the minions (bug review 2026-11-02, nr 13)
                 case Tutorial.StepSpecial: return tu.Burst || !p.SpecialReady ? null : !OneTap || TapHasTarget(p) ? LineSpecial : LineSpecialNear;
-                // one tap: Knut is on his way down (the line stays through his throw, until BLINK's own line)
-                case Tutorial.StepThrow: return !tu.Burst ? LineThrow : OneTap && knut ? LineKnut : null;
+                // the drag lesson, from the moment Fenn is seen: what to do, then how a drag is made (after a tap, or a while with
+                // no aimed bolt), or that the last bolt missed him. Then Knut is on his way down (the line stays through his
+                // throw, until BLINK's own line)
+                case Tutorial.StepThrow:
+                    if (tu.Burst) return knut && Time - tu.BurstAt >= TutAfter ? LineKnut : null; // the card praises the shot first
+                    if (!TutHiderSeen()) return null;
+                    return tu.DragMissed ? LineDragMiss : tu.DragTaps > 0 || tu.DragT >= TutDragSlow ? LineDragHow : LineDrag;
                 // "He pulled you in!" only when the anchor really caught Tyra; it can miss, or Knut may not throw at all
                 // (bug review 2026-11-02, nr 19)
                 case Tutorial.StepBlink:
-                    if (!tu.Hooked) return OneTap && knut ? LineKnut : null;
+                    if (!tu.Hooked) return knut ? LineKnut : null;
                     return p.SpellAt <= Time ? (tu.Pulled ? LineBlink : LineBlinkMissed) : null;
                 // the goal of the moment, also while Knut is a step out of reach (the trail leads to him; the HUD's arrow on SPECIAL
                 // waits for a target)
@@ -260,10 +305,23 @@ namespace BAM.Sim
             }
         }
 
+        /// <summary>The drag lesson runs and Fenn is to be seen: out on his spot, or on his way to it past the grass's edge.</summary>
+        bool TutHiderSeen()
+        {
+            var tu = Tut; var f = tu.Hider;
+            if (tu.Step != Tutorial.StepThrow || tu.Burst || f == null || !f.Alive || State != MatchState.Play) return false;
+            return tu.HiderOut || IsVisibleTo(f, Teams.Player);
+        }
+
         void RefreshTutorial()
         {
             var tu = Tut;
             tu.Opening = tu.Step == Tutorial.StepMove && Time < Tutorial.OpeningTime;
+            // the drag lesson: the arrow is over Fenn from the moment he is seen, and the drag is asked for once he stands there
+            // and the special is ready (not while a bolt that missed him is on its way and the charge comes back)
+            bool seen = TutHiderSeen();
+            tu.PointAt = seen ? tu.Hider : null;
+            tu.DragAsked = seen && tu.HiderOut && Player.Alive && Player.SpecialReady;
             TutSay(TutLineNow());
             // the tower moment's gold ring: where to wait for the minions, and where to step back to when the tower shoots Tyra
             bool wait = tu.Step == Tutorial.StepTower && !tu.Done && State == MatchState.Play && tu.TowerSay != Tutorial.TowerGo;
@@ -280,7 +338,14 @@ namespace BAM.Sim
             tu.T += dt;
             RefreshTutorial();
             // the special pressed this tick (PlayerAct casts it later in this tick): a drag carries an angle, a tap does not
-            if (specialBuf > 0) { tu.PressAt = Time; tu.PressAimed = !float.IsNaN(bufAng); }
+            if (specialBuf > 0)
+            {
+                bool aimed = !float.IsNaN(bufAng);
+                // the drag lesson takes no tap once Fenn stands there: it fires nothing (a tap with Fenn in the ring would hit him
+                // and teach the tap again), and a tap when the drag is asked for turns the line to how a drag is made
+                if (!aimed && tu.Step == Tutorial.StepThrow && !tu.Burst && tu.HiderOut) { seatSpecBuf[0] = 0; if (tu.DragAsked) tu.DragTaps++; }
+                else { tu.PressAt = Time; tu.PressAimed = aimed; }
+            }
             // a confirmed hit is a rise of the real charge
             if (p.Charge > tu.LastCharge)
             {
@@ -303,7 +368,17 @@ namespace BAM.Sim
                 float floor = tu.Step < Tutorial.StepFight ? TutKnutFloor : TutKnutLast;
                 if (k.Hp < k.MaxHp * floor) k.Hp = k.MaxHp * floor;
             }
-            if (k != null && k.Alive && tu.Step < Tutorial.StepThrow)
+            // nor can Fenn fall to anything but her own aimed bolt: where he stands inside her ring her arrows find him by
+            // themselves, and they stop at half his health (TutDamage; this floor is for what does not pass it). Down, he stays down.
+            var f = tu.Hider;
+            if (f != null && f.Alive)
+            {
+                f.TutUnkillable = true;
+                if (f.Hp < f.MaxHp * TutHiderFloor) f.Hp = f.MaxHp * TutHiderFloor;
+            }
+            else if (f != null) f.RespawnT = 1e9f;
+            // Knut keeps to his walk by the tower until the drag lesson is done
+            if (k != null && k.Alive && (tu.Step < Tutorial.StepThrow || tu.Step == Tutorial.StepThrow && !tu.Burst))
             {
                 if (k.X >= TutGuardX1) tu.GuardDir = -1; else if (k.X <= TutGuardX0) tu.GuardDir = 1;
                 MoveUnit(k, tu.GuardDir * TutGuardPace, 0, dt);
@@ -320,9 +395,10 @@ namespace BAM.Sim
 
             if (tu.Line != null) tu.Shown += dt;
             // the gold trail's landmark: the wave until the tap is learned, Knut when he is to be finished, the tower when it is
-            // busy with the minions (the ring leads the rest of the tower moment, RefreshTutorial)
+            // busy with the minions (the ring leads the rest of the tower moment, RefreshTutorial). None to Fenn: the trail says
+            // "walk here", and his lesson is the shot from where she stands (the arrow is over him, PointAt)
             tu.Goal = tu.Step <= Tutorial.StepSpecial ? TutNearestFoeMinion(p)
-                : tu.Step == Tutorial.StepThrow && !tu.Burst || tu.Step == Tutorial.StepFight ? (k != null && k.Alive ? k : null)
+                : tu.Step == Tutorial.StepFight ? (k != null && k.Alive ? k : null)
                 : tu.Step == Tutorial.StepTower && tu.TowerSay == Tutorial.TowerGo ? tu.Tower : null;
 
             switch (tu.Step)
@@ -349,26 +425,32 @@ namespace BAM.Sim
                         TutEndWave(false);
                         if (Time - tu.BurstAt >= TutAfter && (!TutEnemyMinions() || Time - tu.BurstAt >= TutClearMax))
                         {
+                            // the lane is empty: Fenn steps out of the side grass for the drag lesson (the one-tap game of
+                            // 2026-11-01 had none: the old aimed bolt at Knut, far up by the tower with no sign of how a drag is
+                            // made, was where new players stalled, so it was passed over; Rickard 2026-11-16 asked for it back,
+                            // on Fenn)
                             TutEndWave(true);
                             TutNext(Tutorial.StepThrow);
-                            StartFight();
-                            // one-tap special (Rules.OneTapSpecial, 2026-11-01): no drag to teach, so the aimed bolt at Knut (where
-                            // new players stalled) counts as done at once and Knut comes on to his hook. The old drag game gets its
-                            // special back full for the aimed bolt.
-                            if (OneTap) { tu.Burst = true; tu.BurstAt = Time; } else p.Charge = p.HDef.MaxCharge;
+                            TutHoldMinions();
+                            // only where a drag aims at all (Rules.DragAimSpecial; the old tap + drag game always did): else the
+                            // lesson's dot fills by itself and Knut comes at once, as from 2026-11-01 until this lesson came
+                            if (!OneTap || DragAim) TutHiderStart();
+                            else { tu.Burst = true; tu.BurstAt = Time; if (tu.Lesson < tu.Lessons) tu.Lesson++; }
                         }
                     }
                     break;
                 case Tutorial.StepThrow:
-                    // old drag game: the charge comes back full until an aimed bolt hits Knut, a moment after the last press so a
-                    // bolt in the air lands first
-                    if (!tu.Burst) { if (!p.SpecialReady && Time - tu.PressAt >= TutRefillAfter) p.Charge = p.HDef.MaxCharge; }
-                    // one tap: Knut walks down until his anchor has a short, clear way to Tyra (it used to wait until he stood
-                    // beside her, about 6 s with no line: tutorial review 2026-11-15)
-                    else if (Time - tu.BurstAt >= TutHookAfter && (!OneTap || k == null || !k.Alive || SimMath.Dist(k, p) <= TutHookFrom || tu.T > TutHookWait))
+                    if (!tu.Burst) TutDragStep(dt);
+                    else
                     {
-                        TutNext(Tutorial.StepBlink);
-                        tu.SpellOn = true; p.Spell = SpellId.Blink; p.SpellAt = Time; p.SpellChanEnd = -1;
+                        // Fenn is down: Knut becomes a real enemy and walks down until his anchor has a short, clear way to Tyra
+                        // (it used to wait until he stood beside her, about 6 s with no line: tutorial review 2026-11-15)
+                        if (k != null && k.Alive && k.Has(St.Untargetable)) StartFight();
+                        if (Time - tu.BurstAt >= TutHookAfter && (k == null || !k.Alive || SimMath.Dist(k, p) <= TutHookFrom || Time - tu.BurstAt > TutHookWait))
+                        {
+                            TutNext(Tutorial.StepBlink);
+                            tu.SpellOn = true; p.Spell = SpellId.Blink; p.SpellAt = Time; p.SpellChanEnd = -1;
+                        }
                     }
                     break;
                 case Tutorial.StepBlink:
@@ -419,13 +501,77 @@ namespace BAM.Sim
             k.RemoveAll(St.Disarm); k.RemoveAll(St.Untargetable);
             k.MaxHp = k.Hp = TutKnutHp; k.DmgMult = TutKnutDmg; k.Charge = 0;
             Tut.KnutDownAt = -1;
-            // Tyra's minions hold where they stand until the push on the tower (they still swing at Knut when he comes close):
-            // left to walk, they stood at the enemy tower long before her, and "let your minions go first" had nothing to show
+            TutHoldMinions();
+        }
+
+        // Tyra's minions hold where they stand from the drag lesson until the push on the tower (they still swing at what comes
+        // close): left to walk, they stood at the enemy tower long before her, and "let your minions go first" had nothing to show
+        void TutHoldMinions()
+        {
             for (int i = 0; i < Units.Count; i++)
             {
                 var u = Units[i];
-                if (u.Alive && u.Kind == UnitKind.Minion && u.Team == Teams.Player) { u.TutStatic = true; u.SpawnX = u.X; u.SpawnY = u.Y; }
+                if (u.Alive && u.Kind == UnitKind.Minion && u.Team == Teams.Player && !u.TutStatic) { u.TutStatic = true; u.SpawnX = u.X; u.SpawnY = u.Y; }
             }
+        }
+
+        // The drag lesson begins: where Fenn will stand, and a drag aims the special from now on. He comes out of the left tuft,
+        // or, with Tyra far to the right (he would be off her screen), out of the right one: he waits there unseen, so the move
+        // across is never seen either.
+        void TutHiderStart()
+        {
+            var tu = Tut; var f = tu.Hider; var p = Player;
+            tu.DragOn = true;
+            if (f == null || !f.Alive) return;
+            bool right = p.X > TutHiderRightFrom && !IsVisibleTo(f, Teams.Player);
+            if (right) { f.X = f.PX = Map.W - f.X; f.Facing = SimMath.PI; }
+            bool onRight = f.X > Map.W * 0.5f;
+            tu.HiderViaX = onRight ? Map.W - TutHiderViaX : TutHiderViaX; tu.HiderViaY = TutHiderViaY;
+            tu.HiderX = onRight ? Map.W - TutHiderX : TutHiderX; tu.HiderY = TutHiderY;
+        }
+
+        /// <summary>The drag lesson, every tick until Tyra's aimed bolt has hit Fenn: he walks out of the grass to his spot, becomes
+        /// a target there and her special is full; it comes back a moment after every bolt that missed him.</summary>
+        void TutDragStep(float dt)
+        {
+            var tu = Tut; var p = Player; var f = tu.Hider;
+            if (!tu.DragOn) TutHiderStart(); // the step was entered some other way than from the tap lesson (a test)
+            if (f == null || !f.Alive) { tu.Burst = true; tu.BurstAt = Time; if (tu.Lesson < tu.Lessons) tu.Lesson++; return; } // nobody to learn on: on to Knut
+            if (!tu.HiderOut)
+            {
+                // round the wall's end, then up to his spot
+                float gx = tu.HiderVia ? tu.HiderX : tu.HiderViaX, gy = tu.HiderVia ? tu.HiderY : tu.HiderViaY;
+                float dx = gx - f.X, dy = gy - f.Y, d = SimMath.Hypot(dx, dy);
+                if (d > 0.15f && tu.T < TutHiderWalkMax) { MoveUnit(f, dx / d * TutHiderPace, dy / d * TutHiderPace, dt); return; }
+                if (!tu.HiderVia) { tu.HiderVia = true; return; }
+                // he stands there (or was held up: then where he got to): a target now, and her special is ready
+                tu.HiderOut = true;
+                f.RemoveAll(St.Untargetable);
+                p.Charge = p.HDef.MaxCharge;
+                return;
+            }
+            float fx = p.X - f.X, fy = p.Y - f.Y;
+            if (fx * fx + fy * fy > 1e-4f) f.Facing = SimMath.Atan2(fy, fx); // he watches her
+            // a bolt that missed him: the special is back a moment after the press, so a bolt in the air lands first
+            if (!p.SpecialReady && Time - tu.PressAt >= TutRefillAfter)
+            {
+                if (tu.DragShown)
+                {
+                    // the game's own shot found no way to him (it cannot miss today: her bolt flies through everything to the
+                    // island's edge, TyraS.BoltPierces): the lesson ends all the same, nobody is left standing at it
+                    f.TutUnkillable = false; Kill(f, p);
+                    tu.Burst = true; tu.BurstAt = Time;
+                    if (tu.Lesson < tu.Lessons) tu.Lesson++;
+                    return;
+                }
+                p.Charge = p.HDef.MaxCharge; tu.DragMissed = true;
+            }
+            if (!tu.DragAsked) return;
+            tu.DragT += dt;
+            if (tu.DragT < TutDragMercy || tu.DragShown) return;
+            // nobody is left standing at this lesson: the game makes the shot itself, a drag at Fenn, and the match goes on
+            float ang = SimMath.Atan2(f.Y - p.Y, f.X - p.X);
+            if (OneTap ? TryAimSpecial(p, ang, 1) : TryCastSpecial(p, ang, 1)) { tu.DragShown = true; tu.PressAt = Time; tu.PressAimed = true; }
         }
 
         /// <summary>The tower moment (every tick of it): the enemy tower shoots for real now, at the first enemy inside its ring and
@@ -493,20 +639,31 @@ namespace BAM.Sim
         {
             var tu = Tut; var p = Player;
             if (tu.Island || tu.Burst || src != p || kind != DmgKind.Special || tgt.Team == p.Team) return;
-            // the tap lesson: any bolt that hits; the old drag game's aimed bolt: only a bolt Tyra aimed, and only on Knut
+            // the tap lesson: any bolt that hits; the drag lesson: only a bolt aimed by hand, and only on Fenn
             bool tap = tu.Step == Tutorial.StepSpecial;
-            if (tap || tu.Step == Tutorial.StepThrow && tu.PressAimed && tgt == tu.Guard) { tu.Burst = true; tu.BurstAt = Time; }
-            if (tap) TutLessonDone();
+            if (!tap && !(tu.Step == Tutorial.StepThrow && tu.PressAimed && tgt == tu.Hider)) return;
+            tu.Burst = true; tu.BurstAt = Time;
+            // a lesson done, with its word of praise; the shot the game had to make itself fills the dot without one
+            if (tap || !tu.DragShown) TutLessonDone(); else if (tu.Lesson < tu.Lessons) tu.Lesson++;
         }
 
-        /// <summary>DealDamage, for the guided match's enemy tower and Knut. The tower: only Tyra's own auto attacks in the last
+        /// <summary>DealDamage, for the guided match's enemy tower, Knut and Fenn. The tower: only Tyra's own auto attacks in the last
         /// moment hurt it, each taking the same share of what is left, so the TowerHits-th hit always breaks it (regen between hits
         /// changes nothing); everything else (her minions' swings too) deals 0. Knut: in the fight moment Tyra's special takes all
-        /// that is left of him; every other hit is the real one (and stops at his floor, UpdateTutorial).</summary>
+        /// that is left of him; every other hit is the real one (and stops at his floor, UpdateTutorial). Fenn: in the drag lesson
+        /// her own aimed bolt takes all of him (TutSawHit has just counted it); every other hit takes him no lower than half.</summary>
         float TutDamage(Unit src, Unit tgt, float amount, DmgKind kind)
         {
             var tu = Tut; var p = Player;
             if (tu.Island) return amount;
+            if (tgt == tu.Hider)
+            {
+                // every other hit stops at half his health (her arrows find him by themselves inside her ring): there it takes nothing
+                if (tu.Step != Tutorial.StepThrow || kind != DmgKind.Special || src == null || src != p || !tu.PressAimed)
+                    return Math.Min(amount, Math.Max(0, tgt.Hp - tgt.MaxHp * TutHiderFloor));
+                tgt.TutUnkillable = false;
+                return Math.Max(amount, tgt.Hp);
+            }
             if (tgt == tu.Guard)
             {
                 if (tu.Step != Tutorial.StepFight || kind != DmgKind.Special || src == null || src != p) return amount;

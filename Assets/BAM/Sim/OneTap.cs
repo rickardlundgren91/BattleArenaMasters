@@ -18,9 +18,10 @@ namespace BAM.Sim
         public bool OneTap = Rules.OneTapSpecial;
         /// <summary>This match lets a drag aim the one special by hand (Rules.DragAimSpecial; a test may turn it off).</summary>
         public bool DragAim = Rules.DragAimSpecial;
-        /// <summary>A drag aims now: the one-tap game with drag aim on, outside the guided match (it teaches the tap only: new players
-        /// got stuck on the old drag step, 2026-11-01).</summary>
-        public bool DragAimOn => OneTap && DragAim && Tut == null;
+        /// <summary>A drag aims now: the one-tap game with drag aim on. In the guided match from its drag lesson on (Tutorial.DragOn;
+        /// Rickard 2026-11-16: "Sen har vi inte lärt spelaren att man kan dra skillen"): the lessons before it teach the tap
+        /// alone, and until that day the whole guided match did (new players got stuck on the old drag step, 2026-11-01).</summary>
+        public bool DragAimOn => OneTap && DragAim && (Tut == null || Tut.DragOn);
 
         /// <summary>Can a drag aim h's special now (the HUD lets the SPECIAL button drag)? CanDragAim, plus veiled Fenn's Shadow Strike:
         /// the Veil itself has nothing to aim, the strike out of it has (hero review 2026-11-13).</summary>

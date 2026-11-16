@@ -181,7 +181,10 @@ namespace BAM.Art.Editor
                     else t = y <= 19 && x >= 5 && x <= 7 ? (byte)1 : (byte)0; // the bridge
                     tiles[y * w + x] = t;
                 }
-            island = ArtKit.BuildArena(new ArenaInfo { Width = w, Height = h, Tiles = tiles, Rocks = new Vector3[0], Island = true, LaneRises = rise });
+            // the boost pad on the bridge's last row (tile 6, 19), throwing on down the map (Sim TutorialIsland.cs)
+            var pad = new Vector3(6.5f, 0f, h - 19.5f);
+            island = ArtKit.BuildArena(new ArenaInfo { Width = w, Height = h, Tiles = tiles, Rocks = new Vector3[0], Island = true, LaneRises = rise,
+                Pads = new[] { pad }, PadTo = new[] { pad + Vector3.back * 4.4f } });
             island.transform.position = new Vector3(IslandX, 0f, 0f);
         }
 

@@ -30,10 +30,11 @@ namespace BAM.Art
         static float waterY;
         static bool skirted; // Rickard's cliff picture hangs on the edge: the old code-drawn cliff faces would sit in the same plane
 
-        // A jump pad (the second map), after the old game's 3D pads (View3DJumpPads.cs): a low stone plinth, a bronze rim and a
-        // teal plate with three chevrons pointing the way it throws you, and a faint ring where you land. Code-built until Rickard
-        // makes a pad picture or model.
-        static void JumpPad(MeshBuilder solid, MeshBuilder marks, Vector3 p, Vector3 to)
+        // A jump pad (the second map; the training island's boost pad too, Island.Lane), after the old game's 3D pads
+        // (View3DJumpPads.cs): a low stone plinth, a bronze rim and a teal plate with three chevrons pointing the way it throws
+        // you, and a faint ring where you land (landing; not on the island, whose pad throws out over the open sky). Code-built
+        // until Rickard makes a pad picture or model.
+        internal static void JumpPad(MeshBuilder solid, MeshBuilder marks, Vector3 p, Vector3 to, bool landing = true)
         {
             p.y = 0f; to.y = 0f;
             Vector3 f = to - p; f.y = 0f; f = f.sqrMagnitude > 0.001f ? f.normalized : Vector3.forward;
@@ -50,7 +51,7 @@ namespace BAM.Art
                 solid.Color(Pal.White);
                 solid.Face(L, T, Ti, Li); solid.Face(T, R, Ri, Ti);
             }
-            marks.Color(Pal.WhiteSoft).Ring(new Vector3(to.x, 0.014f, to.z), 0.38f, 0.45f, 24);
+            if (landing) marks.Color(Pal.WhiteSoft).Ring(new Vector3(to.x, 0.014f, to.z), 0.38f, 0.45f, 24);
         }
 
         public static GameObject Build(ArenaInfo info)
@@ -137,7 +138,7 @@ namespace BAM.Art
                     if (Void(info, tx + 1, ty)) Cliff(solid, kerb, new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1), tx == w - 1);
                 }
 
-            if (info.Pads != null)
+            if (info.Pads != null && !info.Island) // the island's pad stands on its bridge and rises with it (Island.Lane)
                 for (int i = 0; i < info.Pads.Length; i++) JumpPad(solid, marks, info.Pads[i], info.PadTo[i]);
 
             if (info.Rocks != null)
@@ -648,7 +649,7 @@ namespace BAM.Art
         static MeshBuilder Pick(Layer l, MeshBuilder solid, byte fallback) => l.T != null ? l.B : solid.Color(fallback);
 
         static Material marksMat;
-        static Material MarksMaterial()
+        internal static Material MarksMaterial()
         {
             if (marksMat != null) return marksMat;
             marksMat = ArtMaterials.Instance(ArtMaterials.UnlitFade);
