@@ -534,7 +534,13 @@ namespace BAM.Art
             // Ragn: his tail sways from the body (ClothSway).
             // No weapon since 2026-11-14 (Rickard: "ragn behöver inget vapen han slår med händer"): he fights with his claws, as before
             // V2; v2_ragn_hammer and the skins' hammers stay unused. An empty gear so his skins' worn parts (Jarl's cape) can go on.
-            g[(int)HeroId.Ragn] = new GearDef();
+            // A hammered iron crescent moon rides on his back between the braces (his Moon Leap, the moon in his eyes; a smith's work), tipped
+            // 10 degrees so the match camera sees its face, so he is known from behind (Rickard 2026-11-16: "Ravna va fräck att man såg en
+            // mask bakifrån", card "A: Järnmåne på ryggen"). Rigid iron: no sway. His skins keep their own look (no v2s_ragn_<skin>_moon)
+            g[(int)HeroId.Ragn] = new GearDef
+            {
+                Worn = new[] { new WornDef { Model = "v2_ragn_moon", Bone = Chest, From = LArm, To = RArm, Height = 0.22f, At = new Vector3(0f, -0.18f, -0.235f), Turn = new Vector3(10f, 0f, 0f) } },
+            };
 
             // Nässla: the new root staff held as before, the mushroom cap on her head and the basket on her back (her V2 body has
             // neither built in)
