@@ -210,6 +210,11 @@ namespace BAM.UI
                 Screens.HandleBack();
             Screens.Tick();
         }
+
+        // back from the background (or a system dialog): Home's PLAY waits a moment, so the tap that brought the game back
+        // does not start a match (Screens.OnPlay)
+        void OnApplicationFocus(bool focus) { if (focus) Screens.HoldPlay(); }
+        void OnApplicationPause(bool paused) { if (!paused) Screens.HoldPlay(); }
     }
 
     /// <summary>

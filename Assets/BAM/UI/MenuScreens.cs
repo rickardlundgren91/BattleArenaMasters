@@ -26,7 +26,26 @@ namespace BAM.UI
 
         // The tutorial is not offered here any more: the very first start goes into it by itself (GameFlow.StartFirstTutorial,
         // the old MenuNewPlayer), with a Skip button. Training in MODES plays it again.
-        static void OnPlay() => PlayMode();
+        static void OnPlay()
+        {
+            // Rickard 2026-11-16 (phone): "man kommer direkt in i 3v3" when the game opens. A tap made while the game was still
+            // loading, or the tap that brought it back to the front, landed on the full-width PLAY the moment Home came up.
+            // PLAY only counts once Home has been on screen a moment after a start or a return to the game.
+            if (Time.frameCount < playReadyFrame || Time.realtimeSinceStartup < playReadyAt) return;
+            PlayMode();
+        }
+
+        static int playReadyFrame;
+        static float playReadyAt;
+        const float PlayHoldSeconds = 1f;
+        const int PlayHoldFrames = 20;
+
+        /// <summary>The game started or came back to the front: Home's PLAY waits a moment (OnPlay).</summary>
+        internal static void HoldPlay()
+        {
+            playReadyFrame = Time.frameCount + PlayHoldFrames;
+            playReadyAt = Time.realtimeSinceStartup + PlayHoldSeconds;
+        }
 
         static void StartBotMatch()
         {

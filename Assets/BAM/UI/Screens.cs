@@ -116,6 +116,7 @@ namespace BAM.UI
             Init();
             ClearStack();
             Push(mainMenu);
+            if (!updateAsked) HoldPlay(); // the first Home of this start (see OnPlay)
             CheckForUpdate(); // once per start: a newer version on Google Play (UpdateNotice.cs)
             // Rickard: Byte Strike for all music for now (BamAudio plays it for Menu until a menu track exists); after a
             // match the same loop goes on where it was
