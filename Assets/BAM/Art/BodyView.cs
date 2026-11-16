@@ -1912,8 +1912,8 @@ namespace BAM.Art
         /// <summary>How much of Blast's V2 head pose comes from the bind pose on his chest (the rest from his clips).</summary>
         const float BlastV2HeadHold = 0.85f;
         bool headHold;
-        Transform holdHead, holdChest;
-        Quaternion holdRel = Quaternion.identity;
+        Transform holdHead, holdChest, holdNeck;
+        Quaternion holdRel = Quaternion.identity, holdNeckRel = Quaternion.identity;
 
         /// <summary>Notes the head's turn on the chest in the bind pose (a fresh instance stands in it), for <see cref="HoldHead"/>.</summary>
         void MeasureHeadHold()
@@ -1924,12 +1924,17 @@ namespace BAM.Art
             holdChest = anim.GetBoneTransform(HumanBodyBones.UpperChest) ?? anim.GetBoneTransform(HumanBodyBones.Chest) ?? anim.GetBoneTransform(HumanBodyBones.Spine);
             if (holdHead == null || holdChest == null) return;
             holdRel = Quaternion.Inverse(holdChest.rotation) * holdHead.rotation;
+            // the neck too: the skin under his chin hangs on it, so with only the head held the clips' neck bend stretched a long,
+            // bent neck between the collar and the chin (Rickard 2026-11-16: "konstigt ansikte, hals och det runt där")
+            holdNeck = anim.GetBoneTransform(HumanBodyBones.Neck);
+            if (holdNeck != null) holdNeckRel = Quaternion.Inverse(holdChest.rotation) * holdNeck.rotation;
             headHold = true;
         }
 
         void HoldHead(float w)
         {
             if (holdHead == null || holdChest == null) return;
+            if (holdNeck != null) holdNeck.rotation = Quaternion.Slerp(holdNeck.rotation, holdChest.rotation * holdNeckRel, w);
             holdHead.rotation = Quaternion.Slerp(holdHead.rotation, holdChest.rotation * holdRel, w);
         }
 
