@@ -48,8 +48,8 @@ namespace BAM.Art
 
         static T Clone<T>(T o) where T : class => o == null ? null : (T)typeof(object).GetMethod("MemberwiseClone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(o, null);
 
-        // worn parts that are the hero's weapon: kept when the skin has none of its own
-        static bool IsWeapon(HeroId hero, string slot) => hero == HeroId.Kugg && slot == "cannon";
+        // worn parts that are the hero's weapon, or her mark (Tikta's glowing wings, 2026-11-16): kept when the skin has none of its own
+        static bool IsWeapon(HeroId hero, string slot) => (hero == HeroId.Kugg && slot == "cannon") || (hero == HeroId.Tikta && (slot == "glowwingr" || slot == "glowwingl"));
 
         public static GearDef For(HeroId hero, string skin, GearDef plain)
         {

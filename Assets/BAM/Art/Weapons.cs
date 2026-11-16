@@ -203,6 +203,11 @@ namespace BAM.Art
         public bool Along;
         /// <summary>Degrees turned about the hero's right, up and forward after <see cref="Yaw"/> (Weapon Tuner "Extra turn").</summary>
         public Vector3 Turn;
+        /// <summary>Drawn unlit and a little see-through, so it glows against the body (Tikta's insect wings, Rickard 2026-11-16).</summary>
+        public bool Glow;
+        /// <summary>Degrees a wing beats up and down about the hero's forward axis at its root (0 = none): slow and small at rest,
+        /// wider and faster on the move. Negative for a left wing, so both beat up together.</summary>
+        public float Flap;
     }
 
     /// <summary>
@@ -416,6 +421,17 @@ namespace BAM.Art
         internal const float BonkPeltWide = 1.3f;
         internal static Vector3 BonkPeltAt => new Vector3(0f, 0.15f, -0.03f); // a property: byHeroV2 above is made before any field below it
 
+        /// <summary>Tikta's glowing insect wings (Rickard 2026-11-16: "Ravna va fräck att man såg en mask bakifrån", he picked
+        /// glowing wings so she stands out from behind and from the match camera): a teal fore wing and a violet hind wing a side,
+        /// made in code (bam-work/hero-details/tikta/tools/make_glowwings.py), rooted on her upper back and beating softly. Kept on
+        /// her skins too (SkinGear). Tune with the Weapon Tuner ("Tikta V2", the last two worn parts).</summary>
+        internal static WornDef TiktaGlowWing(bool right) => new WornDef
+        {
+            Model = right ? "v2_tikta_glowwingr" : "v2_tikta_glowwingl", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm,
+            To = HumanBodyBones.RightUpperArm, Height = 0.27f,
+            At = new Vector3(right ? 0.015f : -0.015f, -0.02f, -0.1f), Glow = true, Flap = right ? 12f : -12f,
+        };
+
         static GearDef[] MakeV2()
         {
             GearDef[] old = byHero ?? WeaponTuning.Apply(Make());
@@ -457,7 +473,8 @@ namespace BAM.Art
             kn.Socket = Vector3.zero; kn.NoFingerIndex = Vector3.zero; kn.NoFingerThumb = Vector3.zero;
 
             // Tikta: the new needles in both fists; the chitin wing plate on her back (made from behind, so turned round), her scarf tails
-            // hanging down her back from the neck (a soft swing) and the spare-needle holster on her right thigh
+            // hanging down her back from the neck (a soft swing) and the spare-needle holster on her right thigh; last, her glowing
+            // insect wings out of the wing plate (TiktaGlowWing)
             GearDef tk = g[(int)HeroId.Tikta];
             tk.Weapons[0].Model = "v2_tikta_needle"; tk.Weapons[1].Model = "v2_tikta_needle";
             tk.Worn = new[]
@@ -465,6 +482,7 @@ namespace BAM.Art
                 new WornDef { Model = "v2_tikta_wings", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.14f, -0.07f), Yaw = 180f },
                 new WornDef { Model = "v2_tikta_scarf", Bone = HumanBodyBones.Neck, From = LArm, To = RArm, Height = 0.22f, At = new Vector3(0f, 0.03f, -0.06f), Flat = 0.7f, Sway = 20f },
                 new WornDef { Model = "v2_tikta_holster", Bone = RLeg, From = RLeg, To = HumanBodyBones.RightLowerLeg, Height = 0.12f, At = new Vector3(0.045f, -0.02f, 0f) },
+                TiktaGlowWing(true), TiktaGlowWing(false),
             };
 
             // Blast: the new skull bomb (still thrown), and his bomb belt round the hips, as wide as twice the hip joints
@@ -740,7 +758,7 @@ namespace BAM.Art
         const float DeathLetGo = 0.25f;
         float figH;
         // worn parts (GearDef.Worn): their transforms, rest turns and swing springs
-        WornDef[] worn; Transform[] wornT; Quaternion[] wornRest; Vector3[] swayAx; float[] swayA, swayV; float swayClock;
+        WornDef[] worn; Transform[] wornT; Quaternion[] wornRest; Vector3[] swayAx, flapAx; float[] swayA, swayV; float swayClock, flapPhase;
         // thrown: when the weapon leaves the hand, how long it stays away, and whether a weapon that is not Thrown goes too (Throw)
         float hideIn = -1f, backIn = -1f, awayFor = AwayFor;
         bool hideHeld;
@@ -835,7 +853,7 @@ namespace BAM.Art
             return h;
         }
 
-        static Renderer MakeRenderer(GameObject go, Mesh mesh, string model, List<Renderer> rends, List<Material> op, List<Material> fd)
+        static Renderer MakeRenderer(GameObject go, Mesh mesh, string model, List<Renderer> rends, List<Material> op, List<Material> fd, bool glow = false)
         {
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
@@ -843,13 +861,16 @@ namespace BAM.Art
             r.receiveShadows = true;
             Texture tex = Props.Texture(model);
             if (tex == null) tex = Texture2D.whiteTexture;
-            Material o = ArtMaterials.Instance(ArtMaterials.Lit), f = ArtMaterials.Instance(ArtMaterials.LitFade);
+            Material o = ArtMaterials.Instance(glow ? ArtMaterials.UnlitFade : ArtMaterials.Lit), f = ArtMaterials.Instance(glow ? ArtMaterials.UnlitFade : ArtMaterials.LitFade);
             o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex;
             f.SetTexture(ArtMaterials.BaseMap, tex); f.mainTexture = tex;
+            if (glow) o.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, GlowAlpha)); // its own light, a little see-through
             r.sharedMaterial = o;
             rends.Add(r); op.Add(o); fd.Add(f);
             return r;
         }
+
+        const float GlowAlpha = 0.8f;
 
         // where each worn part was placed from, kept in its bone's own space so the Weapon Tuner can move it live (PlaceWorn)
         struct WornBase { public Vector3 FromL; public Quaternion RootL, LayL; public float Span, Ps, H, MeshX, MeshY; public Vector3 At, Turn; public float Yaw, Height, Wide; }
@@ -858,7 +879,7 @@ namespace BAM.Art
         void AddWorn(WornDef[] ws, Animator an, float H, List<Renderer> rends, List<Material> op, List<Material> fd)
         {
             int n = ws.Length;
-            worn = ws; wornT = new Transform[n]; wornRest = new Quaternion[n]; swayAx = new Vector3[n]; swayA = new float[n]; swayV = new float[n];
+            worn = ws; wornT = new Transform[n]; wornRest = new Quaternion[n]; swayAx = new Vector3[n]; flapAx = new Vector3[n]; swayA = new float[n]; swayV = new float[n];
             wornB = new WornBase[n];
             for (int i = 0; i < n; i++)
             {
@@ -869,7 +890,8 @@ namespace BAM.Art
                 if (bone == null) bone = an.GetBoneTransform(HumanBodyBones.Hips);
                 if (mesh == null || bone == null) continue;
                 var go = new GameObject("Worn " + w.Model);
-                MakeRenderer(go, mesh, w.Model, rends, op, fd);
+                Renderer wr = MakeRenderer(go, mesh, w.Model, rends, op, fd, w.Glow);
+                if (w.Glow) wr.receiveShadows = false;
                 Transform t = go.transform;
                 t.SetParent(bone, false);
                 Transform fa = w.From != HumanBodyBones.LastBone ? an.GetBoneTransform(w.From) : null;
@@ -906,6 +928,7 @@ namespace BAM.Art
             wornRest[i] = t.localRotation;
             // a swing goes back about the hero's right (forward for a Front flap), whatever the part's own Yaw
             swayAx[i] = (Quaternion.Inverse(t.localRotation) * (b.RootL * Vector3.right)) * (w.Front ? -1f : 1f);
+            flapAx[i] = Quaternion.Inverse(t.localRotation) * (b.RootL * Vector3.forward); // a wing beats about the hero's forward
         }
 
         // the bones a skinned part follows and where each one's segment ends; a thigh pulls at most ThighShare, the rest stays on the hips
@@ -988,12 +1011,21 @@ namespace BAM.Art
         {
             if (wornT == null || dt <= 0f) return;
             swayClock += dt;
+            float mv = dead ? 0f : Mathf.Clamp01(moveW);
+            flapPhase += dt * 2f * Mathf.PI * Mathf.Lerp(0.9f, 3.2f, mv); // wing beats a second: a slow fan at rest, quick on the move
             for (int i = 0; i < wornT.Length; i++)
             {
                 Transform t = wornT[i];
                 if (t == null) continue;
                 WornDef w = worn[i];
                 if (w.At != wornB[i].At || w.Turn != wornB[i].Turn || w.Yaw != wornB[i].Yaw || w.Height != wornB[i].Height || w.Wide != wornB[i].Wide) PlaceWorn(i); // the Weapon Tuner moved it
+                if (w.Flap != 0f)
+                {
+                    // up and down about the root, the beat's low point at the rest pose's line: a wider beat on the move
+                    float beat = dead ? 0f : w.Flap * Mathf.Lerp(0.45f, 1f, mv) * (0.5f + 0.5f * Mathf.Sin(flapPhase));
+                    t.localRotation = wornRest[i] * Quaternion.AngleAxis(beat, flapAx[i]);
+                    continue;
+                }
                 float max = worn[i].Sway;
                 if (max <= 0f) continue;
                 float target = dead ? 0f : max * Mathf.Clamp01(moveW) + max * 0.25f * Mathf.Clamp01(atkW) + 1.5f * Mathf.Sin(swayClock * 1.4f + i);
