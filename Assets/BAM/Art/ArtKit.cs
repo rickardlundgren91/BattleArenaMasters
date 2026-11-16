@@ -114,6 +114,12 @@ namespace BAM.Art
         public virtual bool Muzzle(out Vector3 at) { at = Vector3.zero; return false; }
         /// <summary>A whole-body form: 0 = its own body, 1 = Kugg's turret while the rules keep him rooted in his Anchor (BodyForm.cs), 2 = Ravna as a flock of crows in her Night Flight (BodyFlock.cs).</summary>
         public virtual void SetForm(int form) { }
+        /// <summary>The unit is in the air (the guided match's boost pad): the game layer has lifted transform.position
+        /// <paramref name="height"/> tiles off the ground. Its soft shadow and ring stay down on the ground under it, smaller the
+        /// higher it is, and the unit itself is drawn <paramref name="size"/> times as big (1 = as always): in this camera, which
+        /// has no perspective, a body that comes up towards it must grow to look higher and not just further up the map.
+        /// (0, 1) = on the ground again.</summary>
+        public virtual void SetAir(float height, float size) { }
     }
 
     public abstract class ProjectileView : MonoBehaviour
@@ -181,6 +187,8 @@ namespace BAM.Art
         // Fenn the Spectral Knight (Rickard 2026-11-11 "fenn spectral knight, assassin" / "gör effekter på hans modell")
         SpectralVeil = 33,  // he fades into a ghost (his decoy stands there) or comes back out of it: pale ghost wisps, glow and a ring
         SpectralStrike = 34, // his Phantom Strike out of the Veil: a pale ghost sword cut on its target
+        // the guided match's boost pad (Rickard 2026-11-16: a jump that is seen, and a cut)
+        PadDust = 35,       // the pad shoots the hero up, or she comes down from it onto the lane: ground dust thrown outward and a pale ring, in nobody's colours
     }
 
     public static class ArtKit

@@ -350,7 +350,10 @@ namespace BAM.Game
                     hud.AfterStep();
                     acc -= Rules.Tick;
                     n++;
-                    if (IslandDone()) { SecondHalf(); return; }
+                    // the island's pad has thrown the hero: the arena half takes over in this very frame, which goes on below
+                    // and draws it (a cut: with a return here its first picture was the new match not yet drawn, the hero
+                    // standing on the ground she is about to come down to, which the old fade covered)
+                    if (IslandDone()) { SecondHalf(); break; }
                     if (IsOver())
                     {
                         over = true; overAt = Time.unscaledTime; acc = 0f;
@@ -510,13 +513,14 @@ namespace BAM.Game
 
         bool IslandDone() => match.Tut != null && match.Tut.Island && match.Tut.Done;
 
-        // the island's pad threw the hero and the screen is black: the arena half starts behind it and fades in
+        // The island's pad has thrown the hero to the top of her jump: a cut to the arena half, where she comes down out of the
+        // air (Tutorial.Air). No fade (Rickard 2026-11-16: "nu fadear bara bilden när man går på jump pad, jag vill att man ska
+        // hoppa och att det klipps till att man går in i nästa scen"; the light fade of 2026-10-29 hid the whole flight).
         void SecondHalf()
         {
             islandSeconds = match.Time;
             Teardown();
             Begin(false);
-            hud.FadeIn();
         }
 
         bool IsOver() => match.State == MatchState.Over || (match.Tut != null && match.Tut.Done);

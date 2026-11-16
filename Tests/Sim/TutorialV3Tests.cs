@@ -7,7 +7,8 @@ namespace BAM.Sim
     // The arena: BLINK with the joystick at rest goes away from Knut, only her special finishes him, and the tower shoots: her
     // hits count only while it is busy with her minions. Since 2026-11-16 (Rickard: "Sen har vi inte lärt spelaren att man kan dra
     // skillen. Gör så att fenn dyker upp från buskarna och man får lära sig på honom") Fenn steps out of the side grass after the
-    // tap lesson and falls to a dragged, aimed bolt alone. Eleven lessons fill the guide card's dots (Tutorial.Lesson).
+    // tap lesson and falls to a dragged, aimed bolt alone. Eleven lessons in all (Tutorial.Lesson). The island ends with the
+    // boost pad's throw, seen and not faded over, and the arena begins with Tyra coming down from it (Rickard 2026-11-16).
     public sealed partial class Match
     {
         static PlayerInput TutV3Go(Unit p, float gx, float gy, float stop = 0.15f)
@@ -142,9 +143,53 @@ namespace BAM.Sim
 
             // the pad. Five lessons in all; the pad is none
             t0 = m.Time;
-            while (m.Time - t0 < 90f && !tu.Done) m.Step(TutV3IslandPlayer(m));
+            while (m.Time - t0 < 90f && !tu.Jumping) m.Step(TutV3IslandPlayer(m));
+            Check(tu.Jumping && !tu.Done && tu.Air == 0, $"TUT3 jump: stepping on the pad sets off its throw (jumping {tu.Jumping}, done {tu.Done}, air {tu.Air})");
+            // The throw (Rickard 2026-11-16: no fade over it, a jump and a cut): Tyra goes up from the pad's middle for JumpTime s,
+            // fast at first and never down again in this half, deaf to the joystick; at the top the half is done, and the game
+            // cuts to the arena there
+            float jumpAt = m.Time, lastAir = 0, airHalf = -1; bool fell = false, said = false;
+            while (m.Time - jumpAt < 5f && !tu.Done)
+            {
+                m.Step(TutV3Go(p, IslandDiscX, IslandDiscY)); // steering back to the island: the throw has her
+                if (tu.Air < lastAir) fell = true;
+                if (tu.PAir != lastAir) fell = true; // PAir is the tick before, for the picture between ticks
+                lastAir = tu.Air;
+                if (airHalf < 0 && m.Time - jumpAt >= Tutorial.JumpTime * 0.5f) airHalf = tu.Air;
+                if (tu.Line != null || tu.RingOn) said = true;
+            }
             Check(tu.Done && tu.Lesson == Tutorial.IslandLessons, $"TUT3: the island ends on the pad with its five lessons done (done {tu.Done}, lesson {tu.Lesson}, step {tu.Step})");
+            Check(!fell && tu.Air == 1 && Math.Abs(m.Time - jumpAt - Tutorial.JumpTime) < 0.03f, $"TUT3 jump: the half ends at the top of the throw, {Tutorial.JumpTime} s after the pad (fell {fell}, air {tu.Air}, {m.Time - jumpAt:0.00} s)");
+            Check(airHalf > 0.7f && airHalf < 0.8f, $"TUT3 jump: fast off the pad, slowing to the top: three quarters up at half time (air {airHalf:0.00})");
+            Check(SimMath.Hypot(p.X - tu.PadX, p.Y - tu.PadY) < 0.01f && !said, $"TUT3 jump: she goes up from the pad's middle, whatever the joystick says, with no line and no ring ({p.X:0.00}, {p.Y:0.00})");
             Check(m.Time < 60f, $"TUT3: a player who follows the marks is through the island in under a minute ({m.Time:0.0} s)");
+        }
+
+        // The arena half begins where the island's ended, at the top of the boost pad's throw: Tyra comes down for LandTime s,
+        // slow off the top and never up again, deaf to the joystick until she is down; then the title has its time.
+        static void TutV3Landing()
+        {
+            var m = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Tutorial = true, Seed = 5 });
+            var tu = m.Tut; var p = m.Player;
+            Check(tu.Air == 1 && tu.PAir == 1 && tu.Opening && !tu.Jumping, $"TUT3 landing: the arena half begins with Tyra at the top of the throw (air {tu.Air})");
+            float x0 = p.X, y0 = p.Y, last = 1, airHalf = -1; bool up = false, moved = false, said = false;
+            while (tu.Air > 0 && m.Time < 5f)
+            {
+                m.Step(TutV3Go(p, p.X + 3, p.Y));
+                if (tu.Air > last || tu.PAir != last) up = true;
+                last = tu.Air;
+                if (tu.Air > 0 && (p.X != x0 || p.Y != y0)) moved = true;
+                if (airHalf < 0 && m.Time >= Tutorial.LandTime * 0.5f) airHalf = tu.Air;
+                if (tu.Line != null) said = true;
+            }
+            Check(!up && Math.Abs(m.Time - Tutorial.LandTime) < 0.03f, $"TUT3 landing: she is down {Tutorial.LandTime} s in, never a turn up on the way (up {up}, {m.Time:0.00} s)");
+            Check(airHalf > 0.7f && airHalf < 0.8f, $"TUT3 landing: slow off the top, fast into the ground: three quarters up at half time (air {airHalf:0.00})");
+            Check(!moved && !said, $"TUT3 landing: in the air she cannot be steered, and no line is up (moved {moved}, line {said})");
+            for (int i = 0; i < 30; i++) m.Step(TutV3Go(p, p.X + 3, p.Y));
+            Check(p.X > x0 + 0.5f && tu.Air == 0 && tu.PAir == 0, $"TUT3 landing: once down she walks ({p.X - x0:0.00} tiles in half a second)");
+            Check(tu.Opening && tu.Line == null, "TUT3 landing: the title's time comes after the landing, with no line under it");
+            while (m.Time < Tutorial.OpeningTime + 0.05f) m.Step(PlayerInput.None);
+            Check(!tu.Opening && tu.Line != null, $"TUT3 landing: the first line comes {Tutorial.OpeningTime} s in (line '{tu.Line}')");
         }
 
         static void TutV3Arena()
@@ -152,6 +197,7 @@ namespace BAM.Sim
             var m = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Tutorial = true, Seed = 5 });
             var tu = m.Tut; var p = m.Player; var tw = tu.Tower;
             Check(tu.Lesson == Tutorial.IslandLessons && tu.Lessons == Tutorial.AllLessons, "TUT3: the arena half goes on from lesson 5 of 11");
+            TutV3Landing();
             Check(tw.Has(St.Untargetable) && tw.Has(St.Disarm), "TUT3: before its moment the enemy tower neither shoots nor is a target");
             int towerHitsOnTyra = 0; bool knutBySpecial = false, fennByDrag = false, lineWithoutMarks = true; float minHp = p.Hp; int lessonAtTower = -1;
             while (m.State != MatchState.Over && !tu.Done && m.Time < 120f)
@@ -269,7 +315,7 @@ namespace BAM.Sim
             Check(!back && tu.Done && tu.Lesson == Tutorial.AllLessons, $"TUT3 drag: Fenn stays down and the match goes on to the tower (done {tu.Done}, lesson {tu.Lesson})");
 
             // a player who only ever taps is not left standing: after TutDragMercy s of asking the game makes the shot itself,
-            // and that dot fills without a word of praise
+            // and that lesson counts as done without a word of praise
             var m2 = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Tutorial = true, Seed = 7 });
             var tu2 = m2.Tut; var f2 = tu2.Hider;
             while (m2.Time < 60f && tu2.Step < Tutorial.StepThrow) m2.Step(TutV3ArenaPlayer(m2, drag: false));
@@ -303,7 +349,7 @@ namespace BAM.Sim
             while (m3.Time < 150f && !tu3.Done) m3.Step(TutV3ArenaPlayer(m3));
             Check(tu3.Done && !f3.Alive, "TUT3 drag: the mirrored lesson plays through as the other");
 
-            // the rules without drag aim (Rules.DragAimSpecial off): no drag lesson, its dot fills by itself, Fenn never shows
+            // the rules without drag aim (Rules.DragAimSpecial off): no drag lesson, it counts as done by itself, Fenn never shows
             var m4 = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Tutorial = true, Seed = 7 });
             m4.DragAim = false;
             var tu4 = m4.Tut; bool shown4 = false, asked4 = false;

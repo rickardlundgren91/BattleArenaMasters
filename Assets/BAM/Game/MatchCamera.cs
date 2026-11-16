@@ -45,7 +45,8 @@ namespace BAM.Game
         Color menuBackground;
         bool skyChanged;
         Match m;
-        Vector3 focus;
+        Vector3 focus, upFrom;
+        bool upWas;                     // the island's boost pad was throwing Tyra last frame (upFrom: the focus when it began)
         Unit watched;
         Rect frame;                     // the standing frame in screen pixels
         Vector2 screen;
@@ -62,7 +63,7 @@ namespace BAM.Game
         public void Begin(Match match)
         {
             m = match;
-            watched = null;
+            watched = null; upWas = false;
             cam.orthographic = true;
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 200f;
@@ -92,8 +93,22 @@ namespace BAM.Game
             UpdateSize();
             Vector3 target = Target(out float speed);
             if (over) speed = 3.5f;
-            float k = 1f - Mathf.Exp(-speed * dt);
-            focus += (target - focus) * k;
+            // The island's boost pad: the camera goes up with Tyra, from where it stood back to the frame of the whole island, by
+            // her own climb (Tutorial.Air) and not by the usual easing. She stays about where she is on the screen and the island
+            // falls away under her; and where it ends she hangs about where the arena half's first frame has her (within a
+            // twentieth of the screen's height on a 9:20 phone, less on others), so the cut does not throw the eye.
+            bool up = m.Tut != null && m.Tut.Island && m.Tut.Jumping;
+            if (up)
+            {
+                if (!upWas) upFrom = focus;
+                focus = Vector3.Lerp(upFrom, target, Mathf.Lerp(m.Tut.PAir, m.Tut.Air, alpha));
+            }
+            else
+            {
+                float k = 1f - Mathf.Exp(-speed * dt);
+                focus += (target - focus) * k;
+            }
+            upWas = up;
             // half the width actually seen (more than TilesAcross on a WideScreen), so a wide view is not pushed off-centre
             float halfW = 0.5f * (wide ? Mathf.Max(TilesAcross, cam.pixelWidth * upp) : TilesAcross), halfH = FrameLength * 0.42f;
             focus.x = 2f * halfW >= m.Map.W + 2f * Over ? m.Map.W * 0.5f : Mathf.Clamp(focus.x, halfW - Over, m.Map.W - halfW + Over);
@@ -165,9 +180,10 @@ namespace BAM.Game
             }
             if (m.Tut != null && m.Tut.Island)
             {
-                // the training island: framed whole until the bridge opens, then on the hero (also through the pad's flight)
+                // the training island: framed whole until the bridge opens, then on the hero; and whole again as the pad throws
+                // her (Frame takes the camera there by her climb)
                 speed = 4f;
-                return m.Tut.CamHold ? Coords.World(m.Tut.CamX, m.Tut.CamY) : Coords.Of(p);
+                return m.Tut.CamHold || m.Tut.Jumping ? Coords.World(m.Tut.CamX, m.Tut.CamY) : Coords.Of(p);
             }
             if (m.Tut != null && p.Alive) return TutTarget(p, ref speed);
             if (p.Alive) { watched = null; return Coords.Of(p) + LeadV; }

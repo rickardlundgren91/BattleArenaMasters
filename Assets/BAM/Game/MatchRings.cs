@@ -212,8 +212,9 @@ namespace BAM.Game
                 }
             }
             var p = m.Player;
-            // the island shows the range ring too (old View3D.SyncRange ran there as well)
-            if (hidden || p == null || !p.Alive || m.State == MatchState.Over) return;
+            // the island shows the range ring too (old View3D.SyncRange ran there as well); not while the guided match's boost pad
+            // has her in the air: she hits nobody from up there, and the ring would lie alone on the ground under her
+            if (hidden || p == null || !p.Alive || m.State == MatchState.Over || m.Tut != null && m.Tut.Air > 0f) return;
             Vector3 at = views.DrawnAt(p);
             at.y = 0f;
             float r = p.Range;

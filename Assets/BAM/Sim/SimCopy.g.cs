@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "8efe2720483cbfba";
+            Generated = true; GeneratedHash = "bc121c9290e282f7";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -484,6 +484,7 @@ namespace BAM.Sim
         }
         internal void __Copy(global::BAM.Sim.Tutorial __s, SimMirror __m)
         {
+            Air = __s.Air;
             ArrowOnRing = __s.ArrowOnRing;
             BlinkAt = __s.BlinkAt;
             BridgeOpen = __s.BridgeOpen;
@@ -503,7 +504,6 @@ namespace BAM.Sim
             DragT = __s.DragT;
             DragTaps = __s.DragTaps;
             Dummy = __m.Map(__s.Dummy);
-            Fade = __s.Fade;
             Gained = __s.Gained;
             Goal = __m.Map(__s.Goal);
             Guard = __m.Map(__s.Guard);
@@ -522,7 +522,6 @@ namespace BAM.Sim
             HookAt = __s.HookAt;
             Hooked = __s.Hooked;
             Island = __s.Island;
-            JumpLeft = __s.JumpLeft;
             Jumping = __s.Jumping;
             KnutDownAt = __s.KnutDownAt;
             LastCharge = __s.LastCharge;
@@ -537,6 +536,7 @@ namespace BAM.Sim
             __m.ListMap(Minions, __s.Minions);
             OnYouT = __s.OnYouT;
             Opening = __s.Opening;
+            PAir = __s.PAir;
             PadOn = __s.PadOn;
             PadX = __s.PadX;
             PadY = __s.PadY;

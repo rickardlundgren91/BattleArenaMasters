@@ -5,7 +5,8 @@ namespace BAM.Sim
     /// <summary>
     /// The guided first match's arena half: a real small first battle with Tyra, as on the island (Rickard 2026-10-29: "andra delen
     /// är inte bra"; he chose a real fight over the old walk past target boards). The boost pad throws Tyra onto the lane of the real
-    /// arena, two of her minions walk with her and a small enemy wave comes down. Six lessons, each done by the player, one short
+    /// arena (she comes down out of the air for the first LandTime s, Tutorial.Air), two of her minions walk with her and a small
+    /// enemy wave comes down. Six lessons, each done by the player, one short
     /// line at a time on the same guide card as the island's (tutorial review 2026-11-15: the lines did not match what happened,
     /// Knut, the heal and the tower asked nothing of the player and the tower never shot):
     /// 1 follow the minions into the wave (Tyra attacks by herself; her hits charge the special), 2 TAP the special when it is
@@ -22,12 +23,13 @@ namespace BAM.Sim
     public sealed partial class Tutorial
     {
         public const int StepMove = 0, StepAuto = 1, StepSpecial = 2, StepThrow = 3, StepBlink = 4, StepFight = 5, StepHeal = 6, StepTower = 7;
-        /// <summary>The opening: DESTROY THE ENEMY TOWER over Tyra as she lands (no look at the tower first since 2026-10-29).</summary>
-        public const float OpenHold = 0f, OpeningTime = 1.8f;
+        /// <summary>The opening: Tyra comes down from the island's boost pad for LandTime s (Air), then DESTROY THE ENEMY TOWER
+        /// stands over her until OpeningTime (no look at the tower first since 2026-10-29).</summary>
+        public const float OpenHold = 0f, LandTime = 0.55f, OpeningTime = LandTime + 1.8f;
         public const int TowerHits = 6;
         public const float BurstDelay = 0.15f;
-        /// <summary>The whole guided match's lessons, one dot each on the guide card: the island's five (walk, attack, grass, Focus,
-        /// one target) and the arena's six (charge, the tapped special, the dragged special, Blink, Knut, the tower).</summary>
+        /// <summary>The whole guided match's lessons: the island's five (walk, attack, grass, Focus, one target) and the arena's
+        /// six (charge, the tapped special, the dragged special, Blink, Knut, the tower).</summary>
         public const int IslandLessons = 5, ArenaLessons = 6, AllLessons = IslandLessons + ArenaLessons;
         /// <summary>StepTower's line: wait for the minions, go (the tower is busy with them), or it shoots you.</summary>
         public const int TowerWait = 0, TowerGo = 1, TowerYou = 2;
@@ -36,7 +38,7 @@ namespace BAM.Sim
         public int Step;
         /// <summary>The one hint to show now, null = none (the plain text; LineMarked has the words to highlight).</summary>
         public string Line;
-        /// <summary>The first OpeningTime s: the title over Tyra's landing.</summary>
+        /// <summary>The first OpeningTime s: Tyra's landing, then the title over her.</summary>
         public bool Opening;
         /// <summary>Dummy: no practice target any more (null; kept for the screens). Guard: Knut. Hider: Fenn, who waits hidden in
         /// the side grass until the drag lesson (StepThrow). Goal: what the gold trail leads to now (the nearest enemy minion,
@@ -87,8 +89,8 @@ namespace BAM.Sim
 
         // ---------- the training island (the first half, Tyra; TutorialIsland.cs). Unused in the arena half but where noted. ----------
         public const int IslandWalk = 0, IslandMinion = 1, IslandGrass = 2, IslandFocus = 3, IslandTarget = 4, IslandPad = 5;
-        /// <summary>This is the island half: Step is one of the Island* steps, Done means the boost pad threw Tyra and the
-        /// picture has faded, so the game starts the arena half (a new Match with Tutorial and without Island).</summary>
+        /// <summary>This is the island half: Step is one of the Island* steps, Done means the boost pad has thrown Tyra to the
+        /// top of her jump, so the game cuts to the arena half (a new Match with Tutorial and without Island), where she lands.</summary>
         public bool Island;
         /// <summary>Both halves: the line with the words to highlight between '|' marks (Line is the same text without them); '\n'
         /// breaks lines. Tip: highlight in the calm colour (teal) instead of red. Speaker: the guide's name on the card ("TYRA",
@@ -109,18 +111,21 @@ namespace BAM.Sim
         /// <summary>The boost pad, shown at its tile centre once the bridge opens.</summary>
         public bool PadOn;
         public float PadX, PadY;
-        /// <summary>The pad threw Tyra: she flies (St.Casting) and the picture fades, Fade 0..1.</summary>
+        /// <summary>The pad has thrown Tyra: the island half's last JumpTime s, in which she does nothing else (St.Casting).
+        /// Rickard 2026-11-16: "nu fadear bara bilden när man går på jump pad, jag vill att man ska hoppa och att det klipps
+        /// till att man går in i nästa scen": no fade any more (it hid the whole flight); the throw is seen, and at its top the
+        /// game cuts to the arena half, which begins with her coming down.</summary>
         public bool Jumping;
-        public float Fade;
-        /// <summary>How far the pad throws her (the old gamedata pad: a push of 3.6 flown for its length + 0.8).</summary>
-        public const float PadThrow = 3.6f + 0.8f;
-        /// <summary>The flight's arc, 0..1 (up and down again over PadThrow), as Unit.JumpLift for the arena's pads: only the
-        /// picture lifts her, the rules know no heights. The picture has faded before she is down.</summary>
-        public float JumpArc => Jumping ? (float)Math.Sin(Math.PI * Math.Max(0, Math.Min(1, 1 - JumpLeft / PadThrow))) : 0;
+        public const float JumpTime = 0.55f;
+        /// <summary>Both halves: how high the pad's throw has Tyra now, 0..1 of its full height. The island: up from the pad,
+        /// fast at first and slowing to the top (1 when the half is Done). The arena: 1 at its start, slow at first and fast
+        /// into the ground, 0 from LandTime on. One throw's arc, cut in two at its top. PAir is the tick before, for the picture
+        /// between ticks. Only the picture lifts her (MatchViews, as Unit.JumpLift for the arena's pads): the rules know no heights.</summary>
+        public float Air, PAir;
         /// <summary>The leader of the three (taking it down takes down the other two).</summary>
         public Unit Leader;
 
-        internal float Pause, Leave, JumpLeft;
+        internal float Pause, Leave;
         internal readonly System.Collections.Generic.List<Unit> Minions = new System.Collections.Generic.List<Unit>(8);
     }
 
@@ -156,7 +161,7 @@ namespace BAM.Sim
         const float TutHiderWalkMax = 3.5f;
         // the line turns to how a drag is made after this long with no aimed bolt (or at the first tap), and after TutDragMercy s
         // of asking the game makes the shot itself, so that nobody is left standing at this lesson (new players stalled at the old
-        // drag step, 2026-11-01); that dot fills without a word of praise
+        // drag step, 2026-11-01); that lesson then counts as done without a word of praise
         const float TutDragSlow = 10f, TutDragMercy = 30f;
         /// <summary>Where the guided match's Knut stops walking at Tyra and stands to swing: his reach, a little inside.</summary>
         static float TutKnutStop(Unit k, Unit p) => (k.Range + p.R) * 0.9f;
@@ -201,6 +206,9 @@ namespace BAM.Sim
             var p = NewHero(HeroId.Tyra, Teams.Player, TutStartX, TutStartY);
             p.IsPlayer = true; p.DmgMult = 2; p.TakenMult = 0.5f; p.Charge = 0; Player = p;
             tu.Speaker = TutSpeaker(p);
+            // she comes down out of the air, from the top of the island's boost pad's throw, and can do nothing until she is down
+            // (UpdateTutorial lifts the status the tick she lands; its own length is only a net)
+            tu.Air = tu.PAir = 1; AddStatus(p, St.Casting, Tutorial.LandTime + 1);
 
             // two of her minions land with her and walk the lane; the first enemy wave is already on its way
             TutMinion(MinionKind.Melee, Teams.Player, TutStartX - 0.8f, TutStartY - 0.6f);
@@ -338,6 +346,14 @@ namespace BAM.Sim
             if (Tut.Island) { UpdateIsland(dt); return; }
             var tu = Tut; var p = Player;
             tu.T += dt;
+            // the landing: the second half of the pad's throw, slow off its top and fast into the ground; down, she can act
+            tu.PAir = tu.Air;
+            if (tu.Air > 0)
+            {
+                float down = Time / Tutorial.LandTime;
+                tu.Air = down >= 1 ? 0 : 1 - down * down;
+                if (tu.Air <= 0) p.RemoveAll(St.Casting);
+            }
             RefreshTutorial();
             // the special pressed this tick (PlayerAct casts it later in this tick): a drag carries an angle, a tap does not
             if (specialBuf > 0)
@@ -435,7 +451,7 @@ namespace BAM.Sim
                             TutNext(Tutorial.StepThrow);
                             TutHoldMinions();
                             // only where a drag aims at all (Rules.DragAimSpecial; the old tap + drag game always did): else the
-                            // lesson's dot fills by itself and Knut comes at once, as from 2026-11-01 until this lesson came
+                            // lesson counts as done by itself and Knut comes at once, as from 2026-11-01 until this lesson came
                             if (!OneTap || DragAim) TutHiderStart();
                             else { tu.Burst = true; tu.BurstAt = Time; if (tu.Lesson < tu.Lessons) tu.Lesson++; }
                         }
@@ -645,7 +661,7 @@ namespace BAM.Sim
             bool tap = tu.Step == Tutorial.StepSpecial;
             if (!tap && !(tu.Step == Tutorial.StepThrow && tu.PressAimed && tgt == tu.Hider)) return;
             tu.Burst = true; tu.BurstAt = Time;
-            // a lesson done, with its word of praise; the shot the game had to make itself fills the dot without one
+            // a lesson done, with its word of praise; the shot the game had to make itself counts without one
             if (tap || !tu.DragShown) TutLessonDone(); else if (tu.Lesson < tu.Lessons) tu.Lesson++;
         }
 

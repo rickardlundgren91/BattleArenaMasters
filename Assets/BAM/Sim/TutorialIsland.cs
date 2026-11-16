@@ -7,8 +7,8 @@ namespace BAM.Sim
     // without a touch and the grass step had no enemy in it): 1 walk to a ring, 2 bring a minion inside her white ring (she
     // attacks by herself), 3 find the minion that hides in the grass, then hide there herself, 4 Focus: a hero hits a random
     // enemy in range, 5 so making one enemy the only one in range hits it every time; then a boost pad at the end of the bridge
-    // throws her towards the battle, the picture fades and the game starts the arena half (Tutorial.cs). The towers are not
-    // part of it. Every finished lesson fills one of the guide card's dots (Tutorial.Lesson).
+    // shoots her up into the sky, and at the top of that jump the game cuts to the arena half, where she comes down (Tutorial.cs,
+    // Tutorial.Air). The towers are not part of it. Every finished lesson counts (Tutorial.Lesson).
     public sealed partial class Match
     {
         struct IslandStepDef
@@ -32,10 +32,10 @@ namespace BAM.Sim
         const float IslandCamY = 12.8f;
         // Rickard 2026-10-26 (a shorter, Brawl Stars-like tutorial): half the pause between steps. 0.5 -> 0.65 s 2026-11-15: the
         // pause now shows the praise for the finished lesson ("NICE!"), which needs a moment to be read
-        const float IslandFirstPause = 1.8f, IslandStepPause = 0.65f, IslandFadeOut = 0.6f;
+        const float IslandFirstPause = 1.8f, IslandStepPause = 0.65f;
         const int IslandPadTx = IslandBridgeX0 + 1, IslandPadTy = 19;
-        // the old gamedata pad: a push of (0, 3.6) at speed 12, flown at half speed for its length + 0.8
-        const float IslandJumpDist = Tutorial.PadThrow, IslandJumpSpeed = 6f;
+        // the pad draws Tyra onto its middle at this speed as it throws her (she sets it off at the tile's edge, half a tile out)
+        const float IslandPadPull = 6f;
         // Lesson 1's ring: left of the platform's middle, 3.4 tiles from where Tyra starts. From it the first minion (far edge)
         // is about 6 tiles away, out of her reach of 4.4 + its radius, so she has to walk it into her white ring herself (it
         // used to walk past her in the middle and fall without a touch).
@@ -92,7 +92,7 @@ namespace BAM.Sim
                     }
                     // rows 17-19: the bridge, with the boost pad on its last row. Nothing below it: the old "Tutorial" map's lane
                     // (rows 22-49) was never walked and showed as a blank stone slab under the bridge once it opened (tutorial
-                    // review 2026-11-15); the pad's flight goes out over the open sky into the fade
+                    // review 2026-11-15); the pad throws straight up, so nothing is needed there
                     else t = ty <= IslandPadTy && tx >= IslandBridgeX0 && tx <= IslandBridgeX0 + 2 ? Arena.Ground : Arena.Void;
                     tiles[ty * IslandW + tx] = t;
                 }
@@ -132,7 +132,7 @@ namespace BAM.Sim
             tu.LineMarked = marked; tu.Line = marked?.Replace("|", "");
         }
 
-        /// <summary>A lesson is done: one more of the guide card's dots fills, with a word of praise (the HUD).</summary>
+        /// <summary>A lesson is done: the guide card says a word of praise, with a ding (the HUD).</summary>
         void TutLessonDone() { var tu = Tut; if (tu.Lesson < tu.Lessons) tu.Lesson++; tu.LessonAt = Time; }
 
         void IslandSpawn(int id)
@@ -175,11 +175,15 @@ namespace BAM.Sim
             var tu = Tut; var p = Player;
             if (tu.Jumping)
             {
-                // the pad's flight: out over the open sky, Tyra does nothing else (St.Casting), the picture fades
-                float step = Math.Min(tu.JumpLeft, IslandJumpSpeed * dt);
-                p.Y += step; tu.JumpLeft -= step; p.Facing = SimMath.PI / 2;
-                tu.Leave += dt; tu.Fade = Math.Min(1, tu.Leave / IslandFadeOut);
-                if (tu.Leave >= IslandFadeOut) tu.Done = true;
+                // the pad's throw: Tyra is drawn onto its middle and shot straight up (Air: fast off the pad, slowing to the top),
+                // and does nothing else (St.Casting). At the top this half is done: the game cuts to the arena, where she comes down
+                float dx = tu.PadX - p.X, dy = tu.PadY - p.Y, d = SimMath.Hypot(dx, dy), step = Math.Min(d, IslandPadPull * dt);
+                if (d > 1e-4f) { p.X += dx / d * step; p.Y += dy / d * step; }
+                p.Facing = SimMath.PI / 2;
+                tu.Leave += dt;
+                float k = Math.Min(1, tu.Leave / Tutorial.JumpTime);
+                tu.PAir = tu.Air; tu.Air = 1 - (1 - k) * (1 - k);
+                if (k >= 1) tu.Done = true;
                 RefreshIsland();
                 return;
             }
@@ -201,8 +205,8 @@ namespace BAM.Sim
             {
                 if ((int)Math.Floor(p.X) == IslandPadTx && (int)Math.Floor(p.Y) == IslandPadTy)
                 {
-                    tu.Jumping = true; tu.JumpLeft = IslandJumpDist;
-                    AddStatus(p, St.Casting, IslandJumpDist / IslandJumpSpeed + 0.1f);
+                    tu.Jumping = true; tu.Leave = 0;
+                    AddStatus(p, St.Casting, Tutorial.JumpTime + 0.1f);
                 }
                 RefreshIsland();
                 return; // the pad step ends with the jump

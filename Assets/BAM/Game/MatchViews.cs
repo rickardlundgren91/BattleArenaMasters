@@ -61,6 +61,7 @@ namespace BAM.Game
             public float FixX, FixY;       // online guest: a correction of the guess, drawn away over ~0.1 s instead of a jump
             public float JoltX, JoltY, JoltT, JoltLen; // the player's own hit shoves the target a little away (OwnHit), map tiles; JoltT left of JoltLen s
             public bool Squared;           // the view was told it faces a target or an aim, not its path (AnimFix.LegsFollow)
+            public float Air;              // how high the view was told it is in the air (UnitView.SetAir), 0 = on the ground
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
 
@@ -155,10 +156,11 @@ namespace BAM.Game
             info.LaneRises = Island && rebuild; // the opened bridge and lane rise into place
             if (Island && bridgeShown)
             {
-                // the island's boost pad stands on the bridge's last row and throws on down the map, out over the sky (TutorialIsland.cs)
+                // the island's boost pad stands on the bridge's last row, its chevrons pointing on down the map, away from the
+                // island; the throw itself goes straight up (TutorialIsland.cs, Tutorial.Air)
                 var tu = m.Tut;
                 info.Pads = new[] { Coords.World(tu.PadX, tu.PadY) };
-                info.PadTo = new[] { Coords.World(tu.PadX, tu.PadY + Tutorial.PadThrow) };
+                info.PadTo = new[] { Coords.World(tu.PadX, tu.PadY + 1f) };
             }
             arena = ArtKit.BuildArena(info);
         }
@@ -324,7 +326,7 @@ namespace BAM.Game
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
             r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.MaxHp = -1f; r.Energy = -2f; r.Ready = false; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff; r.Form = -1;
-            r.JoltT = 0f;
+            r.JoltT = 0f; r.Air = 0f;
             r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
             r.Bar = null;
             foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
@@ -1231,6 +1233,12 @@ namespace BAM.Game
         }
 
         const float PadArcH = 1.6f; // how high a jump pad throws a hero, world units
+        // The guided match's boost pad (Tutorial.Air; Rickard 2026-11-16: "jag vill att man ska hoppa och att det klipps till att
+        // man går in i nästa scen"): how high its throw takes Tyra, and how much bigger she is drawn for each tile of it (a third
+        // bigger at the top). Not higher: in the arena she stands 8 tiles nearer the camera than its focus, and from 13 tiles up
+        // her head would pass the camera's near plane (MatchCamera.Back 18); and at 10 she hangs just clear of the first enemy
+        // wave on the screen. TutAirGrow 0 = she keeps her size.
+        const float TutAirH = 10f, TutAirGrow = 0.03f;
 
         /// <summary>How high the Tripo tower's flat stone foot lifts a body standing at world point p (Rickard 2026-11-04 "fötterna går
         /// igenom plattformen": since the tower stops bodies at its wall, Rules.TowerBody 1.1, heroes stand on the foot, which is 0.20
@@ -1261,7 +1269,10 @@ namespace BAM.Game
             bool jump = (u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY) > 4f;
             Vector3 pos = jump ? Coords.Of(u) : Coords.Lerp(u.PX, u.PY, u.X, u.Y, alpha);
             pos.y += u.JumpLift * PadArcH; // a jump pad's throw flies in an arc
-            if (u == m.Player && m.Tut != null) pos.y += m.Tut.JumpArc * PadArcH; // and so does the island's boost pad's (TutorialIsland.cs)
+            // the guided match's boost pad: straight up on the island, and down out of the air onto the lane in the arena
+            float air = u == m.Player && m.Tut != null ? Mathf.Lerp(m.Tut.PAir, m.Tut.Air, alpha) * TutAirH : 0f;
+            pos.y += air;
+            if (air != r.Air) { r.Air = air; v.SetAir(air, 1f + air * TutAirGrow); } // her shadow and ring stay on the ground
             if (u.Kind != UnitKind.Tower) pos.y += TowerFootLift(pos); // stands on the tower's stone foot, not in it
             if (r.JoltT > 0f)
             {

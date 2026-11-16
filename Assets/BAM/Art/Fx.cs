@@ -1286,6 +1286,12 @@ namespace BAM.Art
                 case FxKind.HookDrag:
                     Dust(p + Vector3.up * 0.08f, 2, C(Pal.Ground, 200), 0.35f * size, 0.9f, 0.45f, 0.5f, 0.15f);
                     break;
+                case FxKind.PadDust:
+                    // the guided match's boost pad shoots Tyra up, or she comes down from it: the ground's own dust and a pale
+                    // ring, nobody's colours (her landing used to borrow Fenn's clawed wolf puff, hidden under the old fade)
+                    Ring(p, 0.25f * size, 1.4f * size, new Color(1f, 0.96f, 0.86f, 0.8f), 0.4f);
+                    Dust(p + Vector3.up * 0.12f, 10, C(Pal.Ground, 215), 0.5f * size, 2.4f, 0.6f, 0.35f, 0.3f);
+                    break;
                 case FxKind.AnchorHit:
                     SpecialHit((int)HeroId.Knut, mid, 1.1f * size);
                     Pic("tx_fx_knut_splash", p, Color.white, 2.4f * size, 0.5f); // his water splash on the ground

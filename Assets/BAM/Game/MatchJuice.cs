@@ -21,6 +21,7 @@ namespace BAM.Game
         // shake: the old amp was trauma² × 3 % of the screen width, here of the 11.5 tiles across
         const float ShakeWidth = 11.5f * 0.03f, TraumaFall = 1.7f;
         float trauma, t, stopT, zoomT = 9f, zoomA;
+        bool landed; // the guided match's arena half: Tyra has come down from the island's boost pad
         Match m;
 
         public Vector2 Shake { get; private set; }
@@ -32,6 +33,7 @@ namespace BAM.Game
         {
             m = match;
             trauma = 0f; stopT = 0f; zoomT = 9f; zoomA = 0f; Shake = Vector2.zero; Zoom = 1f;
+            landed = false;
         }
 
         void AddTrauma(float v) => trauma = Mathf.Min(1f, Mathf.Max(trauma, v));
@@ -57,6 +59,9 @@ namespace BAM.Game
         public void AfterStep()
         {
             if (m.Tut != null && m.Tut.Island) return;
+            // the guided match's arena half begins with Tyra coming down from the island's boost pad (Tutorial.Air): a thump
+            // as she lands
+            if (!landed && m.Tut != null && m.Tut.Air <= 0f) { landed = true; AddTrauma(0.45f); }
             var p = m.Player;
             var ev = m.Events;
             float buzz = 0f;

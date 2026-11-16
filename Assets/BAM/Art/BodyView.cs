@@ -138,6 +138,11 @@ namespace BAM.Art
         Transform decalT;
         MeshFilter decalF;
         MeshRenderer decalR;
+        // in the air (SetAir): the decal's own size, and the root's scale to come back to
+        const float AirShadow = 0.55f, AirShadowH = 8f; // the shadow and ring are this share of their size from this high up
+        float decalRR = 1f;
+        bool airOn;
+        Vector3 airRest = Vector3.one;
         HealthBar bar;
         StatusFx status;
 
@@ -556,8 +561,8 @@ namespace BAM.Art
             decalT = dg.transform;
             decalT.SetParent(transform, false);
             decalT.localPosition = new Vector3(0f, 0.02f, 0f);
-            float rr = d.Radius * 1.25f + 0.08f;
-            decalT.localScale = new Vector3(rr, 1f, rr);
+            decalRR = d.Radius * 1.25f + 0.08f;
+            decalT.localScale = new Vector3(decalRR, 1f, decalRR);
             decalF = dg.AddComponent<MeshFilter>();
             decalR = dg.AddComponent<MeshRenderer>();
             decalR.sharedMaterial = ArtMaterials.UnlitFade;
@@ -580,6 +585,7 @@ namespace BAM.Art
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
             dead = false; deathT = -1f; spawnT = -1f; vis = 1f;
+            SetAir(0f, 1f); // a body that went back to the pool in mid-air (the guided match's island ends at the top of the pad's throw)
             Probe.Reset();
             FormReset();
             atkCut = castCut = -1f;
@@ -895,6 +901,27 @@ namespace BAM.Art
         HoneyMarks honey; // Moa's shield rings, made the first time one shows
         HeroMarks marks; // Tikta's Deathmark and Blast's chain marks, made the first time one shows
         HeroMarks Marks() => marks ?? (marks = new HeroMarks(transform, def.Height, def.Radius));
+
+        public override void SetAir(float height, float size)
+        {
+            bool on = height > 0f || size != 1f;
+            if (!on && !airOn) return;
+            if (on && !airOn) airRest = transform.localScale;
+            airOn = on;
+            transform.localScale = on ? airRest * size : airRest;
+            if (decalT == null) return;
+            if (!on)
+            {
+                decalT.localPosition = new Vector3(0f, 0.02f, 0f);
+                decalT.localScale = new Vector3(decalRR, 1f, decalRR);
+                return;
+            }
+            // the decal hangs under the lifted, grown root: back down to the ground, at its own size but for the shrink by height
+            float s = Mathf.Max(1e-4f, transform.lossyScale.y), k = Mathf.Max(1e-4f, size);
+            float rr = decalRR * Mathf.Lerp(1f, AirShadow, Mathf.Clamp01(height / AirShadowH)) / k;
+            decalT.localPosition = new Vector3(0f, (0.02f - height) / s, 0f);
+            decalT.localScale = new Vector3(rr, 1f, rr);
+        }
 
         public override void SetMarker(UnitMarker m)
         {

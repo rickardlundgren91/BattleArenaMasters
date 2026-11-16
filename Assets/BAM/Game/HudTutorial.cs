@@ -94,8 +94,10 @@ namespace BAM.Game
         bool joyUsed;
         int lastLesson;
 
+        // the boost pad's throw: the dust on the pad as it shoots Tyra up, and where she comes down in the arena, still to show
+        const float PadDustSize = 1.5f;
+        bool padPuffed, landPending;
         // healing: a soft green glow round Tyra's feet while the heal moment lasts
-        bool landPending;
         Image healGlow, healRing;
         static readonly Color HealGreen = Hex(0x5dff8a), TabTeal = Hex(0x13a89e);
 
@@ -151,11 +153,21 @@ namespace BAM.Game
         void TutorialFrame(bool hidden)
         {
             DissolveFrame();
-            // the arena half starts with Tyra landing from the island's boost pad: a puff of dust where she comes down
-            if (landPending && m.Tut != null && !island && m.Player != null)
+            // the boost pad's throw (Tutorial.Air): a puff of dust on the pad as it shoots Tyra up, and one where she comes down in
+            // the arena, the moment she is down (it used to puff at the half's first frame, under the fade)
+            if (m.Tut != null && m.Player != null)
             {
-                landPending = false;
-                BAM.Art.ArtKit.PlayFx(BAM.Art.FxKind.WolfLand, views.DrawnAt(m.Player), 1.8f, m.Player.Team);
+                if (island && m.Tut.Jumping && !padPuffed)
+                {
+                    padPuffed = true;
+                    BAM.Art.ArtKit.PlayFx(BAM.Art.FxKind.PadDust, Coords.World(m.Tut.PadX, m.Tut.PadY), PadDustSize, m.Player.Team);
+                }
+                if (!island && landPending && m.Tut.Air <= 0f)
+                {
+                    landPending = false;
+                    Vector3 at = views.DrawnAt(m.Player); at.y = 0f;
+                    BAM.Art.ArtKit.PlayFx(BAM.Art.FxKind.PadDust, at, PadDustSize, m.Player.Team);
+                }
             }
             var tu = m.Tut;
             bool on = tu != null && !hidden;
@@ -174,13 +186,13 @@ namespace BAM.Game
             // the skip button at the old W*0.8..0.95, but a little higher (H*0.03..0.07) so it clears the pause button under it
             if (lesson) { Top(tutSkip, W * 0.875f, H * 0.05f, W * 0.15f, H * 0.04f, W, H); tutSkipText.fontSize = Mathf.RoundToInt(W * 0.034f); Corners(tutSkipPlate, H * 0.02f); }
 
-            // the opening title, fading in over 0.3 s and out over the last 0.4 s of the opening
+            // the opening title: once Tyra is down (Tutorial.LandTime), fading in over 0.3 s and out over the last 0.4 s of the opening
             bool opening = play && tu.Opening;
             if (tutOpen1.gameObject.activeSelf != opening) { tutOpen1.gameObject.SetActive(opening); tutOpen2.gameObject.SetActive(opening); }
             if (opening)
             {
                 float fs = W * 0.1f;
-                tutOpenGroup.alpha = Mathf.Clamp01(t / 0.3f) * Mathf.Clamp01((Tutorial.OpeningTime - t) / 0.4f);
+                tutOpenGroup.alpha = Mathf.Clamp01((t - Tutorial.LandTime) / 0.3f) * Mathf.Clamp01((Tutorial.OpeningTime - t) / 0.4f);
                 Title(tutOpen1, fs, H * 0.6f, W, H);
                 Title(tutOpen2, fs, H * 0.6f + fs * 1.1f, W, H);
             }
@@ -900,7 +912,7 @@ namespace BAM.Game
             joyUsed = false;
             lastLesson = m.Tut != null ? m.Tut.Lesson : 0;
             cardSrc = cardLineSrc = cardBuiltSrc = null; cardAlpha = 0f; cardLaidW = -1f;
-            landPending = m.Tut != null && !m.Tut.Island;
+            landPending = m.Tut != null && !m.Tut.Island; padPuffed = false;
             card.gameObject.SetActive(false);
             if (tutorial)
             {

@@ -24,7 +24,6 @@ namespace BAM.Game
         static readonly string[] Numbers = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20" };
         static readonly string[] TutStepNames = { "move", "auto_attack", "special_tap", "special_drag", "blink", "fight", "heal", "tower" };
         static readonly string[] IslandStepNames = { "island_walk", "island_minion", "island_grass", "island_focus", "island_target", "island_pad" }; // island_focus from 2026-11-15: the later numbers moved up one
-        const float FadeInTime = 0.6f;
         const string MarkRed = "<color=#E0392B>", MarkTeal = "<color=#13A89E>", MarkEnd = "</color>";
 
         readonly GameFlow flow;
@@ -48,9 +47,7 @@ namespace BAM.Game
         JoystickZone joy;
         AimView aim;
         AimIndicator aimLook;
-        Image fade;
         RectTransform canvasRect, pointChevron, ringChevron;
-        float fadeInAt = -1f;
         string hintSource, hintRich;
         readonly System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
 
@@ -87,8 +84,6 @@ namespace BAM.Game
             heroTest = m.HeroTest;
             if (!built) Build();
             specialRoot.gameObject.SetActive(!island); // no special on the training island
-            fadeInAt = -1f;
-            SetFade(0f);
             hintSource = null;
             canvas.gameObject.SetActive(true);
             canvas.enabled = true;
@@ -308,7 +303,6 @@ namespace BAM.Game
             Hint(hidden);
             TutMarks(hidden); // the guided match's gold ring, boost pad and bouncing arrows (HudTutorial.cs)
             TutorialFrame(hidden); // its guide card, arrows, "+ CHARGE", tower blocks and end; Skip (HudTutorial.cs)
-            Fade();
             Fps(dt);
             joy.Rest();
             if (!m.Player.Alive && joy.Held) joy.Release();
@@ -582,29 +576,6 @@ namespace BAM.Game
             c.anchoredPosition = local + new Vector2(0f, 14f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 5f)));
         }
 
-        /// <summary>The arena half of the guided match starts under black and fades in.</summary>
-        public void FadeIn()
-        {
-            fadeInAt = Time.unscaledTime;
-            SetFade(1f);
-        }
-
-        void Fade()
-        {
-            float a = 0f;
-            if (island) a = m.Tut.Fade;
-            else if (fadeInAt >= 0f) a = 1f - Mathf.Clamp01((Time.unscaledTime - fadeInAt) / FadeInTime);
-            SetFade(a);
-        }
-
-        void SetFade(float a)
-        {
-            if (fade.color.a == a) return;
-            // the jump from the island to the arena goes through the island's light sky, not black (Rickard 2026-10-29: no cut)
-            fade.color = tutorial ? new Color(0.8f, 0.9f, 0.98f, a) : new Color(0f, 0f, 0f, a);
-            fade.enabled = a > 0f;
-        }
-
         // ---------------------------------------------------------------- layout
 
         // Every frame and on a settings change; lays the controls out again only when the hand or the screen's side gaps changed
@@ -824,10 +795,8 @@ namespace BAM.Game
             BuildEmote(); // after the overhead marks: its bubbles sit just above them
             pointChevron = MakeChevron(canvasRect);
             ringChevron = MakeChevron(canvasRect);
-            fade = UiKit.Fill(canvasRect, Color.clear);
-            fade.enabled = false;
             BuildFocus(); // under the tutorial's pieces, over the controls
-            BuildTutorial(); // the guided match's own pieces; its picture of Home over everything, even the black
+            BuildTutorial(); // the guided match's own pieces; its picture of Home over everything
 
             canvas.gameObject.SetActive(false);
         }
