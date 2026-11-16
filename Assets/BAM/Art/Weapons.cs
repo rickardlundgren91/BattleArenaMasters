@@ -542,13 +542,14 @@ namespace BAM.Art
             // cannon, built into the body and its two skins, so the separate v2_kugg_cannon sleeve (buried inside the round V3's thick
             // forearm) is gone, as are the backpack and cape (buried in the ball, 2026-11-15). The back cog (Rickard 2026-11-16 picked
             // "Båda" on the card: rune smoke from the chimney, BodyView.KuggSmoke, and a glowing cog on his back, visible from behind
-            // like Ravna's mask): his Tripo cog, origin at its centre, on the middle of the ball's back, turning slowly; each skin
+            // like Ravna's mask): his Tripo cog (0.45 m on his 0.95 m body), its middle at the upper chest's height, 0.22 m behind it on
+            // the ball's back, turning slowly about its middle (WornDef.Spin); each skin
             // has its own (SkinGear: v2s_kugg_<skin>_gear). Without the cog's prop nothing is put on him.
             g[(int)HeroId.Kugg] = new GearDef
             {
                 Worn = new[]
                 {
-                    new WornDef { Model = "v2_kugg_gear", Bone = Chest, From = LArm, To = RArm, Height = 0.4f, At = new Vector3(0f, -0.175f, -0.265f), Spin = 20f },
+                    new WornDef { Model = "v2_kugg_gear", Bone = Chest, From = LArm, To = RArm, Height = 0.47f, At = new Vector3(0f, -0.285f, -0.235f), Spin = 20f },
                 },
             };
 
@@ -900,7 +901,7 @@ namespace BAM.Art
         const float GlowAlpha = 0.8f;
 
         // where each worn part was placed from, kept in its bone's own space so the Weapon Tuner can move it live (PlaceWorn)
-        struct WornBase { public Vector3 FromL; public Quaternion RootL, LayL; public float Span, Ps, H, MeshX, MeshY; public Vector3 At, Turn; public float Yaw, Height, Wide; }
+        struct WornBase { public Vector3 FromL; public Quaternion RootL, LayL; public float Span, Ps, H, MeshX, MeshY; public Vector3 At, Turn; public float Yaw, Height, Wide; public Vector3 Pos; }
         WornBase[] wornB;
 
         void AddWorn(WornDef[] ws, Animator an, float H, List<Renderer> rends, List<Material> op, List<Material> fd)
@@ -946,7 +947,7 @@ namespace BAM.Art
             ref WornBase b = ref wornB[i];
             b.At = w.At; b.Turn = w.Turn; b.Yaw = w.Yaw; b.Height = w.Height; b.Wide = w.Wide;
             Vector3 at = w.At * b.H / b.Ps;
-            t.localPosition = b.FromL + b.RootL * at;
+            t.localPosition = b.Pos = b.FromL + b.RootL * at;
             Quaternion turn = Quaternion.AngleAxis(w.Turn.z, Vector3.forward) * Quaternion.AngleAxis(w.Turn.y, Vector3.up) * Quaternion.AngleAxis(w.Turn.x, Vector3.right);
             t.localRotation = b.RootL * turn * Quaternion.Inverse(b.RootL) * b.LayL * b.RootL * Quaternion.Euler(0f, w.Yaw, 0f);
             // Wide: a share of the distance between its two bones, across (a cloak to the shoulders) or, Along, lengthwise (a sleeve)
@@ -1057,6 +1058,9 @@ namespace BAM.Art
                 {   // about the hero's forward, in the part's own frame at rest
                     Vector3 ax = Quaternion.Inverse(wornRest[i]) * (wornB[i].RootL * Vector3.forward);
                     t.localRotation = wornRest[i] * Quaternion.AngleAxis(dead ? 0f : swayClock * w.Spin, ax);
+                    // about its middle: a Props mesh's origin is its bottom (SkinParts), so the middle is kept where it sits at rest
+                    Vector3 mid = Vector3.Scale(t.localScale, new Vector3(0f, wornB[i].MeshY * 0.5f, 0f));
+                    t.localPosition = wornB[i].Pos + wornRest[i] * mid - t.localRotation * mid;
                     continue;
                 }
                 float max = worn[i].Sway;
