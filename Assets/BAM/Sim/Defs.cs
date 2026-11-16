@@ -155,7 +155,12 @@ namespace BAM.Sim
                 AimLead = lead, AimNoise = noise, V3 = name != "Bronze",
             };
 
-        public static readonly BotTier Bronze = T("Bronze", 0.35f, 0.4f, 0.5f, 0.7f, 0, 3, 3, false, new[] { 0.6f, 0.9f, 1.3f }, 1, 2, 0.2f, 0.9f); // Easy a bit easier (Rickard 2026-10-31): reactions 0.5/0.8/1.2 -> 0.6/0.9/1.3 s, aim noise 0.7 -> 0.9
+        // Easy a bit easier (Rickard 2026-10-31): reactions 0.5/0.8/1.2 -> 0.6/0.9/1.3 s, aim noise 0.7 -> 0.9. Clearly easier (Rickard 2026-11-16
+        // "Easy bottar är för svåra"): a beginner's slow thinking, reactions 0.6/0.9/1.3 -> 1.2/1.7/2.4 s, and it stays in a fight down to 25 %
+        // health instead of 35 % (beginners leave too late). Bot lab, 2000 matches per row on both maps, a bot in the player's seat as the
+        // person: one that plays like the old Easy won 53 -> 69 % (dies 2.8 -> 2.4 a match), a slower beginner 40 -> 55 % (4.2 -> 3.9).
+        // Normal, Hard and Ultra are untouched.
+        public static readonly BotTier Bronze = T("Bronze", 0.25f, 0.4f, 0.5f, 0.7f, 0, 3, 3, false, new[] { 1.2f, 1.7f, 2.4f }, 1, 2, 0.2f, 0.9f);
         public static readonly BotTier Silver = T("Silver", 0.2f, 0.6f, 0.6f, 0.7f, 2, 3, 2, false, new[] { 0.5f, 0.7f, 1f }, 1, 4, 0.5f, 0.5f);
         public static readonly BotTier Gold = T("Gold", 0.4f, 0.6f, 0.6f, 0.7f, 2.5f, 3, 2, true, new[] { 0.4f, 0.6f, 0.9f }, 1, 5, 0.75f, 0.35f);
         public static readonly BotTier Platinum = T("Platinum", 0.5f, 0.6f, 0.69f, 0.8f, 3, 3, 2, true, new[] { 0.333f, 0.5f, 0.75f }, 1, 7, 0.9f, 0.25f);
