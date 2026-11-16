@@ -309,7 +309,7 @@ namespace BAM.Online
         public List<HeroTotals> heroes = new List<HeroTotals>();
         // gold (Gold.cs, 2026-11-15): the balance; today's goals (gDay, matches, wins, kills, hero goal 0/1, done bits); the heroes
         // whose gold skin is bought
-        public int gold, gm, gw, gk, gh, gDone;
+        public int gold, gm, gw, gk, gh, gDone, gLv; // gLv: the level today's goals started at (picks the hero goal's hero)
         public long gDay = -1;
         public List<string> skins = new List<string>();
 

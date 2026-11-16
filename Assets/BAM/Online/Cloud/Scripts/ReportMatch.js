@@ -75,19 +75,25 @@ const GOLD_FIRST_WIN = 100, GOLD_GOAL = 50, GOLD_LEVEL = 100, GOLD_MILESTONE = 5
 // levels 15, 20, 25 and 30 give 500 instead of 100 (Rickard 2026-11-16, card "Ja, 500 guld på milstolparna")
 const goldForLevel = l => l <= 1 ? 0 : (l >= 15 && (l - 15) % 5 === 0 ? GOLD_MILESTONE : GOLD_LEVEL);
 function goldForLevels(from, to) { let g = 0; for (let l = from + 1; l <= to; l++) g += goldForLevel(l); return g; }
-const GOAL_TARGET = [3, 2, 10, 1], GOAL_HEROES = ["Tyra", "Kugg", "Bram", "Fenn", "Ragn", "Nassla"];
-/// The day's three goals (all four kinds but one: 0 play, 1 win, 2 kills, 3 a match with one hero) and that hero, from the day alone.
-function dayGoals(day) {
+const GOAL_TARGET = [3, 2, 10, 1];
+// the account level that opens each hero, in HeroId order (Progress.HeroLevel; Knut free and Bram level 4 since 2026-11-16): the
+// hero goal asks only for a hero the player has (Rickard 2026-11-16 "questen bara ges för de heroes man har"). Keep equal to the phone.
+const HERO_UNLOCK = [["Bram", 4], ["Fenn", 1], ["Tyra", 1], ["Moa", 2], ["Knut", 1], ["Tikta", 6], ["Blast", 8], ["Bonk", 10], ["Kugg", 1], ["Ragn", 1], ["Nassla", 1], ["Ravna", 1]];
+/// The day's three goals (all four kinds but one: 0 play, 1 win, 2 kills, 3 a match with one hero) and that hero, from the day and
+/// the level the day's goals started at.
+function dayGoals(day, level) {
   const h = (day * 2654435761) % 4294967296, skip = h % 4;
-  return { goals: [0, 1, 2, 3].filter(g => g !== skip), hero: GOAL_HEROES[Math.floor(h / 256) % GOAL_HEROES.length] };
+  const pool = HERO_UNLOCK.filter(x => x[1] <= level).map(x => x[0]);
+  if (!pool.length) pool.push("Tyra");
+  return { goals: [0, 1, 2, 3].filter(g => g !== skip), hero: pool[Math.floor(h / 256) % pool.length] };
 }
 function applyGold(t, day, won, kills, hero, firstWin, levelBefore, levelAfter) {
   if (levelAfter > levelBefore) t.gold += goldForLevels(levelBefore, levelAfter);
   if (firstWin) t.gold += GOLD_FIRST_WIN;
-  if (day > t.gDay) { t.gDay = day; t.gm = t.gw = t.gk = t.gh = t.gDone = 0; }
+  if (day > t.gDay) { t.gDay = day; t.gm = t.gw = t.gk = t.gh = t.gDone = 0; t.gLv = levelBefore; }
   if (day !== t.gDay) return;
   t.gm++; if (won) t.gw++; t.gk += Math.min(60, Math.max(0, kills));
-  const d = dayGoals(day);
+  const d = dayGoals(day, t.gLv > 0 ? t.gLv : t.level);
   if (hero === d.hero) t.gh = 1;
   const have = [t.gm, t.gw, t.gk, t.gh];
   for (const g of d.goals) if (!(t.gDone & (1 << g)) && have[g] >= GOAL_TARGET[g]) { t.gDone |= 1 << g; t.gold += GOLD_GOAL; }
@@ -95,7 +101,7 @@ function applyGold(t, day, won, kills, hero, firstWin, levelBefore, levelAfter) 
 
 const xpToNext = l => 100 + 50 * (l - 1);
 function levelOf(xp) { let l = 1; while (l < MAX_LEVEL && xp >= xpToNext(l)) { xp -= xpToNext(l); l++; } return l; }
-const fresh = () => ({ xp: 0, level: 1, rating: 0, rs: SEASON, pend: 0, matches: 0, wins: 0, losses: 0, kills: 0, deaths: 0, streak: 0, bestStreak: 0, seconds: 0, winDay: -1, heroes: [], mk: {}, gold: 0, gm: 0, gw: 0, gk: 0, gh: 0, gDone: 0, gDay: -1, skins: [] });
+const fresh = () => ({ xp: 0, level: 1, rating: 0, rs: SEASON, pend: 0, matches: 0, wins: 0, losses: 0, kills: 0, deaths: 0, streak: 0, bestStreak: 0, seconds: 0, winDay: -1, heroes: [], mk: {}, gold: 0, gm: 0, gw: 0, gk: 0, gh: 0, gDone: 0, gDay: -1, gLv: 0, skins: [] });
 const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 
 /// The Rating one match changes: a win up to the cap of its kind (0 = none), a loss never under 0.

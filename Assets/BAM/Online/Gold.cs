@@ -33,19 +33,33 @@ namespace BAM.Online
 
         public enum GoalKind { Play = 0, Win = 1, Kills = 2, Hero = 3 }
         static readonly int[] Target = { 3, 2, 10, 1 };
-        /// <summary>The heroes "play a match with ..." can ask for: open to every player from the start.</summary>
-        public static readonly string[] GoalHeroes = { "Tyra", "Kugg", "Bram", "Fenn", "Ragn", "Nassla" };
+        static readonly List<string> pool = new List<string>(16);
 
-        /// <summary>The day's three goals: all four kinds but one, and the hero the hero goal asks for, both picked from the day number
-        /// alone, so the phone and the server agree without storing anything.</summary>
-        public static void DayGoals(long day, List<GoalKind> into, out string hero)
+        /// <summary>The heroes "play a match as ..." can ask for at this account level: only heroes the player has (Rickard 2026-11-16
+        /// "questen bara ges för de heroes man har"), in HeroId order. ReportMatch.js HERO_UNLOCK must give the same list.</summary>
+        public static List<string> GoalHeroes(int level)
+        {
+            pool.Clear();
+            for (int id = 0; id < 256; id++)
+                if (BAM.Sim.HeroCatalog.InGame(id) && Progress.HeroLevel((BAM.Sim.HeroId)id) <= level) pool.Add(((BAM.Sim.HeroId)id).ToString());
+            if (pool.Count == 0) pool.Add("Tyra");
+            return pool;
+        }
+
+        /// <summary>The day's three goals: all four kinds but one, and the hero the hero goal asks for, picked from the day number among
+        /// the heroes open at the level the day's goals started at, so the phone and the server agree.</summary>
+        public static void DayGoals(long day, int level, List<GoalKind> into, out string hero)
         {
             uint h = unchecked((uint)((ulong)day * 2654435761UL));
             int skip = (int)(h % 4);
-            hero = GoalHeroes[(int)((h >> 8) % (uint)GoalHeroes.Length)];
+            var heroes = GoalHeroes(level);
+            hero = heroes[(int)((h >> 8) % (uint)heroes.Count)];
             into.Clear();
             for (int g = 0; g < 4; g++) if (g != skip) into.Add((GoalKind)g);
         }
+
+        /// <summary>The level the day's goals started at; a day begun before gLv existed (ReportMatch v8) uses the level now.</summary>
+        static int DayLevel(Totals t) => t.gLv > 0 ? t.gLv : t.level;
 
         public static int TargetOf(GoalKind g) => Target[(int)g];
 
@@ -60,12 +74,12 @@ namespace BAM.Online
         {
             if (levelAfter > levelBefore) t.gold += ForLevels(levelBefore, levelAfter);
             if (firstWin) t.gold += FirstWin;
-            if (day > t.gDay) { t.gDay = day; t.gm = t.gw = t.gk = t.gh = t.gDone = 0; }
+            if (day > t.gDay) { t.gDay = day; t.gm = t.gw = t.gk = t.gh = t.gDone = 0; t.gLv = levelBefore; } // the day's hero comes from the level it started at
             if (day != t.gDay) return; // a late match from an earlier day: its goals are gone
             t.gm++;
             if (won) t.gw++;
             t.gk += Math.Min(60, Math.Max(0, kills));
-            DayGoals(day, tmp, out string goalHero);
+            DayGoals(day, DayLevel(t), tmp, out string goalHero);
             if (hero == goalHero) t.gh = 1;
             foreach (var g in tmp)
             {
@@ -85,7 +99,7 @@ namespace BAM.Online
             var t = Progress.Shown;
             long day = Today;
             bool now = t.gDay == day;
-            DayGoals(day, tmp, out string hero);
+            DayGoals(day, now ? DayLevel(t) : t.level, tmp, out string hero);
             var list = new List<GoalView>(3);
             foreach (var g in tmp)
             {
