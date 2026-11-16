@@ -38,8 +38,9 @@ namespace BAM.Art
             if (HeroIndex < 0 || anim == null || !anim.isHuman) return;
             var h = (HeroId)HeroIndex;
             // on the menu stages always, but not Tyra: her quiver's sparkles blinked on Home (Rickard 2026-11-16 "tyras pilar blinkar i
-            // huvudmenyn, bort med det"); in a match she keeps it
-            bool on = (readyCue || Preview && h != HeroId.Tyra) && !dead;
+            // huvudmenyn, bort med det"), and not Fenn: his ghost light and specks looked bad up close on Home (Rickard 2026-11-16 "bort
+            // med partiklar från fenn phantom från menyn som med tyra"); in a match both keep it
+            bool on = (readyCue || Preview && h != HeroId.Tyra && h != HeroId.Fenn) && !dead;
             if (on && !Preview && marker == UnitMarker.Enemy && CueBehind(h))
             {   // behind them: the enemy's cue shows only while its back is turned to the camera
                 Vector3 cf = ArtDriver.CamRot * Vector3.forward, f = transform.forward;
