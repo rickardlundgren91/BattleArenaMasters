@@ -62,8 +62,9 @@ namespace BAM.Sim
         public bool DragAsked;
         /// <summary>A drag aims the special from the drag lesson on (Match.DragAimOn); the lessons before it know the tap alone.</summary>
         public bool DragOn;
-        /// <summary>Lessons done so far in the whole guided match, of Lessons (the arena half starts at IslandLessons): the guide
-        /// card's dots. LessonAt: when the last one was done (Match.Time of this half), for the card's word of praise.</summary>
+        /// <summary>Lessons done so far in the whole guided match, of Lessons (the arena half starts at IslandLessons): which
+        /// word of praise the guide card says, and the ding for it. (The card showed them as a row of dots until 2026-11-16.)
+        /// LessonAt: when the last one was done (Match.Time of this half), for the card's word of praise.</summary>
         public int Lesson, Lessons;
         public float LessonAt = -99;
         /// <summary>StepTower: which of its three lines is up (TowerWait, TowerGo, TowerYou).</summary>

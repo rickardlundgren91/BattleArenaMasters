@@ -10,21 +10,24 @@ namespace BAM.Game
     /// drawTutSkip, drawTutEnd and HudTutorialIsland.drawTutDissolve; Rickard 2026-10-26 "alla") and was made one piece in the
     /// tutorial review of 2026-11-15 (Rickard: "snygg, sammanhängande och lärorik"), after a look at how Brawl Stars, Mobile
     /// Legends, Wild Rift and Pokémon Unite teach their first minutes:
-    /// - ONE guide card at the top in both halves (the island had a card in the sky, the arena a pill): Tyra's portrait and name,
-    ///   one short line of at most two rows with the words to notice coloured, and a row of dots, one per lesson, so the
-    ///   player sees how far it is. A finished lesson fills its dot with a pop and a ding, and while no new line is up the card
-    ///   says a word of praise ("NICE!").
+    /// - ONE guide card at the top in both halves (the island had a card in the sky, the arena a pill): Tyra's portrait and name
+    ///   and one short line of at most two rows with the words to notice coloured. A finished lesson gets a ding, and while
+    ///   no new line is up the card says a word of praise ("NICE!"). The card does not count the lessons: it had a row of
+    ///   dots, one per lesson, on its top edge, and the end screen lit them one by one, until Rickard saw them (2026-11-16:
+    ///   "visa inte hur många steg det är i tutorial med dom prickarna. det ser bara för mycket ut").
     /// - One mark at a time for where to look: a gold ring on the ground with a bouncing arrow, an arrow over a unit, a soft
     ///   trail of gold lights up the lane (the arena), an arrow over the joystick until it is first used, over SPECIAL only when
-    ///   a tap would hit and over BLINK when it is asked for. The FOCUS chip needs none: for its lesson it comes up big
-    ///   right under the card, with a gold ring round it (HudFocus.cs).
+    ///   a tap would hit and over BLINK when it is asked for. BLINK is a small button, so its arrow is as big as SPECIAL's
+    ///   and the button itself is lit (Rickard 2026-11-16: "större pil och lysande knapp för när man ska använda blink").
+    ///   The FOCUS chip needs no arrow: for its lesson it comes up big right under the card, with a gold ring round it
+    ///   (HudFocus.cs).
     /// - The drag lesson (Rickard 2026-11-16: "Sen har vi inte lärt spelaren att man kan dra skillen"): the drag is shown, not
     ///   only named. While it is asked for and no finger is on the button, a finger's dot lands on SPECIAL, slides out the way
     ///   Fenn stands and lets go, over and over, and the aim line shows from Tyra through him as it would for a real finger
     ///   there (DragGhost).
     /// - Skip, small and quiet in the top right corner in both halves: the tutorial counts as done, then Home.
     /// - The arena half: DESTROY THE / ENEMY TOWER over Tyra's landing, "+ CHARGE" flying from Tyra into the button on every
-    ///   confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED! with the dots
+    ///   confirmed hit, the enemy tower's bar in Tutorial.TowerHits blocks, and at the end TOWER DESTROYED! with one line
     ///   and, the first time, a big PLAY FIRST MATCH (straight into the first match) over a small Home; a replay gets CONTINUE.
     /// - The very first start: a picture of Home zooms in and fades into the island (Dissolve).
     /// Everything is placed in the safe area's own units, as the old code drew in the frame's W and H.
@@ -34,11 +37,10 @@ namespace BAM.Game
         const float TutDissolveTime = 1.6f, TutOverBanner = 1f, TutOverTap = 2.2f;
         const float ChargeFlight = 0.65f, ChargeArrive = 0.15f;
         // the card: a word of praise stays this long after a lesson (while no line is up), and the card fades in and out this fast
-        const float PraiseTime = 0.9f, CardFade = 0.15f, DotPop = 0.45f;
+        const float PraiseTime = 0.9f, CardFade = 0.15f;
         const int TrailDots = 28;
         static readonly Color TutGold = Hex(0xffcf4a), ChargeGold = Hex(0xffc94a), ChargeEdge = Hex(0x3a1a00), TowerRed = Hex(0xff3b4e);
         static readonly Color TowerOff = new Color(0.25f, 0.12f, 0.2f, 1f), CardFill = new Color(14f / 255f, 20f / 255f, 58f / 255f, 0.88f);
-        static readonly Color DotTodo = new Color(1f, 1f, 1f, 0.22f);
         // Tyra's face in her 400 x 308 portrait (x 137-307, y 18-188 from the top): the top strip's cut shows her to the waist,
         // too small to know at the card's size
         static readonly Rect CardFace = new Rect(0.3425f, 0.39f, 0.425f, 0.552f);
@@ -48,10 +50,13 @@ namespace BAM.Game
         // the drag lesson's demonstration: seconds a round, and how far the finger slides from the button's centre, in its radii
         // (a real drag aims from 0.5, SpecialButton.DragStart); GhostMin: never shorter than this, so its aim line shows whole
         const float GhostPeriod = 2.1f, GhostReach = 1.55f, GhostMin = 0.8f;
+        // the BLINK lesson: its arrow is drawn for a button this many times SPECIAL's radius (BLINK's own radius gave an arrow
+        // half the size of SPECIAL's), and a gold ring leaves the lit button this often (seconds)
+        const float BlinkArrow = 1.15f, BlinkPing = 0.9f;
 
         RectTransform tutSkip, tutBar, tutEnd, joyArrow, specialArrow, blinkArrow;
         CanvasGroup tutOpenGroup, joyArrowGroup, specialArrowGroup, blinkArrowGroup; // the arrows' groups kept, not looked up every frame (full review 2026-11-09 nr 90)
-        Image specialPulse, chargeRing, tutEndDim, ghostDot, ghostStreak;
+        Image specialPulse, chargeRing, tutEndDim, ghostDot, ghostStreak, blinkGlow, blinkPulse, blinkPing;
         Vector2 ghostOffset;    // the demonstration's finger now, from the button's centre in canvas units (Hud.Aim aims by it)
         float ghostAim;         // how strongly its aim line shows, 0 = no demonstration now
         float ghostAt = -1f;    // when it began (unscaled time)
@@ -64,12 +69,11 @@ namespace BAM.Game
         float dissolveAt = -1f;
 
         // the guide card
-        RectTransform card, cardTab, cardFace, cardDots;
+        RectTransform card, cardTab, cardFace;
         CanvasGroup cardGroup;
-        Image cardPlate, cardEdge, cardShadow, cardSheen, cardTabPlate, cardDotsPlate, cardDotsEdge;
+        Image cardPlate, cardEdge, cardShadow, cardSheen, cardTabPlate;
         RawImage cardPic;
         Text cardLine, cardPraise, cardWho;
-        readonly Image[] cardDot = new Image[Tutorial.AllLessons];
         string cardSrc;             // what the card says now: the line's or the praise's own string
         string cardLineSrc;         // the line (with its | marks) the card's text is to show, and whether it is a tip
         bool cardLineTip;
@@ -80,7 +84,6 @@ namespace BAM.Game
         float cardLaidW = -1f, cardLaidH, cardLaidTop; // what the card was last laid out for (LayCard)
 
         // the end screen
-        readonly Image[] endDot = new Image[Tutorial.AllLessons];
         Button tutEndPlay, tutEndHome;
         Text tutEndPlayText, tutEndHomeText;
         CanvasGroup tutEndButtons;
@@ -133,7 +136,8 @@ namespace BAM.Game
 
         // ---------------------------------------------------------------- after every tick
 
-        // a finished lesson: a ding (its dot pops on the card, CardDots). Not for the last one: the tower's fall is loud enough
+        // a finished lesson: a ding (the card says its word of praise, GuideCard). Not for the last one: the tower's fall is
+        // loud enough
         void TutorialAfterStep()
         {
             var tu = m.Tut;
@@ -197,7 +201,8 @@ namespace BAM.Game
             DragGhost(dragOn, tu, p);
             Arrow(specialArrow, specialArrowGroup, spOn, spOn ? Local(RectTransformUtility.WorldToScreenPoint(null, specialRoot.position)) : Vector2.zero, SpecialButton.Radius);
             bool blinkOn = lineUp && play && tu.Step == Tutorial.StepBlink && tu.BlinkAsked && p.Alive && m.SpellReady(p) && spellRoot.gameObject.activeSelf;
-            Arrow(blinkArrow, blinkArrowGroup, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR);
+            Arrow(blinkArrow, blinkArrowGroup, blinkOn, blinkOn ? Local(RectTransformUtility.WorldToScreenPoint(null, spellRoot.position)) : Vector2.zero, SpellR, SpecialButton.Radius * BlinkArrow);
+            BlinkLit(blinkOn);
             bool pulseOn = spOn || dragOn;
             if (specialPulse.enabled != pulseOn) specialPulse.enabled = pulseOn;
             if (pulseOn)
@@ -242,8 +247,8 @@ namespace BAM.Game
 
         // The guide card (Rickard 2026-10-26: the old bubble covered the action, then "snyggare text"; 2026-11-15 one card for
         // both halves): a dark navy card with a soft drop shadow, a gold edge and a faint sheen under the pause button, never over
-        // the island or the fight; the guide's face in a gold ring at its left with her name on a teal tab over it, the line
-        // beside her with the marked words red (teal for a tip), and the lessons' dots on its top edge at the right.
+        // the island or the fight; the guide's face in a gold ring at its left with her name on a teal tab over it, and the
+        // line beside her with the marked words red (teal for a tip).
         void GuideCard(bool on, Tutorial tu, float W, float H)
         {
             string src = on ? tu.LineMarked ?? tu.Line : null;
@@ -277,27 +282,26 @@ namespace BAM.Game
                     lay = true; // a new line: its rows and its height are measured again
                 }
             }
-            // under the pause button (its ring's lower edge, HudCenter.cs), with room for the dots that sit on the card's edge
+            // under the pause button (its ring's lower edge, HudCenter.cs), with room for her name's tab on the card's top edge
             float top = Mathf.Max(H * 0.105f, pauseRoot.sizeDelta.y - pauseRoot.anchoredPosition.y + W * 0.03f);
             if (lay || W != cardLaidW || H != cardLaidH || top != cardLaidTop)
             {
                 cardLaidW = W; cardLaidH = H; cardLaidTop = top;
-                LayCard(tu, W, H, top);
+                LayCard(W, H, top);
             }
 
-            // every frame only what moves: a new line settles in from a little small and the word of praise lands from big, the
-            // dots, and the whole card springing in (from 0.85 of its size with a little overshoot) and fading
+            // every frame only what moves: a new line settles in from a little small and the word of praise lands from big,
+            // and the whole card springing in (from 0.85 of its size with a little overshoot) and fading
             float tk = Mathf.Clamp01((now - cardTextAt) / 0.22f), back = (1f - tk) * (1f - tk);
             cardLine.rectTransform.localScale = Vector3.one * (1f - 0.06f * back);
             cardPraise.rectTransform.localScale = Vector3.one * (1f + 0.35f * back);
-            CardDots(tu);
             float ck = Mathf.Clamp01((now - cardShownAt) / 0.32f);
             card.localScale = Vector3.one * (ck >= 1f ? 1f : 1f - 0.15f * Mathf.Cos(ck * Mathf.PI * 1.5f) * (1f - ck));
             cardGroup.alpha = cardAlpha;
         }
 
         // The card's sizes and places: only when its line, the screen or the pause button's place changed, not every frame.
-        void LayCard(Tutorial tu, float W, float H, float top)
+        void LayCard(float W, float H, float top)
         {
             float fs = Mathf.Round(W * 0.048f), pad = fs * 0.75f, w = W * 0.9f;
             float pd = fs * 2.7f, inset = pad * 0.62f;                               // her face's width, and its gap to the card's edge
@@ -340,21 +344,6 @@ namespace BAM.Game
             cardTab.sizeDelta = new Vector2(tabW, tab);
             cardTab.anchoredPosition = new Vector2(cardHasFace ? Mathf.Max(inset + pd / 2f, pad * 0.4f + tabW / 2f) : pad + tabW / 2f, tab * 0.12f);
             Corners(cardTabPlate, tab / 2f);
-            // the lessons' dots in a small plate on the top edge at the right, a wider gap between the island's five and the arena's
-            int n = Mathf.Min(tu.Lessons, cardDot.Length);
-            if (cardDots.gameObject.activeSelf != n > 0) cardDots.gameObject.SetActive(n > 0);
-            float d = W * 0.017f, g = W * 0.009f, mid = W * 0.012f, side = W * 0.02f, dh = d + W * 0.022f;
-            cardDots.sizeDelta = new Vector2(n * d + (n - 1) * g + (n > Tutorial.IslandLessons ? mid : 0f) + 2f * side, dh);
-            cardDots.anchoredPosition = new Vector2(-pad * 1.5f, 0f);
-            Corners(cardDotsPlate, dh / 2f);
-            RoundRing(cardDotsEdge, dh / 2f, Mathf.Max(1.5f, W * 0.0035f));
-            for (int i = 0; i < cardDot.Length; i++)
-            {
-                var img = cardDot[i];
-                if (img.enabled != i < n) img.enabled = i < n;
-                img.rectTransform.sizeDelta = new Vector2(d, d);
-                img.rectTransform.anchoredPosition = new Vector2(side + d / 2f + i * (d + g) + (i >= Tutorial.IslandLessons ? mid : 0f), 0f);
-            }
         }
 
         // The line as the card shows it: the |marked| words coloured (red, teal for a tip), and a line that needs two rows broken
@@ -395,21 +384,6 @@ namespace BAM.Game
 
         // src from..to (to not included) without its | marks
         static string Unmarked(string src, int from, int to) => src.Substring(from, to - from).Replace("|", "");
-
-        // The lessons' dots: gold when done (the newest pops), the one in hand white and breathing, the rest faint.
-        void CardDots(Tutorial tu)
-        {
-            int n = Mathf.Min(tu.Lessons, cardDot.Length);
-            float pop = Mathf.Clamp01((m.Time - tu.LessonAt) / DotPop);
-            float breathe = 1.2f + 0.12f * Mathf.Sin(Time.unscaledTime * 5f);
-            for (int i = 0; i < n; i++)
-            {
-                bool done = i < tu.Lesson, cur = i == tu.Lesson;
-                cardDot[i].color = done ? TutGold : cur ? Color.white : DotTodo;
-                float sc = cur ? breathe : done && i == tu.Lesson - 1 && pop < 1f && m.Time >= tu.LessonAt ? 1f + 0.9f * Mathf.Sin(pop * Mathf.PI) : 1f;
-                cardDot[i].rectTransform.localScale = new Vector3(sc, sc, 1f);
-            }
-        }
 
         // The drag lesson's demonstration, a round every GhostPeriod s while the drag is asked for and no finger is on the button:
         // a finger's dot (the real drag's own, Hud.DragMarks) lands on SPECIAL, rests, slides out the way Fenn stands from Tyra
@@ -581,33 +555,23 @@ namespace BAM.Game
             }
         }
 
-        // The end: the tower falls, then TOWER DESTROYED! over the lessons' dots lighting up one by one and one line; after 2.2 s the
-        // buttons. The first time a big PLAY FIRST MATCH goes straight into the first match (Rickard 2026-11-16; Home is where a
-        // new player can lose the way, and Pokémon Unite follows its first lesson with a whole match against bots), with a small
-        // Home under it; a replay from the menus gets one CONTINUE back to Home.
+        // The end: the tower falls, then TOWER DESTROYED! over one line; after 2.2 s the buttons. The first time a big PLAY
+        // FIRST MATCH goes straight into the first match (Rickard 2026-11-16; Home is where a new player can lose the way, and
+        // Pokémon Unite follows its first lesson with a whole match against bots), with a small Home under it; a replay from
+        // the menus gets one CONTINUE back to Home. No count of the lessons here either (the card's dots lit up one by one
+        // between the title and the line until 2026-11-16).
         void TutorialEnd(bool on, float o, float W, float H)
         {
             on = on && o > TutOverBanner;
             if (tutEnd.gameObject.activeSelf != on) tutEnd.gameObject.SetActive(on);
             if (!on) return;
-            float k = Mathf.Clamp01((o - TutOverBanner) / 0.35f), k2 = Mathf.Clamp01((o - TutOverBanner - 0.9f) / 0.35f);
+            // the line comes half a second after the title, close under it
+            float k = Mathf.Clamp01((o - TutOverBanner) / 0.35f), k2 = Mathf.Clamp01((o - TutOverBanner - 0.5f) / 0.35f);
             tutEndDim.color = new Color(0.04f, 0.06f, 0.16f, 0.55f * k);
             float fs = W * 0.095f;
             Title(tutEnd1, fs * (1f + 0.25f * (1f - k)), H * 0.4f, W, H);
             Fade(tutEnd1, k);
-            int n = endDot.Length;
-            float d = W * 0.024f, g = W * 0.014f, mid = W * 0.02f, row = n * d + (n - 1) * g + mid;
-            for (int i = 0; i < n; i++)
-            {
-                float dk = Mathf.Clamp01((o - TutOverBanner - 0.3f - i * 0.05f) / 0.18f);
-                var rt = endDot[i].rectTransform;
-                rt.sizeDelta = new Vector2(d, d);
-                rt.anchoredPosition = new Vector2(-row / 2f + d / 2f + i * (d + g) + (i >= Tutorial.IslandLessons ? mid : 0f), H / 2f - H * 0.435f);
-                float sc = 1f + 0.8f * Mathf.Sin(dk * Mathf.PI);
-                rt.localScale = new Vector3(sc, sc, 1f);
-                endDot[i].color = new Color(TutGold.r, TutGold.g, TutGold.b, dk);
-            }
-            Title(tutEnd2, W * 0.052f, H * 0.49f, W, H);
+            Title(tutEnd2, W * 0.052f, H * 0.46f, W, H);
             Fade(tutEnd2, k2);
             bool tap = o > TutOverTap;
             if (tutEndButtons.gameObject.activeSelf != tap) tutEndButtons.gameObject.SetActive(tap);
@@ -653,15 +617,36 @@ namespace BAM.Game
             t.rectTransform.anchoredPosition = new Vector2(0f, H / 2f - yDown + fs * 0.35f);
         }
 
-        // a large, softly blinking gold arrow pointing down at a control (the old tutPointAt), r = the control's radius
-        void Arrow(RectTransform a, CanvasGroup g, bool show, Vector2 at, float r)
+        // a large, softly blinking gold arrow pointing down at a control (the old tutPointAt), r = the control's radius. The
+        // arrow's own size follows that radius; for a small control (BLINK) size gives the radius to draw it for instead, and
+        // the arrow stands that much higher, so its point still stops at the control's rim.
+        void Arrow(RectTransform a, CanvasGroup g, bool show, Vector2 at, float r, float size = 0f)
         {
             if (a.gameObject.activeSelf != show) a.gameObject.SetActive(show);
             if (!show) return;
+            if (size < r) size = r;
             float now = Time.unscaledTime;
-            a.anchoredPosition = at + new Vector2(0f, r * 1.1f + Mathf.Sin(now * 5f) * r * 0.15f);
-            a.localScale = Vector3.one * (r / 110f);
+            a.anchoredPosition = at + new Vector2(0f, r * 1.1f + (size - r) * 0.2f + Mathf.Sin(now * 5f) * size * 0.15f);
+            a.localScale = Vector3.one * (size / 110f);
             g.alpha = 0.6f + 0.4f * Mathf.Abs(Mathf.Sin(now * 1000f / 320f));
+        }
+
+        // The BLINK button lit while its line asks for it: a gold light on the button, a gold ring breathing round its rim (the
+        // colour and pace of SPECIAL's pulse) and a ring that leaves it and fades, over and over. The button is half the size of
+        // SPECIAL and sits over it, where a new player has not looked yet.
+        void BlinkLit(bool on)
+        {
+            if (blinkPulse.enabled != on) { blinkGlow.enabled = on; blinkPulse.enabled = on; blinkPing.enabled = on; }
+            if (!on) return;
+            float now = Time.unscaledTime, r = SpellR;
+            float k = 0.5f + 0.5f * Mathf.Sin(now * 7f);
+            blinkGlow.rectTransform.sizeDelta = Vector2.one * 2f * r;
+            blinkGlow.color = new Color(1f, 0.86f, 0.4f, 0.1f + 0.16f * k);
+            blinkPulse.rectTransform.sizeDelta = Vector2.one * 2f * r * (1.14f + 0.1f * k);
+            blinkPulse.color = new Color(1f, 0.86f, 0.4f, 0.55f + 0.4f * k);
+            float w = Mathf.Repeat(now, BlinkPing) / BlinkPing;
+            blinkPing.rectTransform.sizeDelta = Vector2.one * 2f * r * (1.1f + 0.75f * w);
+            blinkPing.color = new Color(1f, 0.86f, 0.4f, 0.7f * (1f - w) * (1f - w));
         }
 
         static Image Sliced(RectTransform parent, Color color)
@@ -733,6 +718,15 @@ namespace BAM.Game
             chargeRing = Circle(specialRoot, "TutCharge", 2f * SpecialButton.Radius, Color.clear).GetComponent<Image>();
             chargeRing.sprite = UiKit.CircleRing;
             chargeRing.enabled = false;
+            // the BLINK button lit for its lesson (BlinkLit): a light on it and two rings round it, sized every frame
+            blinkGlow = Circle(spellRoot, "TutBlinkGlow", 100f, Color.clear).GetComponent<Image>();
+            blinkGlow.enabled = false;
+            blinkPulse = Circle(spellRoot, "TutBlinkPulse", 100f, Color.clear).GetComponent<Image>();
+            blinkPulse.sprite = UiKit.CircleRing;
+            blinkPulse.enabled = false;
+            blinkPing = Circle(spellRoot, "TutBlinkPing", 100f, Color.clear).GetComponent<Image>();
+            blinkPing.sprite = UiKit.CircleRing;
+            blinkPing.enabled = false;
             // the drag lesson's demonstration: a gold streak from the button's centre and the finger's dot at its end, the size of
             // the real drag's dot (Hud.cs "Finger")
             var streak = UiKit.NewRect("TutDragStreak", specialRoot);
@@ -857,26 +851,10 @@ namespace BAM.Game
             cardWho.horizontalOverflow = HorizontalWrapMode.Overflow;
             cardWho.raycastTarget = false;
             TextDepth(cardWho);
-
-            cardDots = UiKit.NewRect("Lessons", card);
-            cardDots.anchorMin = cardDots.anchorMax = new Vector2(1f, 1f);
-            cardDots.pivot = new Vector2(1f, 0.5f);
-            cardDotsPlate = Sliced(cardDots, new Color(CardFill.r, CardFill.g, CardFill.b, 0.97f));
-            cardDotsEdge = UiKit.Fill(cardDots, new Color(TutGold.r, TutGold.g, TutGold.b, 0.85f));
-            cardDotsEdge.raycastTarget = false;
-            for (int i = 0; i < cardDot.Length; i++)
-            {
-                var d = UiKit.NewRect("Dot", cardDots);
-                d.anchorMin = d.anchorMax = new Vector2(0f, 0.5f);
-                d.pivot = new Vector2(0.5f, 0.5f);
-                cardDot[i] = d.gameObject.AddComponent<Image>();
-                cardDot[i].sprite = UiKit.Circle;
-                cardDot[i].raycastTarget = false;
-            }
             card.gameObject.SetActive(false);
         }
 
-        // the end: a dim screen that takes every touch, the words, the dots and the buttons (the menus' own, UiKit.Button)
+        // the end: a dim screen that takes every touch, the words and the buttons (the menus' own, UiKit.Button)
         void BuildTutorialEnd()
         {
             tutEnd = UiKit.NewRect("TutorialEnd", safe);
@@ -885,12 +863,6 @@ namespace BAM.Game
             UiKit.Stretch(tutEndDim.rectTransform, -2000, -400, -2000, -400); // past the safe area's edges too, and a foldable's sides
             tutEndDim.raycastTarget = true;
             tutEnd1 = Centred(tutEnd, "TOWER DESTROYED!", TutGold, 7);
-            for (int i = 0; i < endDot.Length; i++)
-            {
-                endDot[i] = Plain(tutEnd, "Dot", Color.clear);
-                endDot[i].sprite = UiKit.Circle;
-                endDot[i].enabled = true;
-            }
             tutEnd2 = Centred(tutEnd, "", Color.white, 5);
             var buttons = UiKit.NewRect("Buttons", tutEnd);
             UiKit.Stretch(buttons);
@@ -949,6 +921,7 @@ namespace BAM.Game
             specialArrow.gameObject.SetActive(false);
             blinkArrow.gameObject.SetActive(false);
             specialPulse.enabled = chargeRing.enabled = false;
+            blinkGlow.enabled = blinkPulse.enabled = blinkPing.enabled = false;
             ghostDot.enabled = ghostStreak.enabled = false; ghostAim = 0f; ghostAt = -1f;
             for (int i = 0; i < chargeTexts.Length; i++) chargeTexts[i].gameObject.SetActive(false);
             for (int i = 0; i < TrailDots; i++) trailGlow[i].enabled = trailCore[i].enabled = false;
