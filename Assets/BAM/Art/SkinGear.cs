@@ -92,7 +92,7 @@ namespace BAM.Art
                 if (used.Contains(m) || !Has(m)) continue;
                 // Kugg's round V3 bodies hide a pack or a cape wholly inside the ball (as the plain one's, Weapons.MakeV2)
                 if (hero == HeroId.Kugg && (slot == "pack" || slot == "cape")) continue;
-                WornDef w = Extra(hero, slot);
+                WornDef w = Extra(hero, skin, slot);
                 if (w == null) { Debug.LogWarning("[BAM.Art] " + hero + " skin " + skin + ": no place for its " + slot + " yet"); continue; }
                 w.Model = m;
                 worn.Add(w);
@@ -108,7 +108,7 @@ namespace BAM.Art
             Hips = HumanBodyBones.Hips, LLeg = HumanBodyBones.LeftUpperLeg, RLeg = HumanBodyBones.RightUpperLeg, Head = HumanBodyBones.Head;
 
         // where a skin's extra part sits: copied from the V2 part most like it (Weapons.MakeV2)
-        static WornDef Extra(HeroId hero, string slot)
+        static WornDef Extra(HeroId hero, string skin, string slot)
         {
             switch (slot)
             {
@@ -117,12 +117,21 @@ namespace BAM.Art
                 case "cape": // Kugg's short cape
                     return new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.32f, At = new Vector3(0f, 0.02f, -0.07f), Flat = 0.8f, Sway = 10f };
                 case "mantle": // Bonk's pelt over the shoulders; on anyone else a cape like Fenn's
+                    // Bonk Lava: his rock body is broader, and at the pelt's size the feather mantle sank into it (only a strip showed
+                    // under the shoulder blades, Rickard's menu screenshots 2026-11-16); bigger, higher and not pressed flat it hangs
+                    // over his back from the shoulders
+                    if (hero == HeroId.Bonk && string.Equals(skin, "Lava", System.StringComparison.OrdinalIgnoreCase))
+                        return new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = 1.6f, At = new Vector3(0f, 0.16f, -0.05f), Flat = 1f, Sway = 8f };
                     return hero == HeroId.Bonk
                         ? new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = Weapons.BonkPeltWide, At = Weapons.BonkPeltAt, Flat = 0.8f, Sway = 8f }
                         : new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.42f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f };
                 case "wings": // Tikta's wing plate
                     return new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.14f, -0.07f), Yaw = 180f };
                 case "helmet": // on the head, like Nässla's cap
+                    // Bonk Mammoth's sabre-tooth skull: at the cap's size it sat inside his big hair (not seen in the menu, 2026-11-16);
+                    // as a hood over the head, the fangs framing his face
+                    if (hero == HeroId.Bonk)
+                        return new WornDef { Bone = Head, From = Head, Height = 0.25f, At = new Vector3(0f, 0.085f, 0f) };
                     return new WornDef { Bone = Head, From = Head, Height = 0.16f, At = new Vector3(0f, 0.06f, 0f) };
                 case "halo": // a ring behind the head
                     return new WornDef { Bone = Head, From = Head, Height = 0.22f, At = new Vector3(0f, 0.0f, -0.08f) };

@@ -34,6 +34,10 @@ namespace BAM.Art
         public bool Thrown;
         /// <summary>Reverse grip: the weapon leaves the fist on the little-finger side instead of the thumb side.</summary>
         public bool Reverse;
+        /// <summary>The hold was tuned on a hand with no thumb bone (Bonk's base and Lava bodies), so the handle stands up the hero's
+        /// height as it does there even when a skin's body has a thumb (Mammoth: the thumb laid his club forward and down, Rickard
+        /// 2026-11-16 menu screenshots), and the thumb takes no part in the socket's frame either.</summary>
+        public bool NoThumb;
         /// <summary>Degrees the weapon is turned about its own handle after it is placed (a flat fan turned to lie along the knuckles).</summary>
         public float Twist;
         /// <summary>With a hold angle (AnimFix.FixedGrip): how much of the hand's own turn away from its idle the weapon follows at
@@ -396,7 +400,7 @@ namespace BAM.Art
             // förutom hur vapen ligger"): it now leans 35 degrees out from straight back and the fist sits 0.04 further out
             g[(int)HeroId.Bonk] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 145f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f } } },
+                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 145f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f }, NoThumb = true } },
                 Shoulder = true,
                 CarryOut = 0.14f,
             };
@@ -1091,7 +1095,7 @@ namespace BAM.Art
             Transform hd = an.GetBoneTransform(W.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
             if (mesh == null || hd == null) return;
             Transform ix = an.GetBoneTransform(W.Left ? HumanBodyBones.LeftIndexProximal : HumanBodyBones.RightIndexProximal);
-            Transform th = an.GetBoneTransform(W.Left ? HumanBodyBones.LeftThumbProximal : HumanBodyBones.RightThumbProximal);
+            Transform th = W.NoThumb ? null : an.GetBoneTransform(W.Left ? HumanBodyBones.LeftThumbProximal : HumanBodyBones.RightThumbProximal);
             Vector3 fingers = ix != null ? ix.position - hd.position : hd.TransformDirection(Vector3.up) * 0.05f;
             Vector3 fn = fingers.normalized;
             Vector3 up = th != null ? th.position - hd.position : root.up;
@@ -1135,7 +1139,7 @@ namespace BAM.Art
             // Tyra pilot: her Avatar (Tyra.fbx.meta, made 25 Oct from a rig without them) maps only the index finger, so the
             // Humanoid lookup finds no thumb; the FBX has the bone, so the socket's frame takes it by name (only here, so the
             // fist and every other hero stay as they are)
-            Transform ixB = ix != null ? ix : HandBone(hd, W.Left, "Index1"), thB = th != null ? th : HandBone(hd, W.Left, "Thumb1");
+            Transform ixB = ix != null ? ix : HandBone(hd, W.Left, "Index1"), thB = th != null ? th : W.NoThumb ? null : HandBone(hd, W.Left, "Thumb1");
             // a model without those bones takes them from WeaponDef.NoFingerIndex/NoFingerThumb (Knut has no fingers, Fenn no thumb)
             float fl = hd.localPosition.magnitude * hd.parent.lossyScale.y / Mathf.Max(1e-6f, hd.lossyScale.y);
             bool hasIx = ixB != null || W.NoFingerIndex != Vector3.zero, hasTh = thB != null || W.NoFingerThumb != Vector3.zero;
