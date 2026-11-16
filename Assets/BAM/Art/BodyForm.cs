@@ -27,6 +27,7 @@ namespace BAM.Art
         {
             formOn = form == 1 && HeroIndex == (int)HeroId.Kugg;
             if (formOn && formT == null) BuildForm();
+            SetFlock(form == 2 && HeroIndex == (int)HeroId.Ravna); // Ravna's Night Flight (BodyFlock.cs)
         }
 
         void BuildForm()
@@ -69,27 +70,31 @@ namespace BAM.Art
             go.SetActive(false);
         }
 
-        // every frame after the rest of the look: the turret's growth and the golem hidden under it
+        // every frame after the rest of the look: the turret's growth, Ravna's crows, and the body hidden under either
         void FormLook(float dt)
         {
-            if (formT == null) return;
-            formK = Mathf.MoveTowards(formK, formOn && !dead ? 1f : 0f, dt / FormGrow);
-            bool show = formK > 0f && renderersOn && !dead;
-            if (formT.gameObject.activeSelf != show) formT.gameObject.SetActive(show);
-            if (show) formT.localScale = Vector3.one * (formSize * BackOut(formK));
-            if (sealT != null)
+            FlockLook(dt);
+            if (formT == null && !FlockHidesBody && !bodyOff) return;
+            if (formT != null)
             {
-                if (sealT.gameObject.activeSelf != show) sealT.gameObject.SetActive(show);
-                if (show)
+                formK = Mathf.MoveTowards(formK, formOn && !dead ? 1f : 0f, dt / FormGrow);
+                bool show = formK > 0f && renderersOn && !dead;
+                if (formT.gameObject.activeSelf != show) formT.gameObject.SetActive(show);
+                if (show) formT.localScale = Vector3.one * (formSize * BackOut(formK));
+                if (sealT != null)
                 {
-                    float ls = transform.lossyScale.y > 0f ? transform.lossyScale.y : 1f;
-                    sealT.localScale = Vector3.one * (SealSize * (0.6f + 0.4f * formK) / ls);
-                    sealT.localRotation = Quaternion.Euler(0f, idleT * 12f, 0f); // turns slowly so it reads as alive
-                    Color c = Fx.HeroMain(HeroId.Kugg); c.a = 0.85f * formK;
-                    sealMat.SetColor(ArtMaterials.BaseColor, c);
+                    if (sealT.gameObject.activeSelf != show) sealT.gameObject.SetActive(show);
+                    if (show)
+                    {
+                        float ls = transform.lossyScale.y > 0f ? transform.lossyScale.y : 1f;
+                        sealT.localScale = Vector3.one * (SealSize * (0.6f + 0.4f * formK) / ls);
+                        sealT.localRotation = Quaternion.Euler(0f, idleT * 12f, 0f); // turns slowly so it reads as alive
+                        Color c = Fx.HeroMain(HeroId.Kugg); c.a = 0.85f * formK;
+                        sealMat.SetColor(ArtMaterials.BaseColor, c);
+                    }
                 }
             }
-            bool hide = (formOn || formK > 0f) && !dead;
+            bool hide = (formOn || formK > 0f || FlockHidesBody) && !dead;
             if (hide) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = false; bodyOff = true; }
             else if (bodyOff) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = renderersOn; bodyOff = false; }
         }
@@ -111,6 +116,7 @@ namespace BAM.Art
             formOn = false; formK = 0f;
             if (formT != null) formT.gameObject.SetActive(false);
             if (sealT != null) sealT.gameObject.SetActive(false);
+            FlockReset();
             if (bodyOff) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = renderersOn; bodyOff = false; }
         }
     }

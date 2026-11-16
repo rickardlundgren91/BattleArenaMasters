@@ -1332,7 +1332,8 @@ namespace BAM.Game
                 if (sprint != r.Sprint) { r.Sprint = sprint; v.SetSprint(sprint); }
                 bool four = u.Hero == HeroId.Ragn && m.RagnRunning(u); // Wolf Run: on all fours (Rickard 2026-11-10)
                 if (four != r.Four) { r.Four = four; v.SetFourLegs(four); }
-                int form = u.Hero == HeroId.Kugg && u.KuggRooted ? 1 : 0; // Kugg stands as a turret in his Anchor (Hero7.cs)
+                // Kugg stands as a turret in his Anchor (Hero7.cs); Ravna flies as a flock of crows in her Night Flight (Hero8.cs, BodyFlock.cs)
+                int form = u.Hero == HeroId.Kugg && u.KuggRooted ? 1 : u.Hero == HeroId.Ravna && u.RavnaFlying ? 2 : 0;
                 if (form != r.Form) { r.Form = form; v.SetForm(form); }
                 HeroMarks(r, u, v);
             }
