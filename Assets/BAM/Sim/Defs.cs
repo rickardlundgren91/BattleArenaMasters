@@ -243,8 +243,9 @@ namespace BAM.Sim
         public const float TowerAggroTime = 2, TowerRamp = 0.2f, TowerRampMax = 2, TowerRampReset = 2.5f;
         public const float TowerLateMax = 2;
         // Rickard 2026-11-02 "torn ska skada lite mer": every tower shot on a hero x1.15 (25 -> 28.75 before streak and late bonus);
-        // shots on minions and the tutorial tower are unchanged (protocol 42)
-        public const float TowerVsHero = 1.15f;
+        // shots on minions and the tutorial tower are unchanged (protocol 42). Rickard 2026-11-16 "Buffa tornets dmg mot heroes":
+        // 1.15 -> 1.4 (25 -> 35 per shot before streak and late bonus, +22 %), minions still 25
+        public const float TowerVsHero = 1.4f;
         // Rickard's Tripo tower stands 3 tiles wide: a round wall of radius ~1.05 on a flat stone foot to 1.5. Its body (Tower.Radius
         // 0.55) let heroes walk into the wall (tester Cajsa 2026-11-04 "jag kan gå rätt igenom dem"), so bodies are kept out to the
         // wall's edge; heroes may still stand on the low foot. Only walking uses it: hits, reach and shots still use Tower.Radius

@@ -93,7 +93,8 @@ namespace BAM.Sim
             k.Spell = SpellId.Shield;
             Check(!m.SpellLocked(k) && m.CastSpell(k), "KUGG lock: a Shield still works while anchored");
             k.Spell = SpellId.Blink; k.SpellAt = 0;
-            for (int i = 0; i < 1200 && k.KuggRooted; i++) m.Step(PlayerInput.None); // the shots, the pack-up
+            // the shots, the pack-up; kept at full health: since the tower hits heroes x1.4 (2026-11-16) it killed him in this wait
+            for (int i = 0; i < 1200 && k.KuggRooted; i++) { k.Hp = k.MaxHp; m.Step(PlayerInput.None); }
             Check(!k.KuggRooted && !m.SpellLocked(k) && m.CastSpell(k, 0, 1), "KUGG lock: walking again, he can Blink");
 
             // the bot never anchors with an enemy hero right on him

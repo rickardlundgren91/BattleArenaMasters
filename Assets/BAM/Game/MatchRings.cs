@@ -10,13 +10,16 @@ namespace BAM.Game
     /// thin white ring that flashes thicker on each attack, the attack charge as a ring growing out to it until the next swing,
     /// the special's own reach while it is ready (when it differs from the auto range), a gold ring on the unit the last auto
     /// attack picked (held 1.1 s), and an enemy tower's range when the player comes near it: faint white, red while it shoots
-    /// at the player. Drawn with ArtKit's aim rings, tinted per ring, each with its own thin ring mesh: the old rings are a
+    /// at the player; the player's own tower's range in faint blue when near it. Drawn with ArtKit's aim rings, tinted per ring, each with its own thin ring mesh: the old rings are a
     /// screen pixel or two wide (View3D.SyncRange's widths in pixels), and the aim ring's own band grows with its radius.
     /// </summary>
     sealed class MatchRings
     {
         static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
         static readonly Color Gold = new Color(1f, 0.82f, 0.2f), Dark = new Color(0.05f, 0.04f, 0.1f), TowerRed = new Color(1f, 0.24f, 0.31f);
+        // the player's own tower's reach (Rickard 2026-11-16 "visa range ringen för egna tornet också så man kan se när man är nära"):
+        // the allies' blue (HP bars), faint, so it never reads as the enemy tower's white/red warning ring
+        static readonly Color TowerOwn = new Color(0.35f, 0.65f, 1f, 0.35f);
 
         sealed class Ring
         {
@@ -30,7 +33,7 @@ namespace BAM.Game
         }
 
         // target: a dark edge, the gold band and a pulsing inner ring
-        readonly Ring[] range = new Ring[3], charge = new Ring[1], reach = new Ring[1], target = new Ring[3], tower = new Ring[2];
+        readonly Ring[] range = new Ring[3], charge = new Ring[1], reach = new Ring[1], target = new Ring[3], tower = new Ring[3];
         // Brawl Stars ideas 2 and 3 (Rickard 2026-10-26): a red ring under each enemy the dragged special would hit, and an orange
         // ring at the hero's feet while its special is ready
         readonly Ring[] hits = new Ring[8], ready = new Ring[2];
@@ -324,6 +327,19 @@ namespace BAM.Game
                     // red, not only its edge (Rickard 2026-10-30 "tornets area blir inte röd")
                     if (onMe) Show(tower[1], tc, tr, new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.13f), tr);
                     Show(tower[0], tc, tr + w / 2f, onMe ? new Color(TowerRed.r, TowerRed.g, TowerRed.b, 0.75f) : new Color(1f, 1f, 1f, 0.25f), w);
+                }
+            }
+
+            // the player's own tower near the player: its reach in faint blue, so the player sees where its cover starts
+            var own = m.Towers[p.Team];
+            if (own != null && own.Alive)
+            {
+                float tr = own.Range, dx = own.X - p.X, dy = own.Y - p.Y;
+                if (dx * dx + dy * dy < (tr + 2f) * (tr + 2f))
+                {
+                    Vector3 tc = Coords.Of(own); tc.y = 0f;
+                    float w = 1.5f * px;
+                    Show(tower[2], tc, tr + w / 2f, TowerOwn, w);
                 }
             }
         }
