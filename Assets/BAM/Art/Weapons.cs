@@ -473,6 +473,12 @@ namespace BAM.Art
             GearDef m = g[(int)HeroId.Moa];
             m.Weapons[0].Model = "v2_moa_staff";
             m.Shield.Model = "v2_moa_shield";
+            // the staff stands up through her right fist, as Make() meant it (HoldUp 82): his Weapon Tuner hold for her old body
+            // (WeaponTune "Moa", HoldUp 8.3 with its Offset and Turn, 2026-11-12) carried over here and laid the V2 staff out level in
+            // front of her, the honey head at her belly on Home and down by her feet on the hero page (Rickard 2026-11-15: "majoriteten
+            // buggar" in the menus; screenshots bam-work/hero-menu/Moa). Her old body keeps his numbers; "MoaV2" in the Tuner still wins
+            WeaponDef ms = m.Weapons[0];
+            ms.HoldUp = 82f; ms.HoldOut = 8f; ms.Offset = Vector3.zero; ms.Turn = Vector3.zero;
 
             // Knut: the new anchor; his old socket and stand-in finger points were for his old fingerless hand (as Fenn's above), so
             // on the V2 rig with real fingers the anchor goes by the plain grip
