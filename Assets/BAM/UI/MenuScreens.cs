@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BAM.Art;
 using BAM.Audio;
 using BAM.Core;
@@ -117,6 +118,9 @@ namespace BAM.UI
         // the held weapons' highest point over the feet so far (world units, 0 = none yet), from the frame the idle holds them,
         // never while a tapped swing plays
         float gearTop, swingTill;
+        // the body's half width about its middle (world units, 0 = none yet): a wide hero (round Kugg) is drawn smaller until he
+        // fits across the picture too, not only from feet to crown
+        float bodyHalfW;
         int measureAt;
 
         /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback). mine: in this player's own skin
@@ -133,7 +137,7 @@ namespace BAM.UI
             view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, Facing(), 0));
             view.SetMoving(false, 0);
             heroHeight = MeasureHeight(view, Spot.y);
-            gearTop = swingTill = 0;
+            gearTop = swingTill = bodyHalfW = 0;
             measureAt = Time.frameCount + 2; // the model plays its idle from the next frame, and the weapons follow in its LateUpdate
             shownId = id;
             shownSkin = skin;
@@ -174,9 +178,11 @@ namespace BAM.UI
             }
             // a weapon held above the head stays in the picture: the hero is drawn only as much smaller as that needs (Rickard's
             // pick 2026-10-29; ANIM-23: Bram's hammer reaches 1.36 times his height, and since the heroes' true heights its top was cut)
+            float aspect = size.x / size.y;
             float viewH = Mathf.Max(heroHeight / HeroFill, gearTop * 1.04f / Mathf.Max(0.05f, 1f - FeetAt));
+            viewH = Mathf.Max(viewH, 2f * bodyHalfW * 1.08f / aspect);
             cam.orthographicSize = viewH / 2;
-            cam.aspect = size.x / size.y;
+            cam.aspect = aspect;
             cam.transform.position = Spot + new Vector3(0, viewH / 2 - FeetAt * viewH, -6f);
         }
 
@@ -250,8 +256,37 @@ namespace BAM.UI
             {
                 float top = Mathf.Min(ArtKit.GearTopOf(view) - Spot.y, 1.6f * heroHeight);
                 if (top > gearTop + 0.001f) { gearTop = top; Frame(); }
+                if (bodyHalfW <= 0f)
+                {
+                    bodyHalfW = Mathf.Max(0.001f, Mathf.Min(BodyHalfWidth(), 1.2f * heroHeight));
+                    Frame();
+                }
             }
             if (!Picture.enabled) Picture.enabled = true;
+        }
+
+        // the skinned body's reach from the stage's middle across the ground (so turning him never changes it), measured once on
+        // the posed mesh in its idle (a skinned renderer's bounds are the import's, T-pose arms and all); held weapons left out, as
+        // the height above leaves them to FitGear
+        float BodyHalfWidth()
+        {
+            float r = 0f;
+            var baked = new Mesh();
+            var verts = new List<Vector3>();
+            foreach (var sk in view.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (!sk.enabled || !sk.gameObject.activeInHierarchy || sk.sharedMesh == null) continue;
+                sk.BakeMesh(baked, true);
+                baked.GetVertices(verts);
+                Transform t = sk.transform;
+                for (int k = 0; k < verts.Count; k++)
+                {
+                    Vector3 w = t.position + t.rotation * verts[k] - Spot;
+                    r = Mathf.Max(r, w.x * w.x + w.z * w.z);
+                }
+            }
+            Destroy(baked);
+            return Mathf.Sqrt(r);
         }
 
         // the dragged yaw plus a slow sway, so the hero never stands frozen (old Speltest View3DTeam: sin(t * 0.6))

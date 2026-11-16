@@ -133,7 +133,7 @@ namespace BAM.UI
             void BuildGoldPill()
             {
                 if (OnlineHooks.Gold == null) return;
-                float y = 14.2f * Cw, h = 6.4f * Cw, x = 41.4f * Cw, w = 38 * Cw;
+                float y = SkinRowY, h = 6.4f * Cw, x = 41.4f * Cw, w = 38 * Cw;
                 var pill = Img(top, "GoldPill", UiKit.Rounded, new Color(10 / 255f, 13 / 255f, 36 / 255f, 0.85f));
                 Round(pill, 1.6f * Cw);
                 pill.raycastTarget = true;

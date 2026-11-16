@@ -1411,8 +1411,13 @@ namespace BAM.Art
                 // Tyra pilot, AnimFix.GripLockFull (on by default since Rickard 2026-10-31): the weapon is held only as the
                 // fist holds it (the anatomical grip), whatever the hold above aimed; the wrist has nothing to take, the bow's look
                 // then follows the clip's hand
-                bool full = AnimFix.GripLockFull && hasAnat[i] && !gone && t.localScale.y > 1e-4f;
-                if (full) { t.rotation = hand[i].rotation * anatR[i]; FistTwist[i] = 0f; } // nothing left for the wrist to take
+                // On the menu stage the menu hold (WeaponDef.Menu) wins at rest: the fist's own grip in a borrowed relaxed idle
+                // (Moa's) laid Tyra's V2 bow level with its tip at the camera, a brown or gold lump cutting into her thigh on Home
+                // (Unity MCP 2026-11-16: bow 0.74 x 0.36 x 1.31 m with its long side into the screen); a tapped shot on the hero page
+                // still eases into the fist's grip
+                bool menuHold = OnMenu && W.Menu.On;
+                bool full = AnimFix.GripLockFull && hasAnat[i] && !gone && t.localScale.y > 1e-4f && !(menuHold && rest > 0.5f);
+                if (full) { t.rotation = menuHold ? Quaternion.Slerp(t.rotation, hand[i].rotation * anatR[i], Mathf.Clamp01(1f - 2f * rest)) : hand[i].rotation * anatR[i]; FistTwist[i] = 0f; } // nothing left for the wrist to take
                 if (W.WristMax > 0f && !gone && !full) Wrist(i, W, liveW);
                 LockGrip(i, full);
                 // Rickard's Offset was tuned on the 0.6 palm; with the calibrated socket the grip is already in the fist (Tyra's -0.03

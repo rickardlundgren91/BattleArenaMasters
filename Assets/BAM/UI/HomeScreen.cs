@@ -31,6 +31,9 @@ namespace BAM.UI
         static Text homeHeroName; // "BONK · FIGHTER" under the hero's ring (BuildHeroName); hidden in a party, where the name tags take its place
         static int homeModeShown = -1;
         static GameObject homeTutCard;
+        /// <summary>The top of the skin and gold row under the top bar: below the online profile chip (54 x 16 cw, its bottom at 17.6
+        /// cw) where there is one, since at 14.2 cw the "SKIN" pill sat over the chip's level badge (Unity MCP 2026-11-16).</summary>
+        static float SkinRowY => OnlineHooks.HomeChip != null ? 18.6f * Cw : 14.2f * Cw;
         static GameObject homeSkinPick; // the skin dropdown under the top bar (BuildSkinPick), for every hero
         static Text homeSkinText;
         static RectTransform homeSkinList;
@@ -635,7 +638,7 @@ namespace BAM.UI
             // the skin dropdown, under the hero's picture and name: "SKIN  THUNDER ▾", the name in the skin's colour
             void BuildSkinPick()
             {
-                float y = 14.2f * Cw, h = 6.4f * Cw, w = 36 * Cw;
+                float y = SkinRowY, h = 6.4f * Cw, w = 36 * Cw;
                 var pill = Img(top, "SkinPick", UiKit.Rounded, new Color(10 / 255f, 13 / 255f, 36 / 255f, 0.85f));
                 Round(pill, 1.6f * Cw);
                 pill.raycastTarget = true;
