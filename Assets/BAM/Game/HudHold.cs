@@ -20,10 +20,13 @@ namespace BAM.Game
         const float HoldTime = 0.4f, HoldFade = 0.12f;
         static readonly Color HoldBack = new Color(12f / 255f, 16f / 255f, 44f / 255f, 0.72f), HoldGold = Hex(0xffc94a),
             HoldDesc = Hex(0xe6e9ff), HoldBlue = Hex(0x9fd8ff), HoldDesc2 = Hex(0xc9cfee), HoldFoot = Hex(0x8f96c4);
+        // an item's card is nearly solid: at 0.72 (which in this project's linear colour space shows far more of the field than the
+        // old game's 0.72 did) its rule could not be read over the lane (the web build, 2026-11-15). The SPECIAL's card is as it was
+        static readonly Color HoldBackItem = new Color(12f / 255f, 16f / 255f, 44f / 255f, 0.94f);
 
         RectTransform holdCard;
         CanvasGroup holdLook;
-        Image holdRing, holdEdge;
+        Image holdRing, holdEdge, holdBack;
         Text holdTag, holdName, holdDesc, holdName2, holdDesc2, holdFoot;
         float holdLaidW = -1f;
         // what the card says now: the hero and whether its special is ready (SPECIAL), or HoldItemKey + the item
@@ -49,14 +52,15 @@ namespace BAM.Game
             holdCard.pivot = new Vector2(0f, 1f);
             holdLook = holdCard.gameObject.AddComponent<CanvasGroup>();
             holdLook.blocksRaycasts = false; holdLook.interactable = false;
-            var back = UiKit.Fill(holdCard, HoldBack, UiKit.Rounded);
-            back.raycastTarget = false;
+            holdBack = UiKit.Fill(holdCard, HoldBack, UiKit.Rounded);
+            holdBack.raycastTarget = false;
             holdEdge = UiKit.Fill(holdCard, HoldGold, UiKit.Ring); // the gold edge (UiKit.Ring: the same corner as Rounded); an item's in its rarity's colour
             holdEdge.type = Image.Type.Sliced;
             holdEdge.raycastTarget = false;
             holdTag = HoldText(UiKit.Font, HoldGold);
             holdName = HoldText(UiKit.Font, Color.white);
             holdDesc = HoldText(UiKit.BodyFont, HoldDesc);
+            holdDesc.supportRichText = true; // an item's numbers are gold (GoldNumbers)
             holdName2 = HoldText(UiKit.Font, HoldBlue);
             holdDesc2 = HoldText(UiKit.BodyFont, HoldDesc2);
             holdFoot = HoldText(UiKit.Font, HoldFoot);
@@ -156,7 +160,7 @@ namespace BAM.Game
             float y = pad;
             y = Put(holdTag, RarityWord[info.Rarity] + " ITEM", tf, pad, y, tw) + tf * 0.4f;
             y = Put(holdName, info.Name, nf, pad, y, tw) + nf * 0.2f;
-            y = Put(holdDesc, info.Text, df, pad, y, tw, df * 1.25f) + pad * 0.8f;
+            y = Put(holdDesc, GoldNumbers(info.Text), df, pad, y, tw, df * 1.25f) + pad * 0.8f; // its numbers in gold, as on the choice
 
             holdCard.sizeDelta = new Vector2(cw, y);
             holdCard.anchoredPosition = new Vector2(W * 0.97f - cw, holdCard.anchoredPosition.y);
@@ -166,6 +170,7 @@ namespace BAM.Game
         void HoldLook(Color c, bool forSpecial)
         {
             holdEdge.color = c; holdTag.color = c;
+            holdBack.color = forSpecial ? HoldBack : HoldBackItem;
             holdName2.enabled = holdDesc2.enabled = holdFoot.enabled = forSpecial;
         }
 

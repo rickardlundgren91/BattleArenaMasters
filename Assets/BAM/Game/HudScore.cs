@@ -13,12 +13,22 @@ namespace BAM.Game
     /// A tap anywhere else closes it. Against bots the match waits while it is open (GameFlow reads <see cref="MenuOpen"/>,
     /// Rickard 2026-10-30); online it goes on, as in the old game. In the guided match (which had no score tab) the button is the
     /// pause button instead.
+    /// Each row also shows the hero's items at its right end (two places, empty ones dim; the item polish round 2026-11-16):
+    /// nothing else in a match told what an ally or an enemy carried. A tap on an item names it under the rows with its whole
+    /// rule (the same text as holding one's own item, HudHold.cs).
     /// </summary>
     sealed partial class Hud
     {
         static readonly Color ScoreDim = new Color(6f / 255f, 9f / 255f, 26f / 255f, 0.86f), ScoreBlue = Hex(0x3aa0ff), ScoreRed = Hex(0xff3b4e);
         static readonly Color ScoreSub = Hex(0xa9b4e8), RowMine = new Color(58f / 255f, 160f / 255f, 1f, 0.28f), RowOther = new Color(30f / 255f, 40f / 255f, 88f / 255f, 0.85f);
         static readonly Color ExitRed = Hex(0xe8434f), ExitEdge = Hex(0xffb3b9), StayBlue = Hex(0x2b3a7a);
+        static readonly Color ScoreSlot = new Color(0f, 0f, 0f, 0.28f); // an empty item place on a row
+        // where K / D / A ends on a row, as a share of its width. It was 0.62, where the numbers lay over the end of the player's
+        // own "You · Marksman" (seen on the web build 2026-11-15); the item places start at about 0.76
+        const float ScoreKdaAt = 0.72f;
+        // an item place on a row: its size as a share of the sheet's height (0.54 of a row), the gap between two and the room to
+        // the row's right end as shares of its width
+        const float ScoreItemSize = 0.075f * 0.54f, ScoreItemGap = 0.014f, ScoreItemInset = 0.03f;
 
         sealed class ScoreRow
         {
@@ -27,6 +37,9 @@ namespace BAM.Game
             public RawImage Pic;
             public RectTransform Disc;
             public Text Name, Role, Kda, Secs;
+            // the hero's items at the row's right end: the dim round place, the icon in it (which takes the tap) and what it shows
+            public readonly Image[] ItemSlot = new Image[Unit.MaxItems], Item = new Image[Unit.MaxItems];
+            public readonly ItemId[] ItemShown = new ItemId[Unit.MaxItems];
             // what the row shows now, so its texts and portrait are only rebuilt when they change (no per-frame garbage)
             public Unit Shown;
             public int K = -1, D = -1, A = -1, S = -1;
@@ -36,7 +49,11 @@ namespace BAM.Game
         }
 
         RectTransform scoreRoot;
-        Text[] scoreHeads = new Text[2], scoreKdaHeads = new Text[2];
+        Text[] scoreHeads = new Text[2], scoreKdaHeads = new Text[2], scoreItemHeads = new Text[2];
+        // the item a finger tapped on the sheet (None: none): its name and rule show under the rows
+        ItemId scoreItemSel;
+        Text scoreItemName, scoreItemText;
+        bool scoreItemsOn = true;
         readonly ScoreRow[] scoreRows = new ScoreRow[6];
         Button scoreExit, scoreLeave, scoreStay;
         Text scoreHint, scoreAsk;
@@ -60,6 +77,7 @@ namespace BAM.Game
             {
                 scoreHeads[t] = ScoreText(scoreRoot, t == 0 ? "YOUR TEAM" : "ENEMY TEAM", t == 0 ? ScoreBlue : ScoreRed, TextAnchor.MiddleLeft);
                 scoreKdaHeads[t] = ScoreText(scoreRoot, "K / D / A", ScoreSub, TextAnchor.MiddleRight);
+                scoreItemHeads[t] = ScoreText(scoreRoot, "ITEMS", ScoreSub, TextAnchor.MiddleRight);
             }
             for (int i = 0; i < scoreRows.Length; i++) scoreRows[i] = MakeScoreRow();
             scoreExit = ScoreButton("EXIT GAME", ExitRed, () => scoreAskLeave = true);
@@ -68,12 +86,22 @@ namespace BAM.Game
             scoreStay.GetComponentsInChildren<Image>(true)[1].color = ScoreSub; // its edge
             scoreHint = ScoreText(scoreRoot, "Tap anywhere else to close", ScoreSub, TextAnchor.MiddleCenter);
             scoreAsk = ScoreText(scoreRoot, "Leave the match?", Color.white, TextAnchor.MiddleCenter);
+            // the tapped item: its name in its rarity's colour and its rule in the plain font, between the rows and EXIT GAME
+            scoreItemName = ScoreText(scoreRoot, "", ScoreSub, TextAnchor.MiddleLeft);
+            scoreItemName.supportRichText = true;
+            scoreItemText = ScoreText(scoreRoot, "", Color.white, TextAnchor.UpperLeft);
+            scoreItemText.font = UiKit.BodyFont;
+            scoreItemText.supportRichText = true;
+            scoreItemText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            scoreItemText.verticalOverflow = VerticalWrapMode.Truncate;
+            scoreItemText.resizeTextForBestFit = true;
             scoreRoot.gameObject.SetActive(false);
         }
 
         void BeginScore()
         {
             scoreOpen = scoreAskLeave = false;
+            scoreItemSel = ItemId.None;
             if (scoreRoot != null) scoreRoot.gameObject.SetActive(false);
             foreach (var row in scoreRows) if (row != null) { row.Shown = null; row.Spot = -1; } // a new match: every row rebuilds
         }
@@ -85,7 +113,7 @@ namespace BAM.Game
             if (tutorial) { flow.Pause(); return; }
             if (m.State != MatchState.Play && m.State != MatchState.Countdown) return;
             CancelTouches();
-            scoreOpen = true; scoreAskLeave = false;
+            scoreOpen = true; scoreAskLeave = false; scoreItemSel = ItemId.None;
         }
 
         /// <summary>Opens the score sheet (Android back in a match with other players, where Pause is not allowed).</summary>
@@ -93,7 +121,7 @@ namespace BAM.Game
         {
             if (m == null || tutorial || scoreRoot == null || (m.State != MatchState.Play && m.State != MatchState.Countdown)) return;
             CancelTouches();
-            scoreOpen = true; scoreAskLeave = false;
+            scoreOpen = true; scoreAskLeave = false; scoreItemSel = ItemId.None;
         }
 
         void CloseScore() { scoreOpen = false; scoreAskLeave = false; }
@@ -114,6 +142,7 @@ namespace BAM.Game
             // frame, which rebuilt their 24 texts and the canvas each frame while the sheet was open (bug review 2026-11-02, nr 31)
             int used0 = 0, used1 = 0;
             int n = 0;
+            bool anyItem = false;
             for (int i = 0; i < m.Heroes.Count && n < scoreRows.Length; i++)
             {
                 var u = m.Heroes[i];
@@ -129,6 +158,7 @@ namespace BAM.Game
                 if (row.Shown != u)
                 {
                     row.Shown = u; row.K = row.D = row.A = row.S = -1;
+                    for (int k = 0; k < Unit.MaxItems; k++) row.ItemShown[k] = (ItemId)255; // drawn again below
                     var info = HeroCatalog.Get(u.Hero);
                     row.Pic.texture = Resources.Load<Texture2D>("BAM/Menu/portrait_" + HeroCatalog.FileName(info.Name));
                     row.Back.color = u == m.Player ? RowMine : RowOther;
@@ -145,6 +175,17 @@ namespace BAM.Game
                     row.K = u.Kills; row.D = u.Deaths; row.A = u.Assists;
                     SetText(row.Kda, u.Kills + " / " + u.Deaths + " / " + u.Assists);
                 }
+                // its items (every hero's: the rules run the same on every phone, so nothing here is secret)
+                for (int k = 0; k < Unit.MaxItems; k++)
+                {
+                    var id = m.ItemsOn && k < u.ItemCount ? u.Items[k].Id : ItemId.None;
+                    if (row.ItemSlot[k].enabled != m.ItemsOn) row.ItemSlot[k].enabled = m.ItemsOn;
+                    if (row.ItemShown[k] == id) continue;
+                    row.ItemShown[k] = id;
+                    row.Item[k].enabled = id != ItemId.None;
+                    if (id != ItemId.None) row.Item[k].sprite = ItemSprite(id);
+                }
+                if (u.ItemCount > 0) anyItem = true;
                 bool dead = !u.Alive;
                 if (row.Dark.enabled != dead) { row.Dark.enabled = dead; row.Secs.enabled = dead; }
                 if (dead) SetText(row.Secs, Int(Mathf.CeilToInt(Mathf.Max(0f, u.RespawnT))));
@@ -156,6 +197,33 @@ namespace BAM.Game
             scoreLeave.gameObject.SetActive(scoreAskLeave);
             scoreStay.gameObject.SetActive(scoreAskLeave);
             scoreAsk.gameObject.SetActive(scoreAskLeave);
+
+            // the ITEMS heads only where the match has items, and under the rows the tapped item, or a word that they can be tapped
+            if (scoreItemsOn != m.ItemsOn) { scoreItemsOn = m.ItemsOn; for (int t = 0; t < 2; t++) scoreItemHeads[t].enabled = scoreItemsOn; }
+            var sel = scoreItemSel != ItemId.None ? ItemCatalog.Get(scoreItemSel) : null;
+            bool line = !scoreAskLeave && m.ItemsOn && (sel != null || anyItem);
+            if (scoreItemName.gameObject.activeSelf != line) scoreItemName.gameObject.SetActive(line);
+            if (scoreItemText.gameObject.activeSelf != (line && sel != null)) scoreItemText.gameObject.SetActive(line && sel != null);
+            if (line && sel != null)
+            {
+                SetText(scoreItemName, sel.Name + "  <size=" + Mathf.RoundToInt(scoreItemName.fontSize * 0.7f) + ">" + RarityWord[sel.Rarity] + "</size>");
+                scoreItemName.color = RarityEdge[sel.Rarity];
+                SetText(scoreItemText, GoldNumbers(sel.Text));
+            }
+            else if (line)
+            {
+                SetText(scoreItemName, "Tap an item to read it");
+                scoreItemName.color = ScoreSub;
+            }
+        }
+
+        // a tap on an item on the sheet: its name and rule show under the rows (a tap anywhere else still closes the sheet)
+        void ScoreItemTapped(ScoreRow row, int slot)
+        {
+            var id = row.ItemShown[slot];
+            if (id == ItemId.None || ItemCatalog.Get(id) == null) return;
+            scoreItemSel = id;
+            BamAudio.Play(SfxId.UiTap);
         }
 
         static void SetText(Text t, string s) { if (t.text != s) t.text = s; }
@@ -167,7 +235,10 @@ namespace BAM.Game
             {
                 float y0 = t == 0 ? H * 0.14f : H * 0.48f, fs = W * 0.038f;
                 ScoreAt(scoreHeads[t], x0, y0 + H * 0.02f, w, fs, TextAnchor.MiddleLeft);
-                ScoreAt(scoreKdaHeads[t], x0, y0 + H * 0.02f, w * 0.62f, fs, TextAnchor.MiddleRight);
+                ScoreAt(scoreKdaHeads[t], x0, y0 + H * 0.02f, w * ScoreKdaAt, fs, TextAnchor.MiddleRight);
+                // centred over the rows' item places (PlaceScoreRow), which also keeps it off the heart button behind the sheet
+                float ih = Unit.MaxItems * ScoreItemSize * H + (Unit.MaxItems - 1) * ScoreItemGap * W;
+                ScoreAt(scoreItemHeads[t], x0 + w - W * ScoreItemInset - ih, y0 + H * 0.02f, ih, fs, TextAnchor.MiddleCenter);
             }
             float bh = H * 0.06f;
             ScoreRect(scoreExit, W * 0.25f, H * 0.86f, W * 0.5f, bh);
@@ -175,6 +246,15 @@ namespace BAM.Game
             ScoreRect(scoreStay, W * 0.51f, H * 0.86f, W * 0.29f, bh);
             ScoreAt(scoreHint, 0f, H * 0.86f + bh + H * 0.025f, W, W * 0.03f, TextAnchor.MiddleCenter);
             ScoreAt(scoreAsk, 0f, H * 0.86f - H * 0.03f, W, W * 0.042f, TextAnchor.MiddleCenter);
+            // the tapped item: its name on one line under the enemy rows (they end at 0.77 H), its rule in the room down to EXIT GAME
+            ScoreAt(scoreItemName, x0, H * 0.793f, w, W * 0.036f, TextAnchor.MiddleLeft);
+            var ir = scoreItemText.rectTransform;
+            ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 1f);
+            ir.anchoredPosition = new Vector2(x0, -(H * 0.793f + W * 0.03f));
+            ir.sizeDelta = new Vector2(w, H * 0.855f - (H * 0.793f + W * 0.03f));
+            scoreItemText.fontSize = Mathf.RoundToInt(W * 0.03f);
+            scoreItemText.resizeTextMaxSize = Mathf.RoundToInt(W * 0.03f); scoreItemText.resizeTextMinSize = Mathf.RoundToInt(W * 0.02f);
+            scoreItemText.alignment = TextAnchor.UpperLeft;
         }
 
         void PlaceScoreRow(ScoreRow row, int team, int i, float W, float H)
@@ -194,7 +274,15 @@ namespace BAM.Game
             float tx = r * 2f + W * 0.05f;
             ScoreAt(row.Name, tx, rowH / 2f - rowH * 0.15f, w * 0.45f, rowH * 0.27f, TextAnchor.MiddleLeft);
             ScoreAt(row.Role, tx, rowH / 2f + rowH * 0.18f, w * 0.45f, rowH * 0.22f, TextAnchor.MiddleLeft);
-            ScoreAt(row.Kda, 0f, rowH / 2f, w * 0.62f, rowH * 0.3f, TextAnchor.MiddleRight);
+            ScoreAt(row.Kda, 0f, rowH / 2f, w * ScoreKdaAt, rowH * 0.3f, TextAnchor.MiddleRight);
+            // the two item places at the right end, clear of K / D / A (which ends at ScoreKdaAt of the row)
+            float s = H * ScoreItemSize, gap = W * ScoreItemGap;
+            for (int k = 0; k < Unit.MaxItems; k++)
+            {
+                var ir = row.ItemSlot[k].rectTransform;
+                ir.sizeDelta = new Vector2(s, s);
+                ir.anchoredPosition = new Vector2(-(W * ScoreItemInset + s / 2f + (Unit.MaxItems - 1 - k) * (s + gap)), -rowH / 2f);
+            }
         }
 
         ScoreRow MakeScoreRow()
@@ -225,6 +313,23 @@ namespace BAM.Game
             row.Name = ScoreText(row.Root, "", Color.white, TextAnchor.MiddleLeft);
             row.Role = ScoreText(row.Root, "", ScoreSub, TextAnchor.MiddleLeft);
             row.Kda = ScoreText(row.Root, "", Color.white, TextAnchor.MiddleRight);
+            for (int k = 0; k < Unit.MaxItems; k++)
+            {
+                int slot = k;
+                var sr = UiKit.NewRect("Item" + k, row.Root);
+                sr.anchorMin = sr.anchorMax = new Vector2(1f, 1f);
+                sr.pivot = new Vector2(0.5f, 0.5f);
+                row.ItemSlot[k] = sr.gameObject.AddComponent<Image>();
+                row.ItemSlot[k].sprite = UiKit.Circle; row.ItemSlot[k].color = ScoreSlot; row.ItemSlot[k].raycastTarget = false;
+                row.Item[k] = UiKit.Fill(sr, Color.white);
+                row.Item[k].preserveAspect = true; row.Item[k].raycastTarget = true; row.Item[k].enabled = false;
+                row.ItemShown[k] = (ItemId)255;
+                // the icon is the button: an empty place lets the tap through to the sheet, which closes
+                var b = row.Item[k].gameObject.AddComponent<Button>();
+                b.targetGraphic = row.Item[k];
+                b.transition = Selectable.Transition.None;
+                b.onClick.AddListener(() => ScoreItemTapped(row, slot));
+            }
             return row;
         }
 
