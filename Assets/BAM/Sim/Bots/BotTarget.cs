@@ -236,24 +236,102 @@ namespace BAM.Sim
         }
 
         // ---------- after a hero that ran into the grass ----------
+        // Easy (Bronze) walks to where it saw a low hero vanish, within 3 s and 7 tiles, and stops there (the old chase). Normal and up
+        // hunt (Rickard 2026-11-16 "ska jaga mer i gräset när man är synlig och en stund efter om dom misstänker att dom har en chans"):
+        // longer and farther by level (BotTables.HuntT, HuntR), also a hero that is not low when they would win the fight clearly
+        // (HuntChance), from the team's last look at it, and they sweep the grass it can have reached that nobody of theirs sees
+        // (HuntSpot); a fight in grass they keep in sight instead of stepping back out of it (KeepSight). Only what the team saw.
         bool WantsBushChase(Unit enemyTower)
         {
-            var h = H; var e = seenU;
-            bool low = HpR(e) < 0.35f || (e.Hp + ShieldOf(e)) / Math.Max(1, DpsOf(h)) < 2.5f;
-            if (!low || HpR(h) < 0.5f || Now - seenT > 3 || Hyp(h.X - seenX, h.Y - seenY) > 7) return false;
-            if (BotTables.Ranged(h.Hero) && HpR(e) > 0.2f) return false;
-            if (enemyTower != null && enemyTower.Alive && Hyp(seenX - enemyTower.X, seenY - enemyTower.Y) < enemyTower.UDef.Range + 1) return false;
+            var h = H; var e = seenU; bool hunt = tierI >= 1, ranged = BotTables.Ranged(h.Hero);
+            float sx = seenX, sy = seenY, age = Now - seenT;
+            if (hunt)
+            {
+                sx = e.LastSeenX[h.Team]; sy = e.LastSeenY[h.Team]; age = Now - e.LastSeenT[h.Team];
+                if (Now - seenT > BotTables.HuntT[tierI]) { hasSeen = false; return false; } // its own look is old: what it knew of that hero (health, way) is stale
+                if (age > BotTables.HuntT[tierI] || Hyp(h.X - sx, h.Y - sy) > BotTables.HuntR[tierI] || HpR(h) < (ranged ? 0.6f : 0.45f)) return false;
+                // its health now as a person would guess it: what we last saw, plus the regeneration that starts HeroRegenDelay after a fight
+                float eHp = Math.Min(e.MaxHp, seenHp + e.MaxHp * Rules.RegenAmount / Rules.RegenTick * Math.Max(0, age - Rules.HeroRegenDelay));
+                if (e == dropU && Now < dropT || ranged && eHp / e.MaxHp > 0.35f || !HuntChance(e, eHp, sx, sy)) return false; // given up, or a ranged bot after a hero that is not low
+            }
+            else
+            {
+                bool low = HpR(e) < 0.35f || (e.Hp + ShieldOf(e)) / Math.Max(1, DpsOf(h)) < 2.5f;
+                if (!low || HpR(h) < 0.5f || age > 3 || Hyp(h.X - sx, h.Y - sy) > 7) return false;
+                if (ranged && HpR(e) > 0.2f) return false;
+            }
+            if (enemyTower != null && enemyTower.Alive && Hyp(sx - enemyTower.X, sy - enemyTower.Y) < enemyTower.UDef.Range + 1) return false;
             int foes = 0, mates = 0; var us = M.Units;
             for (int i = 0; i < us.Count; i++)
             {
                 var u = us[i];
                 if (u.Kind != UnitKind.Hero || !u.Alive) continue;
-                if (u != e && u.Team != h.Team && (Sees(u) ? Hyp(u.X - seenX, u.Y - seenY) < 6 : RemNear(u, h.Team, seenX, seenY, 6))) foes++;
+                if (u != e && u.Team != h.Team && (Sees(u) ? Hyp(u.X - sx, u.Y - sy) < 6 : RemNear(u, h.Team, sx, sy, 6))) foes++;
                 if (u != h && u.Team == h.Team && Dist(u, h) < 6) mates++;
             }
             int missing = Unaccounted(h, e);
             if (missing >= 2 || missing > 0 && BotTables.Suspicion[tierI] > 0.5f && foes + 1 > mates) return false;
-            return foes <= mates && AnyBushNear(seenX, seenY, 2);
+            return foes <= mates && AnyBushNear(sx, sy, 2);
+        }
+
+        /// <summary>Where the chase goes now: Easy to the spot it saw the hero vanish; Normal and up the next grass tile to search
+        /// (HuntSpot). None left to search ends the hunt.</summary>
+        bool BushChaseSpot(out float x, out float y)
+        {
+            if (tierI == 0) { x = seenX; y = seenY; return true; }
+            if (HuntSpot(out x, out y)) return true;
+            hasSeen = false; // every grass tile it can have reached is in our sight: it is not in there
+            return false;
+        }
+
+        /// <summary>Would the bot still win against e (health + shield eHp as last seen, at sx, sy)? e is low, or the bot and its teammates
+        /// within 6 tiles of that spot kill e HuntEdge times faster than e alone kills the bot.</summary>
+        bool HuntChance(Unit e, float eHp, float sx, float sy)
+        {
+            var h = H; float myDps = Math.Max(1, DpsOf(h));
+            if (eHp / e.MaxHp < 0.35f || eHp / myDps < 2.5f) return true;
+            float dps = myDps; var us = M.Units;
+            for (int i = 0; i < us.Count; i++) { var a = us[i]; if (a != h && a.Alive && a.Kind == UnitKind.Hero && a.Team == h.Team && !a.IsClone && Hyp(a.X - sx, a.Y - sy) < 6) dps += DpsOf(a); }
+            return eHp / dps * BotTables.HuntEdge[tierI] < (h.Hp + ShieldOf(h)) / Math.Max(1, DpsOf(e));
+        }
+
+        /// <summary>The next grass tile to search for the hunted hero: one it can have reached since the team last saw it that none of
+        /// our units sees now (it would show there), nearest to where it would be had it kept walking the way it went (HuntAhead), then
+        /// nearest the bot. Its walk comes from the bot's own last look to the team's last one, or how it walked at the bot's last look.</summary>
+        bool HuntSpot(out float hx, out float hy)
+        {
+            var h = H; var e = seenU; hx = hy = 0;
+            float lx = e.LastSeenX[h.Team], ly = e.LastSeenY[h.Team], age = Now - e.LastSeenT[h.Team];
+            float dx = lx - seenX, dy = ly - seenY, dl = Hyp(dx, dy);
+            if (dl < 0.3f) { dx = seenVx; dy = seenVy; dl = Hyp(dx, dy); }
+            float reach = e.BaseSpeed * 1.15f * age + 0.75f, px = lx, py = ly;
+            if (dl > 0.05f) { float a = Math.Min(reach, BotTables.HuntAhead[tierI]); px += dx / dl * a; py += dy / dl * a; }
+            float see = Rules.GrassSight - 0.3f, bs = 1e9f; bool found = false; var us = M.Units; var own = TowerOf(h.Team);
+            for (int b = 0; b < bushN; b++)
+            {
+                float x = bushX[b], y = bushY[b];
+                if (Hyp(x - lx, y - ly) > reach || !M.Map.Free(x, y, h.R) || NearEnemyTowerAt(x, y, h.Team, 0.5f)) continue;
+                if (own != null && own.Alive && Hyp(own.X - x, own.Y - y) < own.UDef.Range - 0.3f) continue; // our tower sees it
+                bool lit = false;
+                for (int i = 0; i < us.Count; i++) { var o = us[i]; if (o.Alive && o.Team == h.Team && Hyp(o.X - x, o.Y - y) < see) { lit = true; break; } }
+                if (lit) continue;
+                float s = Hyp(x - px, y - py) + 0.5f * Hyp(x - h.X, y - h.Y);
+                if (s < bs) { bs = s; hx = x; hy = y; found = true; }
+            }
+            return found;
+        }
+
+        /// <summary>A hero in grass is seen only from Rules.GrassSight: a Normal-or-up bot fighting it with a chance (HuntChance) stays that
+        /// close instead of stepping back to its range and losing it, unless a teammate, our minion or our tower keeps it in sight.</summary>
+        bool KeepSight(Unit e)
+        {
+            var h = H;
+            if (tierI == 0 || tierI >= 4 || !M.Map.InGrass(e.X, e.Y)) return false; // Ultra sees into grass anyway
+            var own = TowerOf(h.Team);
+            if (own != null && own.Alive && Dist(own, e) < own.UDef.Range - 0.3f) return false;
+            var us = M.Units;
+            for (int i = 0; i < us.Count; i++) { var o = us[i]; if (o != h && o.Alive && o.Team == h.Team && Dist(o, e) < Rules.GrassSight - 0.4f) return false; }
+            return HuntChance(e, e.Hp + ShieldOf(e), e.X, e.Y);
         }
     }
 }

@@ -34,7 +34,7 @@ namespace BAM.Sim
         Unit leadE; float leadT = -1e9f, leadAt = -1e9f;
         Unit susU; float susT = float.NaN, susJ;
         readonly float[] soakRT = new float[8], soakRJ = new float[8];
-        bool hasSeen; Unit seenU; float seenX, seenY, seenT;
+        bool hasSeen; Unit seenU; float seenX, seenY, seenT, seenVx, seenVy, seenHp; // the last enemy hero it fought: where, its walk, health + shield
         bool hasBlocked; float blockedX, blockedY, blockedT;
         bool hasStuck; float stuckX, stuckY, stuckT;
         Unit chaseU, dropU; float chaseX, chaseY, chaseGap, chaseT, chaseLastT = -99, dropT;
@@ -308,10 +308,10 @@ namespace BAM.Sim
                 if (e != null) SetGoal(sa.X + (e.X - sa.X) * 0.25f, sa.Y + (e.Y - sa.Y) * 0.25f); else SetGoal(sa.X, sa.Y);
             }
             else if (target != null) GoalHero(target, enemyTower, safety);
-            else if (hasSeen && seenU.Alive && !Sees(seenU) && !retreat && safety && WantsBushChase(enemyTower))
+            else if (hasSeen && seenU.Alive && !Sees(seenU) && !retreat && safety && WantsBushChase(enemyTower) && BushChaseSpot(out float hx, out float hy))
             {
-                Mode = BotMode.BushChase; focus = null; SetGoal(seenX, seenY);
-                if (Hyp(h.X - seenX, h.Y - seenY) < 1.2f) hasSeen = false;
+                Mode = BotMode.BushChase; focus = null; SetGoal(hx, hy);
+                if (tierI == 0 && Hyp(h.X - seenX, h.Y - seenY) < 1.2f) hasSeen = false;
             }
             else GoalLane(enemyTower, fwd, shouldTower, tank, towerUp, safety);
             if (v3 && target == null && !finish && (Mode == BotMode.Lane || Mode == BotMode.Group || Mode == BotMode.Support)) V3Goal(hpR, myTower, fwd);
@@ -388,9 +388,10 @@ namespace BAM.Sim
                 for (int i = 0; i < M.Heroes.Count; i++) { var k = M.Heroes[i]; if (k != target && now - h.LastHitBy[i] < 1) { commitT = 0; break; } }
             ChaseTrack(target);
             Mode = Outranges(h, target) && safety ? BotMode.Harass : BotMode.Hero; focus = target;
-            hasSeen = true; seenU = target; seenX = target.X; seenY = target.Y; seenT = now;
+            hasSeen = true; seenU = target; seenX = target.X; seenY = target.Y; seenT = now; seenVx = target.MoVx; seenVy = target.MoVy; seenHp = target.Hp + ShieldOf(target);
             float d = Dist(h, target); if (d == 0) d = 1;
             float keep = Mode == BotMode.Harass ? HarassKeep(h, target) : h.Range * 0.85f + target.R;
+            if (KeepSight(target)) keep = Math.Min(keep, Rules.GrassSight - 0.5f); // in grass it is seen only this close (BotTarget.cs)
             SetGoal(target.X + (h.X - target.X) / d * keep, target.Y + (h.Y - target.Y) / d * keep, keep + 0.1f, target);
             if (v3 && TK3(30) > 0 && V3CleanSpot(target, keep, out float cx, out float cy)) SetGoal(cx, cy);
             if (d < h.Range + target.R + 3 && !M.Map.LosClear(h, target)) SetGoal(target.X, target.Y, 0.3f, target); // a wall in the way: walk round it

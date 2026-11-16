@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "bb5437080dbb78a0";
+            Generated = true; GeneratedHash = "8efe2720483cbfba";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -223,9 +223,12 @@ namespace BAM.Sim
             SimMirror.Arr(react, __s.react);
             retreat = __s.retreat;
             retreatT = __s.retreatT;
+            seenHp = __s.seenHp;
             seenKills = __s.seenKills;
             seenT = __s.seenT;
             seenU = __m.Map(__s.seenU);
+            seenVx = __s.seenVx;
+            seenVy = __s.seenVy;
             seenX = __s.seenX;
             seenY = __s.seenY;
             shufT = __s.shufT;

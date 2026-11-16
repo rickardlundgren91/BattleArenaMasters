@@ -57,6 +57,14 @@ namespace BAM.Sim
         internal const float AfkMax = 3, AfkExp = 5, ReactionOffset = 0.1f;
         internal const float TowerBotLeaveS = 4;
         internal const float ChaseLookT = 1, ChaseCatchT = 2, ChaseLeash = 6, ChaseDropT = 3;
+        // hunting a hero that slipped into the grass (BotTarget.cs WantsBushChase, Rickard 2026-11-16 "Våra bottar, speciellt de svårare,
+        // ska jaga mer i gräset när man är synlig och en stund efter om dom misstänker att dom har en chans"): seconds after the team last
+        // saw it, tiles from the bot to that spot, how far past it the bot first looks (the way it went), and how clearly the bot and its
+        // teammates there must win the duel when it is not low. Easy (Bronze) keeps the old chase: 3 s, 7 tiles, low heroes, the spot itself.
+        internal static readonly float[] HuntT = { 3, 4, 5, 6, 6 };
+        internal static readonly float[] HuntR = { 7, 8, 9, 10, 10 };
+        internal static readonly float[] HuntAhead = { 0, 2, 2.5f, 3, 3 };
+        internal static readonly float[] HuntEdge = { 0, 1.6f, 1.45f, 1.3f, 1.3f };
         // team play with the human (old SimTeamplay.cs)
         internal const float TeamJoinR = 12, TeamFightT = 2, TeamReach = 6, TeamStayHp = 0.5f, TeamJoinHp = 0.45f, TeamLowHp = 0.3f,
             TeamFollowR = 5, TeamFollowStop = 2.5f, TeamIntentR = 8, TeamIntentKeep = 1.5f, TeamLeash = 10, TeamBackR = 8,
