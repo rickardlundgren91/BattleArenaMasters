@@ -425,8 +425,8 @@ namespace BAM.Art
         // holds he picked carry over; the worn parts are first guesses from the bones, to be tuned with BAM > Art > Weapon Tuner
         // ("<Hero> V2"). Rickard 2026-11-13: "jag måste ju kunna spela dom så lägg in dom". No numbers of the match change.
         /// <summary>Bonk's V2 wolf pelt over his shoulders (shared with his skins' mantles, SkinGear).</summary>
-        internal const float BonkPeltWide = 1.3f;
-        internal static Vector3 BonkPeltAt => new Vector3(0f, 0.15f, -0.03f); // a property: byHeroV2 above is made before any field below it
+        internal const float BonkPeltWide = 1.35f;
+        internal static Vector3 BonkPeltAt => new Vector3(0f, 0.11f, -0.02f); // a property: byHeroV2 above is made before any field below it
 
         /// <summary>Tikta's glowing insect wings (Rickard 2026-11-16: "Ravna va fräck att man såg en mask bakifrån", he picked
         /// glowing wings so she stands out from behind and from the match camera): a teal fore wing and a violet hind wing a side,
