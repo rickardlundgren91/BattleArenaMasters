@@ -8,7 +8,8 @@ namespace BAM.Art
     // the rules fly her (Hero8.cs RavnaFlying) her body and gear are hidden and a flock of her own crows (Rickard's Tripo crow, the one
     // on her shoulder: Props v2_ravna_crow, ravna_crow if that is missing) swirls along her path instead. The crows burst out of her in
     // FlockGrow s, circle round her spot as it flies (so they turn with her when she steers), beat their wings (the model is a perched
-    // crow, so a beat is a quick squeeze across the wings and a bob) and shed dark feathers behind them. When she lands they fly back into
+    // crow, so a beat is a quick squeeze across the wings and a bob) and fly in a dark violet magic mist with wisps, amber glints and
+    // falling feathers (Rickard 2026-11-16 "dimmigt, mystiskt, fåglar, magiskt"). When she lands they fly back into
     // her as her body returns (the puff and caw are MatchViews' FlockEnd). Nothing changes in the rules: this is only the look.
     sealed partial class BodyView
     {
@@ -23,7 +24,9 @@ namespace BAM.Art
         float[] crowA, crowRad, crowH, crowSpin, crowPh;
         int crowN;
         bool flockOn, flockShown, flockFading;
-        float flockK, flockT, featherT, crowScale;
+        float flockK, flockT, featherT, mistT, wispT2, crowScale;
+        static readonly Color32 MistDark = new Color32(34, 26, 52, 150), MistViolet = new Color32(96, 64, 150, 90),
+            WispViolet = new Color32(150, 100, 235, 200), EyeAmber = new Color32(255, 180, 70, 255);
         Vector3 crowCentre;
 
         bool FlockHidesBody => (flockOn || flockK > 0.5f) && !dead;
@@ -33,6 +36,7 @@ namespace BAM.Art
             if (on && crowT == null) BuildFlock();
             if (crowT == null) on = false; // the crow model is missing: she keeps her own body
             if (on && !flockOn) { flockT = 0f; FlockBurst(); }
+            if (!on && flockOn && renderersOn && vis >= 0.99f && !dead) FlockLand(transform.position, ShownHeight);
             flockOn = on;
         }
 
@@ -126,25 +130,61 @@ namespace BAM.Art
                 crowM[i].localScale = new Vector3(crowScale * (1f + 0.3f * beat), crowScale * (1f - 0.08f * beat), crowScale);
             }
 
-            // dark feathers falling behind the flock (none while see-through: only her own team sees her then)
-            if (!fade && flockOn && (featherT -= dt) <= 0f)
+            // the magic round the flock (Rickard 2026-11-16: "mer effekter, rök eller dimma ... dimmigt, mystiskt, fåglar, magiskt"): a
+            // dark violet mist rolls off it and trails behind, pale violet wisps curl up out of it, amber motes (her eyes' colour) glint
+            // in it, and dark feathers fall behind (none of it while see-through: only her own team sees her then)
+            if (!fade && flockOn)
             {
-                featherT = ArtKit.High ? 0.07f : 0.14f;
-                var c = crowT[(int)(Random.value * crowN) % crowN];
-                Fx.Leaves(c.position, 1, new Color32(28, 24, 34, 230), 0.14f, 0.25f, 0.7f, 0.05f, 0.1f);
+                Vector3 mid = transform.position + new Vector3(0f, ShownHeight * 0.45f, 0f);
+                Vector3 back = -transform.forward;
+                if ((mistT -= dt) <= 0f)
+                {
+                    mistT = ArtKit.High ? 0.035f : 0.07f;
+                    // the mist: big soft puffs round the flock and a little behind it, so it leaves a trail along the path
+                    Vector3 at = mid + back * (ShownHeight * 0.25f) + new Vector3((Random.value - 0.5f) * ShownHeight * 0.6f, (Random.value - 0.5f) * ShownHeight * 0.4f, (Random.value - 0.5f) * ShownHeight * 0.6f);
+                    Fx.Smoke(at, 1, MistDark, ShownHeight * (0.55f + 0.35f * Random.value), 0.15f, 0.9f, 0.08f, 0.1f);
+                    if (Random.value < 0.5f) Fx.Smoke(mid + back * (ShownHeight * 0.1f), 1, MistViolet, ShownHeight * 0.45f, 0.25f, 0.6f, 0.05f, ShownHeight * 0.2f);
+                }
+                if ((wispT2 -= dt) <= 0f)
+                {
+                    wispT2 = ArtKit.High ? 0.08f : 0.16f;
+                    var c = crowT[(int)(Random.value * crowN) % crowN];
+                    Fx.Wisps(c.position, 1, WispViolet, ShownHeight * 0.28f, 0.2f, 0.7f, 0.5f, 0.08f);
+                    if (Random.value < 0.45f) Fx.Glow(c.position + back * 0.1f, 1, EyeAmber, 0.07f, 0.15f, 0.5f, 0.15f, 0.12f);
+                }
+                if ((featherT -= dt) <= 0f)
+                {
+                    featherT = ArtKit.High ? 0.07f : 0.14f;
+                    var c = crowT[(int)(Random.value * crowN) % crowN];
+                    Fx.Leaves(c.position, 1, new Color32(28, 24, 34, 230), 0.14f, 0.25f, 0.7f, 0.05f, 0.1f);
+                }
             }
         }
 
-        // the moment she bursts into crows: a cloud of dark feathers on her spot
+        // the moment she bursts into crows: a cloud of dark violet mist and feathers on her spot, wisps curling up out of it and a
+        // dark swirl on the ground (FlockLand when she lands; the puff and caw there are MatchViews' FlockEnd)
         void FlockBurst()
         {
             if (!renderersOn || vis < 0.99f || dead) return;
-            Fx.Leaves(transform.position + new Vector3(0f, ShownHeight * 0.5f, 0f), ArtKit.High ? 14 : 8, new Color32(28, 24, 34, 235), 0.18f, 1.2f, 0.6f, 0.3f, 0.15f);
+            Vector3 mid = transform.position + new Vector3(0f, ShownHeight * 0.5f, 0f);
+            Fx.Smoke(mid, ArtKit.High ? 10 : 5, MistDark, ShownHeight * 0.7f, 1.1f, 0.9f, 0.2f, ShownHeight * 0.2f);
+            Fx.Wisps(mid, ArtKit.High ? 8 : 4, WispViolet, ShownHeight * 0.35f, 0.9f, 0.8f, 0.6f, 0.15f);
+            Fx.Leaves(mid, ArtKit.High ? 14 : 8, new Color32(28, 24, 34, 235), 0.18f, 1.2f, 0.6f, 0.3f, 0.15f);
+            Fx.Swirl(transform.position, ShownHeight * 0.7f, new Color(0.45f, 0.3f, 0.75f, 0.7f), 0.7f);
+        }
+
+        // she lands out of her crows: the mist and wisps gather where she stands again
+        void FlockLand(Vector3 feet, float height)
+        {
+            Vector3 mid = feet + new Vector3(0f, height * 0.5f, 0f);
+            Fx.Smoke(mid, ArtKit.High ? 8 : 4, MistDark, height * 0.6f, 0.7f, 0.8f, 0.1f, height * 0.2f);
+            Fx.Wisps(mid, ArtKit.High ? 6 : 3, WispViolet, height * 0.3f, 0.5f, 0.7f, 0.7f, 0.12f);
+            Fx.Swirl(feet, height * 0.6f, new Color(0.45f, 0.3f, 0.75f, 0.6f), 0.6f);
         }
 
         void FlockReset()
         {
-            flockOn = false; flockK = 0f; flockT = 0f;
+            flockOn = false; flockK = 0f; flockT = 0f; mistT = wispT2 = featherT = 0f;
             if (crowT != null && flockShown) for (int i = 0; i < crowN; i++) crowT[i].gameObject.SetActive(false);
             flockShown = false;
         }

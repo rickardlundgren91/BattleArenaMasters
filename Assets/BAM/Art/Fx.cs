@@ -1499,6 +1499,13 @@ namespace BAM.Art
                 case ProjKind.RavnaFlock:
                 case ProjKind.SkrallStrike:
                     SpecialHit((int)(k == ProjKind.RagnLeap ? HeroId.Ragn : k == ProjKind.RavnaFlock ? HeroId.Ravna : HeroId.Skrall), p, 1f); // stand-ins until their own pictures
+                    if (k == ProjKind.RavnaFlock)
+                    {
+                        // the crows tear through: a gust of their dark violet mist, wisps and torn feathers on the one hit (BodyFlock.cs)
+                        Smoke(p, 3, new Color32(34, 26, 52, 160), 0.7f, 0.9f, 0.6f, 0.2f, 0.15f);
+                        Wisps(p, 3, new Color32(150, 100, 235, 210), 0.35f, 1f, 0.5f, 0.5f, 0.1f);
+                        Leaves(p, 5, new Color32(28, 24, 34, 235), 0.16f, 1.6f, 0.6f, 0.4f, 0.1f);
+                    }
                     break;
                 case ProjKind.BramBolt: // Bram's thrown Hammer Line; his spark star where it hits (O-095)
                     Pow(p, 1, heroMain[(int)HeroId.Bram], 0.7f, 0.12f);
