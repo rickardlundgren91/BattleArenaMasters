@@ -29,24 +29,20 @@ namespace BAM.Game
     ///    the SPECIAL and lands with a ring in its rarity's colour (it was: the cards vanished and a small icon was there);
     ///  - the cards close with a short fade, and a finger already on its way still takes its card (they blinked shut, and the
     ///    tap fell through to the field);
-    ///  - the ITEM button is gold and swells a ring when a choice arrives; the tutorial's gold arrow bounces over it until the
-    ///    player has used it twice;
-    ///  - the two places show from the match's start as empty rings with the level that fills them ("LV 6", "LV 10"), so the
-    ///    player sees that items come and when (ItemSlotsFromStart: one switch, Rickard's yes or no is asked for).
+    ///  - the ITEM button is gold and swells a ring when a choice arrives; the tutorial's gold arrow bounces over the first
+    ///    item's button until the player has used the button twice.
     /// The score sheet lists every hero's items (HudScore.cs).
+    /// Not kept: the two item places as empty rings with their level ("LV 6", "LV 10") from the match's start. Rickard saw the
+    /// picture and said no (2026-11-16, a card: "Nej, som förut"), so nothing about items shows by the SPECIAL before the first
+    /// choice arrives.
     /// </summary>
     sealed partial class Hud
     {
-        /// <summary>The two item places show from the match's start as empty rings with their level ("LV 6", "LV 10"), and the
-        /// ITEM button sits on the place it fills. Off: nothing shows before the first choice (as it was before 2026-11-16).
-        /// On for now so Rickard sees it in the game; his yes or no is asked for on a card in the item polish thread.</summary>
-        internal static readonly bool ItemSlotsFromStart = true;
-
         // solid navy, as the menus' panels and the picture Rickard said yes to (bam-work/items/item-pick-mock.png). It was a 0.9
         // "glass", which in this project's linear colour space let the lane, the names and the health bars show through the words
         static readonly Color CardBody = new Color(0.047f, 0.063f, 0.165f, 1f), CardText = new Color(0.86f, 0.89f, 0.98f, 1f);
         // the ITEM button: gold with dark letters (as the menus' gold badges), so it reads as something to collect among the dark controls
-        static readonly Color ItemGold = Hex(0xf2b632), ItemGoldRim = Hex(0xffe9a8), SlotBack = new Color(0.047f, 0.063f, 0.165f, 0.55f), SlotRim = new Color(0.62f, 0.69f, 0.9f, 0.6f);
+        static readonly Color ItemGold = Hex(0xf2b632), ItemGoldRim = Hex(0xffe9a8);
         // rarity colours for the card's edge, glow and rarity word (common, rare, epic, legendary)
         static readonly Color[] RarityEdge = { Hex(0x8fb4d4), Hex(0x2fe0a0), Hex(0xd77bff), Hex(0xffc83a) };
         static readonly string[] RarityWord = { "COMMON", "RARE", "EPIC", "LEGENDARY" };
@@ -79,8 +75,7 @@ namespace BAM.Game
         const string ItemBtnPref = "bam-itembtn";
         const int ItemBtnHintTaps = 2;
 
-        readonly RectTransform[] heldRoot = new RectTransform[Unit.MaxItems], slotRoot = new RectTransform[Unit.MaxItems];
-        readonly Text[] slotText = new Text[Unit.MaxItems];
+        readonly RectTransform[] heldRoot = new RectTransform[Unit.MaxItems];
         readonly Image[] heldIcon = new Image[Unit.MaxItems], heldCd = new Image[Unit.MaxItems], heldRing = new Image[Unit.MaxItems];
         readonly EmoteButton[] heldTap = new EmoteButton[Unit.MaxItems];
         // the item icon a finger is on (-1: none) and since when: held HoldTime, it shows the item's card (HudHold.cs)
@@ -178,19 +173,6 @@ namespace BAM.Game
             }
             offerRoot.gameObject.SetActive(false);
 
-            // the empty item places (ItemSlotsFromStart): a dim round plate with a thin pale ring and the level that fills it
-            for (int i = 0; i < Unit.MaxItems; i++)
-            {
-                var s = slotRoot[i] = UiKit.NewRect("ItemSlot" + i, safe);
-                s.anchorMin = s.anchorMax = s.pivot = new Vector2(0.5f, 0.5f);
-                var back = UiKit.Fill(s, SlotBack, UiKit.Circle); back.raycastTarget = false;
-                var rim = UiKit.Fill(s, SlotRim, UiKit.CircleRing); rim.raycastTarget = false;
-                var t = slotText[i] = UiKit.Label(s, i < ItemS.OfferLevels.Length ? "LV " + ItemS.OfferLevels[i] : "", 24, TextAnchor.MiddleCenter, new Color(0.86f, 0.89f, 0.98f, 0.9f));
-                t.raycastTarget = false; t.horizontalOverflow = HorizontalWrapMode.Overflow; t.verticalOverflow = VerticalWrapMode.Overflow;
-                UiKit.AddOutline(t, 2); UiKit.Stretch(t.rectTransform);
-                s.gameObject.SetActive(false);
-            }
-
             // the ITEM button: a gold round plate with a pale rim and ITEM in dark letters over a breathing gold glow; the whole
             // 0.11 W square takes the finger (7.6 mm, as the other small match buttons)
             offerBtn = UiKit.NewRect("ItemButton", safe);
@@ -275,10 +257,7 @@ namespace BAM.Game
             ReleaseItemTouches();
             if (offerRoot != null) { offerRoot.gameObject.SetActive(false); WholeCards(); } // a match that ended in the middle of a pick
             for (int i = 0; i < Unit.MaxItems; i++)
-            {
                 if (heldRoot[i] != null) heldRoot[i].gameObject.SetActive(false);
-                if (slotRoot[i] != null) slotRoot[i].gameObject.SetActive(false);
-            }
         }
 
         void OfferTapped(int i)
@@ -402,9 +381,7 @@ namespace BAM.Game
             float W = SafeW, rb = W * 0.055f, ri = W * 0.042f;
             Vector3 c = SpecialCentre();
             // in the next item's place: level with the SPECIAL's middle while no item is held, in the lower slot under the first one
-            // (on the place itself when the empty places show)
-            Vector3 at = ItemSlotsFromStart ? ItemSlotPos(p.ItemCount, W)
-                : new Vector3(c.x + InnerSide * (SpecialButton.Radius + W * 0.03f + rb), p.ItemCount == 0 ? c.y : c.y - 1.15f * ri, 0f);
+            var at = new Vector3(c.x + InnerSide * (SpecialButton.Radius + W * 0.03f + rb), p.ItemCount == 0 ? c.y : c.y - 1.15f * ri, 0f);
             offerBtn.localPosition = at;
             offerBtn.sizeDelta = new Vector2(2f * rb, 2f * rb);
             offerBtnLabel.fontSize = Mathf.RoundToInt(W * 0.03f);
@@ -420,8 +397,9 @@ namespace BAM.Game
                 offerBtnBurst.rectTransform.localScale = Vector3.one * (1f + 1.1f * Ease(b));
                 offerBtnBurst.color = new Color(1f, 0.86f, 0.45f, 0.9f * (1f - b));
             }
-            // the first times: the gold arrow of the tutorial points at it (until the player has used the button twice)
-            Arrow(itemArrow, itemArrowGroup, itemBtnHint, new Vector2(at.x, at.y - rb * 0.5f), rb * 1.5f);
+            // the first times: the gold arrow of the tutorial points at it (until the player has used the button twice). Only over
+            // the first item's button: over the second one, in the lower place, the arrow would lie on the first item's icon
+            Arrow(itemArrow, itemArrowGroup, itemBtnHint && p.ItemCount == 0, new Vector2(at.x, at.y - rb * 0.5f), rb * 1.5f);
         }
 
         // the SPECIAL's middle in the safe area's local space
@@ -649,19 +627,6 @@ namespace BAM.Game
                 pickRing.rectTransform.localPosition = ItemSlotPos(pickBurstSlot, W);
                 pickRing.rectTransform.sizeDelta = new Vector2(s, s);
                 pickRing.color = new Color(pickBurstColor.r, pickBurstColor.g, pickBurstColor.b, 0.9f * (1f - b));
-            }
-            // the empty places (ItemSlotsFromStart): a ring with the level that fills it, until the ITEM button or the item takes the
-            // place (it stays under the cards' choice and as the flying icon's target)
-            for (int i = 0; i < Unit.MaxItems; i++)
-            {
-                bool empty = ItemSlotsFromStart && live && i >= p.ItemCount && !(offerBtn.gameObject.activeSelf && i == p.ItemCount);
-                if (slotRoot[i].gameObject.activeSelf != empty) slotRoot[i].gameObject.SetActive(empty);
-                if (!empty) continue;
-                slotRoot[i].localPosition = ItemSlotPos(i, W);
-                slotRoot[i].sizeDelta = new Vector2(2f * r, 2f * r);
-                bool locked = i < ItemS.OfferLevels.Length && m.Level < ItemS.OfferLevels[i];
-                if (slotText[i].enabled != locked) slotText[i].enabled = locked;
-                if (locked) slotText[i].fontSize = Mathf.RoundToInt(W * 0.026f);
             }
         }
 
