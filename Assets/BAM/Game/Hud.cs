@@ -303,7 +303,7 @@ namespace BAM.Game
             HoldFrame(hidden);
             HeroTestFrame(hidden);
             Special();
-            FocusFrame(hidden); // the FOCUS dots under SPECIAL (HudFocus.cs)
+            FocusFrame(hidden); // the FOCUS dots under SPECIAL; big under the guide card on the island (HudFocus.cs)
             Aim(hidden);
             Hint(hidden);
             TutMarks(hidden); // the guided match's gold ring, boost pad and bouncing arrows (HudTutorial.cs)

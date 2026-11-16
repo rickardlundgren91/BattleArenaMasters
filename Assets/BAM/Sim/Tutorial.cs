@@ -70,7 +70,8 @@ namespace BAM.Sim
         public int TowerSay;
         /// <summary>StepBlink: Knut's anchor has done its part and the line asks for BLINK now (the arrow over its button).</summary>
         public bool BlinkAsked => Hooked;
-        /// <summary>The island's Focus step shows its point now (all three in reach, the line names FOCUS): the arrow over the dots.</summary>
+        /// <summary>The island's Focus step shows its point now (all three in reach, the line names FOCUS): the screen brings
+        /// the FOCUS chip up, big under the guide card, and lights a gold ring round it (HudFocus.cs).</summary>
         public bool FocusShown => Island && Step == IslandFocus && Part == 1 && Line != null;
 
         internal float T, Shown, LastCharge, BurstAt = -99, TowerHitAt = -99, GuardDir = 1, KnutDownAt = -1, BlinkAt = -1, PressAt = -99, HookAt = -1, WaveAt = -99;

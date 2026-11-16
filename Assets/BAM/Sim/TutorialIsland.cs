@@ -276,7 +276,8 @@ namespace BAM.Sim
             }
             else if (show && st.Point == 2 && tu.Leader != null && tu.Leader.Alive) at = tu.Leader;
             tu.PointAt = at;
-            // the ring's own arrow: not while another thing is pointed at (a minion; the FOCUS dots in the Focus step's second part)
+            // the ring's own arrow: not while another thing is to be looked at (a minion with the arrow over it; the FOCUS chip,
+            // lit under the guide card in the Focus step's second part)
             tu.ArrowOnRing = tu.RingOn && st.Point != 2 && at == null && !(st.Focus && tu.Part == 1);
         }
     }

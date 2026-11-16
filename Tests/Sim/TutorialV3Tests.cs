@@ -107,8 +107,8 @@ namespace BAM.Sim
             Check(part2, "TUT3: with the minion down the line turns to hiding in the grass yourself");
             Check(tu.Step == Tutorial.IslandFocus && tu.Lesson == 3 && m.Map.InGrass(p.X, p.Y), $"TUT3: standing hidden in the grass ends lesson 3 (step {tu.Step}, lesson {tu.Lesson})");
 
-            // lesson 4, Focus: "stand in the ring" until all three are in her reach, then the line names FOCUS (the arrow over the
-            // dots, not over the ring) while her hits land on them at random
+            // lesson 4, Focus: "stand in the ring" until all three are in her reach, then the line names FOCUS (the ring's arrow
+            // goes: the FOCUS chip, big under the guide card, is what to look at) while her hits land on them at random
             bool focusFirst = false, focusSecond = false, focusArrows = true; string focusLine1 = null;
             t0 = m.Time;
             while (m.Time - t0 < 40f && tu.Step == Tutorial.IslandFocus)
@@ -120,7 +120,7 @@ namespace BAM.Sim
                 if (tu.FocusShown) { focusSecond = tu.Line.Contains("FOCUS") && m.FocusTargets(p) >= 3; if (tu.ArrowOnRing) focusArrows = false; }
             }
             Check(focusFirst && focusLine1 != null && !focusLine1.Contains("FOCUS"), $"TUT3: the Focus lesson first sends Tyra into the ring (line '{focusLine1}')");
-            Check(focusSecond && focusArrows, "TUT3: with all three in reach the line names FOCUS and the arrow leaves the ring for the dots");
+            Check(focusSecond && focusArrows, "TUT3: with all three in reach the line names FOCUS and the ring's arrow goes (the FOCUS chip is what to look at)");
             Check(tu.Step == Tutorial.IslandTarget && tu.Lesson == 4, $"TUT3: watching her hits spread is lesson 4 (step {tu.Step}, lesson {tu.Lesson})");
 
             // lesson 5, one target: the leader cannot be hurt until she stands in the gold ring with only him in reach; the line

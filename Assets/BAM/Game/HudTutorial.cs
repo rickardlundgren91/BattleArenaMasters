@@ -16,7 +16,8 @@ namespace BAM.Game
     ///   says a word of praise ("NICE!").
     /// - One mark at a time for where to look: a gold ring on the ground with a bouncing arrow, an arrow over a unit, a soft
     ///   trail of gold lights up the lane (the arena), an arrow over the joystick until it is first used, over SPECIAL only when
-    ///   a tap would hit, over BLINK when it is asked for and over the FOCUS dots (HudFocus.cs).
+    ///   a tap would hit and over BLINK when it is asked for. The FOCUS chip needs none: for its lesson it comes up big
+    ///   right under the card, with a gold ring round it (HudFocus.cs).
     /// - The drag lesson (Rickard 2026-11-16: "Sen har vi inte lärt spelaren att man kan dra skillen"): the drag is shown, not
     ///   only named. While it is asked for and no finger is on the button, a finger's dot lands on SPECIAL, slides out the way
     ///   Fenn stands and lets go, over and over, and the aim line shows from Tyra through him as it would for a real finger
