@@ -594,9 +594,10 @@ namespace BAM.Art
             rv.Worn = new[]
             {
                 new WornDef { Model = "v2_ravna_mantle", Bone = Chest, From = LArm, To = RArm, Height = 0.55f, At = new Vector3(0f, 0.03f, -0.05f), Flat = 0.8f, Sway = 20f },
-                // the mask a fifth bigger, its bottom a little lower so it still sits over the face (Rickard 2026-11-16 "hennes mask är lite
-                // för liten"; was 0.16 high at 0.06)
-                new WornDef { Model = "v2_ravna_mask", Bone = Head, From = Head, Height = 0.19f, At = new Vector3(0f, 0.05f, 0f) },
+                // the crow-skull mask on the BACK of her head, beak to the back, bigger (Rickard 2026-11-16 "ravnas mask skulle kunna sitta på
+                // baksidan av huvudet så blir det naturligt större också"; was on her face, 0.19 high at 0.05): turned half round, its middle
+                // 0.06 behind the head joint and pressed flatter so its front edge stops about at the crown and the face stays free
+                new WornDef { Model = "v2_ravna_mask", Bone = Head, From = Head, Height = 0.22f, At = new Vector3(0f, 0.05f, -0.06f), Yaw = 180f, Flat = 0.7f },
                 // the crow on top of her left shoulder, between the neck and the shoulder ball, feet in the mantle's feathers: at x -0.015
                 // (out past the shoulder ball) and 0.04 up it stood outside her on the mantle's edge (Rickard 2026-11-16 "Fågeln utanför")
                 new WornDef { Model = "v2_ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = LArm, Height = 0.1f, At = new Vector3(0.035f, 0.025f, -0.01f) },
