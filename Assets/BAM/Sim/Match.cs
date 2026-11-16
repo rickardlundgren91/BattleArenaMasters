@@ -491,7 +491,7 @@ namespace BAM.Sim
             }
         }
 
-        float PacingWaveMult() => Tut != null ? 1 : Time >= 330 ? 0.7f : Time >= 210 ? 0.85f : 1;
+        float PacingWaveMult() => Tut != null ? 1 : (Time >= 330 ? 0.7f : Time >= 210 ? 0.85f : 1) / (Time >= Rules.LateWaveStart ? Rules.LateWaveRate : 1);
         float PacingMinionTowerMult() => Tut != null ? 1 : Time >= 330 ? 1.4f : Time >= 270 ? 1.2f : 1;
 
         // ---------- what a team sees ----------

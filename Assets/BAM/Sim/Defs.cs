@@ -209,6 +209,9 @@ namespace BAM.Sim
         public const float Countdown = 5;          // the match clock runs from -5 to 0 before play
         public const float StartSpeedTime = 3, StartSpeedPct = 0.4f; // every hero runs +40 % for the first 3 s (was +100 % for 5 s; Rickard 2026-10-29: too much)
         public const float WaveFirst = 3, WavePeriod = 16, WaveStagger = 0.2f;
+        // long matches (Rickard 2026-11-16: "vid längre games, 5 min, öka minions spawn rate, testa 50%"): from 5:00 on the match clock
+        // the waves come LateWaveRate times as often, on top of the 3:30 and 5:30 pacing steps (Match.PacingWaveMult)
+        public const float LateWaveStart = 300, LateWaveRate = 1.5f;
         public const float SecondsPerLevel = 16;
         public const int MaxLevel = 12;
         public const float RespawnBase = 10, RespawnPerDeath = 1, RespawnInvulnerable = 4; // base 8 -> 10 (Cajsa's testers 2026-11-04: "motståndaren respawnar för fort"; Rickard card)
