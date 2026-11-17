@@ -13,9 +13,9 @@ namespace BAM.Art
     // her as her body returns (the puff and caw are MatchViews' FlockEnd). Nothing changes in the rules: this is only the look.
     sealed partial class BodyView
     {
-        const int FlockMax = 8;
+        const int FlockMax = 22, FlockLow = 14; // Rickard 2026-11-17 "tätare och större flock" (was 8 / 6)
         const float FlockGrow = 0.14f, FlockShrink = 0.18f;
-        const float CrowSize = 0.3f;   // a crow's longest side over her height
+        const float CrowSize = 0.27f;  // a crow's longest side over her height (0.3 with 8 crows; a little smaller now there are many)
         const float CrowPitch = -45f;  // the perched model stands about 55 degrees up from tail to head: this lays it nearly flat, beak first and a touch down
 
         Transform[] crowT, crowM;      // each crow's place (turns with the flight) and its mesh under it (the wing beat)
@@ -58,7 +58,7 @@ namespace BAM.Art
             crowCentre = mesh.bounds.center;
             Quaternion lay = Quaternion.Euler(CrowPitch, 180f, 0f);
 
-            crowN = ArtKit.High ? FlockMax : 6;
+            crowN = ArtKit.High ? FlockMax : FlockLow;
             crowT = new Transform[crowN]; crowM = new Transform[crowN]; crowR = new MeshRenderer[crowN];
             crowA = new float[crowN]; crowRad = new float[crowN]; crowH = new float[crowN]; crowSpin = new float[crowN]; crowPh = new float[crowN];
             for (int i = 0; i < crowN; i++)
@@ -79,8 +79,8 @@ namespace BAM.Art
                 crowR[i] = r;
                 // a loose cloud: evenly round her, each at its own distance, height, speed and wing beat
                 crowA[i] = i * Mathf.PI * 2f / crowN + Random.value * 0.5f;
-                crowRad[i] = def.Height * (0.22f + 0.2f * Random.value);
-                crowH[i] = def.Height * (0.3f + 0.5f * ((i * 0.618f) % 1f));
+                crowRad[i] = def.Height * (0.12f + 0.6f * Mathf.Sqrt(Random.value)); // a filled cloud up to 0.72 of her height out, not a ring
+                crowH[i] = def.Height * (0.15f + 0.95f * ((i * 0.618f) % 1f));
                 crowSpin[i] = (i % 2 == 0 ? 1f : -1f) * (1.6f + 0.9f * Random.value);
                 crowPh[i] = Random.value * 10f;
                 go.SetActive(false);
@@ -141,8 +141,8 @@ namespace BAM.Art
                 {
                     mistT = ArtKit.High ? 0.035f : 0.07f;
                     // the mist: big soft puffs round the flock and a little behind it, so it leaves a trail along the path
-                    Vector3 at = mid + back * (ShownHeight * 0.25f) + new Vector3((Random.value - 0.5f) * ShownHeight * 0.6f, (Random.value - 0.5f) * ShownHeight * 0.4f, (Random.value - 0.5f) * ShownHeight * 0.6f);
-                    Fx.Smoke(at, 1, MistDark, ShownHeight * (0.55f + 0.35f * Random.value), 0.15f, 0.9f, 0.08f, 0.1f);
+                    Vector3 at = mid + back * (ShownHeight * 0.25f) + new Vector3((Random.value - 0.5f) * ShownHeight * 1.1f, (Random.value - 0.5f) * ShownHeight * 0.6f, (Random.value - 0.5f) * ShownHeight * 1.3f);
+                    Fx.Smoke(at, 1, MistDark, ShownHeight * (0.7f + 0.45f * Random.value), 0.15f, 0.9f, 0.08f, 0.1f);
                     if (Random.value < 0.5f) Fx.Smoke(mid + back * (ShownHeight * 0.1f), 1, MistViolet, ShownHeight * 0.45f, 0.25f, 0.6f, 0.05f, ShownHeight * 0.2f);
                 }
                 if ((wispT2 -= dt) <= 0f)
