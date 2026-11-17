@@ -66,7 +66,7 @@ namespace BAM.Online.UI
             catch (System.Exception e) { Debug.LogWarning("[BAM.Online] " + what + ": " + e); }
         }
 
-        // "+25 Rating", "-10 Rating", "+0 Rating"; a win against Easy or Normal bots over their cap: "Max Rating from Easy bots"
+        // "+25 Rating", "-10 Rating", "+0 Rating"; a win against Easy, Normal or Hard bots over their cap: "Max Rating from Easy bots"
         static string RatingText()
         {
             int r = Progress.LastRating;

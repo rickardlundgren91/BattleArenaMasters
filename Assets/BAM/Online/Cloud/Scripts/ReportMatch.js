@@ -8,7 +8,8 @@
 //
 // Rating by opponent (Rickard 2026-10-29, "20 matcher till Rift"): Easy +15, Normal +35, Hard +75 / -25, Ultra +100 / -30 (2026-10-31), real players +150 / -50.
 // Easy and Normal never take Rating away, and stop giving any at 300 and 700 (Rift and Vanguard reached), so grinding easy bots
-// cannot reach the top.
+// cannot reach the top. Hard stops giving Rating at 4500 too (Rickard 2026-11-17: "Efter 4,5k rating [gäller] bara ultras
+// bottar"): above it only Ultra bots and real players raise it; a loss against Hard still costs.
 // XP and level count every match as before. Rating never goes under 0. Season 2 started everyone's Rating again from 0.
 // A match against real players ("vs", the online match's seed, and the player's team) gives the player Rating only once a
 // player of the OTHER team has reported the same match with the opposite result: each side writes what it reported in private
@@ -26,7 +27,7 @@ const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
 
 // keep equal to Progress.cs
 const MAX_LEVEL = 30, XP_WIN = 100, XP_LOSS = 60, XP_KILL = 5, XP_FIGHT_MAX = 60, XP_FIRST_WIN = 50;
-const RATING = { Easy: { win: 15, loss: 0, cap: 300 }, Normal: { win: 35, loss: 0, cap: 700 }, Hard: { win: 75, loss: -25, cap: 0 }, Ultra: { win: 100, loss: -30, cap: 0 }, Players: { win: 150, loss: -50, cap: 0 } };
+const RATING = { Easy: { win: 15, loss: 0, cap: 300 }, Normal: { win: 35, loss: 0, cap: 700 }, Hard: { win: 75, loss: -25, cap: 4500 }, Ultra: { win: 100, loss: -30, cap: 0 }, Players: { win: 150, loss: -50, cap: 0 } };
 const SEASON = 2;
 // MAX_AGE 7 -> 30 days (bug review 2026-11-02 nr 15): the phone counts offline matches at once, and a player offline over a week
 // lost level at the first sync when the server refused the older ones
