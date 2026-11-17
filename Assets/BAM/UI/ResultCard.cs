@@ -42,7 +42,7 @@ namespace BAM.UI
         static RawImage resBigPic;
         static Button resAgain, resHome;
         static CanvasGroup resAgainGroup, resHomeGroup;
-        static Image resAgainShadow, resHomeShadow, resHomeEdge, resAgainShine;
+        static Image resAgainShadow, resHomeShadow, resHomeEdge, resAgainShine, resAgainSweep;
         static Text resAgainText, resHomeText;
         static CanvasGroup resFade;
         // the account XP under the table or the small card (online builds; Speltest HudV3 drawResult's Progression lines)
@@ -248,6 +248,16 @@ namespace BAM.UI
             resTip.resizeTextForBestFit = true;
 
             resAgain = ResButton("PLAY AGAIN", true, RestartMatch, out resAgainShadow, out resAgainText, out resAgainShine);
+            // the same light band that sweeps over Home's PLAY (HomeScreen BuildPlay): clipped to the face, under the label.
+            // Rickard 17 Nov: "Sån stim på knappen ska det va i slutet av matchen också"
+            var againFace = (Image)resAgain.targetGraphic;
+            againFace.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+            resAgainSweep = Pic(againFace.rectTransform, "Sweep", HomeArt.Shine, Color.clear);
+            resAgainSweep.raycastTarget = false;
+            resAgainSweep.rectTransform.SetSiblingIndex(resAgainShine.rectTransform.GetSiblingIndex() + 1);
+            resAgainSweep.rectTransform.anchorMin = resAgainSweep.rectTransform.anchorMax = resAgainSweep.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            resAgainSweep.rectTransform.localRotation = Quaternion.Euler(0, 0, -31);
+            resAgainSweep.enabled = false;
             resHome = ResButton("HOME", false, GoToMenu, out resHomeShadow, out resHomeText, out resHomeEdge);
             resAgainGroup = resAgain.gameObject.AddComponent<CanvasGroup>();
             resHomeGroup = resHome.gameObject.AddComponent<CanvasGroup>();
@@ -471,6 +481,7 @@ namespace BAM.UI
             resAgainShine.rectTransform.offsetMin = new Vector2(3, -3 - H * 0.065f * 0.42f);
             resAgainShine.rectTransform.offsetMax = new Vector2(-3, -3);
             Radius(resAgainShine, H * 0.065f * 0.25f);
+            resAgainSweep.rectTransform.sizeDelta = new Vector2(H * 0.065f * 0.75f, H * 0.065f * 1.6f);
             bool again = resAgain.gameObject.activeSelf;
             if (again) LayoutButton(resHome, resHomeShadow, resHomeText, W * 0.1f, H * 0.82f, W * 0.8f, H * 0.055f);
             else LayoutButton(resHome, resHomeShadow, resHomeText, W * 0.1f, H * 0.74f, W * 0.8f, H * 0.065f);
@@ -632,9 +643,24 @@ namespace BAM.UI
                 float a = ready ? Mathf.Clamp01(0.45f + 0.55f * (since - ResultArm) / 0.15f) : 0.45f;
                 Arm(resAgainGroup, ready, a);
                 Arm(resHomeGroup, ready, a);
+                Sweep(since);
                 var p = resCard.anchoredPosition;
                 float H = resBody.rect.height, top = ResCardTop(H) + (1 - k) * H * 0.03f;
                 if (Mathf.Abs(p.y + top) > 0.01f) { p.y = -top; resCard.anchoredPosition = p; }
+            }
+
+            // Home PLAY's shine (HomeScreen.cs, the PLAY part of the animator): a 0.45 s pass, brighter the first time (when the
+            // buttons wake), then a soft one every 4 s
+            static void Sweep(float since)
+            {
+                if (resAgainSweep == null || !resAgain.gameObject.activeInHierarchy) return;
+                float s = since - ResultArm, st = s < 0 ? -1 : s < 0.45f ? s / 0.45f : (s % 4f < 0.45f ? (s % 4f) / 0.45f : -1);
+                if (st < 0) { if (resAgainSweep.enabled) resAgainSweep.enabled = false; return; }
+                resAgainSweep.enabled = true;
+                var face = ((Image)resAgain.targetGraphic).rectTransform.rect;
+                float bw = resAgainSweep.rectTransform.sizeDelta.x;
+                resAgainSweep.rectTransform.anchoredPosition = new Vector2(-face.width / 2 - bw * 1.5f + (face.width + bw * 3) * st, 0);
+                resAgainSweep.color = new Color(1, 1, 1, (s < 0.45f ? 0.55f : 0.28f) * (1 - Mathf.Abs(st - 0.5f) * 1.2f));
             }
 
             static void Arm(CanvasGroup g, bool ready, float alpha)
