@@ -393,6 +393,7 @@ namespace BAM.Sim
                 DotTick(u, dt);
                 for (int k = u.StCount - 1; k >= 0; k--)
                 {
+                    if (u.Sts[k].Type == St.HealOverTime && (u.Sts[k].Amount += dt) >= 1f) { u.Sts[k].Amount -= 1f; Heal(u, u.Sts[k].V, u.Sts[k].By); } // First Aid (Spells.cs)
                     u.Sts[k].T -= dt;
                     if (!(u.Sts[k].T > 0) || (u.Sts[k].Type == St.Shield && u.Sts[k].Amount <= 0))
                     {

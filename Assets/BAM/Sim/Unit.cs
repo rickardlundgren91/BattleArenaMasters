@@ -15,6 +15,8 @@ namespace BAM.Sim
         TiktaMark, // Tikta 2.0 Deathmark: By = the Tikta whose next Needle Storm needle on this hero hits harder
         QuarryMark, // the Quarry Mark item (Items.cs): By = the marker; the next hit from another of its team hits harder
         Veil,       // Fenn's Veil (FennS.Veil, Omega's Ignus Fatuus from ABC2): no enemy sees him until he attacks or it runs out
+        HealOverTime, // the First Aid kit: V health every second while it lasts, Amount counts to the next tick (Spells.cs)
+        Reflect,    // the Heavy Bladearmor battle spell: V of the damage a hit does to this hero goes back to the hitter (Spells.cs)
     }
 
     public struct Status
@@ -201,6 +203,8 @@ namespace BAM.Sim
                         case St.Burn: if (Sts[i].Amount > 0) f |= StatusFlags.Burning; break;
                         case St.Poison: f |= StatusFlags.Poisoned; break;
                         case St.TiktaMark: f |= StatusFlags.Marked; break;
+                        case St.Invulnerable: if (Sts[i].V == SpellDefs.ImmuneTag) f |= StatusFlags.Immune; break;
+                        case St.Reflect: f |= StatusFlags.Reflecting; break;
                     }
                 }
                 if (KuggRooted) f |= StatusFlags.Rooted; // Kugg's Anchor shows as rooted (Hero7.cs)

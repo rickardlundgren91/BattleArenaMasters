@@ -77,6 +77,7 @@ namespace BAM.Sim
         WarnCircle = 4, // a red warning circle
         FeatherTrail = 5, // Tyra's bolt's wind and feathers (a strip that slows enemies, TyraS.Trail*)
         Bramble = 6,      // Nässla's Thorn Thicket: a circle that slows and poisons enemies and heals allies (NasslaS)
+        FirstAid = 7,     // the First Aid spell's kit on the ground: the first hero of its team to step on it heals (Spells.cs)
     }
 
     [Flags]
@@ -94,6 +95,8 @@ namespace BAM.Sim
         Revealed = 1 << 8,
         Illusion = 1 << 9,     // Fenn's clone (only his own team is told)
         Marked = 1 << 10,      // Tikta's Deathmark is on this hero
+        Immune = 1 << 11,      // the Immune battle spell: no damage, no control
+        Reflecting = 1 << 12,  // the Heavy Bladearmor battle spell: hits on this hero bounce back
     }
 
     /// <summary>Which arena a match is played on. Runes: the rune-road arena (BAM_OriginalArena_v1_2). Grove: the second map
@@ -118,7 +121,7 @@ namespace BAM.Sim
     }
 
     /// <summary>The battle spell a hero takes into the match (old SimSpells.cs): one extra button beside the SPECIAL.</summary>
-    public enum SpellId : byte { None = 0, Blink = 1, Recall = 2, Shield = 3, Haste = 4, Sprint = 5 }
+    public enum SpellId : byte { None = 0, Blink = 1, Recall = 2, Shield = 3, Haste = 4, Sprint = 5, FirstAid = 6, Immune = 7, Revive = 8, Fury = 9, Bladearmor = 10 }
     /// <summary>A team signal from the emote wheel (Signals.cs).</summary>
     public enum TeamSignal : byte { None = 0, Attack = 1, Defend = 2 }
 }

@@ -129,6 +129,7 @@ namespace BAM.Game
         void SpellDown(Vector2 at)
         {
             if (!SpellShown || m.SpellLocked(m.Player)) return; // an anchored Kugg's Blink or Recall waits (Spells.SpellLocked)
+            if (SpellDefs.Passive(m.Player.Spell)) return; // Revive and Fury work by themselves: the button only shows them
             if (m.Player.Spell != SpellId.Blink) { SpellPress(); return; }
             spellAiming = true; spellMoved = false; spellOverCancel = false; spellFrom = spellFinger = at; // Blink: tap = the way you move, drag = aim
         }
@@ -356,6 +357,29 @@ namespace BAM.Game
                     strokes.Add(new[] { P(-0.95f, -0.35f), P(-0.3f, -0.35f) });
                     strokes.Add(new[] { P(-0.95f, 0.35f), P(-0.3f, 0.35f) });
                     strokes.Add(new[] { P(-0.7f, 0f), P(-0.15f, 0f) });
+                    break;
+                case SpellId.FirstAid: // a cross
+                    fills.Add(new List<Vector2> { P(-0.3f, -0.9f), P(0.3f, -0.9f), P(0.3f, -0.3f), P(0.9f, -0.3f), P(0.9f, 0.3f), P(0.3f, 0.3f), P(0.3f, 0.9f), P(-0.3f, 0.9f), P(-0.3f, 0.3f), P(-0.9f, 0.3f), P(-0.9f, -0.3f), P(-0.3f, -0.3f) });
+                    break;
+                case SpellId.Immune: // a four-point star
+                    fills.Add(new List<Vector2> { P(0f, -1f), P(0.25f, -0.25f), P(1f, 0f), P(0.25f, 0.25f), P(0f, 1f), P(-0.25f, 0.25f), P(-1f, 0f), P(-0.25f, -0.25f) });
+                    break;
+                case SpellId.Revive: // rising up from the ground
+                    fills.Add(new List<Vector2> { P(0f, -1f), P(0.75f, -0.15f), P(0.3f, -0.15f), P(0.3f, 0.55f), P(-0.3f, 0.55f), P(-0.3f, -0.15f), P(-0.75f, -0.15f) });
+                    strokes.Add(new[] { P(-0.75f, 0.88f), P(0.75f, 0.88f) });
+                    break;
+                case SpellId.Fury: // a sword
+                    strokes.Add(new[] { P(-0.55f, 0.55f), P(0.85f, -0.85f) });
+                    strokes.Add(new[] { P(-0.75f, 0.05f), P(-0.05f, 0.75f) });
+                    strokes.Add(new[] { P(-0.6f, 0.6f), P(-0.95f, 0.95f) });
+                    break;
+                case SpellId.Bladearmor: // a shield with blades
+                    fills.Add(new List<Vector2> { P(-0.6f, -0.6f), P(0.6f, -0.6f), P(0.6f, 0.08f), P(0f, 0.75f), P(-0.6f, 0.08f) });
+                    strokes.Add(new[] { P(-0.6f, -0.6f), P(-1.05f, -1.05f) });
+                    strokes.Add(new[] { P(0.6f, -0.6f), P(1.05f, -1.05f) });
+                    strokes.Add(new[] { P(-0.6f, 0.08f), P(-1.1f, 0.25f) });
+                    strokes.Add(new[] { P(0.6f, 0.08f), P(1.1f, 0.25f) });
+                    strokes.Add(new[] { P(0f, 0.75f), P(0f, 1.15f) });
                     break;
                 default: // Haste
                     fills.Add(new List<Vector2> { P(0.3f, -1f), P(-0.6f, 0.15f), P(-0.05f, 0.15f), P(-0.3f, 1f), P(0.6f, -0.2f), P(0.05f, -0.2f) });

@@ -57,6 +57,33 @@ namespace BAM.Art
                     Fx.Flash(at + up, 0.3f, 1.0f, new Color(c.r, c.g, c.b, 0.85f), 0.12f);
                     Fx.Stars(at + up, 4, c32, 0.3f, 1.2f, 0.45f, 0.8f, 0.3f);
                     break;
+                case SpellId.FirstAid:
+                    // the kit lands (its box is the zone's look, WorldViews) or is picked up: a soft red-white heal bloom
+                    Fx.Ring(at, 0.2f, 0.9f, c, 0.35f);
+                    Fx.Flash(at + up, 0.25f, 0.9f, new Color(1f, 1f, 1f, 0.8f), 0.1f);
+                    Fx.Glow(at + Vector3.up * 0.2f, 8, c32, 0.18f, 0.9f, 0.5f, 1.4f, 0.3f);
+                    break;
+                case SpellId.Immune:
+                    // a white-gold flash and a bright ring: nothing gets through for 4 s (BodyView keeps a glow on while it lasts)
+                    Fx.Flash(at + up, 0.35f, 1.3f, new Color(1f, 0.97f, 0.85f, 0.95f), 0.14f);
+                    Fx.Ring(at, 0.3f, 1.2f, c, 0.45f);
+                    Fx.Pillar(at, 0.9f, 3.5f, new Color(c.r, c.g, c.b, 0.7f), 0.35f);
+                    Fx.Stars(at + up, 6, c32, 0.3f, 1.6f, 0.5f, 0.9f, 0.3f);
+                    break;
+                case SpellId.Revive:
+                    // a phoenix flare where the hero stands up again
+                    Fx.Pillar(at, 1.4f, 6f, c, 0.5f);
+                    Fx.Pillar(at, 0.6f, 6f, Color.white, 0.35f);
+                    Fx.Flash(at + up, 0.4f, 1.6f, new Color(1f, 0.9f, 0.75f, 0.95f), 0.14f);
+                    Fx.Ring(at, 0.3f, 1.6f, c, 0.5f);
+                    Fx.Sparks(at + up, 18, c32, 0.12f, 5f, 0.35f, 0.8f, 0.3f);
+                    break;
+                case SpellId.Bladearmor:
+                    // steel: a hard white pop and sparks thrown off the armour
+                    Fx.Flash(at + up, 0.25f, 1.0f, new Color(0.9f, 0.95f, 1f, 0.9f), 0.1f);
+                    Fx.Ring(at, 0.2f, 1.0f, c, 0.35f);
+                    Fx.Sparks(at + up, 16, c32, 0.1f, 6f, 0.25f, 0.6f, 0.2f);
+                    break;
                 case SpellId.Haste:
                 case SpellId.Sprint:
                     // the burst as the speed kicks in: a white pop, a wind ring blown out flat, streaks flung round and a dust ring

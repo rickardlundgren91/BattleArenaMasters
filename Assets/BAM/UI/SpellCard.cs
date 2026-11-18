@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace BAM.UI
 {
     // The BATTLE SPELL card on the hero page (old MenuSpell.cs SpellPicker): BATTLE SPELL in small dim letters, one chip per
-    // spell (now five: SpellDefs.All) with the spell's glyph in its colour and its name, the chosen one mint with a mint edge,
+    // spell (ten since 2026-11-18, two rows of five: SpellDefs.All) with the spell's glyph in its colour and its name, the chosen one mint with a mint edge,
     // and the chosen spell's text under them. The pick counts for every hero (BamSettings.Spell).
     public static partial class Screens
     {
@@ -18,7 +18,10 @@ namespace BAM.UI
         static Text spellDesc;
         static readonly Color ChipOn = new Color(62 / 255f, 230 / 255f, 176 / 255f, 0.22f);
 
-        const float SpellCardH = 8 * Cw + 15 * Cw + 10 * Cw;
+        // two rows of five chips since the five new spells of 2026-11-18 (one row of five before)
+        const int ChipsPerRow = 5;
+        const float ChipGap = 2 * Cw;
+        const float SpellCardH = 8 * Cw + 2 * 15 * Cw + ChipGap + 10 * Cw;
 
         static void BuildSpellCard(RectTransform content)
         {
@@ -29,18 +32,25 @@ namespace BAM.UI
             var title = Treb(card, "BATTLE SPELL", 2.6f, UiKit.TextDim);
             Stretched(title.rectTransform, 4 * Cw, 4.2f * Cw - 2.5f * Cw, 4 * Cw, 5 * Cw);
 
-            var row = UiKit.NewRect("Chips", card);
-            Stretched(row, 3 * Cw, 7 * Cw, 3 * Cw, chipH);
-            var lay = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            lay.spacing = 2 * Cw;
-            lay.childControlWidth = lay.childControlHeight = true;
-            lay.childForceExpandWidth = lay.childForceExpandHeight = true;
+            int rows = (SpellDefs.All.Length + ChipsPerRow - 1) / ChipsPerRow;
+            var rowRects = new RectTransform[rows];
+            for (int ri = 0; ri < rows; ri++)
+            {
+                var row = UiKit.NewRect("Chips" + ri, card);
+                Stretched(row, 3 * Cw, 7 * Cw + ri * (chipH + ChipGap), 3 * Cw, chipH);
+                var lay = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+                lay.spacing = 2 * Cw;
+                lay.childControlWidth = lay.childControlHeight = true;
+                lay.childForceExpandWidth = lay.childForceExpandHeight = true;
+                rowRects[ri] = row;
+            }
 
             spellChips.Clear();
+            int ci = 0;
             foreach (var id in SpellDefs.All)
             {
                 var c = new SpellChip { Id = id };
-                var chip = UiKit.NewRect(SpellDefs.Name(id), row);
+                var chip = UiKit.NewRect(SpellDefs.Name(id), rowRects[ci++ / ChipsPerRow]);
                 c.Back = Pic(chip, "Back", UiKit.Rounded, HubPicBack);
                 UiKit.Stretch(c.Back.rectTransform);
                 Radius(c.Back, 3 * Cw);
@@ -67,7 +77,7 @@ namespace BAM.UI
             spellDesc = Treb(card, "", 3.1f, HubBody);
             spellDesc.fontStyle = FontStyle.Normal;
             spellDesc.horizontalOverflow = HorizontalWrapMode.Wrap;
-            Stretched(spellDesc.rectTransform, 4 * Cw, 7 * Cw + chipH + 5 * Cw - 2.5f * Cw, 4 * Cw, 5 * Cw);
+            Stretched(spellDesc.rectTransform, 4 * Cw, 7 * Cw + rows * chipH + (rows - 1) * ChipGap + 5 * Cw - 2.5f * Cw, 4 * Cw, 5 * Cw);
             RefreshSpellCard();
         }
 
@@ -103,6 +113,10 @@ namespace BAM.UI
         // The old shapes in units of k with y down; drawn on 96 px for 2.4 k.
         static readonly Vector2[] RecallShape = { V(-1, 0), V(0, -1), V(1, 0), V(0.7f, 0), V(0.7f, 0.9f), V(-0.7f, 0.9f), V(-0.7f, 0) };
         static readonly Vector2[] ShieldShape = { V(-0.8f, -0.8f), V(0.8f, -0.8f), V(0.8f, 0.1f), V(0, 1), V(-0.8f, 0.1f) };
+        static readonly Vector2[] CrossShape = { V(-0.3f, -0.9f), V(0.3f, -0.9f), V(0.3f, -0.3f), V(0.9f, -0.3f), V(0.9f, 0.3f), V(0.3f, 0.3f), V(0.3f, 0.9f), V(-0.3f, 0.9f), V(-0.3f, 0.3f), V(-0.9f, 0.3f), V(-0.9f, -0.3f), V(-0.3f, -0.3f) };
+        static readonly Vector2[] StarShape = { V(0, -1), V(0.25f, -0.25f), V(1, 0), V(0.25f, 0.25f), V(0, 1), V(-0.25f, 0.25f), V(-1, 0), V(-0.25f, -0.25f) };
+        static readonly Vector2[] RiseShape = { V(0, -1), V(0.75f, -0.15f), V(0.3f, -0.15f), V(0.3f, 0.55f), V(-0.3f, 0.55f), V(-0.3f, -0.15f), V(-0.75f, -0.15f) };
+        static readonly Vector2[] SmallShieldShape = { V(-0.6f, -0.6f), V(0.6f, -0.6f), V(0.6f, 0.08f), V(0, 0.75f), V(-0.6f, 0.08f) };
         static readonly Vector2[] BoltShape = { V(0.3f, -1), V(-0.6f, 0.15f), V(-0.05f, 0.15f), V(-0.3f, 1), V(0.6f, -0.2f), V(0.05f, -0.2f) };
         static Vector2 V(float x, float y) => new Vector2(x, y);
 
@@ -114,7 +128,8 @@ namespace BAM.UI
             if (pic != null) return glyphs[id] = Sprite.Create(pic, new Rect(0, 0, pic.width, pic.height), new Vector2(0.5f, 0.5f), 100f);
             const int N = 96;
             const float Scale = N / 2.4f, Line = 0.28f;
-            Vector2[] poly = id == SpellId.Recall ? RecallShape : id == SpellId.Shield ? ShieldShape : id == SpellId.Haste ? BoltShape : null;
+            Vector2[] poly = id == SpellId.Recall ? RecallShape : id == SpellId.Shield ? ShieldShape : id == SpellId.Haste ? BoltShape
+                : id == SpellId.FirstAid ? CrossShape : id == SpellId.Immune ? StarShape : id == SpellId.Revive ? RiseShape : id == SpellId.Bladearmor ? SmallShieldShape : null;
             var strokes = new List<Vector2>(); // pairs: from, to
             if (id == SpellId.Blink)
                 for (int i = 0; i < 2; i++)
@@ -122,6 +137,21 @@ namespace BAM.UI
                     float o = (i - 0.5f) * 0.9f;
                     Chevron(strokes, o);
                 }
+            else if (id == SpellId.Revive) { strokes.Add(V(-0.75f, 0.88f)); strokes.Add(V(0.75f, 0.88f)); }
+            else if (id == SpellId.Fury)
+            {
+                strokes.Add(V(-0.55f, 0.55f)); strokes.Add(V(0.85f, -0.85f));
+                strokes.Add(V(-0.75f, 0.05f)); strokes.Add(V(-0.05f, 0.75f));
+                strokes.Add(V(-0.6f, 0.6f)); strokes.Add(V(-0.95f, 0.95f));
+            }
+            else if (id == SpellId.Bladearmor)
+            {
+                strokes.Add(V(-0.6f, -0.6f)); strokes.Add(V(-1.05f, -1.05f));
+                strokes.Add(V(0.6f, -0.6f)); strokes.Add(V(1.05f, -1.05f));
+                strokes.Add(V(-0.6f, 0.08f)); strokes.Add(V(-1.1f, 0.25f));
+                strokes.Add(V(0.6f, 0.08f)); strokes.Add(V(1.1f, 0.25f));
+                strokes.Add(V(0, 0.75f)); strokes.Add(V(0, 1.15f));
+            }
             else if (id == SpellId.Sprint)
             {
                 Chevron(strokes, 0.45f);

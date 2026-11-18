@@ -11,6 +11,7 @@ namespace BAM.Sim
         DotTick = 2,   // a poison tick
         NotDirect = 4, // from a hero but not a direct hit (Inferno Lane's ticks): no Queen's Instinct (Fenn's clone still comes, as the old Phantom Step)
         NoIgnite = 8,  // Blast's Chain Reaction hits: they light no burn
+        Reflected = 16, // Heavy Bladearmor's bounced damage (Spells.cs): it never bounces again
     }
 
     // Damage, death, auto attacks and shots (the old game's Sim.dealDamage, kill and SimCombat).
@@ -19,13 +20,14 @@ namespace BAM.Sim
         // ---------- statuses ----------
         static bool IsControl(St t) => t == St.Stun || t == St.Root || t == St.SlowFlat || t == St.SlowPct;
 
-        /// <summary>A hero under one of Moa's shields (not Queen's Instinct) shrugs off stuns, roots and slows.</summary>
+        /// <summary>A hero under one of Moa's shields (not Queen's Instinct) or the Immune battle spell shrugs off stuns, roots and slows.</summary>
         public bool CcImmune(Unit u)
         {
             if (u.Kind != UnitKind.Hero) return false;
             for (int i = 0; i < u.StCount; i++)
             {
                 ref var s = ref u.Sts[i];
+                if (s.Type == St.Invulnerable && s.V == SpellDefs.ImmuneTag) return true; // Immune (Spells.cs)
                 if (s.Type == St.Shield && s.Amount > 0 && !s.Queen && s.By != null && s.By.Kind == UnitKind.Hero && s.By.Hero == HeroId.Moa) return true;
             }
             return false;
@@ -129,6 +131,7 @@ namespace BAM.Sim
                 amount *= tgt.TakenMult;
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
                 amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark, Minion Skewer, Crushing Spanner, Heroes Bane (Items.cs)
+                amount *= FuryMult(att, tgt); // the Fury battle spell: +20 % on enemy heroes (Spells.cs)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult() * (Tut == null ? Rules.MinionVsTower : 1); // the old wolf counted as a minion
                 if (Tut != null) TutSawHit(src, tgt, kind); // the guided match's special lessons (Tutorial.cs)
@@ -153,6 +156,7 @@ namespace BAM.Sim
                 var t = Towers[tgt.Team]; // a hero hitting a hero under its tower draws the tower's fire
                 if (t != null && t.Alive && SimMath.Dist(t, src) <= t.UDef.Range + src.R && !TowerLocked(t)) t.Target = src;
             }
+            if ((flags & DmgFlags.Reflected) == 0) Reflect(src, tgt, amount); // Heavy Bladearmor (Spells.cs): what the hit does, shields or not
             for (int i = 0; i < tgt.StCount && amount > 0; i++)
             {
                 ref var s = ref tgt.Sts[i];
@@ -201,6 +205,7 @@ namespace BAM.Sim
             if (etw != null && etw.Alive && SimMath.Dist(u, etw) < etw.UDef.Range + u.R + 0.5f) u.TowerDeaths++;
             if (u.SpecialReady) u.ReadyDeaths++;
             u.Deaths++; u.RespawnT = RespawnTime(u); u.DiedAt = Time;
+            ReviveOnDeath(u); // the Revive battle spell (Spells.cs): back where it fell after a moment
             u.ClearStatuses(); u.Needles = 0; u.ClonePending = false; u.KnockT = 0; u.KnockPad = false; u.KnockKeg = null; u.KnockRoll = null; u.KnockFreeAt = -99;
             u.SpellChanEnd = -1; u.RevealT = 0; // a recall channel ends with the hero, and a revive starts unrevealed
             TiktaOnDeath(u); // the Deathmark she put on someone goes with her
@@ -240,7 +245,10 @@ namespace BAM.Sim
 
         void Revive(Unit u)
         {
-            u.Alive = true; u.Hp = u.MaxHp; u.X = u.PX = u.SpawnX; u.Y = u.PY = u.SpawnY;
+            u.Alive = true; u.Hp = u.MaxHp;
+            bool here = u.ReviveHere;
+            if (here) { u.ReviveHere = false; u.Hp = u.MaxHp * SpellDefs.RevivePct; u.PX = u.X; u.PY = u.Y; } // Revive (Spells.cs): where it fell
+            else { u.X = u.PX = u.SpawnX; u.Y = u.PY = u.SpawnY; }
             // nothing from the death comes back with the hero: a status put on the corpse (statuses do not tick while dead) or a reveal
             // from a shot of his that landed after he fell (full review 2026-11-09 nr 72, 76)
             u.ClearStatuses(); u.RevealT = 0;
@@ -249,6 +257,7 @@ namespace BAM.Sim
             u.AtkTimer = 0; u.RespawnT = 0; u.MoInit = false; u.SpellChanEnd = -1; u.TeleAt = -1;
             if (u.Bot != null) u.Bot.Reset(true);
             Emit(EventType.Respawn, u, null);
+            if (here) Emit(EventType.SpellCast, u, null, 0, (byte)SpellId.Revive, false, u.X, u.Y); // the view's rising flare
         }
 
         // ---------- towers ----------
@@ -436,6 +445,7 @@ namespace BAM.Sim
                     case ProjMode.Bomb: p.Done = true; BombBlast(p); break;
                     case ProjMode.FireLane: FireLaneUpdate(p); break;
                     case ProjMode.HoneyField: HoneyFieldUpdate(p); break;
+                    case ProjMode.FirstAidKit: FirstAidUpdate(p); break;
                     case ProjMode.WarnLine: case ProjMode.WarnCircle: WarnUpdate(p); break;
                     case ProjMode.ChainBlast: p.Done = true; ChainBlast(p); break;
                     case ProjMode.Slam: p.Done = true; BonkSlam(p); break;

@@ -755,6 +755,7 @@ namespace BAM.Art
             // warnings: the enemy's in strong red (that is what players dodge), our own team's in a quiet white
             baseColor = k == ZoneKind.HoneyField ? new Color(1f, 0.78f, 0.2f, 1f)
                 : k == ZoneKind.Bramble ? new Color(0.55f, 0.85f, 0.2f, 0.45f) // Nässla's thicket: a lime-green floor (her own picture comes later)
+                : k == ZoneKind.FirstAid ? new Color(1f, 0.45f, 0.45f, 0.3f) // the First Aid kit's soft red glow on the ground
                 : k == ZoneKind.FireLane ? new Color(1f, 0.45f, 0.08f, 0.35f) // a faint heat floor: the cracks and flames carry the look
                 : k == ZoneKind.FeatherTrail ? new Color(1f, 0.96f, 0.86f, 0.3f) // Tyra's wind: a pale cream floor (falkvit 2026-11-18; was mint), the feathers carry the look
                 : warn ? (t == Teams.Player ? new Color(1f, 1f, 1f, 0.6f) : new Color(1f, 0.12f, 0.1f, 1f))
@@ -787,6 +788,7 @@ namespace BAM.Art
             }
             if (k == ZoneKind.HoneyField) MakeComb();
             if (k == ZoneKind.Bramble) MakeBrambleMarks();
+            if (k == ZoneKind.FirstAid) MakeKit();
             if (k == ZoneKind.FireLane || k == ZoneKind.FeatherTrail) { capA = Child("CapStart", Shapes.ZoneCap(), mat, 0f); capB = Child("CapEnd", Shapes.ZoneCap(), mat, 0f); }
             if (k == ZoneKind.BombFuse || warn)
             {
@@ -971,6 +973,11 @@ namespace BAM.Art
             }
             Color c = baseColor; c.a = baseColor.a * a;
             mat.SetColor(ArtMaterials.BaseColor, c);
+            if (kitBox != null)
+            {
+                kitBox.localPosition = new Vector3(0f, 0.2f + Mathf.Sin(age * 3f) * 0.05f, 0f);
+                kitBox.localRotation = Quaternion.Euler(0f, age * 40f, 0f);
+            }
             if (laneMat != null) laneMat.SetColor(ArtMaterials.BaseColor, c);
             if (ringPic != null)
             {
@@ -1107,6 +1114,21 @@ namespace BAM.Art
         // Nässla's thicket (hero review 2026-11-13): the same lime floor for both teams did not say whose it was, poison or heal, and
         // nothing showed when it first stings. Now the edge is the team's colour (the enemy's red, ours blue, as the shots) and a fill
         // grows to the edge until the first tick (NasslaS.Warn), as a bomb's fuse; her own picture comes later (orders)
+        // the First Aid battle spell's kit (Spells.cs): a small white box with a red cross, bobbing and turning slowly over a red glow
+        Transform kitBox;
+        void MakeKit()
+        {
+            var cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            var white = ArtMaterials.Instance(ArtMaterials.Lit != null ? ArtMaterials.Lit : ArtMaterials.Unlit);
+            white.SetColor(ArtMaterials.BaseColor, new Color(0.96f, 0.95f, 0.92f, 1f));
+            var red = ArtMaterials.Instance(ArtMaterials.Unlit);
+            red.SetColor(ArtMaterials.BaseColor, new Color(0.9f, 0.12f, 0.12f, 1f));
+            kitBox = Child("Kit", cube, white, 0.2f);
+            kitBox.localScale = new Vector3(0.42f, 0.28f, 0.34f);
+            var a = Child("CrossA", cube, red, 0f); a.SetParent(kitBox, false); a.localPosition = new Vector3(0f, 0.52f, 0f); a.localScale = new Vector3(0.7f, 0.06f, 0.22f);
+            var b = Child("CrossB", cube, red, 0f); b.SetParent(kitBox, false); b.localPosition = new Vector3(0f, 0.52f, 0f); b.localScale = new Vector3(0.18f, 0.06f, 0.85f);
+        }
+
         void MakeBrambleMarks()
         {
             for (int i = 0; i < 3; i++)

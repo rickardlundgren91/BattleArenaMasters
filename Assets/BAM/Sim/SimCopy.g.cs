@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "6714826bcde60f71";
+            Generated = true; GeneratedHash = "f581f91e5d71a9ac";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -703,6 +703,7 @@ namespace BAM.Sim
             RegenT = __s.RegenT;
             RespawnT = __s.RespawnT;
             RevealT = __s.RevealT;
+            ReviveHere = __s.ReviveHere;
             Seat = __s.Seat;
             Serial = __s.Serial;
             Signal = __s.Signal;

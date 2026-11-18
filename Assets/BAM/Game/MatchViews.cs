@@ -983,8 +983,9 @@ namespace BAM.Game
                     {
                         ArtKit.PlaySpell((SpellId)e.Kind, Coords.World(e.X, e.Y), Coords.Of(e.A));
                         var sp = (SpellId)e.Kind;
-                        Sound(sp == SpellId.Blink ? SfxId.SpellBlink : sp == SpellId.Shield ? SfxId.SpellShield : sp == SpellId.Haste ? SfxId.SpellHaste
-                            : sp == SpellId.Sprint ? SfxId.SpellSprint : SfxId.None, e.A, 0.8f);
+                        Sound(sp == SpellId.Blink ? SfxId.SpellBlink : sp == SpellId.Shield || sp == SpellId.Immune || sp == SpellId.Bladearmor ? SfxId.SpellShield
+                            : sp == SpellId.Haste ? SfxId.SpellHaste : sp == SpellId.Sprint ? SfxId.SpellSprint : sp == SpellId.Revive ? SfxId.Respawn
+                            : sp == SpellId.FirstAid ? SfxId.UiConfirm : SfxId.None, e.A, 0.8f); // the five of 2026-11-18 borrow sounds till they get their own
                     }
                     break;
                 case EventType.SpellCancel:

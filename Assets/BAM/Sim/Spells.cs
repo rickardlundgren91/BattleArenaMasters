@@ -16,19 +16,69 @@ namespace BAM.Sim
             ShieldCd = 25f, ShieldDur = 5f, ShieldPct = 0.25f, // Shield 20 % 3 s 30 s -> 25 % 4 s 25 s (Simon 2026-11-02 "för svag"; Hard bots 3000 matches: 47.0 -> 48.7 % wins with it) -> 5 s (Rickard 2026-11-03 "25% i 5s"); no CC immunity (only Moa's shields)
             HasteCd = 30f, HasteDur = 5f, HastePct = 0.4f,
             SprintCd = 25f, SprintDur = 4f, SprintPct = 0.5f;
-        /// <summary>The four spells in the picker's order.</summary>
-        public static readonly SpellId[] All = { SpellId.Blink, SpellId.Recall, SpellId.Shield, SpellId.Haste, SpellId.Sprint };
 
-        public static string Name(SpellId s) => s == SpellId.None ? "" : s.ToString();
+        // The five of 2026-11-18 (Rickard: "lägg in potion, immune shield, ress, 20% hero dmg", then "förbandslåda att plocka upp,
+        // first aid heter skillen" and "heavy bladearmor - reflects back any damage taken from any target except towers 75%"). The
+        // effects are the old game's use items (ABC2 itemData: HealthPotion 50 %, InvincibilityPotion 4 s, RessurectionPotion 75 %,
+        // DamageOnHit 5 s), with cooldowns cut for BAM's 4:30 matches (ABC2's were 90-200 s). Bot lab 2026-11-18, 1500 Hard matches each,
+        // one team all on the spell vs random old ones: Immune 4 s/50 s won 61 % -> 3 s/60 s 56 % (Shield 54, Bladearmor 55); First Aid
+        // cd 45 s 46.5 % -> 30 s 48.9 %; Revive 50 %; Fury 60 % (Rickard's 20 %, kept).
+        /// <summary>First Aid: a kit at the caster's feet; the first hero of the team to step on it (the caster too, after
+        /// FirstAidArm s) heals FirstAidHeal of max HP over FirstAidTime s (Rickard 2026-11-18: "låt bara en buff ligga på marken ...
+        /// 40% of total hp over 7 seconds"). It lies FirstAidLife s; a new one replaces the caster's old one.</summary>
+        public const float FirstAidCd = 30f, FirstAidHeal = 0.4f, FirstAidTime = 7f, FirstAidLife = 30f, FirstAidArm = 1f, FirstAidR = 0.55f;
+        /// <summary>Immune: no damage and no stun, root or slow for ImmuneDur s, but the hero walks ImmuneSlow slower (ABC2's ale).</summary>
+        public const float ImmuneCd = 60f, ImmuneDur = 3f, ImmuneSlow = -0.3f;
+        /// <summary>Revive: works by itself. ReviveDelay s after a death the hero stands up where it fell with RevivePct of max HP
+        /// (and the usual respawn protection); then the cooldown runs.</summary>
+        public const float ReviveCd = 150f, ReviveDelay = 1.5f, RevivePct = 0.75f;
+        /// <summary>Fury: always on, +FuryPct damage to enemy heroes (and their decoys), from every kind of hit.</summary>
+        public const float FuryPct = 0.2f;
+        /// <summary>Heavy Bladearmor: for BladeDur s, BladePct of every hit's damage on the hero goes back to whoever hit (heroes,
+        /// minions, Fenn's wolf), never to a tower.</summary>
+        public const float BladeCd = 35f, BladeDur = 5f, BladePct = 0.75f;
+        /// <summary>V of the Invulnerable status Immune gives (the respawn's has 0): it also makes the hero CC immune.</summary>
+        public const float ImmuneTag = -8f;
+
+        /// <summary>Every spell in the picker's order.</summary>
+        public static readonly SpellId[] All = { SpellId.Blink, SpellId.Recall, SpellId.Shield, SpellId.Haste, SpellId.Sprint,
+            SpellId.FirstAid, SpellId.Immune, SpellId.Revive, SpellId.Fury, SpellId.Bladearmor };
+        /// <summary>A spell with no button press: Revive and Fury work by themselves (the HUD button only shows them).</summary>
+        public static bool Passive(SpellId s) => s == SpellId.Revive || s == SpellId.Fury;
+
+        public static string Name(SpellId s) => s == SpellId.None ? "" : s == SpellId.FirstAid ? "First Aid" : s.ToString();
+        static int I(float v) => (int)Math.Round(v);
         public static string Desc(SpellId s) =>
             s == SpellId.Blink ? "Dash 3.5 tiles the way you move. Cooldown " + (int)BlinkCd + " s"
             : s == SpellId.Recall ? "Channel " + (int)RecallChannel + " s to teleport to your base. Moving or damage cancels it. No cooldown."
             : s == SpellId.Shield ? "A shield of " + (int)(ShieldPct * 100) + "% max health for " + (int)ShieldDur + " s. Cooldown " + (int)ShieldCd + " s"
             : s == SpellId.Haste ? "+" + (int)(HastePct * 100) + "% attack speed for " + (int)HasteDur + " s. Cooldown " + (int)HasteCd + " s"
-            : s == SpellId.Sprint ? "+" + (int)(SprintPct * 100) + "% movement speed for " + (int)SprintDur + " s. Cooldown " + (int)SprintCd + " s" : "";
-        public static float Cooldown(SpellId s) => s == SpellId.Blink ? BlinkCd : s == SpellId.Recall ? RecallCd : s == SpellId.Shield ? ShieldCd : s == SpellId.Sprint ? SprintCd : HasteCd;
-        /// <summary>The spell's colour as 0xRRGGBB (old spellColor): Blink sky blue, Recall mint, Shield gold, Haste orange; Sprint lime.</summary>
-        public static int Color(SpellId s) => s == SpellId.Blink ? 0x8fd8ff : s == SpellId.Recall ? 0x9fffd0 : s == SpellId.Shield ? 0xffe08a : s == SpellId.Sprint ? 0xc8ff6a : 0xff9a6a;
+            : s == SpellId.Sprint ? "+" + (int)(SprintPct * 100) + "% movement speed for " + (int)SprintDur + " s. Cooldown " + (int)SprintCd + " s"
+            : s == SpellId.FirstAid ? "Drop a first aid kit. You or an ally who picks it up heals " + I(FirstAidHeal * 100) + "% max health over " + I(FirstAidTime) + " s. Cooldown " + I(FirstAidCd) + " s"
+            : s == SpellId.Immune ? "Take no damage and no stuns for " + I(ImmuneDur) + " s, but move " + I(-ImmuneSlow * 100) + "% slower. Cooldown " + I(ImmuneCd) + " s"
+            : s == SpellId.Revive ? "When you die, stand up where you fell with " + I(RevivePct * 100) + "% health. Works by itself. Cooldown " + I(ReviveCd) + " s"
+            : s == SpellId.Fury ? "+" + I(FuryPct * 100) + "% damage to heroes, all match long."
+            : s == SpellId.Bladearmor ? "Heavy Bladearmor: for " + I(BladeDur) + " s, " + I(BladePct * 100) + "% of the damage you take goes back to the attacker (not towers). Cooldown " + I(BladeCd) + " s" : "";
+        public static float Cooldown(SpellId s) => s switch
+        {
+            SpellId.Blink => BlinkCd, SpellId.Recall => RecallCd, SpellId.Shield => ShieldCd, SpellId.Sprint => SprintCd,
+            SpellId.FirstAid => FirstAidCd, SpellId.Immune => ImmuneCd, SpellId.Revive => ReviveCd, SpellId.Fury => 0f, SpellId.Bladearmor => BladeCd,
+            _ => HasteCd,
+        };
+        /// <summary>The spell's colour as 0xRRGGBB (old spellColor): Blink sky blue, Recall mint, Shield gold, Haste orange; Sprint lime;
+        /// First Aid red-cross red, Immune white-gold, Revive phoenix orange-pink, Fury crimson, Bladearmor steel.</summary>
+        public static int Color(SpellId s) => s switch
+        {
+            SpellId.Blink => 0x8fd8ff, SpellId.Recall => 0x9fffd0, SpellId.Shield => 0xffe08a, SpellId.Sprint => 0xc8ff6a,
+            SpellId.FirstAid => 0xff6b6b, SpellId.Immune => 0xfff6d0, SpellId.Revive => 0xffa070, SpellId.Fury => 0xff3c50, SpellId.Bladearmor => 0xb8c6d8,
+            _ => 0xff9a6a,
+        };
+    }
+
+    public sealed partial class Unit
+    {
+        /// <summary>Revive: this dead hero comes back where it fell (Spells.cs ReviveOnDeath), not at its base.</summary>
+        internal bool ReviveHere;
     }
 
     public sealed partial class Match
@@ -45,7 +95,8 @@ namespace BAM.Sim
         /// <summary>What every bot draws from (all difficulties, allies and enemies): never Recall (Rickard 2026-11-18: "bottar ska
         /// aldrig välja teleport som skill"). Bot analysis 2026-10-30: a bot with Recall has no way out of a lost fight and died about
         /// twice as often as one with Blink.</summary>
-        static readonly SpellId[] BotSpells = { SpellId.Blink, SpellId.Shield, SpellId.Haste, SpellId.Sprint };
+        static readonly SpellId[] BotSpells = { SpellId.Blink, SpellId.Shield, SpellId.Haste, SpellId.Sprint,
+            SpellId.FirstAid, SpellId.Immune, SpellId.Revive, SpellId.Fury, SpellId.Bladearmor };
 
         // who gets which spell at match start: the player's pick, a seeded draw for bots
         void AssignSpells()
@@ -73,6 +124,7 @@ namespace BAM.Sim
             // without St.Casting since 0.3.9, and a Blink there would move her needles' start (review 0.3.9 nr 59)
             // Nor in a jump pad's flight (Grove: a Blink in the air left the hero beside its landing spot), nor while Tikta's dragged
             // needles still leave her hand (a Blink moved their start off the red line; full review 2026-11-09 nr 78, 64)
+            if (SpellDefs.Passive(h.Spell)) return false; // Revive and Fury work by themselves
             if (!SpellReady(h) || h.IsClone || h.Has(St.Stun) || h.Has(St.Casting) || h.TeleAt >= 0 || (h.KnockPad && h.KnockT > 0) || NeedleInHand(h) || SpellLocked(h)) return false;
             float fx = h.X, fy = h.Y;
             switch (h.Spell)
@@ -95,6 +147,23 @@ namespace BAM.Sim
                     break;
                 case SpellId.Sprint:
                     AddStatus(h, St.SpeedPct, SpellDefs.SprintDur, SpellDefs.SprintPct, 0, h);
+                    break;
+                case SpellId.FirstAid:
+                {
+                    for (int i = 0; i < Projs.Count; i++) if (Projs[i].Mode == ProjMode.FirstAidKit && Projs[i].Src == h) Projs[i].Done = true; // one kit each
+                    var kit = NewProj(ProjMode.FirstAidKit, h, h.X, h.Y);
+                    kit.Radius = SpellDefs.FirstAidR; kit.Dur = SpellDefs.FirstAidLife;
+                    break;
+                }
+                case SpellId.Immune:
+                    h.RemoveAll(St.Stun); h.RemoveAll(St.Root); // nothing holds it any more (it could not be cast stunned anyway)
+                    for (int i = h.StCount - 1; i >= 0; i--) if ((h.Sts[i].Type == St.SlowPct || h.Sts[i].Type == St.SlowFlat) && h.Sts[i].V < 0) h.RemoveAt(i);
+                    AddStatus(h, St.Invulnerable, SpellDefs.ImmuneDur, SpellDefs.ImmuneTag);
+                    h.AddRaw(St.SlowPct, SpellDefs.ImmuneDur, SpellDefs.ImmuneSlow, 0, h, false); // its own slow: no control, so no Charm or immunity
+                    break;
+                case SpellId.Bladearmor:
+                    h.RemoveAll(St.Reflect);
+                    AddStatus(h, St.Reflect, SpellDefs.BladeDur, SpellDefs.BladePct, 0, h);
                     break;
                 default: // Haste: keepStatus, so a second cast only renews it
                 {
@@ -160,8 +229,57 @@ namespace BAM.Sim
                 case SpellId.Recall: if (h.Hp < h.MaxHp * 0.25f && !HurtRecently(h) && SimMath.Dist(h, h.SpawnX, h.SpawnY) > 8f) CastSpell(h); break;
                 case SpellId.Blink: if (h.Hp < h.MaxHp * 0.35f && HurtRecently(h)) CastSpell(h, SimMath.Atan2(h.SpawnY - h.Y, h.SpawnX - h.X)); break; // flee towards the base
                 case SpellId.Sprint: if (h.Hp < h.MaxHp * 0.4f && HurtRecently(h)) CastSpell(h); break; // run away (the bot walks home when this low)
+                case SpellId.FirstAid: if (h.Hp < h.MaxHp * 0.55f) CastSpell(h); break; // drops it at its feet and takes it a second later
+                case SpellId.Immune: if (h.Hp < h.MaxHp * 0.3f && HurtRecently(h)) CastSpell(h); break;
+                case SpellId.Bladearmor: if (HurtRecently(h) && EnemyHeroNear(h, 3.5f)) CastSpell(h); break;
             }
         }
+
+        // ---------- the five of 2026-11-18 ----------
+        /// <summary>Fury: +20 % on enemy heroes from a hero who has it (its wolf's and decoy's hits too).</summary>
+        float FuryMult(Unit att, Unit tgt) =>
+            att != null && att.Kind == UnitKind.Hero && att.Spell == SpellId.Fury && SpellsOn && tgt.Kind == UnitKind.Hero && tgt.Team != att.Team ? 1 + SpellDefs.FuryPct : 1;
+
+        /// <summary>Heavy Bladearmor: tgt was hit for amount by src; BladePct of it goes back to src, unless src is a tower.</summary>
+        void Reflect(Unit src, Unit tgt, float amount)
+        {
+            if (src == null || !src.Alive || src.Kind == UnitKind.Tower || src.Team == tgt.Team || tgt.Kind != UnitKind.Hero || amount <= 0) return;
+            float v = 0;
+            for (int i = 0; i < tgt.StCount; i++) if (tgt.Sts[i].Type == St.Reflect && tgt.Sts[i].T > 0) v = Math.Max(v, tgt.Sts[i].V);
+            if (v <= 0) return;
+            DealDamage(tgt, src, amount * v, DmgKind.Passive, DmgFlags.Reflected | DmgFlags.NotDirect | DmgFlags.NoIgnite);
+        }
+
+        /// <summary>Revive: called as a hero with it dies. If it is ready, the hero comes back where it fell after ReviveDelay s.</summary>
+        void ReviveOnDeath(Unit u)
+        {
+            u.ReviveHere = false;
+            if (u.Spell != SpellId.Revive || !SpellsOn || Time < u.SpellAt || u.IsClone) return;
+            u.ReviveHere = true;
+            u.RespawnT = Math.Min(u.RespawnT, SpellDefs.ReviveDelay);
+            u.SpellAt = Time + SpellDefs.ReviveCd;
+        }
+
+        /// <summary>The First Aid kit, every tick: the first living hero of its team to touch it (its dropper only after the
+        /// arming time) heals and the kit is gone. A hero at full health walks over it.</summary>
+        void FirstAidUpdate(Proj p)
+        {
+            if (p.T >= p.Dur) { p.Done = true; return; }
+            for (int i = 0; i < Heroes.Count; i++)
+            {
+                var u = Heroes[i];
+                if (!u.Alive || u.Team != p.Team || u.Hp >= u.MaxHp) continue;
+                if (u == p.Src && p.T < SpellDefs.FirstAidArm) continue;
+                if (SimMath.Dist(u, p.X, p.Y) > p.Radius + u.R) continue;
+                u.RemoveAll(St.HealOverTime); // a second kit starts over, it does not stack
+                // a hair over 7 s, so the 7th one-second tick still comes before the status runs out
+                AddStatus(u, St.HealOverTime, SpellDefs.FirstAidTime + 0.05f, u.MaxHp * SpellDefs.FirstAidHeal / SpellDefs.FirstAidTime, 0, p.Src);
+                Emit(EventType.SpellCast, u, null, 0, (byte)SpellId.FirstAid, true, p.X, p.Y); // Big = the pick-up (the view's flash)
+                p.Done = true;
+                return;
+            }
+        }
+
 
         bool HurtRecently(Unit h) => Time - h.LastHurt < 1.5f;
         bool EnemyHeroNear(Unit h, float d)

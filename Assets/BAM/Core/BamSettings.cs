@@ -240,7 +240,7 @@ namespace BAM.Core
             // Grove is CLASSIC's map until a player picks RUNES, so every tester tries it (Rickard 2026-11-13: "gör grove till standard")
             teamSize = PlayerPrefs.GetInt(Key + "teamsize", 3) == 2 ? 2 : 3;
             lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Grove), (int)BAM.Sim.MapId.Runes, (int)BAM.Sim.MapId.Plateau);
-            spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
+            spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Bladearmor);
         }
 
         // First start: Low on weak phones (little memory or few cores), else High. The player can change it in Settings.

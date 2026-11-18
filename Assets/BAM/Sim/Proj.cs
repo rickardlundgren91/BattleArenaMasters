@@ -28,6 +28,7 @@ namespace BAM.Sim
         FeatherTrail, // Tyra: the wind and feathers her bolt leaves along its path for Dur s, slowing the enemies in it (Ang, D, Radius)
         Bramble,     // Nässla: the Thorn Thicket, a circle (Radius) for Dur s that slows and poisons enemies and heals allies in it
         Strike,      // Skrall: one Thunder Judgement strike, waits -T s at its spot (a red warning circle shows it), then hits round it (Radius)
+        FirstAidKit, // the First Aid battle spell: a kit on the ground (Radius) for Dur s; the first of its team's heroes to step on it heals (Spells.cs)
     }
 
     /// <summary>
@@ -72,13 +73,13 @@ namespace BAM.Sim
         public bool IsShot => Mode <= ProjMode.NeedleLine || Mode == ProjMode.Boulder || Mode == ProjMode.Volley || Mode == ProjMode.Echo;
         /// <summary>A shot that has left the shooter's hand and should be drawn.</summary>
         public bool Flying => !Done && IsShot && T >= 0;
-        public bool IsZone => Mode == ProjMode.Bomb || Mode == ProjMode.Keg || Mode == ProjMode.FireLane || Mode == ProjMode.HoneyField || Mode == ProjMode.FeatherTrail || Mode == ProjMode.Bramble;
+        public bool IsZone => Mode == ProjMode.Bomb || Mode == ProjMode.Keg || Mode == ProjMode.FireLane || Mode == ProjMode.HoneyField || Mode == ProjMode.FeatherTrail || Mode == ProjMode.Bramble || Mode == ProjMode.FirstAidKit;
         public bool IsWarning => Mode == ProjMode.WarnLine || Mode == ProjMode.WarnCircle;
         /// <summary>The zone or warning shape: a circle when length is 0, else a strip from (X, Y) along Ang.</summary>
         public float ZoneLength => Mode == ProjMode.FireLane || Mode == ProjMode.WarnLine || Mode == ProjMode.FeatherTrail ? D : 0;
         /// <summary>Seconds a zone or warning has left.</summary>
         public float TimeLeft => Mode == ProjMode.Bomb || Mode == ProjMode.Keg ? -T : Dur - T;
-        public ZoneKind Zone => Mode == ProjMode.HoneyField ? ZoneKind.HoneyField : Mode == ProjMode.Bramble ? ZoneKind.Bramble : Mode == ProjMode.FireLane ? ZoneKind.FireLane : Mode == ProjMode.FeatherTrail ? ZoneKind.FeatherTrail
+        public ZoneKind Zone => Mode == ProjMode.HoneyField ? ZoneKind.HoneyField : Mode == ProjMode.FirstAidKit ? ZoneKind.FirstAid : Mode == ProjMode.Bramble ? ZoneKind.Bramble : Mode == ProjMode.FireLane ? ZoneKind.FireLane : Mode == ProjMode.FeatherTrail ? ZoneKind.FeatherTrail
             : Mode == ProjMode.Bomb || Mode == ProjMode.Keg ? ZoneKind.BombFuse : Mode == ProjMode.WarnLine ? ZoneKind.WarnLine : ZoneKind.WarnCircle;
 
         internal bool HasHit(Unit u)

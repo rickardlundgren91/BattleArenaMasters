@@ -447,6 +447,17 @@ namespace BAM.Art
                 if (mv.sqrMagnitude > 1e-4f) SpellFx.SpeedTrail(p, mv, SpellFx.Of(SpellId.Haste), height, ++hasteN);
             }
             lastP = p;
+            // the battle spells of 2026-11-18 (Spells.cs): Immune glows white-gold, Heavy Bladearmor throws steel sparks
+            if (Has(flags, StatusFlags.Immune))
+            {
+                Color c = SpellFx.Of(SpellId.Immune);
+                Fx.Glow(p + new Vector3(0f, height * 0.5f, 0f), 2, new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), 230), 0.2f, 0.4f, 0.5f, 0.8f, radius * 1.1f);
+            }
+            if (Has(flags, StatusFlags.Reflecting))
+            {
+                Color c = SpellFx.Of(SpellId.Bladearmor);
+                Fx.Sparks(p + new Vector3(0f, height * 0.5f, 0f), 1, new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), 255), 0.08f, 3f, 0.2f, 0.3f, 0.1f);
+            }
             if (Has(flags, StatusFlags.Slowed)) Fx.Glow(p + new Vector3(0f, 0.3f, 0f), 1, Pal.Get(Pal.Slow), 0.12f, 0.2f, 0.5f, -0.2f, radius * 0.8f);
         }
     }
