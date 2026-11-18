@@ -65,6 +65,10 @@ namespace BAM.Art
         /// in the fist's own grip, Unity's retargeted idle turned her hand so the bow lay level across her legs (ANIM-22).</summary>
         public Hold Menu;
         public int MenuSign;
+        /// <summary>Code only: the weapon's length in a match as a share of <see cref="Len"/> (0 = the same as on the menu stage). Tyra's
+        /// V2 bow 1.25 (Rickard 2026-11-18, hero design review 16 Nov: from the match camera her bow could not be seen at all); the
+        /// menu keeps Len, as he tuned it.</summary>
+        public float MatchScale;
         /// <summary>Which way the flat side of the run hold goes: 0 = as the idle votes (BAM's own pick), 1 or -1 fixed (Weapon Tuner
         /// "Walk: flip", Rickard 2026-10-30: "tyra i game norr och vänster gå blir pilbågen bakofram vänd").</summary>
         public int RunSign;
@@ -469,6 +473,7 @@ namespace BAM.Art
             // quiver on her back, slanting over her right shoulder. Her V2 rig has all its finger bones, so her fingers play the clips
             GearDef ty = g[(int)HeroId.Tyra];
             ty.Weapons[0].Model = "v2_tyra_bow";
+            ty.Weapons[0].MatchScale = 1.25f; // a quarter longer in a match, so the bow reads from the match camera (WeaponDef.MatchScale)
             ty.StillFingers = false;
             ty.Worn = new[] { new WornDef { Model = "v2_tyra_quiver", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0.03f, -0.2f, -0.08f), Turn = new Vector3(0f, 0f, -20f) } };
 
@@ -1292,14 +1297,18 @@ namespace BAM.Art
         void Place(int i)
         {
             WeaponDef W = defs[i];
-            float L = W.Len * figH, k = L / meshH[i] / handS[i];
+            float L = PlacedLen(W) * figH, k = L / meshH[i] / handS[i];
             Transform t = wT[i];
             bindP[i] = palmL[i] - handleV[i] * (W.Grip * L);
             bindS[i] = new Vector3(k, k, k);
             t.localPosition = bindP[i]; t.localRotation = bindR[i]; t.localScale = bindS[i];
             gripL[i] = new Vector3(shaftC[i].x, W.Grip * meshH[i], shaftC[i].z);
-            placedLen[i] = W.Len; placedGrip[i] = W.Grip;
+            placedLen[i] = PlacedLen(W); placedGrip[i] = W.Grip;
         }
+
+        // the length the weapon is placed at: Len, times its MatchScale away from the menu stage (OnMenu is set after the build, so
+        // the check in Tick places it again when it changes)
+        float PlacedLen(WeaponDef W) => OnMenu || W.MatchScale <= 0f ? W.Len : W.Len * W.MatchScale;
 
         // as MxOwnShield: on an anchor under the model, placed from the hand every frame (Tick), so it never lies flat with the wrist
         void AddShield(ShieldDef S, Animator an, float H, List<Renderer> rends, List<Material> op, List<Material> fd)
@@ -1476,7 +1485,7 @@ namespace BAM.Art
                 Transform t = wT[i];
                 if (t == null) continue;
                 WeaponDef W = defs[i];
-                if (W.Len != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
+                if (PlacedLen(W) != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
                 if ((W.Thrown || hideHeld) && (hideSide == 0 || hideSide > 0 != W.Left)) t.localScale = bindS[i] * show;
                 else if (t.localScale != bindS[i]) t.localScale = bindS[i]; // a held weapon put back by a swing during its throw
                 float rest = (1f - Mathf.Clamp01(actW)) * liveW;
@@ -2000,7 +2009,7 @@ namespace BAM.Art
                 Transform t = wT[i];
                 if (t == null) continue;
                 WeaponDef W = defs[i];
-                if (W.Len != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
+                if (PlacedLen(W) != placedLen[i] || W.Grip != placedGrip[i]) Place(i);
                 Quaternion q = Quaternion.Inverse(root.rotation) * hand[i].rotation;
                 var v = new Vector4(q.x, q.y, q.z, q.w);
                 if (Vector4.Dot(v, refSum[i]) < 0f) v = -v; // an idle's frames are close together: summed on one side they average

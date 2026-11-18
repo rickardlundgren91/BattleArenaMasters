@@ -1325,7 +1325,7 @@ namespace BAM.Art
         }
 
         // Each hero's two special colours (main, accent) from the MLBB clip analysis (bam-work/art/mlbb-miya/skill-fx-analys.md),
-        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk, Hilde, Oaken, Kugg, Ragn, Nassla, Skrall, Ravna. Tyra keeps the cyan her bolt already has.
+        // index = HeroId: Bram, Fenn, Tyra, Moa, Knut, Tikta, Blast, Bonk, Hilde, Oaken, Kugg, Ragn, Nassla, Skrall, Ravna. Tyra's is white-gold since 2026-11-18 (Rickard "falkvit låter bra": her cyan was Fenn's pale blue; hero design review 16 Nov).
         static Vector3 lastBounce;
         static float lastBounceT = -10f;
 
@@ -1334,7 +1334,7 @@ namespace BAM.Art
 
         static readonly Color32[] heroMain =
         {
-            new Color32(255, 138, 42, 255), new Color32(191, 239, 255, 255), new Color32(180, 240, 255, 255), new Color32(255, 179, 0, 255),
+            new Color32(255, 138, 42, 255), new Color32(191, 239, 255, 255), new Color32(255, 226, 150, 255), new Color32(255, 179, 0, 255),
             new Color32(47, 140, 255, 255), new Color32(124, 255, 79, 255), new Color32(255, 90, 31, 255),
             new Color32(196, 140, 72, 255), // Bonk: club wood and dust
             new Color32(255, 150, 50, 255), // Hilde: powder flash
@@ -1437,12 +1437,13 @@ namespace BAM.Art
                     break;
                 case ProjKind.TyraBolt:
                     SpecialHit((int)HeroId.Tyra, p, 1f);
-                    ImpactRing(new Vector3(p.x, 0f, p.z), 1.1f, new Color(0.75f, 0.95f, 1f, 1f), 0.3f);
-                    Pow(p, 1, new Color32(180, 240, 255, 255), 0.9f, 0.16f);
-                    Rays(p, new Color(0.7f, 0.95f, 1f, 1f), 1.1f, 0.18f);
+                    // white-gold since 2026-11-18 (falkvit; the ice blue was Fenn's ghost light)
+                    ImpactRing(new Vector3(p.x, 0f, p.z), 1.1f, new Color(1f, 0.9f, 0.6f, 1f), 0.3f);
+                    Pow(p, 1, new Color32(255, 226, 150, 255), 0.9f, 0.16f);
+                    Rays(p, new Color(1f, 0.88f, 0.55f, 1f), 1.1f, 0.18f);
                     HitStar(p, Color.white, 1.3f, 0.18f);
-                    Stars(p, 3, new Color32(200, 245, 255, 255), 0.45f, 1.5f, 0.3f, 0.6f);
-                    Sparks(p, 8, new Color32(180, 240, 255, 255), 0.12f, 4f, 0.3f, 0.8f);
+                    Stars(p, 3, new Color32(255, 246, 215, 255), 0.45f, 1.5f, 0.3f, 0.6f);
+                    Sparks(p, 8, new Color32(255, 226, 150, 255), 0.12f, 4f, 0.3f, 0.8f);
                     break;
                 case ProjKind.MoaBolt:
                     // a soft honey splat: warm-white pop, drops flung out, a small honey ring (support colours, no streaks)
@@ -1597,11 +1598,12 @@ namespace BAM.Art
                 case ProjKind.TyraBolt:
                     // a bright ball of light at the head, thin streaks and wisps behind, and a faint line of light left lying along
                     // the path for half a second (Rickard 2026-10-28)
-                    Glow(p, 1, new Color32(200, 245, 255, 255), 0.75f, 0f, 0.08f);
-                    Stars(p, 1, new Color32(200, 245, 255, 255), 0.3f, 0.2f, 0.25f, 0f, 0.05f);
-                    SparksAlong(p, -dir, 1, new Color32(180, 240, 255, 255), 0.09f, 3f, 0.2f, 12f);
-                    if (Random.value < 0.5f) Wisps(p, 1, new Color32(170, 235, 255, 200), 0.35f, 0.3f, 0.4f, 0.4f, 0.05f);
-                    Glow(new Vector3(p.x, 0.15f, p.z), 1, new Color32(150, 225, 255, 110), 0.45f, 0f, 0.5f);
+                    // white-gold since 2026-11-18 (falkvit; was ice blue, the same as Fenn's ghost light)
+                    Glow(p, 1, new Color32(255, 246, 215, 255), 0.75f, 0f, 0.08f);
+                    Stars(p, 1, new Color32(255, 246, 215, 255), 0.3f, 0.2f, 0.25f, 0f, 0.05f);
+                    SparksAlong(p, -dir, 1, new Color32(255, 226, 150, 255), 0.09f, 3f, 0.2f, 12f);
+                    if (Random.value < 0.5f) Wisps(p, 1, new Color32(255, 240, 200, 200), 0.35f, 0.3f, 0.4f, 0.4f, 0.05f);
+                    Glow(new Vector3(p.x, 0.15f, p.z), 1, new Color32(255, 220, 140, 110), 0.45f, 0f, 0.5f);
                     break;
                 // a small glow at each arrow's head (0.3 blobbed the five heads into one near the bow, where they fly 0.17 tiles apart a
                 // tile out), embers rarer

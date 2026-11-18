@@ -401,7 +401,7 @@ namespace BAM.Art
         {
             switch (k)
             {
-                case ProjKind.TyraBolt: c = new Color(0.7f, 0.95f, 1f, 0.9f); return true;
+                case ProjKind.TyraBolt: c = new Color(1f, 0.93f, 0.72f, 0.9f); return true; // white-gold (falkvit, 2026-11-18; was ice blue)
                 case ProjKind.MoaBolt: c = new Color(1f, 0.8f, 0.25f, 0.8f); return true;
                 case ProjKind.BlastFire: c = new Color(1f, 0.55f, 0.2f, 0.45f); return true; // a faint fuse-smoke streak behind the bomb
                 case ProjKind.TiktaNeedleSpecial: c = new Color(0.2f, 1f, 0.85f, 0.8f); return true;
@@ -672,8 +672,8 @@ namespace BAM.Art
                 // it went, and a short light pillar stands where it struck
                 if (kind == ProjKind.TyraBolt && hit)
                 {
-                    Fx.Spikes(vis.position, dir, new Color(0.75f, 0.95f, 1f, 1f), 1.4f, 0.2f);
-                    Fx.Pillar(new Vector3(vis.position.x, 0f, vis.position.z), 0.7f, 3f, new Color(0.7f, 0.95f, 1f, 0.8f), 0.3f);
+                    Fx.Spikes(vis.position, dir, new Color(1f, 0.9f, 0.6f, 1f), 1.4f, 0.2f); // white-gold (falkvit 2026-11-18)
+                    Fx.Pillar(new Vector3(vis.position.x, 0f, vis.position.z), 0.7f, 3f, new Color(1f, 0.88f, 0.55f, 0.8f), 0.3f);
                 }
             }
             launched = false;
@@ -756,7 +756,7 @@ namespace BAM.Art
             baseColor = k == ZoneKind.HoneyField ? new Color(1f, 0.78f, 0.2f, 1f)
                 : k == ZoneKind.Bramble ? new Color(0.55f, 0.85f, 0.2f, 0.45f) // Nässla's thicket: a lime-green floor (her own picture comes later)
                 : k == ZoneKind.FireLane ? new Color(1f, 0.45f, 0.08f, 0.35f) // a faint heat floor: the cracks and flames carry the look
-                : k == ZoneKind.FeatherTrail ? new Color(0.78f, 1f, 0.9f, 0.3f) // Tyra's wind: a pale mint floor, the feathers carry the look
+                : k == ZoneKind.FeatherTrail ? new Color(1f, 0.96f, 0.86f, 0.3f) // Tyra's wind: a pale cream floor (falkvit 2026-11-18; was mint), the feathers carry the look
                 : warn ? (t == Teams.Player ? new Color(1f, 1f, 1f, 0.6f) : new Color(1f, 0.12f, 0.1f, 1f))
                 : (t == Teams.Player ? new Color(1f, 0.6f, 0.15f, 1f) : new Color(1f, 0.15f, 0.12f, 1f));
             if (warn) mat.renderQueue = 2995; // over honey and fire, under unit rings
@@ -917,7 +917,7 @@ namespace BAM.Art
                 for (int i = 0; i < n; i++)
                 {
                     Vector3 side = new Vector3(dir.z, 0f, -dir.x) * (radius * (Random.value * 1.4f - 0.7f));
-                    Fx.Pic("tx_fx_tyra_feather", center + dir * (length * (i + Random.value) / n) + side, new Color(0.85f, 1f, 0.92f, 0.9f), radius * 1.4f, duration);
+                    Fx.Pic("tx_fx_tyra_feather", center + dir * (length * (i + Random.value) / n) + side, new Color(1f, 0.98f, 0.92f, 0.9f), radius * 1.4f, duration);
                 }
             }
             else if (kind == ZoneKind.HoneyField)
@@ -1052,8 +1052,8 @@ namespace BAM.Art
             else if (kind == ZoneKind.FeatherTrail)
             {
                 // the wind: pale streaks blowing along the bolt's way, so a player sees where the slow lies
-                Fx.SparksAlong(p + Vector3.up * 0.15f, dir, 1, new Color(0.85f, 1f, 0.95f, 0.8f), 0.05f, 2.2f, 0.35f, 10f);
-                if (Random.value < 0.3f) Fx.Glow(p, 1, new Color(0.7f, 1f, 0.85f, 0.6f), 0.2f, 0.1f, 0.4f, 0.6f);
+                Fx.SparksAlong(p + Vector3.up * 0.15f, dir, 1, new Color(1f, 0.97f, 0.88f, 0.8f), 0.05f, 2.2f, 0.35f, 10f); // cream white (falkvit 2026-11-18; was mint)
+                if (Random.value < 0.3f) Fx.Glow(p, 1, new Color(1f, 0.92f, 0.7f, 0.6f), 0.2f, 0.1f, 0.4f, 0.6f);
             }
             else if (kind == ZoneKind.HoneyField)
             {
