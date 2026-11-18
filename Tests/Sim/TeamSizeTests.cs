@@ -9,7 +9,7 @@ namespace BAM.Sim
     {
         static void TeamSizeChecks()
         {
-            foreach (var map in new[] { MapId.Runes, MapId.Grove })
+            foreach (var map in new[] { MapId.Runes, MapId.Grove, MapId.Plateau })
             {
                 // offline: the player and one bot ally against two bots, the player in the middle slot as in 3v3
                 var m = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Difficulty = Difficulty.Normal, Seed = 77, TeamSize = 2, Map = map });

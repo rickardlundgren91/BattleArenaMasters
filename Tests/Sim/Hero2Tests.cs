@@ -238,6 +238,7 @@ namespace BAM.Sim
             TraceReplayChecks(); // full review 2026-11-13 nr 124 (TraceReplayTests.cs)
             Review1113Items(); // full review 2026-11-13 nr 113 (Review1113ItemsTests.cs)
             TeamSizeChecks(); // 2v2 (Rickard 2026-11-15, TeamSizeTests.cs)
+            PlateauChecks(); // the third map (Rickard 2026-11-18, PlateauTests.cs)
             TutorialV3(); // the guided match after the tutorial review of 2026-11-15 (TutorialV3Tests.cs)
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");
             return fails == 0 ? 0 : 1;

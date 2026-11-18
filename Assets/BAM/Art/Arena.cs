@@ -29,6 +29,9 @@ namespace BAM.Art
 
         static float waterY;
         static bool skirted; // Rickard's cliff picture hangs on the edge: the old code-drawn cliff faces would sit in the same plane
+        // Plateau (2026-11-18): void tiles inside the map's rectangle (its cliff corners): the painted floor leaves them out and the
+        // cliff picture runs along every edge between floor and void, not only round the rectangle
+        static bool holes;
 
         // A jump pad (the second map; the training island's boost pad too, Island.Lane), after the old game's 3D pads
         // (View3DJumpPads.cs): a low stone plinth, a bronze rim and a teal plate with three chevrons pointing the way it throws
@@ -72,6 +75,9 @@ namespace BAM.Art
             Texture2D cliffPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/tx_arena_cliff");
             if (cliffPic != null) waterY = CliffSkirtLip - CliffSkirtH; // the water meets the picture's bottom edge
             skirted = cliffPic != null;
+            holes = false;
+            if (!info.Island)
+                for (int i = 0; i < info.Tiles.Length && !holes; i++) holes = info.Tiles[i] == TVoid;
 
             // water (or an abyss) all around and below, so the camera never sees the empty background at the map edge;
             // the island floats over its own cloud sea instead
@@ -80,9 +86,9 @@ namespace BAM.Art
             // the BAM arena's own ground picture (grass, cobbled road between the towers, worn earth along it, tall grass under the
             // bushes), baked offline exactly like the old game painted it (bam-work/art/ground/bake.py); only for that map's size
             Texture2D painted = !info.Island && w == 15 && h == 35 ? Resources.Load<Texture2D>("BAMArt/Arena/" + (info.Ground ?? "T_BAM_ArenaGround_v1_2")) : null;
-            if (painted != null) PaintedGround(root, painted, w, h);
+            if (painted != null) PaintedGround(root, painted, info);
             if (painted != null) TowerRunes.Build(root);
-            if (painted != null) RoadRunes.Build(root);
+            if (painted != null && !info.NoRoadRunes) RoadRunes.Build(root); // Plateau's lane bends: the straight rune strip is not on its road
             Mesh pillarM = Props.Mesh("wallkit_pillar"), beamM = Props.Mesh("wallkit_straight");
             bool kit = pillarM != null && beamM != null && !info.Island;
             Texture2D rockPic = info.Island ? null : Resources.Load<Texture2D>("BAMArt/Arena/T_BAM_Pillar_C");
@@ -327,14 +333,14 @@ namespace BAM.Art
             var n = new System.Collections.Generic.List<Vector3>();
             var tri = new System.Collections.Generic.List<int>();
             // left and right as seen from outside, looking at the face
-            void Face(Vector3 left, Vector3 right)
+            void Face(Vector3 left, Vector3 right, float uStart = float.NaN)
             {
                 Vector3 along = right - left; along.y = 0f;
                 float len = along.magnitude;
                 Vector3 outN = Vector3.Cross(Vector3.up, along / len); // outward, for the left-to-right order seen from outside
                 int i0 = v.Count;
                 v.Add(left); v.Add(right); v.Add(right + Vector3.down * CliffSkirtH); v.Add(left + Vector3.down * CliffSkirtH);
-                float u0 = (left.x * 0.37f + left.z * 0.61f) / CliffSkirtW, u1 = u0 + len / CliffSkirtW; // each side starts elsewhere in the picture
+                float u0 = float.IsNaN(uStart) ? (left.x * 0.37f + left.z * 0.61f) / CliffSkirtW : uStart, u1 = u0 + len / CliffSkirtW; // each side starts elsewhere in the picture
                 uv.Add(new Vector2(u0, 1f)); uv.Add(new Vector2(u1, 1f)); uv.Add(new Vector2(u1, 0f)); uv.Add(new Vector2(u0, 0f));
                 for (int k = 0; k < 4; k++) n.Add(outN);
                 tri.Add(i0); tri.Add(i0 + 1); tri.Add(i0 + 2); tri.Add(i0); tri.Add(i0 + 2); tri.Add(i0 + 3);
@@ -350,10 +356,27 @@ namespace BAM.Art
                 tri.Add(i1); tri.Add(i1 + 1); tri.Add(i1 + 2); tri.Add(i1); tri.Add(i1 + 2); tri.Add(i1 + 3);
             }
             float y = CliffSkirtLip;
-            Face(new Vector3(-rim, y, -rim), new Vector3(w + rim, y, -rim));         // south, seen from -z
-            Face(new Vector3(w + rim, y, h + rim), new Vector3(-rim, y, h + rim));   // north, seen from +z
-            Face(new Vector3(-rim, y, h + rim), new Vector3(-rim, y, -rim));         // west, seen from -x
-            Face(new Vector3(w + rim, y, -rim), new Vector3(w + rim, y, h + rim));   // east, seen from +x
+            if (holes)
+            {   // Plateau: one face per floor tile edge that meets void or the map's end; u runs along each straight edge without a seam
+                int tw = info.Width, th = info.Height;
+                for (int ty = 0; ty < th; ty++)
+                    for (int tx = 0; tx < tw; tx++)
+                    {
+                        if (info.Tile(tx, ty) == TVoid) continue;
+                        float x0 = tx, x1 = tx + 1, z0 = th - ty - 1, z1 = th - ty;
+                        if (Void(info, tx, ty + 1)) Face(new Vector3(x0, y, z0), new Vector3(x1, y, z0), x0 / CliffSkirtW + 0.13f);        // south
+                        if (Void(info, tx, ty - 1)) Face(new Vector3(x1, y, z1), new Vector3(x0, y, z1), -x1 / CliffSkirtW + 0.41f);       // north
+                        if (Void(info, tx - 1, ty)) Face(new Vector3(x0, y, z1), new Vector3(x0, y, z0), -z1 / CliffSkirtW + 0.67f);       // west
+                        if (Void(info, tx + 1, ty)) Face(new Vector3(x1, y, z0), new Vector3(x1, y, z1), z0 / CliffSkirtW + 0.29f);        // east
+                    }
+            }
+            else
+            {
+                Face(new Vector3(-rim, y, -rim), new Vector3(w + rim, y, -rim));         // south, seen from -z
+                Face(new Vector3(w + rim, y, h + rim), new Vector3(-rim, y, h + rim));   // north, seen from +z
+                Face(new Vector3(-rim, y, h + rim), new Vector3(-rim, y, -rim));         // west, seen from -x
+                Face(new Vector3(w + rim, y, -rim), new Vector3(w + rim, y, h + rim));   // east, seen from +x
+            }
             var mesh = new Mesh { name = "Cliff skirt" };
             mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetNormals(n); mesh.SetTriangles(tri, 0);
             mesh.RecalculateBounds();
@@ -618,14 +641,38 @@ namespace BAM.Art
             Add(root, "Rocks", mesh, mat, true);
         }
 
-        // one quad over the whole floor, unlit like the old game's ground (the picture already carries its light and shadows)
-        static void PaintedGround(GameObject root, Texture2D tex, int w, int h)
+        // one quad over the whole floor, unlit like the old game's ground (the picture already carries its light and shadows);
+        // with void tiles (Plateau) one quad per floor tile, so the cliff corners stay open
+        static void PaintedGround(GameObject root, Texture2D tex, ArenaInfo info)
         {
+            int w = info.Width, h = info.Height;
             var mesh = new Mesh { name = "Arena ground" };
-            mesh.vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, h), new Vector3(w, 0f, h), new Vector3(w, 0f, 0f) };
-            mesh.uv = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
-            mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
-            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            if (!holes)
+            {
+                mesh.vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, h), new Vector3(w, 0f, h), new Vector3(w, 0f, 0f) };
+                mesh.uv = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+                mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+                mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            }
+            else
+            {
+                var v = new System.Collections.Generic.List<Vector3>();
+                var uv = new System.Collections.Generic.List<Vector2>();
+                var n = new System.Collections.Generic.List<Vector3>();
+                var tri = new System.Collections.Generic.List<int>();
+                for (int ty = 0; ty < h; ty++)
+                    for (int tx = 0; tx < w; tx++)
+                    {
+                        if (info.Tile(tx, ty) == TVoid) continue;
+                        float x0 = tx, x1 = tx + 1, z0 = h - ty - 1, z1 = h - ty;
+                        int i0 = v.Count;
+                        v.Add(new Vector3(x0, 0f, z0)); v.Add(new Vector3(x0, 0f, z1)); v.Add(new Vector3(x1, 0f, z1)); v.Add(new Vector3(x1, 0f, z0));
+                        uv.Add(new Vector2(x0 / w, z0 / h)); uv.Add(new Vector2(x0 / w, z1 / h)); uv.Add(new Vector2(x1 / w, z1 / h)); uv.Add(new Vector2(x1 / w, z0 / h));
+                        for (int k = 0; k < 4; k++) n.Add(Vector3.up);
+                        tri.Add(i0); tri.Add(i0 + 1); tri.Add(i0 + 2); tri.Add(i0); tri.Add(i0 + 2); tri.Add(i0 + 3);
+                    }
+                mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetNormals(n); mesh.SetTriangles(tri, 0);
+            }
             mesh.RecalculateBounds();
             var mat = ArtMaterials.Instance(ArtMaterials.Unlit);
             mat.SetTexture(ArtMaterials.BaseMap, tex);
@@ -703,7 +750,7 @@ namespace BAM.Art
             // z-fought with it and the edge flickered (Rickard's video 2026-11-04 16:37); the picture is the cliff now. Its kerb went
             // too: the row of dark stone boxes lay as a straight dark line between the floor's grass and the picture's grass lip
             // (Rickard's screenshot 2026-11-04 17:03, "bara denna lilla buggen")
-            if (skirted && outer) return;
+            if (skirted && (outer || holes)) return; // with holes the picture hangs on the inner cliff edges too (CliffSkirt)
             MeshBuilder top = Pick(kerb, m, Pal.Cliff);
             top.Face(a, b, b + down * 0.5f, a + down * 0.5f);
             m.Color(Pal.CliffDark).Face(a + down * 0.5f, b + down * 0.5f, b + down * Mathf.Max(bottom, 0.6f), a + down * Mathf.Max(bottom, 0.6f));

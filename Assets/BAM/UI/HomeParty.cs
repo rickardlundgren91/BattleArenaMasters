@@ -233,8 +233,8 @@ namespace BAM.UI
             var pv = CurrentParty(); bool party = pv != null;
             int size = party ? pv.Size : BamSettings.TeamSize; // 3v3 or 2v2 (Rickard 2026-11-15)
             string title = homeMode == Mode.Classic ? "CLASSIC " + size + "V" + size : CardTitle(homeMode);
-            string rest = party ? "With your party" + (pv.Map == MapId.Grove ? " · Grove" : "")
-                : homeMode == Mode.Classic ? (BamSettings.LastMap == MapId.Grove ? "Grove · " : "") + "vs bots · " + DifficultyOrder.Name(BamSettings.LastDifficulty)
+            string rest = party ? "With your party" + (pv.Map != MapId.Runes ? " · " + pv.Map : "")
+                : homeMode == Mode.Classic ? (BamSettings.LastMap != MapId.Runes ? BamSettings.LastMap + " · " : "") + "vs bots · " + DifficultyOrder.Name(BamSettings.LastDifficulty)
                 : homeMode == Mode.HeroTest ? "Hero test" : "Tutorial";
             playSub.text = title;
             playSub2.text = rest;

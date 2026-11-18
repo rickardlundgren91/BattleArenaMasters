@@ -239,7 +239,7 @@ namespace BAM.Core
             hardOpen = PlayerPrefs.GetInt(Key + "hardopen", 0) == 1;
             // Grove is CLASSIC's map until a player picks RUNES, so every tester tries it (Rickard 2026-11-13: "gör grove till standard")
             teamSize = PlayerPrefs.GetInt(Key + "teamsize", 3) == 2 ? 2 : 3;
-            lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Grove), (int)BAM.Sim.MapId.Runes, (int)BAM.Sim.MapId.Grove);
+            lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Grove), (int)BAM.Sim.MapId.Runes, (int)BAM.Sim.MapId.Plateau);
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Sprint);
         }
 

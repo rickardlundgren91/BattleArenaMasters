@@ -371,6 +371,9 @@ namespace BAM.Online.Mp
         }
 
         /// <summary>Host: the arena for the next match.</summary>
+        /// <summary>A map id off the wire: Runes, Grove or Plateau; anything else plays Runes.</summary>
+        static MapId MapOf(int b) => b == (int)MapId.Grove ? MapId.Grove : b == (int)MapId.Plateau ? MapId.Plateau : MapId.Runes;
+
         public static void SetMap(MapId map)
         {
             if (!IsHost || Quick || map == Map) return;
@@ -611,7 +614,7 @@ namespace BAM.Online.Mp
                 case MpMsg.Hello:
                 {
                     int proto = r.I32(); string version = r.Str(), pid = r.Str(), name = r.Str(); int hero = r.U8(), spell = r.U8();
-                    string party = r.Str(); int psize = Math.Max(1, r.U8()); int skin = r.U8(); var hmap = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
+                    string party = r.Str(); int psize = Math.Max(1, r.U8()); int skin = r.U8(); var hmap = MapOf(r.U8());
                     if (string.IsNullOrEmpty(party)) party = pid;
                     string no = proto != MpMsg.Protocol || version != Application.version ? "Your game and your friend's are different versions. Update both from Google Play."
                         : State == Phase.Match ? "A match is being played in that room. Try again when it is over."
@@ -668,7 +671,7 @@ namespace BAM.Online.Mp
                     for (int i = 0; i < n; i++)
                         Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = HeroCatalog.Clean(r.U8()), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
                     bool q = r.U8() == 1; int ps = r.U8(); Diff = DifficultyOrder.Clean(r.U8());
-                    Size = r.U8() == 2 ? 2 : 3; Map = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
+                    Size = r.U8() == 2 ? 2 : 3; Map = MapOf(r.U8());
                     foreach (var mm in Members) mm.Skin = r.U8(); // last: every member's look, in the same order
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
                     Quick = q; if (q && ps > 0) partySize = Math.Max(partySize, ps); if (!q && partySize > 1) partySize = 1;
@@ -682,7 +685,7 @@ namespace BAM.Online.Mp
                     var seats = new SeatConfig[n];
                     for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = HeroCatalog.Clean(r.U8()), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }
                     int mine = r.U8();
-                    int size = r.U8() == 2 ? 2 : 3; var map = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
+                    int size = r.U8() == 2 ? 2 : 3; var map = MapOf(r.U8());
                     for (int s = 0; s < n; s++) seats[s].Skin = r.U8();
                     if (mine <= 0 || mine >= n) return;
                     // still playing on with bots after the host left a match (its app in the background, EXIT GAME): the host came

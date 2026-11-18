@@ -73,7 +73,7 @@ namespace BAM.UI
         static float ExpNow => ExpH + PartyRowH + (Party() != null ? PartyRowH : 0); // MAP, and PARTY under it in a party
 
         static string PlaySubFor(Mode m, bool withDifficulty) =>
-            m == Mode.Classic ? SizeNow + "V" + SizeNow + " · VS BOTS" + (BamSettings.LastMap == MapId.Grove ? " · GROVE" : "") + (withDifficulty ? " · " + DifficultyOrder.Name(BamSettings.LastDifficulty).ToUpperInvariant() : "") : ModeTitle(m);
+            m == Mode.Classic ? SizeNow + "V" + SizeNow + " · VS BOTS" + (BamSettings.LastMap != MapId.Runes ? " · " + BamSettings.LastMap.ToString().ToUpperInvariant() : "") + (withDifficulty ? " · " + DifficultyOrder.Name(BamSettings.LastDifficulty).ToUpperInvariant() : "") : ModeTitle(m);
 
         static void BuildModes()
         {
@@ -172,15 +172,15 @@ namespace BAM.UI
                 RefreshModes();
             }, true);
 
-            // under BOT DIFFICULTY: the MAP, RUNES (the first arena) or GROVE (the second); in a party the leader's pick for everyone
+            // under BOT DIFFICULTY: the MAP, RUNES (the first arena), GROVE (the second) or PLATEAU (the third); in a party the leader's pick for everyone
             modeMapRow = UiKit.NewRect("Map", modeExpand);
             var mapLabel = Treb(modeMapRow, "MAP", 2.7f, UiKit.TextDim);
             Stretched(mapLabel.rectTransform, 0, 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
             var msegs = UiKit.NewRect("Pick", modeMapRow);
             Stretched(msegs, 0, 4.5f * Cw, 0, 12 * Cw);
-            modeMap = new HubChoice(msegs, new[] { "RUNES", "GROVE" }, i =>
+            modeMap = new HubChoice(msegs, new[] { "RUNES", "GROVE", "PLATEAU" }, i =>
             {
-                var map = i == 1 ? MapId.Grove : MapId.Runes;
+                var map = i == 2 ? MapId.Plateau : i == 1 ? MapId.Grove : MapId.Runes; // PLATEAU: the third map (Rickard 2026-11-18)
                 if (TestParty != null) TestParty.Map = map;
                 else if (Party() != null) OnlineHooks.PartyMap?.Invoke(map);
                 else BamSettings.LastMap = map;
@@ -374,7 +374,7 @@ namespace BAM.UI
             // Ultra opens after 30 wins against Hard bots (Rickard 2026-10-31)
             diffLabel.text = "BOT DIFFICULTY"; // a locked level is dimmed with its padlock and progress; tapping it tells how to open it (ShowHint)
             modeSize.Set(SizeNow == 2 ? 1 : 0);
-            modeMap.Set(MapNow == MapId.Grove ? 1 : 0); Stretched(modeMapRow, 0, ExpH, 0, PartyRowH);
+            modeMap.Set(MapNow == MapId.Plateau ? 2 : MapNow == MapId.Grove ? 1 : 0); Stretched(modeMapRow, 0, ExpH, 0, PartyRowH);
             modePartyRow.gameObject.SetActive(party != null);
             if (party != null) { modeParty.Set(party.Mode); Stretched(modePartyRow, 0, ExpH + PartyRowH, 0, PartyRowH); }
             for (int i = 0; i < modeCards.Length; i++) if (modeCards[i].Sub != null) modeCards[i].Sub.text = CardSub(modeCards[i].Id);

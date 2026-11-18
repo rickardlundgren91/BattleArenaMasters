@@ -74,6 +74,37 @@ namespace BAM.Sim
         /// <summary>Grove: how many rows a jump pad throws you, toward the middle.</summary>
         public const float PadThrow = 6f;
 
+        // The third map, Plateau (Rickard 2026-11-18: "bygg the plateau från abc2"): BAM's own layout after the IDEAS of ABC2's
+        // The Plateau, not a copy of it (its tiles, size and art are not used): the arena stands on a plateau whose corner beside
+        // each base falls away into a stepped cliff (v = void: nobody walks there, shots fly over it), the lane does not run
+        // straight but swings round the LEFT of a big grass field in the middle (LaneX/LaneY below), a grass strip runs down the
+        // right edge into that field, and behind a short wall bar on the cliff side a jump pad throws you 3 rows over the bar.
+        static readonly string[] PlateauTop =
+        {
+            "vvvgg.......ggg", // 0  grass corners either side of the base
+            "vvvgg.000...ggg", // 1
+            "vvv............", // 2
+            "vvv............", // 3
+            "vvv....2.......", // 4
+            "vvv....1.......", // 5
+            "vv.............", // 6  the cliff steps down
+            "v..............", // 7
+            "v..............", // 8
+            "v.J............", // 9  the pad throws you to row 12, over the wall bar; 6.4 tiles from the tower, out of its 4.8 reach
+            "v###.........#g", // 10 the wall bar on the cliff side; a stone at the head of the right grass strip
+            "............ggg", // 11
+            "............ggg", // 12
+            "............ggg", // 13
+            "............ggg", // 14
+            ".....##..gggggg", // 15 a short wall at the field's corner
+            "......ggggggggg", // 16 the big grass field, the lane passes on its left
+            "......ggggggggg", // 17 the middle row
+        };
+        /// <summary>Plateau: how many rows its jump pads throw you (over the short wall bar).</summary>
+        public const float PlateauPadThrow = 3f;
+        // Plateau's lane from team 0's tower to team 1's: up the middle, left round the grass field, back to the middle
+        static readonly float[] PlateauLaneX = { 7.5f, 7.5f, 2.5f, 2.5f, 7.5f, 7.5f }, PlateauLaneY = { 28.5f, 23.5f, 20.5f, 14.5f, 11.5f, 6.5f };
+
         /// <summary>Which map this is (the island counts as Runes).</summary>
         public readonly MapId Id;
 
@@ -102,17 +133,19 @@ namespace BAM.Sim
         public readonly float[][] SpawnX = { new float[3], new float[3] }, SpawnY = { new float[3], new float[3] };
         public readonly float[] TowerX = new float[2], TowerY = new float[2], MinionX = new float[2], MinionY = new float[2];
 
-        /// <summary>The lane's waypoints (tile centres) from team 0's side to team 1's.</summary>
+        /// <summary>The lane's waypoints (tile centres) from team 0's side to team 1's (Plateau's swings round its grass field).</summary>
         public readonly float[] LaneX = { 7.5f, 7.5f, 7.5f }, LaneY = { 28.5f, 17.5f, 6.5f };
 
         /// <summary>The tiles of living towers block paths (Match keeps these up to date); -1 = none.</summary>
         internal int TowerTile0 = -1, TowerTile1 = -1;
 
-        /// <summary>The BAM arena (BAM_OriginalArena_v1_2), or the second map.</summary>
+        /// <summary>The BAM arena (BAM_OriginalArena_v1_2), or the second (Grove) or third (Plateau) map.</summary>
         public Arena(MapId id = MapId.Runes)
         {
             Id = id;
-            var top = id == MapId.Grove ? GroveTop : Top;
+            var top = id == MapId.Grove ? GroveTop : id == MapId.Plateau ? PlateauTop : Top;
+            float padThrow = id == MapId.Plateau ? PlateauPadThrow : PadThrow;
+            if (id == MapId.Plateau) { LaneX = (float[])PlateauLaneX.Clone(); LaneY = (float[])PlateauLaneY.Clone(); }
             W = ArenaW; H = ArenaH;
             Tiles = new byte[W * H]; rockTile = new bool[W * H];
             prev = new int[W * H]; queue = new int[W * H]; seen = new int[W * H]; back = new int[W * H];
@@ -124,7 +157,7 @@ namespace BAM.Sim
                 for (int x = 0; x < W; x++)
                 {
                     char c = row[x];
-                    Tiles[y * W + x] = c == 'g' ? Grass : c == '#' ? Wall : Ground;
+                    Tiles[y * W + x] = c == 'g' ? Grass : c == '#' ? Wall : c == 'v' ? Void : Ground;
                     float cx = x + 0.5f, cy = y + 0.5f;
                     if (c == '0') { if (team == 1) { SpawnX[1][n1] = cx; SpawnY[1][n1++] = cy; } else { SpawnX[0][n0] = cx; SpawnY[0][n0++] = cy; } }
                     else if (c == '1') { TowerX[team] = cx; TowerY[team] = cy; }
@@ -132,7 +165,7 @@ namespace BAM.Sim
                     else if (c == 'J' && PadCount < PadX.Length)
                     {
                         int p = PadCount++;
-                        PadX[p] = cx; PadY[p] = cy; PadToX[p] = cx; PadToY[p] = cy + (team == 1 ? PadThrow : -PadThrow);
+                        PadX[p] = cx; PadY[p] = cy; PadToX[p] = cx; PadToY[p] = cy + (team == 1 ? padThrow : -padThrow);
                         int n = y * W + x;
                         if (p == 0) padTile0 = n; else if (p == 1) padTile1 = n; else if (p == 2) padTile2 = n; else padTile3 = n;
                     }

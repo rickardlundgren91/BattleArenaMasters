@@ -97,8 +97,9 @@ namespace BAM.Sim
     }
 
     /// <summary>Which arena a match is played on. Runes: the rune-road arena (BAM_OriginalArena_v1_2). Grove: the second map
-    /// (2026-11-04, Rickard: own design in the spirit of the old game's walled garden map; PRACTICE only until tested).</summary>
-    public enum MapId : byte { Runes = 0, Grove = 1 }
+    /// (2026-11-04, Rickard: own design in the spirit of the old game's walled garden map). Plateau: the third map (2026-11-18,
+    /// Rickard: "bygg the plateau från abc2"; own layout after ABC2's The Plateau, Arena.PlateauTop).</summary>
+    public enum MapId : byte { Runes = 0, Grove = 1, Plateau = 2 }
 
     // Ultra: above Hard (Rickard 2026-10-31). Beginner: below Easy (Rickard 2026-11-18 "det kanske är bättre med en egen beginner nivå");
     // it got the next free number so saved picks, traces and the online wire keep their meaning: walk the levels with DifficultyOrder.

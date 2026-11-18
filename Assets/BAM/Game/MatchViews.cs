@@ -186,7 +186,8 @@ namespace BAM.Game
             return new ArenaInfo
             {
                 Width = map.W, Height = map.H, Tiles = tiles, Rocks = rocks, Pads = pads, PadTo = padTo,
-                Ground = map.Id == MapId.Grove ? "T_BAM_ArenaGround_Grove" : null,
+                Ground = map.Id == MapId.Grove ? "T_BAM_ArenaGround_Grove" : map.Id == MapId.Plateau ? "T_BAM_ArenaGround_Plateau" : null,
+                NoRoadRunes = map.Id == MapId.Plateau,
                 // the island parks its towers off the map: no tower bases there
                 Towers = towers ? new[] { Coords.World(map.TowerX[0], map.TowerY[0]), Coords.World(map.TowerX[1], map.TowerY[1]) } : null,
             };
