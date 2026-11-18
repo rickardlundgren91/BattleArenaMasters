@@ -455,15 +455,19 @@ namespace BAM.Art.Editor
                     if (!(AssetImporter.GetAtPath(path) is ModelImporter mi)) continue;
                     bool stale = mi.animationType != ModelImporterAnimationType.Human || mi.isReadable != ClothModel(path);
                     string name = Path.GetFileNameWithoutExtension(path);
-                    if (!stale && path.Contains("/Anim/") && (name.StartsWith("Idle") || name.StartsWith("Run") || name.StartsWith("Walk")))
+                    // a clip is judged by what was imported, not by the importer's saved clipAnimations: OnPreprocessAnimation sets
+                    // those for the import only, so a clip whose .meta never held them (Bonk's, Kugg's, Ragn's, Nässla's, Ravna's)
+                    // looked stale at every script reload and was imported again, with a BuildAll that warned in Play (2026-11-18)
+                    if (!stale && path.StartsWith(ModelsDir) && path.Contains("/Anim/"))
                     {
-                        ModelImporterClipAnimation[] c = mi.clipAnimations;
-                        stale = c == null || c.Length == 0 || !c[0].loopTime;
-                    }
-                    if (!stale && path.Contains("/Anim/"))
-                    {
-                        ModelImporterClipAnimation[] c = mi.clipAnimations;
-                        stale = c == null || c.Length == 0 || c[0].mirror != Mirrored(name);
+                        AnimationClip clip = Load(path.Substring(ModelsDir.Length, path.Length - ModelsDir.Length - 4));
+                        if (clip == null) stale = true;
+                        else
+                        {
+                            AnimationClipSettings cs = AnimationUtility.GetAnimationClipSettings(clip);
+                            bool loop = name.StartsWith("Idle") || name.StartsWith("Run") || name.StartsWith("Walk");
+                            stale = (loop && !cs.loopTime) || cs.mirror != Mirrored(name);
+                        }
                     }
                     if (!stale) continue;
                     Debug.Log("[BAM.Art] Importing " + path + " again with the hero rules (humanoid, looping idle and run)");
