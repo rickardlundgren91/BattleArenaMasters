@@ -69,6 +69,12 @@ namespace BAM.Art
         /// V2 bow 1.25 (Rickard 2026-11-18, hero design review 16 Nov: from the match camera her bow could not be seen at all); the
         /// menu keeps Len, as he tuned it.</summary>
         public float MatchScale;
+        /// <summary>Code only: a sword's handle and pommel (below the crossguard) pushed together to this share of their length, 0 =
+        /// as made (Props.ShortHandle). Len and Grip still mean the sword as made: the blade keeps its size and the fist the same
+        /// point on the handle, moved down with it. Fenn's V2 swords 0.6 (Rickard 2026-11-18: "för stort handtag till svärdet").</summary>
+        public float HandleK;
+        /// <summary>Code only, with <see cref="HandleK"/>: the handle's thickness as a share of the made one's.</summary>
+        public float HandleThin = 1f;
         /// <summary>Which way the flat side of the run hold goes: 0 = as the idle votes (BAM's own pick), 1 or -1 fixed (Weapon Tuner
         /// "Walk: flip", Rickard 2026-10-30: "tyra i game norr och vänster gå blir pilbågen bakofram vänd").</summary>
         public int RunSign;
@@ -216,6 +222,13 @@ namespace BAM.Art
         /// <summary>Degrees a wing beats up and down about the hero's forward axis at its root (0 = none): slow and small at rest,
         /// wider and faster on the move. Negative for a left wing, so both beat up together.</summary>
         public float Flap;
+        /// <summary>Its length as a share of the length <see cref="Height"/> or <see cref="Wide"/> gives it, so a cloak can be made
+        /// longer than it is wider (Fenn's, Rickard 2026-11-18); 1 = as made.</summary>
+        public float Long = 1f;
+        /// <summary>A cloak that ripples (Rickard 2026-11-18, Fenn: "animera cloaken"): waves run down it from its top edge, out from
+        /// its back and a little to the sides, this share of its length at the hem at rest and twice that at a full run. The mesh is
+        /// bent on the CPU (a copy per view), on top of the <see cref="Sway"/>; 0 = rigid.</summary>
+        public float Wave;
         /// <summary>Degrees a second the part turns about the hero's forward axis through its origin (Kugg's back cog, Rickard
         /// 2026-11-16); 0 = still. A turning part does not sway.</summary>
         public float Spin;
@@ -474,8 +487,17 @@ namespace BAM.Art
             // so the fist held the guard with the whole handle below it; 0.12 is mid-handle on all three. The round V2 shield at the old
             // 0.5 of his height hid him from helmet to thighs on Home; 0.4 shows his chest and face
             f.Weapons[0].Grip = 0.12f;
+            // Rickard 2026-11-18: "för stort handtag till svärdet": the handle and pommel below the guard 0.6 as long and 0.75 as
+            // thick (the skins' swords too; Props.ShortHandle finds each one's guard, 0.275 of the base sword's length); the blade
+            // as it was. The fist at 0.17 of the sword as made instead of 0.12, which on the shorter handle is the middle of the
+            // grip between pommel and guard (0.12 sat on the pommel's top, with a long bare handle above the fist)
+            f.Weapons[0].HandleK = 0.6f; f.Weapons[0].HandleThin = 0.75f; f.Weapons[0].Grip = 0.17f;
             f.Shield.Dia = 0.4f;
-            f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.42f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f } };
+            // the cape bigger and alive (Rickard 2026-11-18: "större cloak båda längre och bredare", "animera cloaken"): 0.48 of his
+            // height across its shoulders' scale instead of 0.42 (about 14 % wider) and a quarter longer on top (Long), so the hem
+            // reaches his calves instead of his knees; it ripples down from the shoulders all the time (Wave), slowly at rest and
+            // faster as he runs. The skins' capes take the same numbers (SkinGear clones this)
+            f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.48f, Long = 1.25f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f, Wave = 0.06f } };
 
             // Tyra: her new longbow in the left fist (turned a quarter in the conversion so its belly faces as the old bow's did), the
             // quiver on her back, slanting over her right shoulder. Her V2 rig has all its finger bones, so her fingers play the clips
@@ -816,6 +838,7 @@ namespace BAM.Art
         // the bind-pose placement in the hand's own space, so a tuned length or grip can be placed again live
         Vector3[] palmL, handleV, shaftC;
         float[] meshH, handS, placedLen, placedGrip;
+        float[] hLen, hGuard, hK; // WeaponDef.HandleK: the shortened mesh's height as a share of the made one's, where its guard was, the handle's share
         // shield
         ShieldDef sDef;
         Transform sAnchor, sModel, sHand;
@@ -905,6 +928,7 @@ namespace BAM.Art
             h.bindP = new Vector3[nw]; h.gripL = new Vector3[nw]; h.bindR = new Quaternion[nw]; h.bindS = new Vector3[nw];
             h.palmL = new Vector3[nw]; h.handleV = new Vector3[nw]; h.shaftC = new Vector3[nw];
             h.meshH = new float[nw]; h.handS = new float[nw]; h.placedLen = new float[nw]; h.placedGrip = new float[nw];
+            h.hLen = new float[nw]; h.hGuard = new float[nw]; h.hK = new float[nw];
             h.laxSign = new int[nw]; h.votes = new int[nw]; h.handRef = new Quaternion[nw]; h.refSum = new Vector4[nw];
             h.restGrip = new Vector3[nw]; h.gripSum = new Vector3[nw];
             h.runSign = new int[nw]; h.runVotes = new int[nw];
@@ -992,6 +1016,7 @@ namespace BAM.Art
                 wornT[i] = t;
                 PlaceWorn(i);
                 if (w.Skin && SkinWorn(go, mesh, an, rends)) wornT[i] = null; // follows the body now: no sway of its own
+                else if (w.Wave > 0f) MakeWave(i, go, mesh);
             }
         }
 
@@ -1007,7 +1032,7 @@ namespace BAM.Art
             t.localRotation = b.RootL * turn * Quaternion.Inverse(b.RootL) * b.LayL * b.RootL * Quaternion.Euler(0f, w.Yaw, 0f);
             // Wide: a share of the distance between its two bones, across (a cloak to the shoulders) or, Along, lengthwise (a sleeve)
             float k = w.Wide > 0f && b.Span > 0f ? w.Wide * b.Span / (w.Along ? b.MeshY : b.MeshX) : w.Height * b.H / b.MeshY;
-            t.localScale = new Vector3(k, k, k * w.Flat) / b.Ps;
+            t.localScale = new Vector3(k, k * (w.Long > 0f ? w.Long : 1f), k * w.Flat) / b.Ps;
             wornRest[i] = t.localRotation;
             // a swing goes back about the hero's right (forward for a Front flap), whatever the part's own Yaw
             swayAx[i] = (Quaternion.Inverse(t.localRotation) * (b.RootL * Vector3.right)) * (w.Front ? -1f : 1f);
@@ -1088,6 +1113,54 @@ namespace BAM.Art
             return true;
         }
 
+        // WornDef.Wave: the cloak's own copy of its mesh, bent every frame (TickWave); its vertices as made and how far down each is
+        Mesh[] waveM; Vector3[][] waveV, waveOut; float[][] waveD, waveX; float waveClock, waveRun;
+
+        void MakeWave(int i, GameObject go, Mesh mesh)
+        {
+            var mf = go.GetComponent<MeshFilter>();
+            if (mf == null || !mesh.isReadable) return;
+            int n = worn.Length;
+            if (waveM == null) { waveM = new Mesh[n]; waveV = new Vector3[n][]; waveOut = new Vector3[n][]; waveD = new float[n][]; waveX = new float[n][]; }
+            var m = Object.Instantiate(mesh);
+            m.name = mesh.name + " wave";
+            m.MarkDynamic();
+            Vector3[] v = mesh.vertices;
+            Bounds bb = mesh.bounds;
+            float h = Mathf.Max(1e-4f, bb.size.y), wx = Mathf.Max(1e-4f, bb.size.x);
+            var d = new float[v.Length]; var x = new float[v.Length];
+            for (int k = 0; k < v.Length; k++)
+            {
+                d[k] = Mathf.Clamp01((bb.max.y - v[k].y) / h); // 0 at the top edge (its origin), 1 at the hem
+                x[k] = (v[k].x - bb.center.x) / wx;           // -0.5 .. 0.5 across
+            }
+            bb.Expand(new Vector3(0.3f * h, 0.1f * h, 0.6f * h)); // room for the waves, so it is never culled while it ripples
+            m.bounds = bb;
+            mf.sharedMesh = m;
+            waveM[i] = m; waveV[i] = v; waveOut[i] = new Vector3[v.Length]; waveD[i] = d; waveX[i] = x;
+        }
+
+        // waves running down the cloak from its top edge: out from the back (the mesh's +z, away from the body; at most a third of
+        // that in towards the legs) and a little to the sides, growing towards the hem; slow and small at rest, quick and twice as
+        // big on the run. The swing (Sway) still turns the whole cloak about its top edge on top of this
+        void TickWave(int i, float mv, bool dead)
+        {
+            Vector3[] v = waveV[i], o = waveOut[i];
+            float[] d = waveD[i], x = waveX[i];
+            float h = wornB[i].MeshY, a = worn[i].Wave * h * (dead ? 0.3f : 1f + mv);
+            float t = waveClock;
+            for (int k = 0; k < v.Length; k++)
+            {
+                float dk = d[k];
+                if (dk <= 0.001f) { o[k] = v[k]; continue; }
+                float ph = 2f * Mathf.PI * 1.1f * dk - t + 3.4f * x[k];
+                float out_ = a * Mathf.Pow(dk, 1.4f) * (0.35f + 0.65f * Mathf.Sin(ph));
+                float side = 0.35f * a * dk * dk * Mathf.Sin(0.8f * ph + 1.3f);
+                o[k] = new Vector3(v[k].x + side, v[k].y, v[k].z + out_);
+            }
+            waveM[i].vertices = o;
+        }
+
         // a cloak's swing: a soft spring toward a lean that grows with running and a little with the swing of an attack, plus a
         // slow breath at rest, about its top edge (the mesh's origin)
         void TickWorn(float dt, float moveW, float atkW, bool dead)
@@ -1104,12 +1177,18 @@ namespace BAM.Art
                 float k = 1f + 0.6f * rb;
                 foreach (Material m in wornGlow) if (m != null) m.SetColor(ArtMaterials.BaseColor, new Color(k, k, k, Mathf.Lerp(GlowAlpha, 1f, rb)));
             }
+            if (waveM != null)
+            {   // the waves' speed eases with the run, so a stop does not jump them back
+                waveRun = Mathf.Lerp(waveRun, mv, 1f - Mathf.Exp(-dt * 3f));
+                waveClock += dt * Mathf.Lerp(2.4f, 6.5f, waveRun);
+            }
             for (int i = 0; i < wornT.Length; i++)
             {
                 Transform t = wornT[i];
                 if (t == null) continue;
                 WornDef w = worn[i];
                 if (w.At != wornB[i].At || w.Turn != wornB[i].Turn || w.Yaw != wornB[i].Yaw || w.Height != wornB[i].Height || w.Wide != wornB[i].Wide) PlaceWorn(i); // the Weapon Tuner moved it
+                if (waveM != null && waveM[i] != null) TickWave(i, waveRun, dead);
                 if (w.Flap != 0f)
                 {
                     // up and down about the root, the beat's low point at the rest pose's line: a wider beat on the move
@@ -1141,6 +1220,12 @@ namespace BAM.Art
         {
             defs[i] = W;
             Mesh mesh = Props.Mesh(W.Model);
+            hLen[i] = 1f; hGuard[i] = 0f; hK[i] = 1f;
+            if (mesh != null && W.HandleK > 0f && W.HandleK < 1f)
+            {   // a smaller handle (Fenn): the made mesh's numbers kept, so Len and Grip mean what they did
+                Mesh sh = Props.ShortHandle(W.Model, mesh, W.HandleK, W.HandleThin, out float guard);
+                if (sh != null) { hLen[i] = sh.bounds.size.y / Mathf.Max(1e-4f, mesh.bounds.size.y); hGuard[i] = guard; hK[i] = W.HandleK; mesh = sh; }
+            }
             Transform hd = an.GetBoneTransform(W.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
             if (mesh == null || hd == null) return;
             Transform ix = an.GetBoneTransform(W.Left ? HumanBodyBones.LeftIndexProximal : HumanBodyBones.RightIndexProximal);
@@ -1183,7 +1268,7 @@ namespace BAM.Art
             handleV[i] = hd.InverseTransformVector(handle);
             meshH[i] = mh;
             handS[i] = Mathf.Max(1e-6f, hd.lossyScale.y);
-            shaftC[i] = Weapons.ShaftAxis(mesh, W.Grip * mh); // a hammer's box is not centred on its shaft
+            shaftC[i] = Weapons.ShaftAxis(mesh, GripShare(i, W.Grip) * mh); // a hammer's box is not centred on its shaft
             Place(i);
             // Tyra pilot: her Avatar (Tyra.fbx.meta, made 25 Oct from a rig without them) maps only the index finger, so the
             // Humanoid lookup finds no thumb; the FBX has the bone, so the socket's frame takes it by name (only here, so the
@@ -1324,14 +1409,18 @@ namespace BAM.Art
         void Place(int i)
         {
             WeaponDef W = defs[i];
-            float L = PlacedLen(W) * figH, k = L / meshH[i] / handS[i];
+            float L = PlacedLen(W) * figH * hLen[i], k = L / meshH[i] / handS[i], g = GripShare(i, W.Grip);
             Transform t = wT[i];
-            bindP[i] = palmL[i] - handleV[i] * (W.Grip * L);
+            bindP[i] = palmL[i] - handleV[i] * (g * L);
             bindS[i] = new Vector3(k, k, k);
             t.localPosition = bindP[i]; t.localRotation = bindR[i]; t.localScale = bindS[i];
-            gripL[i] = new Vector3(shaftC[i].x, W.Grip * meshH[i], shaftC[i].z);
+            gripL[i] = new Vector3(shaftC[i].x, g * meshH[i], shaftC[i].z);
             placedLen[i] = PlacedLen(W); placedGrip[i] = W.Grip;
         }
+
+        // a Grip (a share of the weapon as made) on the mesh it is drawn with: with a shortened handle (WeaponDef.HandleK) a point on
+        // the handle moves down with it and one above the guard by the handle's lost length
+        float GripShare(int i, float g) => hK[i] >= 1f ? g : (g < hGuard[i] ? g * hK[i] : g - hGuard[i] * (1f - hK[i])) / hLen[i];
 
         // the length the weapon is placed at: Len, times its MatchScale away from the menu stage (OnMenu is set after the build, so
         // the check in Tick places it again when it changes)

@@ -34,7 +34,9 @@ namespace BAM.Art.Editor
             // Moa's ponytail and apron (2026-11-18); her skins (Druid, Queen) are not measured, so they stay still
             || path == ModelsV2Dir + "Moa/Moa.fbx"
             // and their skins (ModelsV2/<Hero>/Skins/<Skin>/*.fbx), which sway the same way
-            || path.StartsWith(ModelsV2Dir + "Tyra/Skins/") || path.StartsWith(ModelsV2Dir + "Ragn/Skins/") || path.StartsWith(ModelsV2Dir + "Nassla/Skins/");
+            || path.StartsWith(ModelsV2Dir + "Tyra/Skins/") || path.StartsWith(ModelsV2Dir + "Ragn/Skins/") || path.StartsWith(ModelsV2Dir + "Nassla/Skins/")
+            // Fenn's helmet plume (Rickard 2026-11-18 "animera tofsen"), on the knight and his skins
+            || path == ModelsV2Dir + "Fenn/Fenn.fbx" || path.StartsWith(ModelsV2Dir + "Fenn/Skins/");
 
         // Rickard's arena pictures repeat across the floor and walls; 512 is plenty at the match camera's distance.
         void OnPreprocessTexture()

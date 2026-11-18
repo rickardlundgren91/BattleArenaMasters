@@ -17,7 +17,7 @@ namespace BAM.Art
     /// </summary>
     sealed class ClothSway
     {
-        enum Kind { Skirt, Tail, HipTail, BackFlaps, Fringe }
+        enum Kind { Skirt, Tail, HipTail, BackFlaps, Fringe, Plume }
 
         /// <summary>One cloth part of one hero. Distances are fractions of the model's height in its bind pose.</summary>
         sealed class Spec
@@ -58,6 +58,12 @@ namespace BAM.Art
                                              // ~1/4 on Spine; with Hips alone only 35 of ~126 tail vertices passed the 0.8 share test)
             public bool WithHead;            // BackFlaps: the neck and head count as the torso too (V2 Nässla: her hanging hair is
                                              // weighted to the shoulders, Spine2, Neck and Head together)
+            public float Up0, Up1;           // Plume: height above the head bone where the sway starts and is full (what rises off the
+                                             // helmet's crown); Back0/Back1 do the same behind the head (what trails down the back)
+            public float Ahead = 0.03f;      // Plume: nothing more than this far in front of the head bone sways (a hood's peak, a crown)
+            public float PivotBack;          // Plume: the tie point, this far behind the head bone (with PivotUp above it)
+            public float Wind;               // a slow wave from side to side all the time, at rest too (share of its length), so it
+                                             // moves on its own (Fenn's plume, Rickard 2026-11-18: "animera tofsen")
         }
 
         /// <summary>The 2026-11-13 remakes (HeroArt.V2, Art/ModelsV2): only cloth and hair that are part of the body shell; capes,
@@ -88,6 +94,13 @@ namespace BAM.Art
                 case 12: // Nässla: her white hair hanging behind, 0.72-0.82 of her height (the hips at about 0.55), 0.10-0.13 behind,
                          // lying close on her back: one spring that lifts it out and never in (testers 2026-11-13: the hair must swing)
                     return new[] { new Spec { Kind = Kind.BackFlaps, Single = true, WithHead = true, Top0 = 0.27f, Top1 = 0.23f, Low = 0.15f, Back0 = 0.085f, Back1 = 0.115f, MaxSide = 0.11f, Hz = 2.3f, Damping = 0.4f, MaxAngle = 16f, Drag = 0.05f, Flare = 0.15f, Inward = 0f, Kick = 0.8f } };
+                case 1: // Fenn: the plume on his helmet (Rickard 2026-11-18: "animera tofsen"), on the knight and all three skins
+                        // (Revenant's ghost flame, Sunforged's white crest, Phantom's on the hood). Measured on the V2 FBX files
+                        // (Blender, bam-work/fenn-detaljer-2026-11-18/): the helmet's crown ends 0.085 of his height above the head
+                        // bone and its back 0.07 behind it; the plume rises to 0.19-0.20 above and arcs back to 0.17-0.21 behind,
+                        // its tip hanging down to the head bone's height. Everything on Head (weight 1.0), so the Head share picks it.
+                        // Tied on at the crown's top; the sun crown's rays and the hood's peak sit in front (Ahead) and stay put
+                    return new[] { new Spec { Kind = Kind.Plume, Up0 = 0.085f, Up1 = 0.125f, Back0 = 0.08f, Back1 = 0.12f, Ahead = 0.03f, PivotUp = 0.085f, PivotBack = 0.0f, Hz = 2.0f, Damping = 0.28f, MaxAngle = 30f, Drag = 0.07f, Kick = 1.0f, Wind = 0.15f } };
                 default: return null;
             }
         }
@@ -510,6 +523,32 @@ namespace BAM.Art
                         for (int i = 0; i < n; i++) if (sw[i] > 0f) Add(i, bi, sw[i]);
                     }
                 }
+                else if (sp.Kind == Kind.Plume)
+                {
+                    // a helmet's plume (Fenn V2): what rises above the crown (Up0..Up1) or trails behind the head (Back0..Back1),
+                    // whichever is more, never what is in front of the head bone (Ahead); one spring bone tied on at the crown
+                    Vector3 hp = At(head), back = -fwd;
+                    int neck = Idx(HumanBodyBones.Neck);
+                    int[] setA = neck >= 0 ? new[] { head, neck } : new[] { head };
+                    Vector3 pivot = hp + back * (sp.PivotBack * H) + up * (sp.PivotUp * H);
+                    var sw = new float[n];
+                    Vector3 sum = Vector3.zero; float ws = 0f;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (Share(i, setA) < 0.8f) continue;
+                        Vector3 d = (v[i] - hp) / H;
+                        float bk = Vector3.Dot(d, back), ab = Vector3.Dot(d, up);
+                        float s = Mathf.Max(Smooth((ab - sp.Up0) / Mathf.Max(1e-4f, sp.Up1 - sp.Up0)), Smooth((bk - sp.Back0) / Mathf.Max(1e-4f, sp.Back1 - sp.Back0)));
+                        s *= Smooth((bk + sp.Ahead) / Mathf.Max(1e-4f, sp.Ahead)); // in front of the head: stays on the helmet
+                        if (s <= 0.005f) continue;
+                        sw[i] = s;
+                        sum += (v[i] - pivot) * (s * s); ws += s * s;
+                    }
+                    if (ws < 1f) continue;
+                    int bi = bones.Length + defs.Count;
+                    defs.Add(new BoneDef { Parent = head, Pivot = bind[head].MultiplyPoint3x4(pivot), Rest = bind[head].MultiplyVector(sum / ws), Spec = sp });
+                    for (int i = 0; i < n; i++) if (sw[i] > 0f) Add(i, bi, sw[i]);
+                }
                 else
                 {
                     Vector3 hp = At(head), back = -fwd;
@@ -660,6 +699,8 @@ namespace BAM.Art
                 Vector3 trail = -vel * sp.Drag;
                 if (trail.sqrMagnitude > 0.16f * L * L) trail = trail.normalized * (0.4f * L);
                 target += trail + outW * (sp.Flare * spin * L);
+                if (sp.Wind > 0f) // its own slow wave, standing still too: side to side, and a little up and down out of step
+                    target += (body.right * Mathf.Sin(clock * 2.1f) + Vector3.up * (0.35f * Mathf.Sin(clock * 3.4f + 1f))) * (sp.Wind * L);
                 if (sp.Flutter > 0f)
                 {
                     float run = Mathf.Clamp01(new Vector2(vel.x, vel.z).magnitude / 3f);
