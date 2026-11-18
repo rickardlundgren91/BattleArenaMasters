@@ -90,6 +90,9 @@ namespace BAM.Art
         // the model at its own height over the root, so the lowest foot bone is held where it was in the bind pose, standing on the ground
         Transform instT, footL, footR, toeL, toeR;
         float footRef = float.NaN, groundY;
+        // how much higher the feet stand over the bind-pose sole after ShortLegs (model units): the lift on the move, where GroundFeet
+        // does not put the feet down, so they never float
+        float legDrop;
         bool groundSet;
         float gearK = 1f; // the renderer bounds' height over the sole-to-crown one the model is fitted by (BuildImported)
 #if UNITY_EDITOR
@@ -375,6 +378,7 @@ namespace BAM.Art
                 float f = LowestFoot();
                 if (!float.IsNaN(f)) footRef = f - transform.position.y; // the bind pose, its mesh's sole on the ground
             }
+            if (HeroIndex == (int)HeroId.Kugg && art.V2 && anim.isHuman) ShortLegs(KuggLegK); else legDrop = 0f;
             if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureHeadHold(); else headHold = false;
             anim.runtimeAnimatorController = null;
             anim.applyRootMotion = false;
@@ -1687,6 +1691,22 @@ namespace BAM.Art
             Out(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, -1f);
         }
 
+        // Kugg's legs drawn shorter (Rickard 2026-11-18, his Home picture: "kugg för liten och för långa ben"): the round golem's
+        // Tripo legs carry his hips at about 0.39 of his height. Each thigh bone is scaled by KuggLegK (evenly, so no bend can shear
+        // the mesh: thighs and shins a little slimmer too) and each foot back by 1/KuggLegK, so the boots keep their size; the
+        // Animator turns bones but never scales them, so this holds. The body comes down with the hips (GroundFeet standing,
+        // legDrop on the move); Models.SizeK draws him bigger to make up for the height the legs gave away.
+        internal const float KuggLegK = 0.78f;
+        void ShortLegs(float k)
+        {
+            Transform ul = anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg), ur = anim.GetBoneTransform(HumanBodyBones.RightUpperLeg);
+            if (ul == null || ur == null || footL == null || footR == null || float.IsNaN(footRef)) { legDrop = 0f; return; }
+            ul.localScale *= k; ur.localScale *= k;
+            footL.localScale /= k; footR.localScale /= k;
+            float f = LowestFoot(), s = Mathf.Max(1e-4f, transform.lossyScale.y);
+            legDrop = float.IsNaN(f) ? 0f : Mathf.Max(0f, (f - transform.position.y - footRef) / s);
+        }
+
         // Kugg's free left fist in his mirrored idle (Kugg/Anim/IdleMirror, Rickard 2026-11-11, his pictures: "nu håller han andra handen
         // i huvudet", and after turning the arm out 50 degrees "det gör den visst"): the clip holds it up in front of his face, and on
         // his broad stone body it went into his head. Standing, a two-bone IK lowers it instead: the fist hangs beside his hip, a little
@@ -1912,7 +1932,7 @@ namespace BAM.Art
             if (float.IsNaN(low)) return;
             float s = Mathf.Max(1e-4f, transform.lossyScale.y);
             Vector3 mp = model.localPosition;
-            float want = (transform.position.y + footRef - (low - mp.y * s)) / s * w; // the lift that puts the foot on its mark
+            float want = (transform.position.y + footRef - (low - mp.y * s)) / s * w - legDrop * (1f - w); // the lift that puts the foot on its mark
             // up at once and down eased, so a hop in a blow still leaves the ground: eased both ways, a foot under its mark stayed under
             // while the lift caught up (Unity run 2: Bram's blows out of his raised idle and Bonk's landings sank the feet 0.23-0.28
             // tiles). With w 0 (on the move, dead) it only eases, so a dead hero's lift settles over the fall

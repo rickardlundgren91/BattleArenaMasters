@@ -280,6 +280,10 @@ namespace BAM.UI
                 if (bodyHalfW <= 0f && shownId != HeroId.Kugg) bodyHalfW = 0.001f;
                 if (bodyHalfW <= 0f)
                 {
+                    // and his height is measured where the posed body really reaches, not taken from his Height: framed by that,
+                    // Kugg stood about 0.6 of the others' height on Home (Rickard 2026-11-18, his picture: "kugg för liten")
+                    float bodyTop = BodyTop();
+                    if (bodyTop > 0.3f * heroHeight && bodyTop < 1.5f * heroHeight) heroHeight = bodyTop;
                     bodyHalfW = Mathf.Max(0.001f, Mathf.Min(BodyHalfWidth(), 1.2f * heroHeight));
                     Frame();
                 }
@@ -292,6 +296,24 @@ namespace BAM.UI
         // arms and all); held weapons left out, as the height above leaves them to FitGear. It was his reach all round the middle,
         // so the arm he held toward the viewer counted as width and Kugg came out about half the others' size on Home (Rickard
         // 2026-11-18, his picture: "kanske bara är för att han är så liten"); a drag that turns him side on may take an arm past the edge
+        // the skinned body's highest point over the stage's feet in its idle (the baked, posed mesh, held weapons left out)
+        float BodyTop()
+        {
+            float top = 0f;
+            var baked = new Mesh();
+            var verts = new List<Vector3>();
+            foreach (var sk in view.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (!sk.enabled || !sk.gameObject.activeInHierarchy || sk.sharedMesh == null) continue;
+                sk.BakeMesh(baked, true);
+                baked.GetVertices(verts);
+                Transform t = sk.transform;
+                for (int k = 0; k < verts.Count; k++) top = Mathf.Max(top, (t.position + t.rotation * verts[k]).y - Spot.y);
+            }
+            Destroy(baked);
+            return top;
+        }
+
         float BodyHalfWidth()
         {
             float r = 0f;

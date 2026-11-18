@@ -132,6 +132,9 @@ namespace BAM.Art
         public static float SizeK(HeroId hero) => hero switch
         {
             HeroId.Fenn => 0.89f, HeroId.Bram => 1.16f, HeroId.Tyra => 1.11f, HeroId.Moa => 1.10f, HeroId.Nassla => 1.17f, HeroId.Ravna => 1.055f,
+            // Kugg (Rickard 2026-11-18 "kugg för liten och för långa ben"): his legs are drawn shorter (BodyView.ShortLegs), which takes
+            // about 8 % off his 1.78; 1.2 puts him at about 1.97 tiles from sole to chimney, as tall as the others
+            HeroId.Kugg => 1.2f,
             _ => 1f,
         };
 
