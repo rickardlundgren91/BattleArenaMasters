@@ -27,7 +27,7 @@ namespace BAM.Sim
             Check(m.Units.Exists(u => u.IsClone && u.Alive && u.Owner == f), "VEIL: his decoy appears");
             Check(!m.Units.Exists(u => u.Kind == UnitKind.Wolf && u.Alive), "VEIL: no wolf");
 
-            // nobody on the other team sees him: not close, not after a hit, not in their tower's range; his own team does
+            // nobody on the other team sees him: not close, not after a hit (only inside their tower's reach, TowerSeesAllTests); his own team does
             Place(a, x + 1, y); f.RevealT = 2;
             Check(!m.IsVisibleTo(f, foe) && m.IsVisibleTo(f, f.Team), "VEIL: unseen by the enemy next to him and after a hit, seen by his team");
             Check(!m.EnemiesInRange(a, 5, Pick.Any, false, new System.Collections.Generic.List<Unit>()).Contains(f), "VEIL: enemies cannot pick him");

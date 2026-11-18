@@ -255,13 +255,22 @@ namespace BAM.Sim
         public const float AssistWindow = 5;
         public const float SpecialBuffer = 0.25f;
         public const float SiegeVsTower = 2;
+        // PUSHING (Rickard 2026-11-18 "Det är för svårt att pusha med minions", "tornet ska vara väldigt farligt, men man ska ändå ha
+        // möjlighet att backdoora"): minions hit towers x1.5 (siege x2 on top), towers hit minions x0.8 (25 -> 20, the wave lives
+        // longer under it), towers hit heroes x1.3 (TowerVsHero), a hero without his own minion at the tower deals x0.75 (was x0.5).
+        // Undefended tower, wave every 21 s (bam-work/torn-ser-allt/): a wave + one hero at level 4 knocked 43-59 % off the tower
+        // before the hero died (now 68-89 %), at level 8 in ~22 s (now ~18 s); waves alone at level 8 in 79 s (now 28 s); three heroes
+        // without minions still fall at level 8 (-52 -> -65 %) and take it at level 12. Hard bots, 2000 per map: 4:27/4:41 -> 4:24/4:41
+        public const float MinionVsTower = 1.5f;
+        public const float TowerVsMinion = 0.8f;
+        public const float BackdoorMult = 0.75f;
         // towers: shots in a row at one hero hit harder, and heroes take more from towers as the match goes on (LateStart..LateFull)
         public const float TowerAggroTime = 2, TowerRamp = 0.2f, TowerRampMax = 2, TowerRampReset = 2.5f;
         public const float TowerLateMax = 2;
         // Rickard 2026-11-02 "torn ska skada lite mer": every tower shot on a hero x1.15 (25 -> 28.75 before streak and late bonus);
         // shots on minions and the tutorial tower are unchanged (protocol 42). Rickard 2026-11-16 "Buffa tornets dmg mot heroes":
         // 1.15 -> 1.4 (25 -> 35 per shot before streak and late bonus, +22 %), minions still 25
-        public const float TowerVsHero = 1.0f;
+        public const float TowerVsHero = 1.3f; // 1.0 (ABC2's 25) -> 1.3 (Rickard 2026-11-18 "tornet ska vara väldigt farligt"; see MinionVsTower)
         // Rickard's Tripo tower stands 3 tiles wide: a round wall of radius ~1.05 on a flat stone foot to 1.5. Its body (Tower.Radius
         // 0.55) let heroes walk into the wall (tester Cajsa 2026-11-04 "jag kan gå rätt igenom dem"), so bodies are kept out to the
         // wall's edge; heroes may still stand on the low foot. Only walking uses it: hits, reach and shots still use Tower.Radius

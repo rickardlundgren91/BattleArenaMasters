@@ -233,7 +233,7 @@ namespace BAM.Sim
         {
             TowerExitChecks(); // first, with every hero as it ships (klutter review 2026-11-13 nr 1, TowerExitTests.cs)
             NightFlightOn = false; SilverOn = false; // the older checks below were written before Night Flight and Silver (Fenn's old wolf and its checks are gone, full review 2026-11-13 nr 116)
-            RagnWalkTable(); RavnaRunTable(); Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Kugg(); Hero8(); Signals(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); DragAimChecks(); TowerStopChecks(); TowerLockChecks(); TowerReturnChecks(); TelegraphChecks(); Review0309(); Fix0400(); Fix0400Bots(); Fix0400Client(); ItemChecks();
+            RagnWalkTable(); RavnaRunTable(); Tikta(); TiktaDrag(); TiktaHidden(); Blast(); Bonk(); Hilde(); BramTyra(); Oaken(); Kugg(); Hero8(); Signals(); Fenn2(); Blinks(); KnockCooldown(); RegenFights(); OneTapChecks(); DragAimChecks(); TowerStopChecks(); TowerLockChecks(); TowerReturnChecks(); TowerSeesAllChecks(); TelegraphChecks(); Review0309(); Fix0400(); Fix0400Bots(); Fix0400Client(); ItemChecks();
             FennVeilChecks(); NightFlightOn = RavnaS.NightFlight; NightFlightChecks(); SilverOn = BramS.Silver; SilverChecks(); Review0410(); Review1113(); HeroReview1113();
             TraceReplayChecks(); // full review 2026-11-13 nr 124 (TraceReplayTests.cs)
             Review1113Items(); // full review 2026-11-13 nr 113 (Review1113ItemsTests.cs)

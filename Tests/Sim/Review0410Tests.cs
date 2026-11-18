@@ -20,26 +20,21 @@ namespace BAM.Sim
             for (int k = 0; k < 120; k++) m.Step(PlayerInput.None);
             Check(tw.Target == f && m.TowerLocked(tw), "REVIEW 0.4.1: the tower is locked on Fenn under it");
 
-            // he veils: the tower lets him go, never shoots him while he is unseen, and takes his decoy
+            // he veils: towers see everything in their reach since 2026-11-18 (Rickard "Dom ska se allt"): it stays on him and shoots
+            // him, not his decoy (until then it let him go and took the decoy, release review 0.4.1)
             m.Projs.Clear(); // no shot of before still on its way
             m.CastFennVeil(f);
-            bool shotAt = false, hit = false, decoy = false;
+            bool hit = false, decoy = false;
             for (int k = 0; k < (int)(2f / Rules.Tick); k++)
             {
                 m.Step(PlayerInput.None);
-                if (m.Projs.Exists(q => q.Src == tw && q.Tgt == f && !q.Done)) shotAt = true;
                 if (m.Events.Exists(e => e.Type == EventType.Damage && e.A == tw && e.B == f)) hit = true;
                 if (tw.Target != null && tw.Target.IsClone && tw.Target.Owner == f) decoy = true;
             }
             Check(f.Has(St.Veil), "REVIEW 0.4.1: still veiled after 2 s");
-            Check(tw.Target != f && !m.TowerLocked(tw), "REVIEW 0.4.1: a tower lets a veiled Fenn go (no lock on whom it cannot see)");
-            Check(!shotAt && !hit, "REVIEW 0.4.1: no tower shot at the veiled Fenn");
-            Check(decoy, "REVIEW 0.4.1: the tower takes his decoy instead");
-
-            // the Veil runs out: seen again, the tower takes him again
-            for (int k = 0; k < (int)((FennS.VeilTime + 0.5f) / Rules.Tick) && f.Has(St.Veil); k++) m.Step(PlayerInput.None);
-            for (int k = 0; k < 60; k++) m.Step(PlayerInput.None);
-            Check(!f.Has(St.Veil) && tw.Target == f, "REVIEW 0.4.1: seen again, he is the tower's target again");
+            Check(tw.Target == f && m.TowerLocked(tw), "TOWER SEES ALL: the tower keeps its lock on a veiled Fenn");
+            Check(hit && !decoy, "TOWER SEES ALL: it shoots the veiled Fenn, not his decoy");
+            Check(m.IsVisibleTo(f, tw.Team), "TOWER SEES ALL: the tower's team sees a veiled Fenn in its reach");
         }
     }
 }

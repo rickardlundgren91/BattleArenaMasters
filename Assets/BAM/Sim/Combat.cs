@@ -130,7 +130,7 @@ namespace BAM.Sim
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
                 amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark, Minion Skewer, Crushing Spanner, Heroes Bane (Items.cs)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
-                if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult(); // the old wolf counted as a minion
+                if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult() * (Tut == null ? Rules.MinionVsTower : 1); // the old wolf counted as a minion
                 if (Tut != null) TutSawHit(src, tgt, kind); // the guided match's special lessons (Tutorial.cs)
                 if (Tut != null && (tgt == Tut.Tower || tgt == Tut.Dummy || tgt == Tut.Guard || tgt == Tut.Hider))
                 {
@@ -267,20 +267,22 @@ namespace BAM.Sim
         }
         /// <summary>Tower aggro holds (Rickard 2026-11-02 "man ska inte kunna tappa aggro från tornet om man har fått det förrän man
         /// går ut ur range"): once a tower aims at an enemy hero it stays on that hero while the hero lives and stands in its reach,
-        /// even in grass, behind a wall, or when another hero starts a fight under it. Only leaving the reach or dying ends it, and
-        /// Fenn's Veil: nothing sees him then, the tower neither (Heroes.cs FennS.Veil), so it lets him go as if he had left its reach
-        /// and takes the next one there, his decoy when nobody else stands in it (release review 0.4.1: it went on shooting him).</summary>
+        /// even in grass, in Fenn's Veil, behind a wall, or when another hero starts a fight under it or hits one of its heroes
+        /// (Rickard 2026-11-18: "Tornet ska inte byta target om den hittat en hero förrän den gått ut ur zonen eller dött", "Den ska
+        /// inte nu byta ens om en annan hero attackerar en hero"). Only leaving the reach or dying ends it. Until 2026-11-18 the Veil
+        /// also ended it; now towers see everything in their reach (IsVisibleTo).</summary>
         internal bool TowerLocked(Unit tw)
         {
             var k = tw.Target;
-            return k != null && k.Kind == UnitKind.Hero && k.Team != tw.Team && k.Alive && !k.Has(St.Veil) && SimMath.Dist(tw, k) <= tw.Range + k.R;
+            return k != null && k.Kind == UnitKind.Hero && k.Team != tw.Team && k.Alive && SimMath.Dist(tw, k) <= tw.Range + k.R;
         }
         /// <summary>Heroes take more from tower shots as the match clock runs: x1 until 1:30, straight up to x2 at 6:00 (LateRamp).</summary>
         internal float TowerLateMult(Unit h) => 1 + (Rules.TowerLateMax - 1) * LateRamp();
         /// <summary>From level 10 (2:24) towers take more damage, +50 % a minute, at most x2 (Rules.TowerTakenMax, reached at 4:24).</summary>
         internal float TowerLateTaken() => Math.Min(Rules.TowerTakenMax, 1 + Rules.TowerTakenPerMinute * Math.Max(0, Time - (Rules.TowerTakenLevel - 1) * Rules.SecondsPerLevel) / 60);
         /// <summary>Backdoor protection (Rickard 2026-10-28, closed-test feedback): a hero hitting a tower without one of its own
-        /// minions in the tower's range deals half damage, the whole match (it was half of the late bonus only).</summary>
+        /// minions in the tower's range deals less, the whole match (it was half of the late bonus only): x0.5 until 2026-11-18, now
+        /// Rules.BackdoorMult x0.75 so a backdoor stays possible against the more dangerous tower.</summary>
         float TowerNeedsWave(Unit att, Unit tw)
         {
             if (att == null || att.Kind != UnitKind.Hero) return 1;
@@ -289,9 +291,9 @@ namespace BAM.Sim
                 var m = Units[i];
                 if (m.IsMinionLike && m.Alive && m.Team == att.Team && SimMath.Dist(m, tw) <= tw.UDef.Range + m.R) return 1;
             }
-            return 0.5f;
+            return Rules.BackdoorMult;
         }
-        float TowerCoeff(Unit tw, Unit tgt) => tgt.Kind != UnitKind.Hero || Tut != null ? 1
+        float TowerCoeff(Unit tw, Unit tgt) => Tut != null ? 1 : tgt.Kind != UnitKind.Hero ? Rules.TowerVsMinion
             : Rules.TowerVsHero * TowerLateMult(tgt) * (tgt == tw.TowerFocus ? 1 + Math.Min(Rules.TowerRampMax, Rules.TowerRamp * tw.TowerStreak) : 1);
 
         // ---------- auto attacks ----------
@@ -322,7 +324,7 @@ namespace BAM.Sim
                 if (u.Target == null) u.Target = TowerPick(u, targets);
                 tgt = u.Target;
                 // a locked hero behind a wall or untargetable for a moment keeps the aggro: the tower holds its shot instead of
-                // turning to someone else (heroes in its reach are always seen, grass or not; Rickard 2026-11-02)
+                // turning to someone else (everything in its reach is seen, grass and Veil too; Rickard 2026-11-02, 2026-11-18)
                 if (locked && tgt != null && (!Map.LosClear(u, tgt) || tgt.Has(St.Untargetable))) tgt = null;
                 // shots in a row at the same hero hit harder; it starts over on another target or after 2.5 s without a shot
                 if (tgt != null)

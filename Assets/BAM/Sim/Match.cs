@@ -495,16 +495,17 @@ namespace BAM.Sim
         float PacingMinionTowerMult() => Tut != null ? 1 : Time >= 330 ? 1.4f : Time >= 270 ? 1.2f : 1;
 
         // ---------- what a team sees ----------
-        /// <summary>Can team see u? Own units always; a recent hit shows the attacker for 2 s (and a target hit outside grass); a tower sees its range; a unit in
-        /// grass is seen only by enemies within 2.5 tiles.</summary>
+        /// <summary>Can team see u? Own units always; a tower sees everything in its reach, Fenn's Veil and grass too; a recent hit shows the
+        /// attacker for 2 s (and a target hit outside grass); a unit in grass is seen only by enemies within 2.5 tiles.</summary>
         public bool IsVisibleTo(Unit u, int team)
         {
             if (!u.Alive) return false;
             if (u.Team == team) return true;
-            if (u.Kind == UnitKind.Hero && u.Has(St.Veil)) return false; // Fenn's Veil beats every sight: hits, towers, grass (Heroes.cs)
+            // TOWERS SEE EVERYTHING (Rickard 2026-11-18 "Torn borde se heroes i stealth", "Dom ska se allt"): nothing hides an enemy in
+            // a tower's reach (its range + the unit's radius, the reach it shoots at), not grass, not Fenn's Veil; its team sees it too
+            if (TowerSees(Towers[team], u)) return true;
+            if (u.Kind == UnitKind.Hero && u.Has(St.Veil)) return false; // Fenn's Veil beats every other sight: hits, grass (Heroes.cs)
             if (u.RevealT > 0) return true;
-            var tw = Towers[team];
-            if (tw != null && tw.Alive && SimMath.Dist(tw, u) <= tw.UDef.Range) return true;
             if (Map.InGrass(u.X, u.Y))
             {
                 for (int i = 0; i < Units.Count; i++)
@@ -516,6 +517,8 @@ namespace BAM.Sim
             }
             return true;
         }
+        /// <summary>Is u (an enemy of tw) inside the reach of the living tower tw? Then tw and its team see it, whatever hides it.</summary>
+        internal static bool TowerSees(Unit tw, Unit u) => tw != null && tw.Alive && SimMath.Dist(tw, u) <= tw.UDef.Range + u.R;
         /// <summary>No enemy can see u right now (the HUD's crossed-out eye; ambush).</summary>
         public bool HiddenFromFoes(Unit u) => u.Alive && !IsVisibleTo(u, Teams.Other(u.Team));
 
