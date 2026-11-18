@@ -229,6 +229,9 @@ namespace BAM.Art
         /// its back and a little to the sides, this share of its length at the hem at rest and twice that at a full run. The mesh is
         /// bent on the CPU (a copy per view), on top of the <see cref="Sway"/>; 0 = rigid.</summary>
         public float Wave;
+        /// <summary>With <see cref="Wave"/>: a cloak made as a thick shell is pressed into one thin sheet, its two layers this share of
+        /// their gap apart (Props.Sheet; Fenn's 0.1, Rickard 2026-11-18: "fenns kappa är dubbel"); 0 = as made.</summary>
+        public float Sheet;
         /// <summary>Degrees a second the part turns about the hero's forward axis through its origin (Kugg's back cog, Rickard
         /// 2026-11-16); 0 = still. A turning part does not sway.</summary>
         public float Spin;
@@ -496,8 +499,11 @@ namespace BAM.Art
             // the cape bigger and alive (Rickard 2026-11-18: "större cloak båda längre och bredare", "animera cloaken"): 0.48 of his
             // height across its shoulders' scale instead of 0.42 (about 14 % wider) and a quarter longer on top (Long), so the hem
             // reaches his calves instead of his knees; it ripples down from the shoulders all the time (Wave), slowly at rest and
-            // faster as he runs. The skins' capes take the same numbers (SkinGear clones this)
-            f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.48f, Long = 1.25f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f, Wave = 0.06f } };
+            // faster as he runs. The skins' capes take the same numbers (SkinGear clones this). Then (Rickard 2026-11-18, Home: "fenns
+            // kappa är dubbel, gör den rörlig som annan textur"): the Tripo cape is a thick shell whose inner layer hung on its own
+            // below the outer one, so it is pressed into one sheet (Sheet), and it bends like cloth instead of swinging stiffly: the
+            // hem trails the way he runs and turns, down from a still top edge (TickCape)
+            f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.48f, Long = 1.25f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f, Wave = 0.06f, Sheet = 0.1f } };
 
             // Tyra: her new longbow in the left fist (turned a quarter in the conversion so its belly faces as the old bow's did), the
             // quiver on her back, slanting over her right shoulder. Her V2 rig has all its finger bones, so her fingers play the clips
@@ -1019,7 +1025,7 @@ namespace BAM.Art
                 wornT[i] = t;
                 PlaceWorn(i);
                 if (w.Skin && SkinWorn(go, mesh, an, rends)) wornT[i] = null; // follows the body now: no sway of its own
-                else if (w.Wave > 0f) MakeWave(i, go, mesh);
+                else if (w.Wave > 0f) MakeWave(i, go, w.Sheet > 0f ? Props.Sheet(w.Model, mesh, w.Sheet) ?? mesh : mesh);
             }
         }
 
@@ -1118,13 +1124,18 @@ namespace BAM.Art
 
         // WornDef.Wave: the cloak's own copy of its mesh, bent every frame (TickWave); its vertices as made and how far down each is
         Mesh[] waveM; Vector3[][] waveV, waveOut; float[][] waveD, waveX; float waveClock, waveRun;
+        float[] capeTop, capeSide, capeSideV; Vector3[] capeHem, capeVel; bool[] capeLive; // TickCape: the bend across, the hem's track
 
         void MakeWave(int i, GameObject go, Mesh mesh)
         {
             var mf = go.GetComponent<MeshFilter>();
             if (mf == null || !mesh.isReadable) return;
             int n = worn.Length;
-            if (waveM == null) { waveM = new Mesh[n]; waveV = new Vector3[n][]; waveOut = new Vector3[n][]; waveD = new float[n][]; waveX = new float[n][]; }
+            if (waveM == null)
+            {
+                waveM = new Mesh[n]; waveV = new Vector3[n][]; waveOut = new Vector3[n][]; waveD = new float[n][]; waveX = new float[n][];
+                capeTop = new float[n]; capeSide = new float[n]; capeSideV = new float[n]; capeHem = new Vector3[n]; capeVel = new Vector3[n]; capeLive = new bool[n];
+            }
             var m = Object.Instantiate(mesh);
             m.name = mesh.name + " wave";
             m.MarkDynamic();
@@ -1140,18 +1151,18 @@ namespace BAM.Art
             bb.Expand(new Vector3(0.3f * h, 0.1f * h, 0.6f * h)); // room for the waves, so it is never culled while it ripples
             m.bounds = bb;
             mf.sharedMesh = m;
-            waveM[i] = m; waveV[i] = v; waveOut[i] = new Vector3[v.Length]; waveD[i] = d; waveX[i] = x;
+            waveM[i] = m; waveV[i] = v; waveOut[i] = new Vector3[v.Length]; waveD[i] = d; waveX[i] = x; capeTop[i] = mesh.bounds.max.y;
         }
 
         // waves running down the cloak from its top edge: out from the back (the mesh's +z, away from the body; at most a third of
         // that in towards the legs) and a little to the sides, growing towards the hem; slow and small at rest, quick and twice as
         // big on the run. The swing (Sway) still turns the whole cloak about its top edge on top of this
-        void TickWave(int i, float mv, bool dead)
+        void TickWave(int i, float mv, bool dead, float back, float across)
         {
             Vector3[] v = waveV[i], o = waveOut[i];
             float[] d = waveD[i], x = waveX[i];
-            float h = wornB[i].MeshY, a = worn[i].Wave * h * (dead ? 0.3f : 1f + mv);
-            float t = waveClock;
+            float h = wornB[i].MeshY, a = worn[i].Wave * h * (dead ? 0.3f : 1f + mv), top = capeTop[i];
+            float t = waveClock, bk = -back * Mathf.Deg2Rad, sd = across * Mathf.Deg2Rad;
             for (int k = 0; k < v.Length; k++)
             {
                 float dk = d[k];
@@ -1159,9 +1170,40 @@ namespace BAM.Art
                 float ph = 2f * Mathf.PI * 1.1f * dk - t + 3.4f * x[k];
                 float out_ = a * Mathf.Pow(dk, 1.4f) * (0.35f + 0.65f * Mathf.Sin(ph));
                 float side = 0.35f * a * dk * dk * Mathf.Sin(0.8f * ph + 1.3f);
-                o[k] = new Vector3(v[k].x + side, v[k].y, v[k].z + out_);
+                // bent like cloth: the further down, the more it turns out from the back (about the top edge) and to the side, so
+                // it curves instead of swinging as a board
+                float bend = Mathf.Pow(dk, 1.2f);
+                float y = v[k].y - top, z = v[k].z + out_, px = v[k].x + side;
+                float c1 = Mathf.Cos(bk * bend), s1 = Mathf.Sin(bk * bend);
+                float y1 = y * c1 - z * s1, z1 = y * s1 + z * c1;
+                float c2 = Mathf.Cos(sd * bend), s2 = Mathf.Sin(sd * bend);
+                o[k] = new Vector3(px * c2 - y1 * s2, px * s2 + y1 * c2 + top, z1);
             }
             waveM[i].vertices = o;
+        }
+
+        // a cloak that bends (WornDef.Wave): its hem trails how it moves in the world (the body running, turning on the spot, a
+        // Blink's stop), out from the back and to the side, on soft springs, plus the attack's lean and a slow breath; the top edge
+        // stays on the shoulders, so the part itself no longer turns (Rickard 2026-11-18 "gör den rörlig som annan textur")
+        void TickCape(int i, Transform t, float dt, float moveW, float atkW, bool dead)
+        {
+            t.localRotation = wornRest[i];
+            float max = worn[i].Sway > 0f ? worn[i].Sway : 20f, step = Mathf.Min(dt, 0.05f);
+            Vector3 hem = t.TransformPoint(new Vector3(0f, capeTop[i] - wornB[i].MeshY, 0f));
+            if (!capeLive[i] || (hem - capeHem[i]).sqrMagnitude > 1f) { capeLive[i] = true; capeHem[i] = hem; capeVel[i] = Vector3.zero; }
+            Vector3 vel = (hem - capeHem[i]) / dt;
+            capeHem[i] = hem;
+            capeVel[i] = Vector3.Lerp(capeVel[i], vel, 1f - Mathf.Exp(-dt / 0.08f)); // smoothed: the walk's bob is not a gust
+            Vector3 outW = t.TransformDirection(Vector3.forward).normalized, acrossW = t.TransformDirection(Vector3.right).normalized;
+            const float Run = 2.5f; // tiles a second: a full run gives the full swing
+            float vOut = -Vector3.Dot(capeVel[i], outW) / Run, vSide = -Vector3.Dot(capeVel[i], acrossW) / Run;
+            float target = dead ? 0f : max * Mathf.Clamp(Mathf.Max(vOut, Mathf.Clamp01(moveW)), -0.3f, 1.3f) + max * 0.25f * Mathf.Clamp01(atkW) + 1.5f * Mathf.Sin(swayClock * 1.4f + i);
+            float sideT = dead ? 0f : max * 0.9f * Mathf.Clamp(vSide, -1f, 1f) + 1.2f * Mathf.Sin(swayClock * 0.9f + 2f * i);
+            swayV[i] += (40f * (target - swayA[i]) - 7f * swayV[i]) * step;
+            swayA[i] = Mathf.Clamp(swayA[i] + swayV[i] * step, -max * 0.3f, max * 1.4f);
+            capeSideV[i] += (30f * (sideT - capeSide[i]) - 6f * capeSideV[i]) * step;
+            capeSide[i] = Mathf.Clamp(capeSide[i] + capeSideV[i] * step, -max, max);
+            TickWave(i, waveRun, dead, swayA[i], capeSide[i]);
         }
 
         // a cloak's swing: a soft spring toward a lean that grows with running and a little with the swing of an attack, plus a
@@ -1191,7 +1233,7 @@ namespace BAM.Art
                 if (t == null) continue;
                 WornDef w = worn[i];
                 if (w.At != wornB[i].At || w.Turn != wornB[i].Turn || w.Yaw != wornB[i].Yaw || w.Height != wornB[i].Height || w.Wide != wornB[i].Wide) PlaceWorn(i); // the Weapon Tuner moved it
-                if (waveM != null && waveM[i] != null) TickWave(i, waveRun, dead);
+                if (waveM != null && waveM[i] != null) { TickCape(i, t, dt, moveW, atkW, dead); continue; }
                 if (w.Flap != 0f)
                 {
                     // up and down about the root, the beat's low point at the rest pose's line: a wider beat on the move

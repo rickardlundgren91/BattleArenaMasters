@@ -32,6 +32,54 @@ namespace BAM.Art
 
         public static Texture2D Texture(string name) => Resources.Load<Texture2D>(Folder + name);
 
+        static readonly Dictionary<string, Mesh> sheets = new Dictionary<string, Mesh>();
+
+        /// <summary>A cloak made as a thick shell (Tripo: an outer and an inner sheet about a quarter of its length apart, which showed
+        /// as two cloaks, Rickard 2026-11-18: "fenns kappa är dubbel") pressed into one thin sheet just inside its outer face: each
+        /// vertex's depth (z, out from the back) is measured against the outer and inner sheets near it (their faces' normals point
+        /// +z and -z), and the gap between them kept at share keep. Its outline, its folds across and down, and its UVs stay. null
+        /// when the mesh can't be read or has no two sheets.</summary>
+        public static Mesh Sheet(string name, Mesh src, float keep)
+        {
+            string key = name + "|" + keep;
+            if (sheets.TryGetValue(key, out Mesh done)) return done;
+            Mesh m = src != null && src.isReadable ? MakeSheet(src, keep) : null;
+            sheets[key] = m;
+            return m;
+        }
+
+        static Mesh MakeSheet(Mesh src, float keep)
+        {
+            Vector3[] v = src.vertices, n = src.normals;
+            if (v.Length == 0 || n == null || n.Length != v.Length) return null;
+            float sig = 0.06f * Mathf.Max(src.bounds.size.x, src.bounds.size.y), inv2 = 1f / (2f * sig * sig), cut = 9f * sig * sig;
+            var o = new Vector3[v.Length];
+            int moved = 0;
+            for (int i = 0; i < v.Length; i++)
+            {
+                float wo = 0f, zo = 0f, wi = 0f, zi = 0f;
+                for (int j = 0; j < v.Length; j++)
+                {
+                    float dx = v[j].x - v[i].x, dy = v[j].y - v[i].y, d2 = dx * dx + dy * dy;
+                    if (d2 > cut) continue;
+                    float w = Mathf.Exp(-d2 * inv2);
+                    if (n[j].z > 0.2f) { wo += w; zo += w * v[j].z; } else if (n[j].z < -0.2f) { wi += w; zi += w * v[j].z; }
+                }
+                o[i] = v[i];
+                if (wo < 1e-3f || wi < 1e-3f) continue;
+                zo /= wo; zi /= wi;
+                float mid = (zo + zi) * 0.5f, at = zo - 0.5f * keep * (zo - zi);
+                o[i].z = at + (v[i].z - mid) * keep;
+                moved++;
+            }
+            if (moved < v.Length / 2) return null; // not a two-sheet shell
+            var m = Object.Instantiate(src);
+            m.name = src.name + " (one sheet)";
+            m.vertices = o;
+            m.RecalculateBounds();
+            return m;
+        }
+
         static readonly Dictionary<string, Mesh> shortHandles = new Dictionary<string, Mesh>();
         static readonly Dictionary<string, float> shortGuards = new Dictionary<string, float>();
 
