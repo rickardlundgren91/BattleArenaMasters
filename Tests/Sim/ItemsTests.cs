@@ -22,14 +22,14 @@ namespace BAM.Sim
         {
             // ---------- the offers and the picks ----------
             var m = ItemMatch(21); var none = PlayerInput.None; var p = m.Player;
-            while (m.Level < 6) { Full(m); m.Step(in none); }
+            while (m.Level < ItemS.OfferLevels[0]) { Full(m); m.Step(in none); }
             bool all3 = true, distinct = true;
             for (int i = 0; i < m.Heroes.Count; i++)
             {
                 var h = m.Heroes[i]; if (h.OfferCount != 3) all3 = false;
                 if (h.Offer[0] == h.Offer[1] || h.Offer[0] == h.Offer[2] || h.Offer[1] == h.Offer[2]) distinct = false;
             }
-            Check(all3 && distinct, "level 6: every hero is offered three different items");
+            Check(all3 && distinct, $"level {ItemS.OfferLevels[0]}: every hero is offered three different items");
             for (int k = 0; k < 60 * 5; k++) { Full(m); m.Step(in none); }
             int botsWith = 0; for (int i = 0; i < m.Heroes.Count; i++) if (m.Heroes[i] != p && m.Heroes[i].ItemCount == 1 && m.Heroes[i].OfferCount == 0) botsWith++;
             Check(botsWith == 5, $"every bot took one item within 4 s ({botsWith}/5)");
@@ -69,8 +69,8 @@ namespace BAM.Sim
             Check(ht7.Player.OfferCount == 3 && ht7.Player.OfferQueued == 0, "HERO TEST at Lv 7: one offer");
             for (int k = 0; k < 60 * 10; k++) ht7.Step(in none);
             Check(ht7.Player.OfferCount == 3 && ht7.Player.ItemCount == 0, "HERO TEST: the offer waits for the player (no bot picks it)");
-            var ht5 = Create(new MatchConfig { PlayerHero = HeroId.Ragn, HeroTest = true, HeroTestLevel = 5, Seed = 4 });
-            Check(ht5.Player.OfferCount == 0, "HERO TEST at Lv 5: no offer yet");
+            var ht5 = Create(new MatchConfig { PlayerHero = HeroId.Ragn, HeroTest = true, HeroTestLevel = ItemS.OfferLevels[0] - 1, Seed = 4 });
+            Check(ht5.Player.OfferCount == 0, $"HERO TEST at Lv {ItemS.OfferLevels[0] - 1}: no offer yet");
             var tut = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Tutorial = true, Seed = 3 });
             Check(!tut.ItemsOn, "the guided match has no items");
 

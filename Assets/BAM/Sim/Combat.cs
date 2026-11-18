@@ -119,6 +119,7 @@ namespace BAM.Sim
             // a dead attacker (a shot that lands after its shooter died, a burn or poison tick of his) is not revealed: he came back
             // from the respawn lit and "in a fight" (full review 2026-11-09 nr 76, 66). Hitting Fenn's decoy reveals nobody.
             if (att != null && att.Alive && !tgt.IsClone) att.RevealT = Rules.RevealTime;
+            if (att != null && att.ItemCount > 0 && (flags & (DmgFlags.Burning | DmgFlags.DotTick | DmgFlags.Reflected)) == 0) CloakBreak(att); // a hit ends the Cloak (Items.cs)
             // being hit in grass reveals nobody: only your own hits and an enemy within 2.5 tiles do, so a stray splash or a
             // bot's next shot cannot keep a hero who is not fighting lit for ever (tester MysOxen 2026-11-04). A hit outside the
             // grass still trails you 2 s into it. Poison and burn ticks are the exception: a hero who burns or is poisoned in the
@@ -132,6 +133,7 @@ namespace BAM.Sim
                 if (tgt.TutUnkillable && amount >= tgt.Hp) amount = Math.Max(0, tgt.Hp - 1);
                 amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark, Minion Skewer, Crushing Spanner, Heroes Bane (Items.cs)
                 amount *= FuryMult(att, tgt); // the Fury battle spell: +20 % on enemy heroes (Spells.cs)
+                amount *= PlateMult(tgt); // the Iron Plate item (Items.cs)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult() * (Tut == null ? Rules.MinionVsTower : 1); // the old wolf counted as a minion
                 if (Tut != null) TutSawHit(src, tgt, kind); // the guided match's special lessons (Tutorial.cs)
@@ -166,6 +168,8 @@ namespace BAM.Sim
             if (amount <= 0) return 0;
             if (tgt.Kind == UnitKind.Hero && tgt.Hero == HeroId.Oaken) amount = StoredImpact(src, tgt, amount, kind, flags); // Hero6.cs
             amount = QueenInstinct(src, tgt, amount, kind, flags);
+            if (amount <= 0) return 0;
+            amount = LastStand(tgt, amount); // the Last Stand item (Items.cs): a killing hit leaves 1 health
             if (amount <= 0) return 0;
             float taken = Math.Min(amount, tgt.Hp), hpBefore = tgt.Hp;
             tgt.Hp -= amount;
@@ -229,6 +233,7 @@ namespace BAM.Sim
                 var a = Heroes[i];
                 if (a != killer && a.Team != u.Team && Time - u.LastHitBy[i] < Rules.AssistWindow) a.Assists++;
             }
+            TrophyOnKill(u, killer); // the Trophy Chain item (Items.cs)
             int streak = 0;
             if (killer != null && killer.Kind == UnitKind.Hero) { killer.Kills++; killer.Streak++; streak = killer.Streak; }
             for (int i = 0; i < u.LastHitBy.Length; i++) u.LastHitBy[i] = -99;
@@ -562,7 +567,7 @@ namespace BAM.Sim
         {
             var s = p.Src; var t = p.Tgt;
             if (!t.Alive) return;
-            float dealt = DealDamage(s, t, p.OnHit ? p.Dmg * ItemAutoMult(s, t) : p.Dmg, DmgKind.Auto); // Thicket Fang (Items.cs)
+            float dealt = DealDamage(s, t, p.OnHit ? p.Dmg * ItemAutoMult(s, t) * KeenMult(s, t) : p.Dmg, DmgKind.Auto); // Thicket Fang, Keen Edge (Items.cs)
             Emit(EventType.Hit, s, t, dealt, (byte)p.Kind, p.Big, t.X, t.Y, DmgKind.Auto); // always: every attack shows where it landed
             if (!p.OnHit || (!s.Alive && !s.IsClone)) return;
             if (s.Kind == UnitKind.Hero && !s.IsClone) OnHeroHit(s, t, p, dealt);

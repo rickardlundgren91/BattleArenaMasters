@@ -70,6 +70,8 @@ namespace BAM.Sim
         public TeamSignal Signal;
         /// <summary>The item offer's choice taken this tick: 1-3, 0 = none (Items.cs).</summary>
         public byte ItemPick;
+        /// <summary>The held item whose icon was tapped this tick: 1-2, 0 = none (a button item: Cloak, Divine Protection; Items.cs).</summary>
+        public byte ItemUse;
         public static PlayerInput None => new PlayerInput { AimAngle = float.NaN, SpellAngle = float.NaN, SpellK = 1 };
     }
 
@@ -347,6 +349,7 @@ namespace BAM.Sim
                 if (input.Spell) CastSpell(h, input.SpellAngle, input.SpellK); // the battle spell (Spells.cs)
                 if (input.Signal != TeamSignal.None) CallSignal(h, input.Signal); // a team signal (Signals.cs)
                 if (input.ItemPick > 0) PickItem(h, input.ItemPick - 1); // the item offer's choice (Items.cs)
+                if (input.ItemUse > 0) UseItem(h, input.ItemUse - 1); // a button item (Items.cs)
             }
 
             // minions of a wave come out one by one

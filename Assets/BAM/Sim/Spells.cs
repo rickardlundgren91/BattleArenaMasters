@@ -156,10 +156,7 @@ namespace BAM.Sim
                     break;
                 }
                 case SpellId.Immune:
-                    h.RemoveAll(St.Stun); h.RemoveAll(St.Root); // nothing holds it any more (it could not be cast stunned anyway)
-                    for (int i = h.StCount - 1; i >= 0; i--) if ((h.Sts[i].Type == St.SlowPct || h.Sts[i].Type == St.SlowFlat) && h.Sts[i].V < 0) h.RemoveAt(i);
-                    AddStatus(h, St.Invulnerable, SpellDefs.ImmuneDur, SpellDefs.ImmuneTag);
-                    h.AddRaw(St.SlowPct, SpellDefs.ImmuneDur, SpellDefs.ImmuneSlow, 0, h, false); // its own slow: no control, so no Charm or immunity
+                    GiveImmune(h, SpellDefs.ImmuneDur, SpellDefs.ImmuneSlow);
                     break;
                 case SpellId.Bladearmor:
                     h.RemoveAll(St.Reflect);
@@ -236,6 +233,14 @@ namespace BAM.Sim
         }
 
         // ---------- the five of 2026-11-18 ----------
+        /// <summary>Immune and the Divine Protection item: no damage and no control for dur s, slow (its own, no control) as long.</summary>
+        internal void GiveImmune(Unit h, float dur, float slow)
+        {
+            h.RemoveAll(St.Stun); h.RemoveAll(St.Root); // nothing holds it any more (it could not be cast stunned anyway)
+            for (int i = h.StCount - 1; i >= 0; i--) if ((h.Sts[i].Type == St.SlowPct || h.Sts[i].Type == St.SlowFlat) && h.Sts[i].V < 0) h.RemoveAt(i);
+            AddStatus(h, St.Invulnerable, dur, SpellDefs.ImmuneTag);
+            h.AddRaw(St.SlowPct, dur, slow, 0, h, false); // its own slow: no control, so no Charm or immunity
+        }
         /// <summary>Fury: +20 % on enemy heroes from a hero who has it (its wolf's and decoy's hits too).</summary>
         float FuryMult(Unit att, Unit tgt) =>
             att != null && att.Kind == UnitKind.Hero && att.Spell == SpellId.Fury && SpellsOn && tgt.Kind == UnitKind.Hero && tgt.Team != att.Team ? 1 + SpellDefs.FuryPct : 1;

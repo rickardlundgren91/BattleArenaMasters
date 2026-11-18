@@ -6,7 +6,9 @@ namespace BAM.Sim
     /// (Speltest SimItemsV2.cs, XYZ main cb45566), the six Rickard kept. Sole Target Sigil and Siege Banner are left out.</summary>
     /// 1 was Resonance Core, removed from the game 2026-11-13 (Rickard: "inte rätt item för spelet. ta bort"); the number stays free
     /// so the other items keep their ids on the wire and in match traces.
-    public enum ItemId : byte { None = 0, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10, Boots = 11 }
+    public enum ItemId : byte { None = 0, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10, Boots = 11,
+        // the nine of 2026-11-18 (Rickard, his card: "Alla som items"; ItemS below)
+        Brimming = 12, LastStand = 13, Battery = 14, Trophy = 15, Cloak = 16, Plate = 17, Divine = 18, Keen = 19, Gloves = 20 }
 
     /// <summary>One item a hero holds and its state. Times are match times (ReadyAt: the item works again from then).</summary>
     public struct ItemSlot
@@ -27,7 +29,7 @@ namespace BAM.Sim
         /// one moved from 12 (2:56) to 10 (2:24) on Rickard's choice of 2026-11-16 (a card: "Level 10 (2:24)"): at 12 it came so
         /// late that against Easy bots it was held under 30 s in two matches of five and never came in almost one of five; at 10
         /// the win rates and the match length are the same (12 000 bot matches, bam-work/items/polish/README.md).</summary>
-        public static readonly int[] OfferLevels = { 6, 10 };
+        public static readonly int[] OfferLevels = { 5, 8 }; // 6, 10 -> 5, 10 -> 5, 8 (Rickard 2026-11-18: "ta lvl 5 och 10", then "Items lvl 5 och 8")
         public const int Choices = 3;
         /// <summary>A bot takes its pick 1-4 s after the offer (the old game's timer).</summary>
         public const float BotPickMin = 1, BotPickMax = 4;
@@ -38,7 +40,9 @@ namespace BAM.Sim
         public static float BotWorth(ItemId id) => id switch
         {
             ItemId.Lifesteal => 54.1f, ItemId.Rally => 52.8f, ItemId.HeroDmg => 51.2f, ItemId.Thread => 51.0f, ItemId.Boots => 50.6f,
-            ItemId.MinionDmg => 49.9f, ItemId.Mark => 49.5f, ItemId.Fang => 49.4f, ItemId.Charm => 49.2f, ItemId.TowerDmg => 49.1f, _ => 50f,
+            ItemId.MinionDmg => 49.9f, ItemId.Mark => 49.5f, ItemId.Fang => 49.4f, ItemId.Charm => 49.2f, ItemId.TowerDmg => 49.1f,
+            // the nine of 2026-11-18: bot lab 2026-11-18 (BotWorthNew below)
+            _ => BotWorthNew(id),
         };
         /// <summary>The odds per rarity (common, rare, epic, legendary), from the old game's itemData.rarityOdds.</summary>
         public static readonly float[] RarityOdds = { 55, 25, 15, 5 };
@@ -58,6 +62,38 @@ namespace BAM.Sim
         public const float Lifesteal = 0.10f, MinionDmg = 0.15f, TowerDmg = 0.10f, HeroDmg = 0.05f;
         // Swift Boots (common; Rickard 2026-11-13: "item boots 10% movementspeed")
         public const float BootsSpeed = 0.10f;
+
+        // The nine of 2026-11-18 (Rickard: "dmg 20% if you hold your special, survive killing dmg 4 seconds, +1 special charge every 8sec,
+        // 5% dmg per hero kill or assist (lose all on death), invis- cloak of invisibility, dmg reduction 25%, invincible- divine protection,
+        // crit chance 35%, attackspeed 30%"; then on a card "Alla som items"). Most are ABC2 items (itemData): DamageSpecialFull,
+        // SurviveAfterFatalDamage (4 s, +40 % speed, cd 100-80), SpecialChargeOverTime, StackingDamageOnKill (max 10),
+        // InvisibilityPotion (4 s, cd 90-50), InvincibilityPotion (4 s, slowed, cd 130-90); cooldowns cut for BAM's 4:30 matches.
+        /// <summary>Brimming Edge: +BrimmingDmg damage of every kind while the SPECIAL is fully charged.</summary>
+        public const float BrimmingDmg = 0.20f;
+        /// <summary>Last Stand: a killing hit leaves 1 health and the hero cannot die for LastStandTime s, LastStandSpeed faster.</summary>
+        public const float LastStandTime = 4f, LastStandSpeed = 0.4f, LastStandCd = 90f;
+        /// <summary>Rune Battery: one SPECIAL charge every BatteryEvery s.</summary>
+        public const float BatteryEvery = 8f;
+        /// <summary>Trophy Chain: +TrophyDmg damage per hero kill or assist since the last death, at most TrophyMax of them.</summary>
+        public const float TrophyDmg = 0.05f; public const int TrophyMax = 10;
+        /// <summary>Cloak of Invisibility (tap its icon): no enemy hero or minion sees the holder for CloakTime s or until it hits something.</summary>
+        public const float CloakTime = 4f, CloakCd = 60f;
+        /// <summary>Iron Plate: PlateCut less damage taken from everything.</summary>
+        public const float PlateCut = 0.25f;
+        /// <summary>Divine Protection (tap its icon): no damage and no stun, root or slow for DivineTime s, DivineSlow slower.</summary>
+        public const float DivineTime = 4f, DivineSlow = -0.3f, DivineCd = 90f;
+        /// <summary>Keen Edge: an auto attack has KeenChance to hit for KeenMult (the number is drawn from the match's seeded Rng).</summary>
+        public const float KeenChance = 0.35f, KeenMult = 1.5f;
+        /// <summary>Quick Gloves: +GlovesHaste attack speed.</summary>
+        public const float GlovesHaste = 0.30f;
+        /// <summary>An item with a button: a tap on its icon uses it (PlayerInput.ItemUse).</summary>
+        public static bool Active(ItemId id) => id == ItemId.Cloak || id == ItemId.Divine;
+        static float BotWorthNew(ItemId id) => id switch
+        {
+            // holder's team win rate, 3000 Normal bot matches with random picks from all nineteen (±2-5)
+            ItemId.Brimming => 46.5f, ItemId.LastStand => 52.9f, ItemId.Battery => 50.0f, ItemId.Trophy => 47.5f, ItemId.Cloak => 50.6f,
+            ItemId.Plate => 57.3f, ItemId.Divine => 52.4f, ItemId.Keen => 54.0f, ItemId.Gloves => 57.6f, _ => 50f,
+        };
     }
 
     /// <summary>Names, rarity, icon and text of the items (HUD and menus; the rules read only Rarity).</summary>
@@ -94,10 +130,29 @@ namespace BAM.Sim
                 Text = $"+{P(ItemS.HeroDmg)} damage to heroes" },
             new Info { Id = ItemId.Boots, Short = $"+{P(ItemS.BootsSpeed)} move speed", Name = "Swift Boots", Rarity = 0, Icon = "item_boots",
                 Text = $"+{P(ItemS.BootsSpeed)} move speed, all match long" },
+            // the nine of 2026-11-18
+            new Info { Id = ItemId.Brimming, Short = $"+{P(ItemS.BrimmingDmg)} damage while your SPECIAL is full", Name = "Brimming Edge", Rarity = 2, Icon = "item_brimming",
+                Text = $"+{P(ItemS.BrimmingDmg)} damage while you hold a fully charged SPECIAL" },
+            new Info { Id = ItemId.LastStand, Short = $"Survive a killing hit for {ItemS.LastStandTime}s", Name = "Last Stand", Rarity = 2, Icon = "item_laststand",
+                Text = $"A killing hit leaves you at 1 health: you cannot die for {ItemS.LastStandTime}s and move +{P(ItemS.LastStandSpeed)} faster (cd {ItemS.LastStandCd}s)" },
+            new Info { Id = ItemId.Battery, Short = $"+1 SPECIAL charge every {ItemS.BatteryEvery}s", Name = "Rune Battery", Rarity = 2, Icon = "item_battery",
+                Text = $"Your SPECIAL gains a charge every {ItemS.BatteryEvery}s" },
+            new Info { Id = ItemId.Trophy, Short = $"+{P(ItemS.TrophyDmg)} damage per kill or assist", Name = "Trophy Chain", Rarity = 3, Icon = "item_trophy",
+                Text = $"+{P(ItemS.TrophyDmg)} damage for every hero kill or assist (up to {ItemS.TrophyMax}); you lose them all when you die" },
+            new Info { Id = ItemId.Cloak, Short = $"TAP: invisible for {ItemS.CloakTime}s", Name = "Cloak of Invisibility", Rarity = 3, Icon = "item_cloak",
+                Text = $"Tap its icon: enemies cannot see you for {ItemS.CloakTime}s or until you hit something (cd {ItemS.CloakCd}s). Towers still see you" },
+            new Info { Id = ItemId.Plate, Short = $"Take {P(ItemS.PlateCut)} less damage", Name = "Iron Plate", Rarity = 2, Icon = "item_plate",
+                Text = $"You take {P(ItemS.PlateCut)} less damage from everything" },
+            new Info { Id = ItemId.Divine, Short = $"TAP: invincible for {ItemS.DivineTime}s", Name = "Divine Protection", Rarity = 2, Icon = "item_divine",
+                Text = $"Tap its icon: no damage and no stuns for {ItemS.DivineTime}s, but you move {P(-ItemS.DivineSlow)} slower (cd {ItemS.DivineCd}s)" },
+            new Info { Id = ItemId.Keen, Short = $"{P(ItemS.KeenChance)} chance to crit", Name = "Keen Edge", Rarity = 1, Icon = "item_keen",
+                Text = $"Your attacks have a {P(ItemS.KeenChance)} chance to deal {ItemS.KeenMult}x damage" },
+            new Info { Id = ItemId.Gloves, Short = $"+{P(ItemS.GlovesHaste)} attack speed", Name = "Quick Gloves", Rarity = 1, Icon = "item_gloves",
+                Text = $"+{P(ItemS.GlovesHaste)} attack speed, all match long" },
         };
         static string P(float v) => Math.Round(v * 100) + "%";
 
-        public const int Count = 11;
+        public const int Count = 20;
         public static Info Get(ItemId id) => id > ItemId.None && (int)id <= Count ? all[(int)id] : null;
         public static int Rarity(ItemId id) { var i = Get(id); return i != null ? i.Rarity : 0; }
     }
@@ -243,7 +298,13 @@ namespace BAM.Sim
                     AddStatus(h, St.SpeedPct, ItemS.CharmSpeedTime, ItemS.CharmSpeed);
                 }
                 else if (it.Id == ItemId.Rally) it.ReadyAt = RallyReadyAt[h.Team]; // the icon shows the team's cooldown
+                else if (it.Id == ItemId.Battery && Time >= it.ReadyAt)
+                {
+                    if (it.ReadyAt > 0 && h.HDef != null && h.Charge < h.HDef.MaxCharge && !h.KuggRooted) { h.Charge = Math.Min(h.HDef.MaxCharge, h.Charge + 1); ItemProc(h, ItemId.Battery); }
+                    it.ReadyAt = Time + ItemS.BatteryEvery; // the first charge comes 8 s after the pick
+                }
             }
+            if (h.Bot != null && !h.Dummy && State == MatchState.Play) BotUseItems(h);
         }
 
         /// <summary>Death: no armed fang, bush memory or waiting Steadfast speed carries over; cooldowns keep running.</summary>
@@ -254,6 +315,7 @@ namespace BAM.Sim
                 ref var it = ref h.Items[k];
                 if (it.Id == ItemId.Fang) { it.Until = 0; it.Was = false; }
                 if (it.Id == ItemId.Charm) it.Until = 0;
+                if (it.Id == ItemId.Trophy) it.Stacks = 0; // Trophy Chain: all lost on death (Rickard: "lose all on death")
             }
         }
 
@@ -309,10 +371,103 @@ namespace BAM.Sim
         float PlainDamageMult(Unit att, Unit tgt)
         {
             if (!RealHero(att) || att.ItemCount == 0 || att.Team == tgt.Team) return 1;
-            if (tgt.Kind == UnitKind.Minion) return att.HasItem(ItemId.MinionDmg) ? 1 + ItemS.MinionDmg : 1;
-            if (tgt.Kind == UnitKind.Tower) return att.HasItem(ItemId.TowerDmg) ? 1 + ItemS.TowerDmg : 1;
-            if (tgt.Kind == UnitKind.Hero) return att.HasItem(ItemId.HeroDmg) ? 1 + ItemS.HeroDmg : 1;
-            return 1;
+            float k = 1;
+            if (tgt.Kind == UnitKind.Minion) k = att.HasItem(ItemId.MinionDmg) ? 1 + ItemS.MinionDmg : 1;
+            else if (tgt.Kind == UnitKind.Tower) k = att.HasItem(ItemId.TowerDmg) ? 1 + ItemS.TowerDmg : 1;
+            else if (tgt.Kind == UnitKind.Hero) k = att.HasItem(ItemId.HeroDmg) ? 1 + ItemS.HeroDmg : 1;
+            // Brimming Edge and Trophy Chain: every kind of target
+            if (att.HasItem(ItemId.Brimming) && att.Charge >= att.HDef.MaxCharge) k *= 1 + ItemS.BrimmingDmg;
+            int t = att.ItemIndex(ItemId.Trophy);
+            if (t >= 0 && att.Items[t].Stacks > 0) k *= 1 + ItemS.TrophyDmg * att.Items[t].Stacks;
+            return k;
+        }
+
+        // ---------- the nine of 2026-11-18 ----------
+        /// <summary>Iron Plate: what a hit on the holder still does.</summary>
+        internal static float PlateMult(Unit tgt) => tgt.Kind == UnitKind.Hero && !tgt.IsClone && tgt.ItemCount > 0 && tgt.HasItem(ItemId.Plate) ? 1 - ItemS.PlateCut : 1;
+
+        /// <summary>Last Stand: amount about to hit tgt. A killing hit with the item ready leaves 1 health and starts the 4 s in which
+        /// the hero cannot die (St.Undying); while that lasts no hit takes the last point.</summary>
+        float LastStand(Unit tgt, float amount)
+        {
+            if (tgt.Kind != UnitKind.Hero || tgt.IsClone || amount < tgt.Hp) return amount;
+            if (tgt.Has(St.Undying)) return Math.Max(0, tgt.Hp - 1);
+            if (tgt.ItemCount == 0) return amount;
+            int k = tgt.ItemIndex(ItemId.LastStand);
+            if (k < 0 || Time < tgt.Items[k].ReadyAt) return amount;
+            tgt.Items[k].ReadyAt = Time + ItemS.LastStandCd;
+            tgt.AddRaw(St.Undying, ItemS.LastStandTime, 0, 0, tgt, false);
+            tgt.AddRaw(St.SpeedPct, ItemS.LastStandTime, ItemS.LastStandSpeed, 0, tgt, false);
+            ItemProc(tgt, ItemId.LastStand);
+            return Math.Max(0, tgt.Hp - 1);
+        }
+
+        /// <summary>Keen Edge: an auto attack's damage factor (KeenMult on a crit, from the seeded Rng so a replay matches).</summary>
+        float KeenMult(Unit s, Unit t)
+        {
+            if (!RealHero(s) || s.ItemCount == 0 || t.Team == s.Team || !s.HasItem(ItemId.Keen)) return 1;
+            if (Rng.Float() >= ItemS.KeenChance) return 1;
+            ItemProc(s, ItemId.Keen);
+            return ItemS.KeenMult;
+        }
+
+        /// <summary>Trophy Chain: a hero died; its killer and those who assisted gain a stack (called before LastHitBy is cleared).</summary>
+        void TrophyOnKill(Unit dead, Unit killer)
+        {
+            for (int i = 0; i < Heroes.Count; i++)
+            {
+                var a = Heroes[i];
+                if (a.ItemCount == 0 || a.Team == dead.Team || a.IsClone) continue;
+                bool got = a == killer || Time - dead.LastHitBy[i] < Rules.AssistWindow;
+                int k = a.ItemIndex(ItemId.Trophy);
+                if (!got || k < 0) continue;
+                if (a.Items[k].Stacks < ItemS.TrophyMax) { a.Items[k].Stacks++; ItemProc(a, ItemId.Trophy, a.Items[k].Stacks); }
+            }
+        }
+
+        /// <summary>A tap on the icon of the item in slot i (PlayerInput.ItemUse, or a bot): Cloak of Invisibility, Divine Protection.</summary>
+        internal bool UseItem(Unit h, int i)
+        {
+            if (h == null || !h.Alive || h.IsClone || i < 0 || i >= h.ItemCount || !ItemsOn) return false;
+            ref var it = ref h.Items[i];
+            if (!ItemS.Active(it.Id) || Time < it.ReadyAt || h.Has(St.Stun)) return false;
+            if (it.Id == ItemId.Cloak)
+            {
+                h.RemoveAll(St.Veil);
+                AddStatus(h, St.Veil, ItemS.CloakTime, CloakTag, 0, h);
+                h.RevealT = 0; // it starts unseen, even straight out of a fight
+                it.ReadyAt = Time + ItemS.CloakCd;
+            }
+            else
+            {
+                GiveImmune(h, ItemS.DivineTime, ItemS.DivineSlow);
+                it.ReadyAt = Time + ItemS.DivineCd;
+            }
+            ItemProc(h, it.Id);
+            return true;
+        }
+        /// <summary>V of the Veil status the Cloak gives (Fenn's has 0): only his own Veil has his strike and reach rules.</summary>
+        internal const float CloakTag = -9f;
+
+        /// <summary>The Cloak ends when its holder hits anything (Combat.DealDamage).</summary>
+        internal void CloakBreak(Unit att)
+        {
+            if (att == null || att.Kind != UnitKind.Hero || att.IsClone) return;
+            for (int i = att.StCount - 1; i >= 0; i--)
+                if (att.Sts[i].Type == St.Veil && att.Sts[i].V == CloakTag) { att.RemoveAt(i); Emit(EventType.VeilEnd, att, null, 0, 0, false, att.X, att.Y); }
+        }
+
+        /// <summary>Bots use the button items: the Cloak to get away, Divine Protection when a fight goes badly.</summary>
+        void BotUseItems(Unit h)
+        {
+            for (int i = 0; i < h.ItemCount; i++)
+            {
+                var id = h.Items[i].Id;
+                if (!ItemS.Active(id) || Time < h.Items[i].ReadyAt) continue;
+                bool hurt = Time - h.LastHurt < 1.5f;
+                if (id == ItemId.Cloak && h.Hp < h.MaxHp * 0.35f && hurt) UseItem(h, i);
+                else if (id == ItemId.Divine && h.Hp < h.MaxHp * 0.3f && hurt) UseItem(h, i);
+            }
         }
 
         float MarkMult(Unit att, Unit tgt, DmgKind kind, bool dot)

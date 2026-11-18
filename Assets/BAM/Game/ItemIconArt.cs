@@ -149,9 +149,80 @@ namespace BAM.Game
                         d = Math.Min(d, Taper(x, y, -0.62f, 0.4f - k * 0.2f, -0.16f, 0.08f - k * 0.03f, 0.03f, 0.075f));
                     return d;
                 }
+                // ---------- the nine of 2026-11-18 ----------
+                case 12: // Brimming Edge: a lightning bolt over a full ring (a SPECIAL brimming with charge)
+                {
+                    float ring = Math.Abs(Len(x, y) - 0.58f) - 0.05f;
+                    return Math.Min(ring, Poly(x, y, Bolt));
+                }
+                case 13: // Last Stand: a heart with a crack through it
+                {
+                    float heart = Math.Min(Math.Min(Len(x + 0.2f, y - 0.18f) - 0.27f, Len(x - 0.2f, y - 0.18f) - 0.27f), Poly(x, y, HeartTip));
+                    float crack = Cap(x, y, 0.02f, 0.38f, -0.08f, 0.1f, 0.035f);
+                    crack = Math.Min(crack, Cap(x, y, -0.08f, 0.1f, 0.08f, -0.12f, 0.035f));
+                    crack = Math.Min(crack, Cap(x, y, 0.08f, -0.12f, -0.02f, -0.38f, 0.035f));
+                    return Math.Max(heart, -crack);
+                }
+                case 14: // Rune Battery: a battery, three charge bars
+                {
+                    float body = Math.Abs(Box(x, y + 0.04f, 0.3f, 0.5f) - 0.03f) - 0.06f;
+                    float cap = Box(x, y - 0.6f, 0.12f, 0.06f);
+                    float bars = 9f;
+                    for (int k = 0; k < 3; k++) bars = Math.Min(bars, Box(x, y + 0.34f - k * 0.27f, 0.18f, 0.08f));
+                    return Math.Min(Math.Min(body, cap), bars);
+                }
+                case 15: // Trophy Chain: a goblet
+                {
+                    float bowl = Math.Max(Len(x, y - 0.22f) - 0.4f, y - 0.42f);
+                    float stem = Box(x, y + 0.24f, 0.06f, 0.2f);
+                    float foot = Box(x, y + 0.5f, 0.26f, 0.06f) - 0.02f;
+                    float handles = Math.Min(Math.Abs(Len(x - 0.42f, y - 0.2f) - 0.13f) - 0.045f, Math.Abs(Len(x + 0.42f, y - 0.2f) - 0.13f) - 0.045f);
+                    return Math.Min(Math.Min(bowl, stem), Math.Min(foot, handles));
+                }
+                case 16: // Cloak of Invisibility: a hooded cloak with an empty face
+                {
+                    float cloak = Poly(x, y, Hood);
+                    float face = Len(x, y - 0.18f) - 0.17f;
+                    return Math.Max(cloak, -face);
+                }
+                case 17: // Iron Plate: a breastplate
+                {
+                    float plate = Poly(x, y, Breast);
+                    float seam = Box(x, y + 0.05f, 0.025f, 0.38f);
+                    return Math.Max(plate, -seam);
+                }
+                case 18: // Divine Protection: a halo over a four-point star
+                {
+                    float halo = Math.Abs(Len(x, (y - 0.5f) * 2.6f) - 0.36f) - 0.07f;
+                    return Math.Min(halo, Poly(x, y + 0.12f, Star4));
+                }
+                case 19: // Keen Edge: a dagger with a glint
+                {
+                    Rot(x + 0.08f, y + 0.08f, -0.785f, out float sx, out float sy);
+                    float blade = Poly(sx, sy, Blade);
+                    float guard = Box(sx, sy + 0.32f, 0.22f, 0.05f) - 0.02f;
+                    float grip = Cap(sx, sy, 0f, -0.36f, 0f, -0.56f, 0.06f);
+                    float glint = Poly((x - 0.42f) * 2.2f, (y - 0.42f) * 2.2f, Star4) / 2.2f;
+                    return Math.Min(Math.Min(blade, guard), Math.Min(grip, glint));
+                }
+                case 20: // Quick Gloves: a glove with speed lines
+                {
+                    float palm = Box(x + 0.1f, y + 0.02f, 0.25f, 0.3f) - 0.08f;
+                    float thumb = Cap(x, y, -0.15f, -0.05f, -0.4f, 0.18f, 0.09f);
+                    float cuff = Box(x + 0.1f, y + 0.46f, 0.3f, 0.08f) - 0.02f;
+                    float lines = 9f;
+                    for (int k = 0; k < 3; k++) lines = Math.Min(lines, Cap(x, y, -0.78f, 0.22f - k * 0.22f, -0.5f, 0.22f - k * 0.22f, 0.04f));
+                    return Math.Min(Math.Min(palm, thumb), Math.Min(cuff, lines));
+                }
             }
             return 9f;
         }
+
+        static readonly float[] Bolt = { 0.12f, 0.6f, -0.26f, -0.04f, -0.02f, -0.04f, -0.14f, -0.6f, 0.26f, 0.06f, 0.02f, 0.06f };
+        static readonly float[] HeartTip = { -0.44f, 0.08f, 0.44f, 0.08f, 0f, -0.5f };
+        static readonly float[] Hood = { 0f, 0.66f, 0.36f, 0.36f, 0.44f, -0.62f, -0.44f, -0.62f, -0.36f, 0.36f };
+        static readonly float[] Breast = { -0.5f, 0.5f, -0.18f, 0.56f, 0f, 0.42f, 0.18f, 0.56f, 0.5f, 0.5f, 0.42f, -0.2f, 0f, -0.58f, -0.42f, -0.2f };
+        static readonly float[] Star4 = { 0f, 0.45f, 0.1f, 0.1f, 0.45f, 0f, 0.1f, -0.1f, 0f, -0.45f, -0.1f, -0.1f, -0.45f, 0f, -0.1f, 0.1f };
 
         static readonly float[] Shield = { -0.46f, 0.5f, 0.46f, 0.5f, 0.46f, 0.02f, 0f, -0.62f, -0.46f, 0.02f };
         static readonly float[] Flag = { -0.34f, 0.56f, 0.52f, 0.4f, 0.3f, 0.24f, 0.52f, 0.08f, -0.34f, 0.0f };

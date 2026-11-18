@@ -16,6 +16,7 @@ namespace BAM.Sim
         QuarryMark, // the Quarry Mark item (Items.cs): By = the marker; the next hit from another of its team hits harder
         Veil,       // Fenn's Veil (FennS.Veil, Omega's Ignus Fatuus from ABC2): no enemy sees him until he attacks or it runs out
         HealOverTime, // the First Aid kit: V health every second while it lasts, Amount counts to the next tick (Spells.cs)
+        Undying,    // the Last Stand item: no hit takes the last point of health while it lasts (Items.cs)
         Reflect,    // the Heavy Bladearmor battle spell: V of the damage a hit does to this hero goes back to the hitter (Spells.cs)
     }
 
@@ -222,7 +223,7 @@ namespace BAM.Sim
         public float StatCd() { int s = StarsFor(NoStars); return Math.Max(0.35f, HDef.Cd + HDef.CdGrowth * (Level - 1)) * (1 + Defs.StarCdr[s]); }
         public float AttackCd => HDef != null ? StatCd() * (KuggShots > 0 ? KuggS.CdMult : 1) / AtkHaste() : UDef.Cd; // Kugg's Anchor fires faster (Hero7.cs)
         /// <summary>1 plus every attack-speed boost on the unit (old SimHeroes6.atkHaste).</summary>
-        public float AtkHaste() { float a = 1; for (int i = 0; i < StCount; i++) if (Sts[i].Type == St.AtkHaste) a += Sts[i].V; return a; }
+        public float AtkHaste() { float a = 1; for (int i = 0; i < StCount; i++) if (Sts[i].Type == St.AtkHaste) a += Sts[i].V; if (ItemCount > 0 && HasItem(ItemId.Gloves)) a += ItemS.GlovesHaste; return a; } // Quick Gloves (Items.cs)
 
         /// <summary>A new level: a clone only takes the number, a hero gains the extra health.</summary>
         internal void SetLevel(int l)

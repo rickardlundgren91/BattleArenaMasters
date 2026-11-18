@@ -239,6 +239,7 @@ namespace BAM.Sim
             Review1113Items(); // full review 2026-11-13 nr 113 (Review1113ItemsTests.cs)
             TeamSizeChecks(); // 2v2 (Rickard 2026-11-15, TeamSizeTests.cs)
             PlateauChecks(); // the third map (Rickard 2026-11-18, PlateauTests.cs)
+            Items1118(); // the nine items of 2026-11-18 (Items1118Tests.cs)
             SpellsV3(); // the five battle spells of 2026-11-18 (SpellsV3Tests.cs)
             TutorialV3(); // the guided match after the tutorial review of 2026-11-15 (TutorialV3Tests.cs)
             Console.WriteLine($"hero tests: {checks - fails}/{checks} passed");

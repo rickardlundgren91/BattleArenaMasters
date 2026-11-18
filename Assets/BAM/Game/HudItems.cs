@@ -221,7 +221,7 @@ namespace BAM.Game
                 UiKit.Stretch(area.rectTransform, -4f, -4f, -4f, -4f);
                 var tap = heldTap[i] = r.gameObject.AddComponent<EmoteButton>(); // fingers read directly, as the other match controls
                 tap.Down = _ => { heldPress = idx; heldPressAt = Time.unscaledTime; };
-                tap.Up = _ => { if (heldPress == idx) heldPress = -1; };
+                tap.Up = _ => { if (heldPress == idx) { if (Time.unscaledTime - heldPressAt < HoldTime) ItemUseTapped(idx); heldPress = -1; } }; // a short tap uses a button item
                 var ic = heldIcon[i] = UiKit.Fill(r, Color.white); ic.raycastTarget = false; ic.preserveAspect = true;
                 var cd = heldCd[i] = UiKit.Fill(r, new Color(0f, 0f, 0f, 0.6f), UiKit.Circle);
                 cd.raycastTarget = false; cd.type = Image.Type.Filled; cd.fillMethod = Image.FillMethod.Radial360;
@@ -255,7 +255,7 @@ namespace BAM.Game
 
         void BeginItems()
         {
-            itemPickQueued = 0; offerShownCount = -1; offerShownAt = -99f; offerPressed = -1; offerLaidW = -1f; offerOpenSeen = -99f;
+            itemPickQueued = 0; itemUseQueued = 0; offerShownCount = -1; offerShownAt = -99f; offerPressed = -1; offerLaidW = -1f; offerOpenSeen = -99f;
             offerOpen = offerByTap = false; offerBtnAt = -99f; offerHurtSeen = float.MaxValue; // the first frame takes the hurt time as seen
             offerBtnBurstAt = -99f; offerBtnBurstFor = -1;
             pickCard = -1; pickAt = pickBurstAt = -99f;
@@ -300,6 +300,17 @@ namespace BAM.Game
         }
 
         byte TakeItemPick() { var b = itemPickQueued; itemPickQueued = 0; return b; }
+
+        // a short tap on a held button item (Cloak of Invisibility, Divine Protection, 2026-11-18) uses it; a long hold still shows its card
+        byte itemUseQueued;
+        void ItemUseTapped(int i)
+        {
+            var p = m != null ? m.Player : null;
+            if (p == null || !p.Alive || i >= p.ItemCount || !ItemS.Active(p.Items[i].Id) || m.Time < p.Items[i].ReadyAt) return;
+            itemUseQueued = (byte)(i + 1);
+            BamAudio.Play(SfxId.UiConfirm, 0.8f);
+        }
+        byte TakeItemUse() { var b = itemUseQueued; itemUseQueued = 0; return b; }
 
         // the item icon a finger holds (-1: none), only while it shows: a hidden icon never gets its finger's Up (EmoteButton.OnDisable)
         int HeldPressed() => heldPress >= 0 && heldRoot[heldPress].gameObject.activeSelf ? heldPress : -1;
@@ -631,7 +642,10 @@ namespace BAM.Game
                 heldRoot[i].localScale = Vector3.one * (1f + 0.25f * pulse);
                 heldRing[i].rectTransform.sizeDelta = Vector2.one * (2f * 1.12f * r + 8f); // just outside the icon (the SPECIAL's: 1.12 radii + 8)
                 float cd = ItemCooldown(it.Id), left = it.ReadyAt - m.Time;
-                heldCd[i].fillAmount = cd > 0 && left > 0 ? Mathf.Clamp01(left / cd) : 0f;
+                heldCd[i].fillAmount = cd > 0 && left > 0 && it.Id != ItemId.Battery ? Mathf.Clamp01(left / cd) : 0f; // Battery's timer is no cooldown
+                if (it.Id == ItemId.Trophy) SetText(heldCount[i], it.Stacks > 0 ? Int(it.Stacks) : ""); // Trophy Chain: its stacks
+                // a button item ready to use breathes, so the player sees it can be tapped
+                if (ItemS.Active(it.Id) && left <= 0) heldRoot[i].localScale = Vector3.one * (1f + 0.25f * pulse + 0.06f * Mathf.Sin(now * 5f));
             }
             // the ring that swells out of the place a taken item just landed in, in its rarity's colour
             float b = (now - pickBurstAt) / PickBurstTime;
@@ -681,6 +695,10 @@ namespace BAM.Game
                 case ItemId.Thread: return ItemS.ThreadCd;
                 case ItemId.Rally: return ItemS.RallyCd;
                 case ItemId.Charm: return ItemS.CharmCd;
+                case ItemId.LastStand: return ItemS.LastStandCd;
+                case ItemId.Battery: return ItemS.BatteryEvery;
+                case ItemId.Cloak: return ItemS.CloakCd;
+                case ItemId.Divine: return ItemS.DivineCd;
             }
             return 0f;
         }

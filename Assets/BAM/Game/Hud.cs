@@ -186,6 +186,7 @@ namespace BAM.Game
             input.MoveY = -v.y;
             input.Signal = TakeSignal(); // ATTACK or DEFEND from the emote wheel (HudEmote.cs)
             input.ItemPick = TakeItemPick(); // the item offer's choice (HudItems.cs)
+            input.ItemUse = TakeItemUse(); // a button item's tap (HudItems.cs)
             if (specialQueued)
             {
                 specialQueued = false;

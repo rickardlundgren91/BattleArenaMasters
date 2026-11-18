@@ -70,7 +70,7 @@ namespace BAM.Online.Mp
         public static void Write(MpWriter w, in PlayerInput i)
         {
             w.U8(Q(i.MoveX)); w.U8(Q(i.MoveY));
-            w.U8((i.Special ? 1 : 0) | (i.Spell ? 2 : 0) | ((int)i.Signal & 3) << 2 | (i.ItemPick & 3) << 4); // bits 2-3: a team signal, 4-5: an item pick
+            w.U8((i.Special ? 1 : 0) | (i.Spell ? 2 : 0) | ((int)i.Signal & 3) << 2 | (i.ItemPick & 3) << 4 | (i.ItemUse & 3) << 6); // bits 2-3: a team signal, 4-5: an item pick, 6-7: a button item used
             w.U16(i.Special ? Ang(i.AimAngle) : NoAngle); w.U8(i.Special ? K(i.AimK) : 0);
             w.U16(i.Spell ? Ang(i.SpellAngle) : NoAngle); w.U8(i.Spell ? K(i.SpellK) : 255);
         }
@@ -80,7 +80,7 @@ namespace BAM.Online.Mp
             var i = PlayerInput.None;
             i.MoveX = (sbyte)r.U8() / 127f; i.MoveY = (sbyte)r.U8() / 127f;
             int f = r.U8();
-            i.Special = (f & 1) != 0; i.Spell = (f & 2) != 0; i.Signal = (TeamSignal)((f >> 2) & 3); i.ItemPick = (byte)((f >> 4) & 3);
+            i.Special = (f & 1) != 0; i.Spell = (f & 2) != 0; i.Signal = (TeamSignal)((f >> 2) & 3); i.ItemPick = (byte)((f >> 4) & 3); i.ItemUse = (byte)((f >> 6) & 3);
             int a = r.U16(); int k = r.U8();
             if (i.Special) { i.AimAngle = UnAng(a); i.AimK = k / 255f; }
             a = r.U16(); k = r.U8();
