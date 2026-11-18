@@ -415,6 +415,9 @@ namespace BAM.Art.Editor
         {
             EditorApplication.delayCall += () =>
             {
+                // the scripts reload on the way into Play too: nothing is rebuilt in Play, so do not import or warn then (Rickard
+                // 2026-11-18 saw "not rebuilt in Play mode" at every Play start); the next reload outside Play checks again
+                if (EditorApplication.isPlayingOrWillChangePlaymode) return;
                 // a model or clip imported before these import rules compiled (first open of a fresh copy) keeps Unity's defaults:
                 // not humanoid, clips not looping, so the heroes stand frozen. Import those files again with the rules.
                 if (ReimportStale()) { BuildAll(); return; }
@@ -424,7 +427,7 @@ namespace BAM.Art.Editor
                     if (art == null || art.Model == null || art.Model != AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath(s)) || art.V2 != UsesV2(s) || art.Texture == null || !Mathf.Approximately(art.Height, s.Height)
                         || art.Idle == null || art.Walk == null || art.Run == null || art.Attack == null || art.Cast == null || art.Hit == null || art.Death == null
                         || (s.RunFour != null && art.RunFour == null)) { BuildAll(); return; } // Ragn's all-fours run came 2026-11-10: a HeroArt built before it lacks it
-                    if (art.Cast != Clip(s.Cast, 3)) { BuildAll(); return; }
+                    if (art.Cast != Clip(s.Cast, 3) || art.Attack != Clip(s.Attack, 2)) { BuildAll(); return; } // an attack clip changed too (Bram's throw 2026-11-18)
                     if (SkinsStale(art, s)) { BuildAll(); return; } // a skin folder came or went // a cast clip changed in specs (Bram's throw 2026-11-13): no Rebuild by hand needed
                 }
             };

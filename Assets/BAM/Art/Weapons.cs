@@ -545,6 +545,12 @@ namespace BAM.Art
             br.Weapons[0] = brCode.Weapons[0];
             br.CarryAt = brCode.CarryAt; br.Elbow = brCode.Elbow; br.CarryOut = brCode.CarryOut; br.ArmSpread = brCode.ArmSpread;
             br.Weapons[0].Model = "v2_bram_hammer";
+            // Rickard 2026-11-18 (Home screenshot, "bram är hemsk"): the code's carry stood the big V2 hammer straight up beside his
+            // head at arm's length, like a torch, 70 % of his height long. Now it lies back over his right shoulder as Bonk carries
+            // his club (HoldUp 36, HoldOut 145), a little further back for the heavy head, and smaller: half his height. Tune further
+            // with BAM > Art > Weapon Tuner "Bram V2" (saved as BramV2 in WeaponTune.json, which beats this)
+            br.Weapons[0].Len = 0.5f; br.Weapons[0].Grip = 0.12f; br.Weapons[0].HoldUp = 30f; br.Weapons[0].HoldOut = 155f;
+            br.CarryOut = 0.14f;
             br.Worn = new[]
             {
                 new WornDef { Model = "v2_bram_backrack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.08f), Yaw = 180f },
