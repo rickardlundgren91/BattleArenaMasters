@@ -481,6 +481,7 @@ namespace BAM.Art
         /// hands; Moa's casting hand; else the held weapon's head (HeldGear.ShotFrom: the bow's arrow, the bomb, the hammer, anchor or
         /// the needle in the throwing fist), else that fist. False for minions, towers, the wolf and code figures.</summary>
         public override bool Muzzle(out Vector3 at) => MuzzleAt(true, out at);
+        public override string HeldModel => gear != null ? gear.HeldModel : null;
 
         /// <summary>The same point as <see cref="Muzzle"/> without counting a release (the weapon debug view asks every frame).</summary>
         internal bool MuzzlePoint(out Vector3 at) => MuzzleAt(false, out at);
@@ -660,6 +661,9 @@ namespace BAM.Art
             {
                 // a bomb leaves the hand as the shot leaves it; Tikta's needle leaves the fist she throws with for a moment (TIKTA-06)
                 if (HeroIndex == (int)HeroId.Tikta) gear.Throw(windup, 0.1f, true, ThrowsRight(CAttack) ? 1 : -1);
+                // Bram throws the hammer in his fist at every auto attack and has it back as it lands (hero review 2026-11-16, Rickard
+                // "låter bra"): his fist kept it while a code-made box hammer flew (the same model flies now, WorldViews)
+                else if (HeroIndex == (int)HeroId.Bram && BramS.Silver) gear.Throw(windup, BramAutoAway, true);
                 else gear.Throw(windup);
                 gear.Fire(windup);
             }
@@ -726,6 +730,8 @@ namespace BAM.Art
         // long as he casts: his fist kept a second anchor while the chained one flew. The tapped slam keeps it in his fist (KNUT-03).
         // Bram's hammer leaves his fist as the rules throw it, after the charge, and is away while it flies its line (hero review
         // 2026-11-13): it stayed in his fist while a second hammer flew; the flying one is the same model now (WorldViews)
+        const float BramAutoAway = 0.3f; // his auto attack hammer's flight (Defs ProjTime 0.25 s) and a moment more
+
         void ThrowOnCast(float at)
         {
             if (HeroIndex == (int)HeroId.Knut) { if (castDrag) gear.Throw(at, KnutS.CastTime, true); }

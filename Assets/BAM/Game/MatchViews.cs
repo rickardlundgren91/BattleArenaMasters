@@ -522,6 +522,7 @@ namespace BAM.Game
             }
             v.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
             v.Launch(from, to, flight);
+            BramHammerLook(v, s, p);
             if (MuzzleOf(s.SrcSerial, out Vector3 mz))
             {
                 v.LaunchFrom(mz); // from the hand or weapon, easing onto the rules' path (SHOT-02)
@@ -540,6 +541,7 @@ namespace BAM.Game
                 s.V.SetSkin(ShotSkin(s.SrcSerial));
                 s.V.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
                 s.V.Launch(from, to, Mathf.Max(flight, 0.05f));
+                BramHammerLook(s.V, s, null);
                 if (!s.Melee && MuzzleOf(s.SrcSerial, out Vector3 mz)) s.V.LaunchFrom(mz);
                 if (s.Hit) s.V.MarkHit();
             }
@@ -1002,6 +1004,15 @@ namespace BAM.Game
         }
 
         // the shooter's hand or weapon tip now, where its art knows it (UnitView.Muzzle; the rest start at the body as before)
+        // Bram's thrown hammer is the one in his hand (his skin's too), and his auto attack's glows with his Focus steps on its
+        // target (hero review 2026-11-16, Rickard 2026-11-18 "låter bra")
+        void BramHammerLook(ProjectileView v, ShotRec s, Proj p)
+        {
+            if (s.Kind != ProjKind.BramHammer && s.Kind != ProjKind.BramBolt) return;
+            if (unitBySerial.TryGetValue(s.SrcSerial, out UnitRec r) && r.V != null) v.SetWeapon(r.V.HeldModel);
+            if (s.Kind == ProjKind.BramHammer) v.SetHeat(p != null && p.Src != null ? p.Src.FocusSteps / (float)BramS.FocusMax : 0f);
+        }
+
         bool MuzzleOf(int srcSerial, out Vector3 at)
         {
             at = default;

@@ -185,7 +185,10 @@ namespace BAM.Art.Editor
             // His Hammer Line throws the hammer straight ahead after a charge, so he casts with Knut's Throw (a right-hand overhand
             // throw) instead of his Anvil Strike, a blow straight down that peaked a third of a second before the hammer left (hero
             // review 2026-11-13, BodyView.CastLead)
-            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bonk/Anim/IdleOrc1", Run = "Bram/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.46f, Start = 0.12f },
+            // His auto attack throws the hammer too since 2026-11-16 (hero review, Rickard 2026-11-18 "låter bra"): Bonk's overhead
+            // chop read as a melee blow while a hammer flew 3.55 tiles, so he attacks with the same overhand Throw (the ranged minions'
+            // attack, Release 0.4 as theirs) until he has a throw clip of his own
+            new Spec { Hero = "Bram", Model = "Bram/Bram", Idle = "Bonk/Anim/IdleOrc1", Run = "Bram/Anim/Run", Attack = "Knut/Anim/Throw", Cast = "Knut/Anim/Throw", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 1.59f, Release = 0.4f },
             // Rickard 2026-10-28: Fenn "vänder sig bakåt och sparkar ut i luften för varje attack": his own Attack1 (Speltest's Power
             // Slash) is a jump with a whole turn (the hips turn 386 degrees and rise half a hip height). Knut's level swing after it was
             // made for an anchor hanging from the fist: Fenn's sword stood 35-60 degrees up at every blow (ANIM-21, Unity run 2), so he

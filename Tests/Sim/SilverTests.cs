@@ -53,6 +53,10 @@ namespace BAM.Sim
             // as the old game's Sharpshooter: a swing at Fenn's clone neither counts nor starts it again (hero review 2026-11-13)
             m.BramFocus(b, c); far.IsClone = true; float fc = m.BramFocus(b, far); far.IsClone = false;
             Check(fc == 0 && Near(m.BramFocus(b, c), 2 * BramS.FocusStep), "SILVER: a swing at Fenn's clone leaves Focus as it was");
+            // a death ends it (hero review 2026-11-16): the first swing after his respawn starts again, even at the same target
+            Check(b.FocusSteps == 2, $"SILVER: the view sees his Focus steps ({b.FocusSteps})");
+            m.Revive(b);
+            Check(b.FocusSteps == 0 && m.BramFocus(b, c) == 0, "SILVER: Focus starts again after a respawn");
             Check(!m.Projs.Exists(q => q.Mode == ProjMode.Echo && !q.Done), "SILVER: no Backlash echo");
         }
     }

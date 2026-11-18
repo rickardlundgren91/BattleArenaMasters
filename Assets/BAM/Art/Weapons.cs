@@ -1378,6 +1378,17 @@ namespace BAM.Art
         /// <paramref name="away"/> seconds later. <paramref name="held"/>: a weapon that is not Thrown goes too (Knut's anchor on the
         /// hook, Tikta's needle); the next throw without it (a swing) puts it back in the fist at once. <paramref name="side"/>: only
         /// the right hand's (1) or the left's (-1), 0 both.</summary>
+        /// <summary>The Props name of the first weapon in a hand (a skin's own when it swapped it), null without one.</summary>
+        public string HeldModel
+        {
+            get
+            {
+                if (defs == null) return null;
+                for (int i = 0; i < defs.Length; i++) if (defs[i] != null && wT[i] != null) return defs[i].Model;
+                return null;
+            }
+        }
+
         public void Throw(float delay, float away = AwayFor, bool held = false, int side = 0)
         {
             hideIn = Mathf.Max(0f, delay);

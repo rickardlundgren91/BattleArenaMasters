@@ -107,6 +107,8 @@ namespace BAM.Sim
         /// <summary>Bram's Focus (Heroes.cs BramS.Silver): the target his last auto attack went at.</summary>
         internal Unit FocusTgt;
         internal int PassHits;                                      // Bram: hits towards the next Backlash; Bonk: swings towards the next power hit
+        /// <summary>Bram's Focus steps on his current target (0..BramS.FocusMax), for the view: his thrown hammer glows hotter with them.</summary>
+        public int FocusSteps => Hero == HeroId.Bram && BramS.Silver && !IsClone ? PassHits : 0;
         public float FeatherReadyAt;                                // Tyra: Featherstep is ready again at this time
         internal int VolleyCast; internal readonly System.Collections.Generic.List<Unit> VolleyHit = new System.Collections.Generic.List<Unit>(8); // Tyra: her last Arrow Volley and whom it hurt
         public float CloneReadyAt;                                  // Fenn: his passive is ready again at this time

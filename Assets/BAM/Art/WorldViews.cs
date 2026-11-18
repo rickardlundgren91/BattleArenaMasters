@@ -66,6 +66,8 @@ namespace BAM.Art
         const float Height = 0.55f;
         const float AnchorLen = 0.8f; // Knut's thrown anchor, ring to flukes, in tiles (the code-made one was about 0.5)
         const float HammerLen = 1f; // Bram's thrown hammer, handle end to head, in tiles: about as long as in his fist (Weapons.cs Len 0.7 of his 1.59-tile figure)
+        const float HammerLenAuto = 0.8f; // his auto attack's: a little smaller, so the Hammer Line stays the big throw
+        Transform hammerT; MeshFilter hammerF; Material hammerMat; string hammerModel; float hammerLen, heat;
 
         public void Build(ProjKind k, int t)
         {
@@ -141,27 +143,32 @@ namespace BAM.Art
                 ar.sharedMaterial = am;
                 ar.shadowCastingMode = ShadowCastingMode.Off;
             }
-            // Bram's thrown Hammer Line: his own hammer (Props/bram_hammer_new), the one that leaves his fist (BodyView.ThrowOnCast), not
-            // a code-made box hammer beside the one still in his hand (hero review 2026-11-13; Rickard's rule: no code graphics where
-            // there is an asset). The handle along the look's up and the head along the flight, so it tumbles end over end as the box did
-            Mesh hammerMesh = k == ProjKind.BramBolt ? Props.Mesh("bram_hammer_new") : null;
+            // Bram's thrown hammer, his Hammer Line and since 2026-11-16 every auto attack too: the hammer that leaves his fist
+            // (BodyView.ThrowOnCast and PlayAttack), not a code-made box hammer beside the one still in his hand (hero reviews
+            // 2026-11-13 and 2026-11-16; Rickard's rule: no code graphics where there is an asset). It starts as the V2 hammer (the old
+            // body's without it) and SetWeapon swaps in the one in his hand at each throw, his skin's own too. The handle along the
+            // look's up and the head along the flight, so it tumbles end over end as the box did
+            bool bramHammer = k == ProjKind.BramBolt || k == ProjKind.BramHammer;
+            Mesh hammerMesh = null;
+            if (bramHammer)
+            {
+                hammerLen = k == ProjKind.BramBolt ? HammerLen : HammerLenAuto;
+                hammerModel = Props.Mesh("v2_bram_hammer") != null ? "v2_bram_hammer" : "bram_hammer_new";
+                hammerMesh = Props.Mesh(hammerModel);
+            }
             if (hammerMesh != null)
             {
                 var hg = new GameObject("Hammer");
-                var ht = hg.transform;
-                ht.SetParent(vis, false);
-                float s = HammerLen / Mathf.Max(0.01f, hammerMesh.bounds.size.y); // long in tiles
-                ht.localScale = new Vector3(s, s, s);
-                ht.localRotation = Quaternion.Euler(0f, 90f, 0f); // the model's head (along its x) along the flight
-                ht.localPosition = -(ht.localRotation * (hammerMesh.bounds.center * s)); // it spins round its middle
-                hg.AddComponent<MeshFilter>().sharedMesh = hammerMesh;
+                hammerT = hg.transform;
+                hammerT.SetParent(vis, false);
+                hammerF = hg.AddComponent<MeshFilter>();
                 var hr = hg.AddComponent<MeshRenderer>();
-                var hm = ArtMaterials.Instance(ArtMaterials.Lit);
-                Texture2D htex = Props.Texture("bram_hammer_new");
-                if (htex != null) { hm.SetTexture(ArtMaterials.BaseMap, htex); hm.mainTexture = htex; }
-                hr.sharedMaterial = hm;
+                hammerMat = ArtMaterials.Instance(ArtMaterials.Lit);
+                hr.sharedMaterial = hammerMat;
                 hr.shadowCastingMode = ShadowCastingMode.Off;
+                PlaceHammer(hammerMesh, hammerModel);
             }
+            else hammerModel = null;
             visF.sharedMesh = boulder || boltPic || towerPic || kuggPic ? FxAtlas.FullQuad() : honey ? FxAtlas.Quad(FxAtlas.Drop) : arc ? FxAtlas.FullQuad() : painted ? FxAtlas.SlashQuad() : melee ? Shapes.Slash() : Shapes.Projectile(k, t);
             visR = go.AddComponent<MeshRenderer>();
             if (bombT != null) visR.enabled = false; // the code shape stays only as the fallback without the model
@@ -267,6 +274,7 @@ namespace BAM.Art
                 g.SetKeys(new[] { new GradientColorKey(trailColor, 0f), new GradientColorKey(trailColor, 1f) },
                     new[] { new GradientAlphaKey(trailColor.a, 0f), new GradientAlphaKey(0f, 1f) });
                 trail.colorGradient = g;
+                autoTrailW = trail.widthMultiplier;
                 trail.shadowCastingMode = ShadowCastingMode.Off;
                 trail.receiveShadows = false;
                 trail.generateLightingData = false;
@@ -349,6 +357,46 @@ namespace BAM.Art
             return texTrail;
         }
 
+        // the hammer model on the tumbling look: long hammerLen tiles, spinning round its middle, its texture
+        void PlaceHammer(Mesh mesh, string model)
+        {
+            float s = hammerLen / Mathf.Max(0.01f, mesh.bounds.size.y); // long in tiles
+            hammerT.localScale = new Vector3(s, s, s);
+            hammerT.localRotation = Quaternion.Euler(0f, 90f, 0f); // the model's head (along its x) along the flight
+            hammerT.localPosition = -(hammerT.localRotation * (mesh.bounds.center * s)); // it spins round its middle
+            hammerF.sharedMesh = mesh;
+            Texture2D tex = Props.Texture(model);
+            Texture use = tex != null ? (Texture)tex : Texture2D.whiteTexture;
+            hammerMat.SetTexture(ArtMaterials.BaseMap, use); hammerMat.mainTexture = use;
+        }
+
+        public override void SetWeapon(string model)
+        {
+            if (hammerT == null || string.IsNullOrEmpty(model) || model == hammerModel) return;
+            Mesh mesh = Props.Mesh(model);
+            if (mesh == null) return; // a model this build lacks: the plain hammer flies
+            hammerModel = model;
+            PlaceHammer(mesh, model);
+        }
+
+        // Bram's Focus on the hammer he throws (Rickard 2026-11-18 "låter bra"): from a plain hammer with a faint forge streak at no
+        // step to an orange-hot one with a long white-gold streak at the last (BramS.FocusMax), so the player sees it pay to stay
+        public override void SetHeat(float h)
+        {
+            heat = Mathf.Clamp01(h);
+            if (hammerMat != null) hammerMat.SetColor(ArtMaterials.BaseColor, Color.Lerp(Color.white, HotIron, heat));
+            if (trail == null || kind != ProjKind.BramHammer) return;
+            Color c = Color.Lerp(Fx.HeroMain(HeroId.Bram), WhiteHot, heat);
+            float a = heat > 0f ? 0.35f + 0.6f * heat : 0f;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(c, 0f), new GradientColorKey(c, 1f) }, new[] { new GradientAlphaKey(a, 0f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = g;
+            trail.widthMultiplier = autoTrailW * (1f + heat);
+            trail.time = 0.1f + 0.15f * heat;
+        }
+        static readonly Color HotIron = new Color(1f, 0.6f, 0.35f, 1f), WhiteHot = new Color(1f, 0.93f, 0.62f, 1f);
+        float autoTrailW;
+
         static bool TrailColor(ProjKind k, int team, out Color c)
         {
             switch (k)
@@ -359,6 +407,7 @@ namespace BAM.Art
                 case ProjKind.TiktaNeedleSpecial: c = new Color(0.2f, 1f, 0.85f, 0.8f); return true;
                 case ProjKind.BramHammerSpecial: c = Fx.HeroMain(HeroId.Bram); c.a = 0.8f; return true; // his forge orange, not the team's
                 case ProjKind.BramBolt: c = Fx.HeroMain(HeroId.Bram); c.a = 0.85f; return true; // his thrown hammer's forge-orange streak (a beam until 2026-11-12)
+                case ProjKind.BramHammer: c = Fx.HeroMain(HeroId.Bram); c.a = 0f; return true; // his auto hammer's Focus streak: SetHeat shows it
                 case ProjKind.TowerShot: c = Pal.Get(Pal.TeamLight(team)); c.a = 0.9f; return true;
                 case ProjKind.TyraArrow: c = new Color(1f, 1f, 1f, 0.45f); return true;
                 case ProjKind.TyraVolley: c = new Color(1f, 0.92f, 0.5f, 0.95f); return true; // the volley's warm gold (Speltest tyravolley)

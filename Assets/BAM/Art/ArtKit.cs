@@ -115,6 +115,8 @@ namespace BAM.Art
         /// needle in the fist Tikta throws with), Moa's casting hand, Bonk's boulder between his hands. False for the rest (minions,
         /// towers, the wolf, code figures).</summary>
         public virtual bool Muzzle(out Vector3 at) { at = Vector3.zero; return false; }
+        /// <summary>The model name (Props) of the weapon in the hero's hand, the skin's own when he wears one; null without one.</summary>
+        public virtual string HeldModel => null;
         /// <summary>A whole-body form: 0 = its own body, 1 = Kugg's turret while the rules keep him rooted in his Anchor (BodyForm.cs), 2 = Ravna as a flock of crows in her Night Flight (BodyFlock.cs).</summary>
         public virtual void SetForm(int form) { }
         /// <summary>The unit is in the air (the guided match's boost pad): the game layer has lifted transform.position
@@ -143,6 +145,10 @@ namespace BAM.Art
         public virtual void SetLob(float height) { }
         /// <summary>The shooter's look (HeroSkins; 0 = plain): a shot in a skin's colour (Kugg's cannon balls and sparks).</summary>
         public virtual void SetSkin(int skin) { }
+        /// <summary>Bram's thrown hammer: fly this model (Props name, the one in his hand, his skin's too) instead of the plain one.</summary>
+        public virtual void SetWeapon(string model) { }
+        /// <summary>Bram's auto attack hammer: how hot it glows, 0..1 (his Focus steps on the target, BramS.FocusMax = 1).</summary>
+        public virtual void SetHeat(float heat) { }
     }
 
     public abstract class ZoneView : MonoBehaviour

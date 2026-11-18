@@ -244,6 +244,7 @@ namespace BAM.Sim
             // nothing from the death comes back with the hero: a status put on the corpse (statuses do not tick while dead) or a reveal
             // from a shot of his that landed after he fell (full review 2026-11-09 nr 72, 76)
             u.ClearStatuses(); u.RevealT = 0;
+            if (u.Hero == HeroId.Bram) { u.PassHits = 0; u.FocusTgt = null; } // his Focus starts again after a death (hero review 2026-11-16)
             if (!Config.HeroTest) AddStatus(u, St.Invulnerable, Rules.RespawnInvulnerable); // HERO TEST: hittable at once (old herotestTick)
             u.AtkTimer = 0; u.RespawnT = 0; u.MoInit = false; u.SpellChanEnd = -1; u.TeleAt = -1;
             if (u.Bot != null) u.Bot.Reset(true);
