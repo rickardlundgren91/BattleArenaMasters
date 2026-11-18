@@ -42,8 +42,9 @@ namespace BAM.Sim
         public float SpellLeft(Unit h) => h == null ? 0 : Math.Max(0, h.SpellAt - Time);
         public static bool SpellChanneling(Unit h) => h != null && h.SpellChanEnd >= 0;
 
-        /// <summary>What a Normal or Hard bot draws from: no Recall. Bot analysis 2026-10-30: a bot with Recall has no way out of a
-        /// lost fight and died about twice as often as one with Blink. Easy bots draw from all five.</summary>
+        /// <summary>What every bot draws from (all difficulties, allies and enemies): never Recall (Rickard 2026-11-18: "bottar ska
+        /// aldrig välja teleport som skill"). Bot analysis 2026-10-30: a bot with Recall has no way out of a lost fight and died about
+        /// twice as often as one with Blink.</summary>
         static readonly SpellId[] BotSpells = { SpellId.Blink, SpellId.Shield, SpellId.Haste, SpellId.Sprint };
 
         // who gets which spell at match start: the player's pick, a seeded draw for bots
@@ -54,8 +55,7 @@ namespace BAM.Sim
             {
                 var h = Heroes[i];
                 var pick = Config.Seats != null && h.Seat >= 0 ? Config.Seats[h.Seat].Spell : h == Player ? Config.PlayerSpell : SpellId.None;
-                var draw = h.Bot != null && h.Bot.Tier.V3 ? BotSpells : SpellDefs.All;
-                h.Spell = h.Seat >= 0 || h == Player ? (pick != SpellId.None ? pick : SpellId.Blink) : draw[Rng.Int(draw.Length)];
+                h.Spell = h.Seat >= 0 || h == Player ? (pick != SpellId.None ? pick : SpellId.Blink) : BotSpells[Rng.Int(BotSpells.Length)];
                 h.SpellAt = 0; h.SpellChanEnd = -1;
             }
         }
