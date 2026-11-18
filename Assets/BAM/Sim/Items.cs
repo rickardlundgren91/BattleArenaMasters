@@ -83,7 +83,7 @@ namespace BAM.Sim
         /// <summary>Divine Protection (tap its icon): no damage and no stun, root or slow for DivineTime s, DivineSlow slower.</summary>
         public const float DivineTime = 4f, DivineSlow = -0.3f, DivineCd = 90f;
         /// <summary>Keen Edge: an auto attack has KeenChance to hit for KeenMult (the number is drawn from the match's seeded Rng).</summary>
-        public const float KeenChance = 0.35f, KeenMult = 1.5f;
+        public const float KeenChance = 0.35f, KeenMult = 2f; // 2x (Rickard 2026-11-18: "Crit gör 2x skadan"; 1.5x was a guess)
         /// <summary>Quick Gloves: +GlovesHaste attack speed.</summary>
         public const float GlovesHaste = 0.30f;
         /// <summary>An item with a button: a tap on its icon uses it (PlayerInput.ItemUse).</summary>
