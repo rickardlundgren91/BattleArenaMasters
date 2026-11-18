@@ -138,20 +138,24 @@ namespace BAM.Sim
         /// <summary>In MinionKind order.</summary>
         public static readonly UnitDef[] Minions =
         {
-            U(UnitKind.Minion, MinionKind.Melee, 0.145f, 1.6f, 135, 14, 1, 1, 0.175f, 0, 0.1666f, ProjKind.MeleeMinionHit),
-            U(UnitKind.Minion, MinionKind.Ranged, 0.145f, 1.6f, 75, 14, 1, 4, 0, 5, 0, ProjKind.RangedMinionShot),
-            U(UnitKind.Minion, MinionKind.Siege, 0.325f, 1.3f, 295, 15, 1, 1.5f, 0.025f, 0, 0.1666f, ProjKind.SiegeShell),
+            U(UnitKind.Minion, MinionKind.Melee, 0.145f, 1.6f, 190, 14, 1, 1, 0.175f, 0, 0.1666f, ProjKind.MeleeMinionHit),
+            U(UnitKind.Minion, MinionKind.Ranged, 0.145f, 1.6f, 130, 14, 1, 4, 0, 5, 0, ProjKind.RangedMinionShot),
+            U(UnitKind.Minion, MinionKind.Siege, 0.325f, 1.3f, 550, 15, 1, 1.5f, 0.025f, 0, 0.1666f, ProjKind.SiegeShell),
         };
         public static UnitDef Minion(MinionKind k) => Minions[(int)k];
 
         // range 4.25 -> 4.8 (Rickard 2026-11-15: Tyra's 4.4 shot the tower from outside its reach). A hero hits the tower within its
         // range + the tower's 0.55, the tower hits a hero within its range + the hero's radius: Tyra (r 0.25) hit from 4.95 and was
         // reached at 4.5; now at 5.05. Every hero's plain auto is inside the reach again (an anchored Kugg's 8 is not)
-        public static readonly UnitDef Tower = U(UnitKind.Tower, MinionKind.Melee, 0.55f, 0, 1400, 25, 0.75f, 4.8f, 0, 10, 0, ProjKind.TowerShot);
+        // ABC2 numbers for towers and minions too (Rickard 2026-11-18 "Ja torn o minions också", for fast matches): tower 1400 -> 2000 hp
+        // (ABC2 2200) and its shots on heroes x1.4 -> x1.0 (Rules.TowerVsHero), minions 135/75/295 -> 190/130/550 hp (ABC2 200/140/600),
+        // a level every 19 s (was 16, ABC2 20), a wave every 21 s (was 16, ABC2 23), stars 3/6/9 -> 5/10/15 % (as ABC2). Bot matches (Hard,
+        // 3000, both maps) with the ABC2 hero numbers: 5:30 -> 4:34 per match (median 4:35 -> 4:10), timeouts 36 -> 2 of 3000
+        public static readonly UnitDef Tower = U(UnitKind.Tower, MinionKind.Melee, 0.55f, 0, 2000, 25, 0.75f, 4.8f, 0, 10, 0, ProjKind.TowerShot);
 
         /// <summary>The team stars (1-3 after hero kills): +health, +damage, -attack cooldown.</summary>
-        public static readonly float[] StarHp = { 0, 0.03f, 0.06f, 0.09f };
-        public static readonly float[] StarDmg = { 0, 0.03f, 0.06f, 0.09f };
+        public static readonly float[] StarHp = { 0, 0.05f, 0.1f, 0.15f };
+        public static readonly float[] StarDmg = { 0, 0.05f, 0.1f, 0.15f };
         public static readonly float[] StarCdr = { 0, -0.02f, -0.04f, -0.06f };
         public const int MaxStars = 3;
 
@@ -224,11 +228,11 @@ namespace BAM.Sim
         public static readonly bool TelegraphTopUp = false;
         public const float Countdown = 5;          // the match clock runs from -5 to 0 before play
         public const float StartSpeedTime = 3, StartSpeedPct = 0.4f; // every hero runs +40 % for the first 3 s (was +100 % for 5 s; Rickard 2026-10-29: too much)
-        public const float WaveFirst = 3, WavePeriod = 16, WaveStagger = 0.2f;
+        public const float WaveFirst = 3, WavePeriod = 21, WaveStagger = 0.2f;
         // long matches (Rickard 2026-11-16: "vid längre games, 5 min, öka minions spawn rate, testa 50%"): from 5:00 on the match clock
         // the waves come LateWaveRate times as often, on top of the 3:30 and 5:30 pacing steps (Match.PacingWaveMult)
         public const float LateWaveStart = 300, LateWaveRate = 1.5f;
-        public const float SecondsPerLevel = 16;
+        public const float SecondsPerLevel = 19;
         public const int MaxLevel = 12;
         public const float RespawnBase = 10, RespawnPerDeath = 1, RespawnInvulnerable = 4; // base 8 -> 10 (Cajsa's testers 2026-11-04: "motståndaren respawnar för fort"; Rickard card)
         // late game (Rickard 2026-10-31: no sudden jumps): from 1:30 to 6:00 on the match clock a dead hero's wait grows in one
@@ -252,7 +256,7 @@ namespace BAM.Sim
         // Rickard 2026-11-02 "torn ska skada lite mer": every tower shot on a hero x1.15 (25 -> 28.75 before streak and late bonus);
         // shots on minions and the tutorial tower are unchanged (protocol 42). Rickard 2026-11-16 "Buffa tornets dmg mot heroes":
         // 1.15 -> 1.4 (25 -> 35 per shot before streak and late bonus, +22 %), minions still 25
-        public const float TowerVsHero = 1.4f;
+        public const float TowerVsHero = 1.0f;
         // Rickard's Tripo tower stands 3 tiles wide: a round wall of radius ~1.05 on a flat stone foot to 1.5. Its body (Tower.Radius
         // 0.55) let heroes walk into the wall (tester Cajsa 2026-11-04 "jag kan gå rätt igenom dem"), so bodies are kept out to the
         // wall's edge; heroes may still stand on the low foot. Only walking uses it: hits, reach and shots still use Tower.Radius
