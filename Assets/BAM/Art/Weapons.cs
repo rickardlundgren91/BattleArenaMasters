@@ -587,12 +587,15 @@ namespace BAM.Art
             // his club (HoldUp 36, HoldOut 145), a little further back for the heavy head, and smaller: half his height. Tune further
             // with BAM > Art > Weapon Tuner "Bram V2" (saved as BramV2 in WeaponTune.json, which beats this)
             br.Weapons[0].Len = 0.5f; br.Weapons[0].Grip = 0.12f; br.Weapons[0].HoldUp = 30f; br.Weapons[0].HoldOut = 155f;
-            br.CarryOut = 0.14f;
+            // Bram 2.0 runda 2 (18 Nov: broad body, thick fur mantle): the hammer is carried a little further out so it clears his
+            // shoulder and mantle (0.14 -> 0.18), and the back rack sits further back on the mantle (At.z -0.08 -> -0.13). Measured on
+            // the model, not yet seen in Unity: tune with Weapon Tuner "Bram V2"
+            br.CarryOut = 0.18f;
             br.Worn = new[]
             {
                 // Bram 2.0 (Tripo 2026-11-18, Rickard's concept C): the fur pauldron and the apron are part of the new body, so the old
                 // separate v2_bram_pauldron and v2_bram_apronflap are no longer worn (they lay double on him)
-                new WornDef { Model = "v2_bram_backrack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.08f), Yaw = 180f },
+                new WornDef { Model = "v2_bram_backrack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.13f), Yaw = 180f },
             };
 
             // Kugg: since the cannon-arm bodies (2026-11-16, Rickard's pick "Ny kanonarm i Tripo") his right forearm and hand ARE the
