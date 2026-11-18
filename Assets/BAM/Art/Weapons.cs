@@ -604,8 +604,8 @@ namespace BAM.Art
                 new WornDef { Model = "v2_nassla_basket", Bone = Chest, From = LArm, To = RArm, Height = 0.22f, At = new Vector3(0f, -0.16f, -0.09f) },
             };
 
-            // Ravna (on hold, Preview): talon daggers in both fists, the crow-skull mask on her head (beak turned to the front in the
-            // conversion), the mantle from her shoulders and the crow on her left shoulder
+            // Ravna (on hold, Preview): talon daggers in both fists, the crow-skull mask on the back of her head (its mesh has the beak
+            // at -z, so Yaw 0 keeps the beak to the back), the mantle from her shoulders and the crow on her left shoulder
             GearDef rv = g[(int)HeroId.Ravna];
             rv.Weapons[0].Model = "v2_ravna_dagger"; rv.Weapons[1].Model = "v2_ravna_dagger";
             rv.Worn = new[]
@@ -613,8 +613,11 @@ namespace BAM.Art
                 new WornDef { Model = "v2_ravna_mantle", Bone = Chest, From = LArm, To = RArm, Height = 0.55f, At = new Vector3(0f, 0.03f, -0.05f), Flat = 0.8f, Sway = 20f },
                 // the crow-skull mask on the BACK of her head, beak to the back, bigger (Rickard 2026-11-16 "ravnas mask skulle kunna sitta på
                 // baksidan av huvudet så blir det naturligt större också"; was on her face, 0.19 high at 0.05): turned half round, its middle
-                // 0.06 behind the head joint and pressed flatter so its front edge stops about at the crown and the face stays free
-                new WornDef { Model = "v2_ravna_mask", Bone = Head, From = Head, Height = 0.22f, At = new Vector3(0f, 0.05f, -0.06f), Yaw = 180f, Flat = 0.7f },
+                // 0.06 behind the head joint and pressed flatter so its front edge stops about at the crown and the face stays free.
+                // Rickard 2026-11-18 "masken är åt fel håll och för högt upp": Yaw 180 had turned the beak to the FRONT (the mesh's beak
+                // is at -z) and it stood above her head; Yaw 0 and 0.08 lower (0.05 -> -0.03): skull and beak seen from behind, only
+                // a few feather tips over her hair from the front (bam-work/hero-review-2026-11-16/ravna-portrait/mask-fore-efter.png)
+                new WornDef { Model = "v2_ravna_mask", Bone = Head, From = Head, Height = 0.22f, At = new Vector3(0f, -0.03f, -0.06f), Flat = 0.7f },
                 // the crow on top of her left shoulder, between the neck and the shoulder ball, feet in the mantle's feathers: at x -0.015
                 // (out past the shoulder ball) and 0.04 up it stood outside her on the mantle's edge (Rickard 2026-11-16 "Fågeln utanför")
                 new WornDef { Model = "v2_ravna_crow", Bone = HumanBodyBones.LeftShoulder, From = LArm, Height = 0.1f, At = new Vector3(0.035f, 0.025f, -0.01f) },
