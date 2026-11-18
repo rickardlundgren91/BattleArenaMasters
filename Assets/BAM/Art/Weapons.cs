@@ -553,9 +553,9 @@ namespace BAM.Art
             br.CarryOut = 0.14f;
             br.Worn = new[]
             {
+                // Bram 2.0 (Tripo 2026-11-18, Rickard's concept C): the fur pauldron and the apron are part of the new body, so the old
+                // separate v2_bram_pauldron and v2_bram_apronflap are no longer worn (they lay double on him)
                 new WornDef { Model = "v2_bram_backrack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.08f), Yaw = 180f },
-                new WornDef { Model = "v2_bram_pauldron", Bone = LArm, From = LArm, Height = 0.11f, At = new Vector3(-0.01f, -0.02f, 0f) },
-                new WornDef { Model = "v2_bram_apronflap", Bone = Hips, From = LLeg, To = RLeg, Wide = 1.9f, At = new Vector3(0f, 0.04f, 0.06f), Flat = 0.7f, Sway = 8f, Front = true },
             };
 
             // Kugg: since the cannon-arm bodies (2026-11-16, Rickard's pick "Ny kanonarm i Tripo") his right forearm and hand ARE the
