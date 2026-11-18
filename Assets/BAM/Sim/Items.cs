@@ -29,7 +29,7 @@ namespace BAM.Sim
         /// one moved from 12 (2:56) to 10 (2:24) on Rickard's choice of 2026-11-16 (a card: "Level 10 (2:24)"): at 12 it came so
         /// late that against Easy bots it was held under 30 s in two matches of five and never came in almost one of five; at 10
         /// the win rates and the match length are the same (12 000 bot matches, bam-work/items/polish/README.md).</summary>
-        public static readonly int[] OfferLevels = { 5, 8 }; // 6, 10 -> 5, 10 -> 5, 8 (Rickard 2026-11-18: "ta lvl 5 och 10", then "Items lvl 5 och 8")
+        public static readonly int[] OfferLevels = { 5, 10 }; // 6, 10 -> 5, 10 -> 5, 8 -> 5, 10 (Rickard 2026-11-18: "ta lvl 5 och 10", "Items lvl 5 och 8", then "item lvl 5 och 10")
         public const int Choices = 3;
         /// <summary>A bot takes its pick 1-4 s after the offer (the old game's timer).</summary>
         public const float BotPickMin = 1, BotPickMax = 4;

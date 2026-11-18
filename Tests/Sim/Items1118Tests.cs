@@ -9,7 +9,7 @@ namespace BAM.Sim
         static void Items1118()
         {
             float x = 7.5f, y = 20;
-            Check(ItemS.OfferLevels[0] == 5 && ItemS.OfferLevels[1] == 8, "items are offered at levels 5 and 8");
+            Check(ItemS.OfferLevels[0] == 5 && ItemS.OfferLevels[1] == 10, "items are offered at levels 5 and 10");
             for (int k = 12; k <= 20; k++) Check(ItemCatalog.Get((ItemId)k) != null, $"item {(ItemId)k} is in the catalog");
 
             Match M(out Unit p, out Unit fo)
