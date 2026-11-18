@@ -32,7 +32,13 @@ namespace BAM.Sim
         /// Since 2026-11-12 (Rickard: "flyger för snabbt ... han ska ändå kasta en hammare och inte en laserstråle"): the same charge
         /// and red line, then he throws the hammer, which flies straight at LineSpeed and hits every enemy it passes once.</summary>
         public const float BeamCharge = 0.3f; // 0.45 -> 0.3 (Rickard 2026-11-15: "Brams laddningstid för special är för lång", card: the wind-up before the throw)
-        public const float LineReach = 8, LineSpeed = 16, LineWidth = 0.6f, LineCoeff = 3.2f; // thrown (2026-11-12): speed 45 -> 16, damage 2.15 -> 3.2 as it can now be dodged (Hard bots: 48.0 % as the beam, 39.2 % thrown at 2.15, 49.6 % at 3.2)
+        public const float LineReach = 8, LineSpeed = 16, LineWidth = 0.6f, LineCoeff = 1.9f; // thrown (2026-11-12): speed 45 -> 16, damage 2.15 -> 3.2 as it can now be dodged (Hard bots: 48.0 % as the beam, 39.2 % thrown at 2.15, 49.6 % at 3.2); 3.2 -> 1.9 a hit as it now hits on the way out AND back (Return)
+        /// <summary>The hammer comes back (hero review 2026-11-16, Rickard 2026-11-18 "låter bra"): at the end of its line it turns and
+        /// flies the same way back to where he threw it, hitting every enemy it passes again (once out, once back). So it is not Tyra's
+        /// bolt, and a hero who stepped aside for the red line can step back into it. Hard bots 2000 matches (seeds 1-2000): 56.2 %
+        /// without it at 3.2; with it 70.1 % at 3.2, 61.1 % at 2.4, 58.3 % at 2.0, 55.1 % at 1.7 (without the bots' threat change);
+        /// as built (bots weigh it as two hits) 53.9 % at 1.8, 55.6 % at 1.9 (Normal 1200: 67.1 %, was 66.1 %), 57.4 % at 2.0.</summary>
+        public const bool Return = true;
         /// <summary>Focus in Silver's steps (hero review 2026-11-13, Rickard "bram 80%"): +10 % a step up to 8 (+80 %); it was 8 % up to 5
         /// (+40 %), Silver's Sharpshooter 10 % up to 10. Hard bots hardly notice (2400 matches: about a third of a step on average, 53 %
         /// either way, never past 7 steps); it pays the player who keeps one target in his ring, a lone hero chased or a good spot.</summary>
@@ -354,7 +360,7 @@ namespace BAM.Sim
             var p = NewProj(ProjMode.HammerLine, h, h.X, h.Y);
             p.Kind = ProjKind.BramBolt; p.T = -BramS.BeamCharge; p.Ang = aa; p.Speed = BramS.LineSpeed; p.Travel = len; p.Radius = BramS.LineWidth; p.Dmg = dmg * BramS.LineCoeff; p.Big = true;
             // the charge: he stands with the red line out as long as the beam can still hit (a stun cuts it, InterruptSpecial)
-            WarnOf(WarnLine(h, aa, len, BramS.LineWidth, BramS.BeamCharge + len / BramS.LineSpeed), p);
+            WarnOf(WarnLine(h, aa, len, BramS.LineWidth, BramS.BeamCharge + (BramS.Return ? 2 : 1) * len / BramS.LineSpeed), p); // out and back
             AddStatus(h, St.Casting, BramS.BeamCharge); AddStatus(h, St.Disarm, BramS.BeamCharge); Channel(h, BramS.BeamCharge);
             castX = h.X + SimMath.Cos(aa) * len; castY = h.Y + SimMath.Sin(aa) * len;
             return true;
@@ -401,7 +407,14 @@ namespace BAM.Sim
                 SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
             }
             p.X = ex; p.Y = ey; p.D += step;
-            if (p.D >= p.Travel - 1e-4f) p.Done = true;
+            if (p.D < p.Travel - 1e-4f) return;
+            if (p.Mode == ProjMode.HammerLine && BramS.Return && !p.Out)
+            {   // the turn: back the same way to where he threw it, and everyone it passes can be hit again
+                p.Out = true; p.Ang += (float)Math.PI; p.D = 0;
+                for (int i = 0; i < p.HitCount; i++) p.Hit[i] = null;
+                p.HitCount = 0;
+            }
+            else p.Done = true;
         }
 
         /// <summary>Focus: the share more this auto attack of Bram's on tgt deals (0 when it is a new target); counts the step. The old game's

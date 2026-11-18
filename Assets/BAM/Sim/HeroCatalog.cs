@@ -198,9 +198,9 @@ namespace BAM.Sim
                 Difficulty = 1 },
             // Hammer Line + Focus = ABC2's Silver (Rickard 2026-11-11, card "Silver (Marksman)"); the anvil texts stay for BramS.Silver = false
             new HeroInfo { Id = HeroId.Bram, Name = "Bram", Title = "The Anvil", Role = "Marksman", Ranged = true,
-                SpecialName = BramS.Silver ? "Hammer Line" : "Hammer Throw", SpecialDesc = BramS.Silver ? "Charges his hammer for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes. Walls stop it; a stun while he charges cuts it."
+                SpecialName = BramS.Silver ? "Hammer Line" : "Hammer Throw", SpecialDesc = BramS.Silver ? "Charges his hammer for a moment behind a red line, then throws his hammer straight up to 8 tiles and it flies back. It hits every enemy it passes, on the way out and again on the way back. Walls stop it; a stun while he charges cuts it."
                     : "Tap: hurls his hammer at a random enemy, then it bounces on to up to two more enemies close by. Drag: Anvil Drop, the hammer lands where you aim after a short moment and stuns every enemy it hits for 1.5 s.",
-                OneTapName = BramS.Silver ? "Hammer Line" : "Anvil Drop", OneTapDesc = BramS.Silver ? "Tap: aims at a random enemy in reach, charges for a moment behind a red line, then throws his hammer straight up to 8 tiles. It hits every enemy it passes."
+                OneTapName = BramS.Silver ? "Hammer Line" : "Anvil Drop", OneTapDesc = BramS.Silver ? "Tap: aims at a random enemy in reach, charges for a moment behind a red line, then throws his hammer straight up to 8 tiles and it flies back. It hits every enemy it passes, out and back."
                     : "Tap: his hammer comes down on a random enemy in reach after a short moment and stuns every enemy it hits for 1.5 s.",
                 PassiveName = BramS.Silver ? "Focus" : "Backlash", PassiveDesc = BramS.Silver ? "Each attack in a row on the same target hits 10% harder, up to 80%. A new target starts again."
                     : "Every attack sends an echo of the hammer back towards Bram that hits the first other enemy in its way.",

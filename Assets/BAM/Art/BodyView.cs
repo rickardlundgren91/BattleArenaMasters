@@ -735,7 +735,7 @@ namespace BAM.Art
         void ThrowOnCast(float at)
         {
             if (HeroIndex == (int)HeroId.Knut) { if (castDrag) gear.Throw(at, KnutS.CastTime, true); }
-            else if (HeroIndex == (int)HeroId.Bram && BramS.Silver) gear.Throw(BramS.BeamCharge, BramS.LineReach / BramS.LineSpeed, true);
+            else if (HeroIndex == (int)HeroId.Bram && BramS.Silver) gear.Throw(BramS.BeamCharge, (BramS.Return ? 2f : 1f) * BramS.LineReach / BramS.LineSpeed, true); // out and back (BramS.Return)
             else gear.Throw(at);
         }
 

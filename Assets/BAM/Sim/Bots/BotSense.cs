@@ -263,7 +263,7 @@ namespace BAM.Sim
                 case HeroId.Bonk: return Rules.OneTapSpecial ? BonkS.SlamCoeffOneTap : 1.7f; // the big Ground Slam
                 case HeroId.Blast: return BlastS.DamageCoeff * (1 + BlastS.BurnPercent); // the bomb with its burn
                 case HeroId.Oaken: return 1.6f;
-                case HeroId.Bram: return Match.SilverOn ? BramS.LineCoeff : 1.5f; // the Hammer Line (the old anvil with a bounce)
+                case HeroId.Bram: return Match.SilverOn ? BramS.LineCoeff * (BramS.Return ? 2 : 1) : 1.5f; // the Hammer Line (the old anvil with a bounce)
                 case HeroId.Tyra: return Rules.OneTapSpecial ? TyraS.DamageCoeff : 1.3f; // her bolt (the old volley)
                 case HeroId.Knut: return 1.3f;
                 case HeroId.Fenn: return FennS.Veil ? 1 + FennS.StrikeBonus : 1.2f; // the Phantom Strike (the old wolf)

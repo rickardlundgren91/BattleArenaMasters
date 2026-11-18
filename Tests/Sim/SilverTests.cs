@@ -30,7 +30,8 @@ namespace BAM.Sim
                 if (charging && hits == 0) chargeTicks++;
             }
             Check(Math.Abs(chargeTicks * Rules.Tick - BramS.BeamCharge) < 0.1f, $"SILVER: nothing is hit during the {BramS.BeamCharge} s charge ({chargeTicks * Rules.Tick:0.00})");
-            Check(a.Hp < ha && c.Hp < hc && hits == 2, $"SILVER: the thrown hammer hits both enemies in the line, each once ({hits})");
+            int want = BramS.Return ? 4 : 2; // out and back (BramS.Return, 2026-11-18)
+            Check(a.Hp < ha && c.Hp < hc && hits == want, $"SILVER: the thrown hammer hits both enemies in the line, each once on the way out and once on the way back ({hits} of {want})");
             Check(p.Done && p.D <= BramS.LineReach + 0.01f, "SILVER: the bolt reaches at most LineReach");
 
             // a stun during the charge cuts the bolt
