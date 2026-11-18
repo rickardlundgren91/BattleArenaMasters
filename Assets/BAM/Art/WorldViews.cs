@@ -661,6 +661,7 @@ namespace BAM.Art
         Material laneMat;
         Vector3 center, dir;
         float length, radius, duration, age, emitT;
+        int brambleTicks; // Nässla's thicket: the poison ticks already shown (-1 = not seen yet, a late-shown one bursts no old ticks)
         Color baseColor;
         bool warn;
         // Blast's Inferno Lane as the old game drew it (View3DStudioBlast.cs "Ässans vrede"): from the first burn two burning strips
@@ -804,7 +805,7 @@ namespace BAM.Art
             center = c; length = Mathf.Max(0f, len); radius = Mathf.Max(0.05f, r); duration = Mathf.Max(0.05f, dur);
             d.y = 0f;
             dir = d.sqrMagnitude > 1e-4f ? d.normalized : Vector3.forward;
-            age = 0f; emitT = 0f;
+            age = 0f; emitT = 0f; brambleTicks = -1;
             transform.position = new Vector3(c.x, warn ? 0.04f : 0.03f, c.z);
             transform.rotation = Quaternion.LookRotation(dir);
             if (pushBody != null) { pushBody.gameObject.SetActive(false); pushHead.gameObject.SetActive(false); }
@@ -957,6 +958,11 @@ namespace BAM.Art
                     Color fc = tc; fc.a = 0.35f * a;
                     innerMat.SetColor(ArtMaterials.BaseColor, fc);
                 }
+                // each poison tick (NasslaS.Warn, then every Tick s) shows on the ground: a green ring runs out to the edge and leaves
+                // and thorny bits fly up round it, so the thicket stings where you see it (Rickard 2026-11-18 "nässla fixa")
+                int due = since + 1e-4f < NasslaS.Warn ? 0 : Mathf.Min(NasslaS.PoisonTicks, Mathf.FloorToInt((since - NasslaS.Warn + 1e-4f) / NasslaS.Tick) + 1);
+                if (brambleTicks < 0) brambleTicks = due;
+                else if (due > brambleTicks) { brambleTicks = due; BrambleSting(); }
             }
             if (warn) return;
             if (kind == ZoneKind.FireLane && length > 0f) LaneIgnite();
@@ -995,7 +1001,33 @@ namespace BAM.Art
                 if (Random.value < 0.35f) Fx.Bubbles(p, 1, Pal.Get(Pal.Honey), 0.12f, 0.05f, 0.7f, 0.25f);
                 if (Random.value < 0.15f) Fx.Drops(p + Vector3.up * 0.6f, 1, Pal.Get(Pal.Honey), 0.12f, 0.1f, 0.6f, -0.4f); // slow honey drips
             }
+            else if (kind == ZoneKind.Bramble)
+            {
+                // Nässla's thicket (design review 2026-11-16, Rickard 2026-11-18 "nässla fixa"): it fell to the line below and threw
+                // orange fire sparks from its middle, as if it burned. Now poison: lime spores drifting up, swamp bubbles and a leaf now and then
+                Fx.Glow(p, 1, BrambleSpore, 0.16f, 0.05f, 0.9f, 0.5f, 0.05f);
+                if (Random.value < 0.35f) Fx.Bubbles(p, 1, BramblePoison, 0.13f, 0.05f, 0.7f, 0.25f);
+                if (Random.value < 0.12f) Fx.Leaves(p + Vector3.up * 0.1f, 1, BrambleLeaf, 0.13f, 0.3f, 0.9f, 0.4f, 0.05f);
+            }
             else Fx.Sparks(center + Vector3.up * 0.1f, 1, Pal.Get(Pal.FireCore), 0.08f, 1.5f, 0.2f, 1f);
+        }
+
+        // Nässla's poison: lime spores (her colour, Fx heroMain), a darker swamp green for the bubbles, and leaf green
+        static readonly Color32 BrambleSpore = new Color32(170, 240, 80, 170), BramblePoison = new Color32(90, 150, 40, 200), BrambleLeaf = new Color32(70, 120, 35, 230);
+
+        /// <summary>A poison tick of Nässla's thicket: a ring runs out to its edge, and leaves and thorny bits jump up round the rim.</summary>
+        void BrambleSting()
+        {
+            Fx.Ring(center + Vector3.up * 0.02f, radius * 0.25f, radius, new Color(0.6f, 0.95f, 0.25f, 0.75f), 0.35f, 0.5f);
+            int n = ArtKit.High ? 8 : 4;
+            for (int i = 0; i < n; i++)
+            {
+                float ang = (i + Random.value * 0.6f) * Mathf.PI * 2f / n;
+                Vector3 rimP = center + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * (radius * 0.85f) + Vector3.up * 0.08f;
+                Fx.Leaves(rimP, 1, BrambleLeaf, 0.15f, 0.9f, 0.6f, 1.4f, 0.1f);
+                if ((i & 1) == 0) Fx.Shards(rimP, 1, Fx.HeroAccent(HeroId.Nassla), 0.07f, 1.2f, 0.45f, 1.6f, 0.1f); // thorny root bits
+            }
+            Fx.Bubbles(center + Vector3.up * 0.05f, ArtKit.High ? 4 : 2, BramblePoison, 0.16f, 0.4f, 0.6f, 0.6f, radius * 0.4f);
         }
 
         // a strip x -1..1, z 0..1 whose u runs along it (the lane picture's chevrons point along +u), v across
