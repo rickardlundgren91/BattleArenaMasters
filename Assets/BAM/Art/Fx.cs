@@ -1126,6 +1126,15 @@ namespace BAM.Art
                     Shards(mid, 6, C(Pal.Honey), 0.09f * size, 3.5f, 0.5f, 1.5f, 0.3f);
                     Ring(p, 0.4f * size, 1.1f * size, new Color(1f, 0.85f, 0.3f, 0.8f), 0.3f);
                     break;
+                case FxKind.HoneyBlock:
+                    // Moa's shield stopped a stun, root, pull or knock (EventType.CcBlocked): louder than the shield's own pop, so the enemy
+                    // whose hook or leap did nothing sees why; the cell breaking off the ring is HoneyMarks.Crack
+                    Flash(mid + Vector3.up * 0.3f, 0.2f * size, 0.95f * size, new Color(1f, 0.85f, 0.3f, 0.9f), 0.14f);
+                    Pow(mid, 1, C(Pal.Honey), 0.8f * size, 0.14f);
+                    Drops(mid, 12, C(Pal.Honey), 0.15f * size, 3.2f, 0.55f, 1.6f, 0.3f);
+                    Shards(mid, 8, C(Pal.Honey), 0.1f * size, 4f, 0.45f, 1.2f, 0.3f);
+                    ImpactRing(p, 1.0f * size, new Color(1f, 0.8f, 0.25f, 0.85f), 0.3f);
+                    break;
                 case FxKind.KegBlast:
                 {
                     // Hilde's keg (Speltest View3DStudioHilde.cs KegVerdictFx, Simon's "powder verdict"): a small quick white-hot core,

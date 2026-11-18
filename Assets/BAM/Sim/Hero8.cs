@@ -191,6 +191,7 @@ namespace BAM.Sim
             if (best == null) return;
             bool free = CcImmune(best);
             SpecialHit(h, best, h.StatDmg() * RagnS.LandCoeff, ProjKind.RagnLeap, true);
+            if (free) CcBlocked(h, best); // Moa's shield: no stun, no shove
             if (!best.Alive || free) return;
             // the shove goes the way he rushed (Rickard 2026-11-12: "träffade honom uppifrån och ner men han blev knockbackad uppåt": an
             // enemy walking at him had passed his middle by the landing, and the push from his middle sent it back the way he came)

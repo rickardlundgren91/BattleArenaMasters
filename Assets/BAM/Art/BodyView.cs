@@ -898,6 +898,8 @@ namespace BAM.Art
             (honey ?? (honey = new HoneyMarks(transform, def.Height, def.Radius))).Set(guard, field, queen);
         }
 
+        public override void HoneyCrack() { if (honey != null) honey.Crack(); }
+
         HoneyMarks honey; // Moa's shield rings, made the first time one shows
         HeroMarks marks; // Tikta's Deathmark and Blast's chain marks, made the first time one shows
         HeroMarks Marks() => marks ?? (marks = new HeroMarks(transform, def.Height, def.Radius));

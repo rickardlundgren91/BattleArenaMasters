@@ -107,6 +107,9 @@ namespace BAM.Art
         /// field's shield and Queen's Instinct. A ring of hex cells at the feet that go dark as the shield is used. Call it only while
         /// the player can see the unit.</summary>
         public virtual void SetHoneyShields(float guard, float field, float queen) { }
+        /// <summary>Moa's shield on this hero just stopped a stun, root, pull or knock (EventType.CcBlocked): a lit honey cell cracks
+        /// off its ring and flies out. Call it only while the player can see the unit.</summary>
+        public virtual void HoneyCrack() { }
         /// <summary>Where a hero's shot leaves its hand now (world space, at its height), for the shot's first drawn point (SHOT-02):
         /// Hilde's cannon mouth, the arrow on Tyra's bow, Blast's bomb, the head of a held weapon (Bram's hammer, Knut's anchor, the
         /// needle in the fist Tikta throws with), Moa's casting hand, Bonk's boulder between his hands. False for the rest (minions,
@@ -191,6 +194,7 @@ namespace BAM.Art
         SpectralStrike = 34, // his Phantom Strike out of the Veil: a pale ghost sword cut on its target
         // the guided match's boost pad (Rickard 2026-11-16: a jump that is seen, and a cut)
         PadDust = 35,       // the pad shoots the hero up, or she comes down from it onto the lane: ground dust thrown outward and a pale ring, in nobody's colours
+        HoneyBlock = 36,    // Moa's shield stopped a stun, root, pull or knock (EventType.CcBlocked; Rickard 2026-11-18): a hard gold flash, a honey splash, hex chips
     }
 
     public static class ArtKit

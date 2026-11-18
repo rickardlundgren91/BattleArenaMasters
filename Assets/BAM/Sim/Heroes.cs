@@ -864,6 +864,7 @@ namespace BAM.Sim
                     bool free = CcImmune(hit);
                     if (!free) p.Caught = hit;
                     SpecialHit(h, hit, p.Dmg, p.Kind, true);
+                    if (free) CcBlocked(h, hit); // Moa's shield: the anchor bites but does not haul
                     if (!free)
                     {
                         Emit(EventType.Pull, h, hit, 0, (byte)p.Kind, false, hit.X, hit.Y);

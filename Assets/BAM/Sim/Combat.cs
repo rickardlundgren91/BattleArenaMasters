@@ -31,13 +31,25 @@ namespace BAM.Sim
             return false;
         }
 
+        /// <summary>Tells the view that Moa's shield on hero u just stopped src's stun, root, pull or knock (EventType.CcBlocked), so
+        /// the enemy sees why nothing happened: a honey cell cracks off her shield ring (Rickard 2026-11-18, hero review: 22 % of
+        /// Ragn's leaps and 17 % of Knut's hooks on a team with Moa did damage but no stun, with nothing on the screen). Display only.</summary>
+        internal void CcBlocked(Unit src, Unit u)
+        {
+            if (u != null && u.Kind == UnitKind.Hero && !u.IsClone && u.Alive) Emit(EventType.CcBlocked, src, u, 0, 0, false, u.X, u.Y);
+        }
+
         /// <summary>A unit knocked back less than Rules.KnockCooldown s ago is not knocked again (it still takes the hit).</summary>
         public bool KnockImmune(Unit u) => Time < u.KnockFreeAt || u.KnockPad && u.KnockT > 0; // a hero in a jump pad's throw flies on
 
         /// <summary>Adds a status; control on a CC-immune hero is ignored (-1). A stun or root on a hero cuts its special.</summary>
         internal int AddStatus(Unit u, St type, float dur, float v = 0, float amount = 0, Unit by = null, bool queen = false)
         {
-            if (IsControl(type) && CcImmune(u)) return -1;
+            if (IsControl(type) && CcImmune(u))
+            {
+                if (type == St.Stun || type == St.Root) CcBlocked(by, u); // not slows: Tyra's trail and Knut's autos would send one a tick
+                return -1;
+            }
             dur = CharmCutDur(u, type, dur, v, by); // Steadfast Charm (Items.cs)
             int i = u.AddRaw(type, dur, v, amount, by, queen);
             if ((type == St.Stun || type == St.Root) && dur > 0 && u.Kind == UnitKind.Hero) InterruptSpecial(u, type == St.Stun);

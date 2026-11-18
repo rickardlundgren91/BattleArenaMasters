@@ -56,6 +56,7 @@ namespace BAM.Game
             public bool Marked, Spark;     // Tikta's Deathmark and Blast's chain spark shown (Tikta 2.0 / Blast 2.0)
             public float ChainCd = -1f;    // the player's Blast: the chain cooldown arc shown, -1 none
             public float StoredFx;         // Oaken: when his Stored Impact glow was last puffed (OAKEN-02)
+            public float CrackFx = -9f;    // when Moa's shield on this hero last cracked off a cell for a stopped stun (EventType.CcBlocked)
             public int Honey = HoneyOff;   // Moa's shield rings shown: lit cells per ring (HoneyKey)
             public Quaternion Rot;
             public float FixX, FixY;       // online guest: a correction of the guess, drawn away over ~0.1 s instead of a jump
@@ -879,6 +880,18 @@ namespace BAM.Game
                     if (e.Big && e.B != null) { if (m.IsVisibleTo(e.B, Mine)) BamAudio.PlayAt(SfxId.MoaShield, Coords.Of(e.B)); }
                     // her special's shield taking hold on an ally (Speltest "moashield": honey)
                     else if (e.B != null && m.IsVisibleTo(e.B, Mine)) BamAudio.PlayAt(SfxId.MoaHoney, Coords.Of(e.B), 0.75f);
+                    break;
+                case EventType.CcBlocked:
+                    // Moa's shield stopped a stun, root, pull or knock on B (Rickard 2026-11-18: the hook landed and nothing happened, with
+                    // nothing on the screen): a cell cracks off the honey ring, a honey splash and the shield's "tink"; at most one every
+                    // 0.35 s on a hero (a boulder's pins or a slam can send several in a moment)
+                    if (e.B != null && m.IsVisibleTo(e.B, Mine) && unitBySerial.TryGetValue(e.B.Serial, out UnitRec cr) && Time.time - cr.CrackFx >= 0.35f)
+                    {
+                        cr.CrackFx = Time.time;
+                        ArtKit.PlayFx(FxKind.HoneyBlock, Coords.Of(e.B), 1f, Side(e.B.Team));
+                        if (cr.V != null) cr.V.HoneyCrack();
+                        BamAudio.PlayAt(SfxId.ShieldBlock, Coords.Of(e.B), 1f);
+                    }
                     break;
                 case EventType.Explosion:
                 {

@@ -244,6 +244,7 @@ namespace BAM.Sim
             bool free = CcImmune(u);
             SpecialHit(p.Src, u, p.Dmg, p.Kind, true);
             if (u.Alive && !free) Knock(p.Src, u, p.Ang + side * BonkS.PinSpread, BonkS.KnockDist, BonkS.KnockStun, roll);
+            else if (free) CcBlocked(p.Src, u); // Moa's shield: no knock, no stun
             p.Ang -= side * BonkS.BallDeflect;
             p.Speed *= BonkS.BallSlow - (1 - Math.Abs(side)) * BonkS.HeadOnSlow;
             p.Dmg *= BonkS.NextBallCoeff;
@@ -279,6 +280,7 @@ namespace BAM.Sim
                 bool free = CcImmune(o);
                 SpecialHit(src, o, roll.Dmg * BonkS.PinCoeff, ProjKind.BonkBoulder, true);
                 if (o.Alive && !free) Knock(src, o, SimMath.Atan2(dy, dx), BonkS.PinKnock, 0, null); // it slides on but bumps nobody else
+                else if (free) CcBlocked(src, o);
             }
         }
 

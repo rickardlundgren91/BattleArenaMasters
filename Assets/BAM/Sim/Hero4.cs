@@ -71,6 +71,7 @@ namespace BAM.Sim
                 if (!u.Alive) continue;
                 bool hero = u.Kind == UnitKind.Hero, free = CcImmune(u);
                 SpecialHit(h, u, p.Dmg * (hero ? heroC : otherC), p.Kind, big, dk);
+                if (free) CcBlocked(h, u);
                 if (!hero || !u.Alive || free || KnockImmune(u)) continue;
                 float dx, dy;
                 if (big) { dx = SimMath.Cos(p.Ang); dy = SimMath.Sin(p.Ang); }

@@ -90,6 +90,7 @@ namespace BAM.Sim
                 if (!u.Alive) continue;
                 bool free = CcImmune(u);
                 SpecialHit(h, u, p.Dmg, p.Kind, true);
+                if (free) CcBlocked(h, u);
                 if (u.Kind != UnitKind.Hero || !u.Alive || free || KnockImmune(u)) continue;
                 InterruptSpecial(u);
                 // a slide into a wall hurts as Hilde's keg does (Speltest's K5 wallSlam), but only her keg stuns: this crash has none to give

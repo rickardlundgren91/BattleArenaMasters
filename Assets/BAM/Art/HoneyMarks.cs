@@ -35,6 +35,14 @@ namespace BAM.Art
         float g = -1f, f = -1f, q = -1f, gAge, fAge, qAge;
         int gN = -1, fN = -1, qN = -1;
         bool visible = true;
+        // the cell that cracks off when the shield stops a stun (Crack): its piece, how old it is (-1 = none), which way it flies and
+        // the ring's size it broke from; the ring jolts while it flies
+        Transform shard;
+        Material shardMat;
+        float crackAge = -1f, crackR = 1f, guardS = -1f, fieldS = -1f;
+        Vector3 crackDir;
+        static Mesh cellOnly;
+        const float CrackTime = 0.45f;
 
         public HoneyMarks(Transform parent, float height, float radius)
         {
@@ -43,7 +51,7 @@ namespace BAM.Art
             this.radius = radius;
         }
 
-        public bool Any => g >= 0f || f >= 0f || q >= 0f;
+        public bool Any => g >= 0f || f >= 0f || q >= 0f || crackAge >= 0f;
 
         public bool Visible
         {
@@ -69,6 +77,7 @@ namespace BAM.Art
         public void Reset()
         {
             g = f = q = -1f; gN = fN = qN = -1; visible = true;
+            crackAge = -1f; guardS = fieldS = -1f;
             Apply();
         }
 
@@ -78,6 +87,28 @@ namespace BAM.Art
             if (field != null) field.gameObject.SetActive(visible && f >= 0f);
             if (crown != null) crown.gameObject.SetActive(visible && q >= 0f);
             if (queenRing != null) queenRing.gameObject.SetActive(visible && q >= 0f);
+            if (shard != null) shard.gameObject.SetActive(visible && crackAge >= 0f);
+        }
+
+        /// <summary>Moa's shield just stopped a stun, root, pull or knock on this hero (EventType.CcBlocked; Rickard 2026-11-18): one
+        /// lit cell breaks off the ring, flies out and up and fades, and the ring jolts. It still plays when the same blow used the
+        /// shield up (the ring is gone then), from the ring's last size. Queen's Instinct blocks nothing, so only the guard and the
+        /// field ring crack.</summary>
+        public void Crack()
+        {
+            if (HexTex() == null || !visible) return;
+            float s = g >= 0f && guardS > 0f ? guardS : fieldS > 0f ? fieldS : guardS;
+            if (s <= 0f) return; // no ring was ever drawn on this hero
+            if (shard == null)
+            {
+                shardMat = HexMat(3063);
+                shard = Part("HoneyCrack", CellOnly(), shardMat);
+            }
+            float a = Random.value * Mathf.PI * 2f;
+            crackDir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            crackR = s;
+            crackAge = 0f;
+            Apply();
         }
 
         // a cell lights for each started twelfth (sixth on the crown) still left; one going dark gives a small honey spark there
@@ -98,6 +129,24 @@ namespace BAM.Art
             if (!visible) return;
             Vector3 p = parent.position;
             float baseR = Mathf.Max(radius, 0.3f);
+            // the ring jolts outward for a moment when a cell cracks off (Crack)
+            float jolt = 1f;
+            if (crackAge >= 0f)
+            {
+                crackAge += dt;
+                float u = crackAge / CrackTime;
+                if (u >= 1f) { crackAge = -1f; Apply(); }
+                else
+                {
+                    float w = 1f - u;
+                    jolt = 1f + 0.18f * w * w;
+                    // the piece: from the ring's edge out by half the ring and up in a small arc, a little bigger, its light fading
+                    shard.position = p + crackDir * (crackR * 0.6f * u) + new Vector3(0f, 0.06f + 0.9f * u - 0.7f * u * u, 0f);
+                    shard.rotation = Quaternion.LookRotation(crackDir) * Quaternion.Euler(-u * 20f, 0f, 0f);
+                    shard.localScale = Local(crackR * (1f + 0.3f * u));
+                    Add(shardMat, GuardLit, 1.6f * w * w);
+                }
+            }
             if (g >= 0f && guard != null)
             {
                 gAge += dt;
@@ -105,6 +154,8 @@ namespace BAM.Art
                 // wide when it breathes), so the two never overlap on the player's own hero (MOA-03)
                 float bead = Mathf.Sin(Mathf.PI / Ring) * 0.92f * GuardBead;
                 float s = Mathf.Max(baseR * 1.75f, (Mathf.Max(0.55f, radius + 0.35f) + 0.12f + 0.14f) / (1f - bead)) * Pop(gAge);
+                guardS = s;
+                s *= jolt;
                 guard.position = p + new Vector3(0f, 0.05f, 0f);
                 guard.rotation = Quaternion.Euler(0f, time * 25f, 0f);
                 guard.localScale = Local(s);
@@ -115,6 +166,8 @@ namespace BAM.Art
             {
                 fAge += dt;
                 float s = baseR * 1.3f * Pop(fAge);
+                fieldS = s;
+                s *= jolt;
                 field.position = p + new Vector3(0f, 0.045f, 0f);
                 field.rotation = Quaternion.Euler(0f, -time * 20f, 0f);
                 field.localScale = Local(s);
@@ -245,6 +298,31 @@ namespace BAM.Art
             m.RecalculateBounds();
             m.UploadMeshData(true);
             return cache[lit] = m;
+        }
+
+        /// <summary>One hex cell as CellMesh draws a ring's first (at radius 1 along +z, pointing out), alone: the piece that cracks off.</summary>
+        static Mesh CellOnly()
+        {
+            if (cellOnly != null) return cellOnly;
+            // as CellMesh's first cell (a = 90 degrees: r = +z, t = -x), built apart since CellMesh's meshes are not readable
+            var hx = new[] { 0f, 1f, 1f, 0f, -1f, -1f };
+            var hy = new[] { 1f, 0.5f, -0.5f, -1f, -0.5f, 0.5f };
+            float size = Mathf.Sin(Mathf.PI / Ring) * 0.92f;
+            Vector3 r = new Vector3(0f, 0f, 1f), t = new Vector3(-1f, 0f, 0f);
+            float cu = CellX / TexSize, cv = 1f - CellY / TexSize, hu = CellHalf / TexSize;
+            var v = new Vector3[7]; var uv = new Vector2[7];
+            v[0] = r; uv[0] = new Vector2(cu, cv);
+            for (int c = 0; c < 6; c++)
+            {
+                v[1 + c] = r + (t * hx[c] + r * hy[c]) * size;
+                uv[1 + c] = new Vector2(cu + hx[c] * hu, cv + hy[c] * hu);
+            }
+            var m = new Mesh { name = "Honey cell crack", vertices = v, uv = uv };
+            m.SetTriangles(Fans(0, 1), 0);
+            m.RecalculateNormals();
+            m.RecalculateBounds();
+            m.UploadMeshData(true);
+            return cellOnly = m;
         }
 
         // the cells from..to as triangle fans, both windings: seen from above whichever way the ground plane faces

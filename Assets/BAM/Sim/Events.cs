@@ -49,6 +49,8 @@ namespace BAM.Sim
         FennVeil,      // Fenn A vanished (his Veil): V = seconds; his decoy comes with its own CloneSpawn
         VeilStrike,    // Fenn A attacked B out of his Veil: he is seen again, this hit is the Shadow Strike (Big)
         VeilEnd,       // Fenn A's Veil ran out without an attack: he is seen again at X/Y
+        CcBlocked,     // Moa's shield on hero B stopped A's stun, root, pull or knock (Match.CcImmune); X/Y = where B stands. Display only:
+                       // no rule reads it (Rickard 2026-11-18 "gör den fixen": the enemy saw the hook land and nothing happen)
     }
 
     /// <summary>One thing that happened in the last Step. A and B are the units involved (check ASerial/BSerial if you keep them).</summary>
