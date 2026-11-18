@@ -198,22 +198,27 @@ namespace BAM.Art.Editor
             // made for an anchor hanging from the fist: Fenn's sword stood 35-60 degrees up at every blow (ANIM-21, Unity run 2), so he
             // chops down with Bonk's one-handed overhead strike from 12 % as Bram does (the hammer meets the target 15 degrees down),
             // his shield staying in the left hand (Rickard's pick 2026-10-29)
-            new Spec { Hero = "Fenn", Model = "FennOriginal/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Bonk/Anim/Attack1", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.46f, Start = 0.12f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): his own Mixamo Sword And Shield Slash (Downward Slash, blow at 39 %), not Bonk's club chop; it starts in his idle's stance (hips -54 degrees, as his idle)
+            new Spec { Hero = "Fenn", Model = "FennOriginal/Fenn", Idle = "Fenn/Anim/Idle", Run = "Fenn/Anim/Run", Attack = "Fenn/Anim/Slash", Cast = "Fenn/Anim/Cast", Hit = "Fenn/Anim/Hit", Death = "Fenn/Anim/Dying", Walk = "Fenn/Anim/Walk", Height = 2.19f, Release = 0.39f },
             // Tyra stands relaxed with the bow down (Moa's idle) in the menu and the match and raises it only to shoot (Rickard
             // 2026-10-27: her drawn-bow IdleBow in the menu "precis samma som när hon är i spelet"; old Speltest's Home had her in a
             // relaxed idle too). Since 2026-10-30 her own relaxed idle: Rickard's Mixamo Breathing Idle (9.9 s), no longer Moa's;
             // back to Moa's the same day: Breathing Idle's open hand at the hip left the bow hanging loose beside it (Rickard: "håller
             // inte bågen bra"), Moa's closed fist holds it as he approved
             new Spec { Hero = "Tyra", Model = "Tyra/Tyra", Idle = "Moa/Anim/Idle", Run = "Tyra/Anim/Run", Attack = "Tyra/Anim/Shoot", Cast = "Tyra/Anim/Cast", Hit = "Tyra/Anim/HitBow", Death = "Tyra/Anim/Dying", Walk = "Tyra/Anim/Walk", Height = 1.78f, Release = 0.55f },
-            new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Moa/Anim/Idle", Run = "Moa/Anim/Run", Attack = "Moa/Anim/Attack1", Cast = "Moa/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.73f, Release = 0.4f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): Mixamo Magic Heal (one hand forward, blow at 29 %) instead of the Throw she shared with Tikta, Bram and the minions
+            new Spec { Hero = "Moa", Model = "Moa/Moa", Idle = "Moa/Anim/Idle", Run = "Moa/Anim/Run", Attack = "Moa/Anim/Heal", Cast = "Moa/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.73f, Release = 0.29f },
             // Knut stands in Bonk's Orc Idle 1 too (Rickard 2026-10-30: "knut behöver också orc pose", "som dom andra två")
-            new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Bonk/Anim/IdleOrc1", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Attack1", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.85f, Release = 0.45f },
-            new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Attack1", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.94f, Release = 0.4f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): Sword And Shield Slash (Cross Slash, blow at 48 %) instead of Standing Melee Attack Horizontal, whose chest swung 226 degrees round in the played part (now 142)
+            new Spec { Hero = "Knut", Model = "Knut/Knut", Idle = "Bonk/Anim/IdleOrc1", Run = "Knut/Anim/Run", Attack = "Knut/Anim/Slash", Cast = "Knut/Anim/Throw", Hit = "Knut/Anim/Hit", Death = "Knut/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 1.85f, Release = 0.48f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): a quick left jab with the needle (Mixamo Punching, Jab Punch, blow at 45 %) instead of the Throw that Moa, Bram and the minions shared; the melee minions keep it
+            new Spec { Hero = "Tikta", Model = "Tikta/Tikta", Idle = "Tikta/Anim/Idle", Run = "Tikta/Anim/Run", Attack = "Tikta/Anim/Jab", Cast = "Tikta/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.94f, Release = 0.45f },
             // the lane minions: the old game's Mixamo goblin creeps (one figure, three paint jobs), moving with the heroes' clips
             new Spec { Out = "Minions", Hero = "Melee", Model = "Creeps/Melee", Attack = "Tikta/Anim/Attack1", Height = 0.8f, Release = 0.4f },
             new Spec { Out = "Minions", Hero = "Ranged", Model = "Creeps/Ranged", Attack = "Knut/Anim/Throw", Height = 0.78f, Release = 0.4f },
             new Spec { Out = "Minions", Hero = "Siege", Model = "Creeps/Siege", Idle = "Bram/Anim/Idle", Run = "Bram/Anim/Run", Attack = "Bram/Anim/Attack1", Hit = "Bram/Anim/Hit", Death = "Bram/Anim/Dying", Walk = "Bram/Anim/Walk", Height = 0.9f, Release = 0.45f },
-            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Blast/Anim/Idle", Run = "Blast/Anim/Run", Attack = "Blast/Anim/Attack1", Cast = "Blast/Anim/Cast", Hit = "Blast/Anim/Hit", Death = "Blast/Anim/Dying", Walk = "Blast/Anim/Walk", Height = 1.88f, Release = 0.4f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): Mixamo Throwing (blow at 29 % of 5.6 s): the chest turns 30 degrees in the played part, against 174 in Casting Spell, his old clip
+            new Spec { Hero = "Blast", Model = "Blast/Blast", Idle = "Blast/Anim/Idle", Run = "Blast/Anim/Run", Attack = "Blast/Anim/Throw", Cast = "Blast/Anim/Cast", Hit = "Blast/Anim/Hit", Death = "Blast/Anim/Dying", Walk = "Blast/Anim/Walk", Height = 1.88f, Release = 0.29f },
             // Bonk (hero 8, Rickard's Tripo body rigged in Mixamo 2026-10-26; his wolf pelt reweighted to the chest so it no longer
             // stretches with his left arm and head). His own Mixamo clips (Orc Idle, Mutant Run, Standing Melee Attack Downward with
             // the club landing at 46 %, Hit Reaction, Dying); the slam borrows Bram's Anvil Strike, since Mixamo's jump attack is
@@ -238,26 +243,30 @@ namespace BAM.Art.Editor
             // pressed his arms in against his wide body and tilted his face (Rickard: "hans armar är lite nära och han är lite skev"). Height as Oaken's, whose body he wore until now (the turret form is sized from it).
             // Since 2026-11-11 Oaken's idle plays mirrored (Kugg/Anim/IdleMirror, a copy of Oaken/Anim/Idle): its raised fist was his
             // left, and Rickard wanted the cannon in that raised hand ("bättre med kugg kanonen i andra handen", his menu pictures)
-            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/IdleMirror", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): Firing A Gun fired with his LEFT hand and stood 78 degrees off his mirrored idle, so he turned round at every shot while the right (cannon) arm was pulled to the target (KuggAim). Attack1Mirror is a byte copy played mirrored: the right hand fires, the stance matches the idle
+            new Spec { Hero = "Kugg", Model = "Kugg/Kugg", Idle = "Kugg/Anim/IdleMirror", Run = "Kugg/Anim/Run", Attack = "Kugg/Anim/Attack1Mirror", Cast = "Kugg/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.27f },
             // Ragn (hero 11, preview, 2026-11-10): Rickard's Tripo werewolf blacksmith rigged in Mixamo, his own clips: Mutant Breathing
             // Idle, Mutant Run, Mutant Swiping (both arms fastest at 0.44-0.45 of the 2.7 s clip) and the long Mutant Jumping (crouch, leap
             // with arms up, land) for Månsprång. Idle is Bonk's Orc Idle 1 since 2026-11-10: Mutant Breathing Idle held his right hand up
             // at his face (Rickard: "samma problem som med kugg"). Hit and death are Bonk's, walk Knut's, as Bonk's. A little shorter than Bonk, whose body he wore.
-            new Spec { Hero = "Ragn", Model = "Ragn/Ragn", Idle = "Bonk/Anim/IdleOrc1", Run = "Ragn/Anim/Run", Attack = "Ragn/Anim/Attack1", Cast = "Ragn/Anim/Cast", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", RunFour = "Ragn/Anim/RunFour", Height = 1.95f, Release = 0.45f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): Mixamo Right Hook (blow at 24 %) instead of Mutant Swiping, whose chest swung 185 degrees in the played part (now 121)
+            new Spec { Hero = "Ragn", Model = "Ragn/Ragn", Idle = "Bonk/Anim/IdleOrc1", Run = "Ragn/Anim/Run", Attack = "Ragn/Anim/Hook", Cast = "Ragn/Anim/Cast", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", RunFour = "Ragn/Anim/RunFour", Height = 1.95f, Release = 0.24f },
             // Nässla (hero 12, preview, 2026-11-10): Rickard's second Tripo swamp witch (short tunic, no staff: the first one with a long
             // ragged cloak and a root staff failed Mixamo's auto-rigger) rigged in Mixamo, his own clips: Old Man Idle, Running, Standing
             // 1H Magic Attack 01 (the throwing forearm fastest at 0.32-0.35) and Standing 2H Magic Area Attack 02 for Taggsnår (arms wide,
             // facing forward). Idle is Moa's since 2026-11-10 (Old Man Idle bowed her head so the hat hid her face); her hat and basket
             // are skinned wholly to Head and Spine2 in Nassla.fbx (Mixamo had tied the basket to the shoulders and arms, so the hat
             // and basket broke apart when the arms came down: Rickard "hatten och korgen buggat ur helt"). Hit, death and walk are Moa's, whose body she wore. A small hunched goblin, shorter than Moa.
-            new Spec { Hero = "Nassla", Model = "Nassla/Nassla", Idle = "Moa/Anim/Idle", Run = "Nassla/Anim/Run", Attack = "Nassla/Anim/Attack1", Cast = "Nassla/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.62f, Release = 0.36f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): Standing 2H Magic Attack 01 (two hands forward, blow at 41 %) instead of 1H Magic Attack 01, whose chest swung 180 degrees in the played part (now 47)
+            new Spec { Hero = "Nassla", Model = "Nassla/Nassla", Idle = "Moa/Anim/Idle", Run = "Nassla/Anim/Run", Attack = "Nassla/Anim/Attack2H", Cast = "Nassla/Anim/Cast", Hit = "Moa/Anim/Hit", Death = "Moa/Anim/Dying", Walk = "Moa/Anim/Walk", Height = 1.62f, Release = 0.41f },
             // Ravna (hero 14, in the game for everyone since 2026-11-12, Tikta's body until now): Rickard's Tripo crow druid rigged in
             // Mixamo (33 bones, index finger only, like Tyra), his clips downloaded 2026-11-12: Standing Idle, Running With Intention
             // (in place), Stabbing (the right fist furthest forward at 0.38 of the 2.7 s clip) and Standing 2H Cast Spell 01 for Night
             // Flight. Hit, death and walk are Tikta's, whose body she wore. The feather cloak and crow come later as their own parts.
             // Her idle is Moa's since 2026-11-12 (Rickard: "annan idle på ravna", "benet går igenom manteln"): her own Standing Idle stood
             // wide-legged, so a knee came through the long mantle.
-            new Spec { Hero = "Ravna", Model = "Ravna/Ravna", Idle = "Moa/Anim/Idle", Run = "Ravna/Anim/Run", Attack = "Ravna/Anim/Attack1", Cast = "Ravna/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.8f, Release = 0.38f },
+            // Rickard 2026-11-18 ("dom snurrar runt och slår", "dumt ut om många har det"): a lead-hand hook with the dagger (Mixamo Punching, Hook With The Lead Hand, blow at 43 %) instead of Stabbing (chest 109 degrees, now 84)
+            new Spec { Hero = "Ravna", Model = "Ravna/Ravna", Idle = "Moa/Anim/Idle", Run = "Ravna/Anim/Run", Attack = "Ravna/Anim/Hook", Cast = "Ravna/Anim/Cast", Hit = "Tikta/Anim/Hit", Death = "Tikta/Anim/Dying", Walk = "Tikta/Anim/Walk", Height = 1.8f, Release = 0.43f },
         };
 
         // Fenn has one body, the Original (Models/FennOriginal, his Meshy body rigged in Mixamo, the right ankle and foot weights
