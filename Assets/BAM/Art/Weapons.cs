@@ -496,6 +496,11 @@ namespace BAM.Art
             // buggar" in the menus; screenshots bam-work/hero-menu/Moa). Her old body keeps his numbers; "MoaV2" in the Tuner still wins
             WeaponDef ms = m.Weapons[0];
             ms.HoldUp = 82f; ms.HoldOut = 8f; ms.Offset = Vector3.zero; ms.Turn = Vector3.zero;
+            // smaller and held higher up (Rickard 2026-11-18 on Home: "vapen ser lite stort och felplacerat ut"): with the old body's
+            // Len 1.05 and Grip 0.42 (WeaponTune "Moa") the staff stood 1.07 of her height, its honey head 0.4 of her height over her
+            // head, and her fist sat down by the bottom knob below the leather wrap (his phone screenshots, front and back). Now 0.85 of
+            // her height, gripped at the middle so the fist comes up onto the wrap and the head sits about level with her own
+            ms.Len = 0.85f; ms.Grip = 0.5f;
 
             // Knut: the new anchor; his old socket and stand-in finger points were for his old fingerless hand (as Fenn's above), so
             // on the V2 rig with real fingers the anchor goes by the plain grip

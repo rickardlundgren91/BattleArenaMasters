@@ -70,6 +70,18 @@ namespace BAM.Art
                 case 2: // Tyra: the ponytail behind her head, as on her old body (its lower part also carries some right-arm weight in the
                         // V2 rig, so only what sits on the head and neck swings)
                     return new[] { new Spec { Kind = Kind.Tail, Back0 = 0.04f, Back1 = 0.085f, PivotUp = 0.12f, Hz = 2.6f, Damping = 0.3f, MaxAngle = 30f, Drag = 0.06f } };
+                case 3: // Moa (Rickard 2026-11-18 on Home: "gör håret rörligt ... gärna hennes kläder om det är lätt"), measured on
+                        // ModelsV2/Moa/Moa.fbx in its bind pose (hips 0.46 of her height, bam-work/hero-review-2026-11-16/moa-sway):
+                        // her white ponytail, from the back of her head down to her shoulder blades, 0.09-0.115 behind, one spring that
+                        // lifts it out from her back and never in (as Nässla's); about 90 vertices
+                    return new[]
+                    {
+                        new Spec { Kind = Kind.BackFlaps, Single = true, WithHead = true, Top0 = 0.50f, Top1 = 0.40f, Low = 0.10f, Back0 = 0.09f, Back1 = 0.115f, MaxSide = 0.09f, Hz = 2.2f, Damping = 0.4f, MaxAngle = 16f, Drag = 0.05f, Flare = 0.15f, Inward = 0f, Kick = 0.8f },
+                        // the lower half of the white apron in front of her thighs (0.04-0.06 in front of the hips, 0.08 to the sides with a
+                        // soft edge): ONE spring tied at the belt, a small swing that never goes back into her legs. Her old body's apron was
+                        // redone many times (12-13 Nov), so this is its own line: delete it alone if it looks wrong
+                        new Spec { Kind = Kind.Skirt, Single = true, FrontOnly = true, Front0 = 0.04f, Front1 = 0.06f, MaxSide = 0.08f, SideFade = 0.02f, Drop = 0.10f, MaxBelow = 0.30f, Hz = 2.4f, Damping = 0.5f, MaxAngle = 10f, Drag = 0.04f, Flare = 0.08f, Inward = 0f, Kick = 0.6f },
+                    };
                 case 11: // Ragn: the wolf tail behind the hips, 0.36-0.50 of his height (the hips at about 0.42, so it reaches 0.08 above
                          // them), out to 0.30 behind; on Hips and Spine together
                     return new[] { new Spec { Kind = Kind.HipTail, Back0 = 0.12f, Back1 = 0.20f, Above = 0.09f, WithSpine = true, Hz = 2.2f, Damping = 0.38f, MaxAngle = 30f, Drag = 0.06f, Flare = 0.3f } };
@@ -716,14 +728,31 @@ namespace BAM.Art
             if (src == null || !src.isReadable) return null;
             // Moa's staff: none (Rickard 2026-11-13 after testing: "ta bort textil animation på staven det blev buggat"); its branch below stays
             // for reference but is never reached
-            if (model != "moa_shield") return null;
+            bool v2 = model == "v2_moa_shield";
+            if (model != "moa_shield" && !v2) return null;
             Vector3[] v = src.vertices;
             float H = Mathf.Max(1e-4f, src.bounds.size.y);
             int n = v.Length;
             var w = new float[n];
             var g = new int[n];
             int groups;
-            if (model == "moa_shield")
+            // the V2 shield's two cream ribbons (Rickard 2026-11-18: "gör tygbitarna på skölden lätt rörliga"), hanging from the rim's
+            // lower left and right (the rim's centre 0.574 up, radius 0.426; the ribbons 0.16-0.30 out to the sides, from 0.27 down to its
+            // bottom, measured on v2_moa_shield.bytes): what lies beyond 0.97 of the rim, below 0.32 and out past the bottom stud
+            Vector2 c2 = new Vector2(0f, 0.574f * H);
+            float r2 = 0.426f * H;
+            if (v2)
+            {
+                groups = 2;
+                for (int i = 0; i < n; i++)
+                {
+                    if (v[i].y >= 0.32f * H || Mathf.Abs(v[i].x) < 0.12f * H) continue;
+                    float d = Vector2.Distance(new Vector2(v[i].x, v[i].y), c2);
+                    w[i] = Smooth((d - 0.97f * r2) / (0.10f * H)) * Smooth((0.32f * H - v[i].y) / (0.04f * H));
+                    g[i] = v[i].x < 0f ? 0 : 1;
+                }
+            }
+            else if (model == "moa_shield")
             {
                 // three ribbons (and the charms on them) below the round shield (centre 0.63 up, radius 0.33): what lies beyond 0.92 of
                 // the rim and below the centre, full 0.12 further out; left, middle and right each on its own spring
@@ -757,7 +786,12 @@ namespace BAM.Art
                 if (ws[k] < 1f) { ws[k] = 0f; continue; }
                 any++;
                 Vector3 mid = sum[k] / ws[k];
-                if (model == "moa_shield")
+                if (v2)
+                {
+                    Vector2 dir = (new Vector2(mid.x, mid.y) - c2).normalized, at = c2 + dir * (0.97f * r2);
+                    pivot[k] = new Vector3(at.x, at.y, mid.z);
+                }
+                else if (model == "moa_shield")
                 {
                     // tied on at the rim, towards the group's middle
                     Vector2 c = new Vector2(0f, 0.63f * H), dir = (new Vector2(mid.x, mid.y) - c).normalized;
@@ -775,6 +809,8 @@ namespace BAM.Art
             mf.sharedMesh = m;
             // the shield's ribbons (Rickard 2026-11-13 after testing: "moas sköld gör nästan ingenting nu"): softer, less damped and trailing
             // further than the body's cloth, pushed twice as hard, so they swing clearly when she runs, stops, turns and strikes
+            // the V2 ribbons "lätt rörliga" (lightly): a little stiffer and a smaller swing than the old shield's
+            if (v2) return new PropSway(go.transform, body, m, v, g, w, pivot, rest, 1.9f, 0.3f, 30f, 0.10f) { kickGain = 1.5f };
             return new PropSway(go.transform, body, m, v, g, w, pivot, rest, 1.7f, 0.22f, 45f, 0.14f) { kickGain = 2f };
         }
 

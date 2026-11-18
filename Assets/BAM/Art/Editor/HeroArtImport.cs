@@ -31,6 +31,8 @@ namespace BAM.Art.Editor
             // the remakes whose swinging cloth or hair is part of the body shell (ClothSway's V2 specs): Tyra's ponytail, Ragn's tail,
             // Nässla's hair; capes, scarves and pelts are parts of their own (Weapons.cs, WornDef.Sway)
             || path == ModelsV2Dir + "Tyra/Tyra.fbx" || path == ModelsV2Dir + "Ragn/Ragn.fbx" || path == ModelsV2Dir + "Nassla/Nassla.fbx"
+            // Moa's ponytail and apron (2026-11-18); her skins (Druid, Queen) are not measured, so they stay still
+            || path == ModelsV2Dir + "Moa/Moa.fbx"
             // and their skins (ModelsV2/<Hero>/Skins/<Skin>/*.fbx), which sway the same way
             || path.StartsWith(ModelsV2Dir + "Tyra/Skins/") || path.StartsWith(ModelsV2Dir + "Ragn/Skins/") || path.StartsWith(ModelsV2Dir + "Nassla/Skins/");
 
