@@ -138,8 +138,8 @@ namespace BAM.Art
                     return new WornDef { Bone = Head, From = Head, Height = 0.16f, At = new Vector3(0f, 0.06f, 0f) };
                 case "halo": // a ring behind the head
                     return new WornDef { Bone = Head, From = Head, Height = 0.22f, At = new Vector3(0f, 0.0f, -0.08f) };
-                case "belt": // Blast's belt round the hips
-                    return new WornDef { Bone = Hips, From = LLeg, To = RLeg, Wide = 2.3f, At = new Vector3(0f, 0.03f, 0f) };
+                case "belt": // Blast's belt round the hips, the same size and place as his own (Weapons.BlastBeltWide)
+                    return new WornDef { Bone = Hips, From = LLeg, To = RLeg, Wide = Weapons.BlastBeltWide, At = Weapons.BlastBeltAt };
                 case "necklace":
                     return new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = 0.85f, At = new Vector3(0f, -0.05f, 0.05f) };
                 case "quiver":

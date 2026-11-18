@@ -431,6 +431,10 @@ namespace BAM.Art
         /// <summary>Bonk's V2 wolf pelt over his shoulders (shared with his skins' mantles, SkinGear).</summary>
         internal const float BonkPeltWide = 1.35f;
         internal static Vector3 BonkPeltAt => new Vector3(0f, 0.11f, -0.02f); // a property: byHeroV2 above is made before any field below it
+        /// <summary>Blast's V2 bomb belt (and every skin's belt, SkinGear): its width in hip joints and where its bottom sits from them,
+        /// in shares of his height (Rickard 2026-11-18: lower and smaller).</summary>
+        internal const float BlastBeltWide = 1.95f;
+        internal static Vector3 BlastBeltAt => new Vector3(0f, -0.03f, 0f);
 
         /// <summary>Tikta's glowing insect wings (Rickard 2026-11-16: "Ravna va fräck att man såg en mask bakifrån", he picked
         /// glowing wings so she stands out from behind and from the match camera): a teal fore wing and a violet hind wing a side,
@@ -508,10 +512,12 @@ namespace BAM.Art
                 TiktaGlowWing(true), TiktaGlowWing(false),
             };
 
-            // Blast: the new skull bomb (still thrown), and his bomb belt round the hips, as wide as twice the hip joints
+            // Blast: the new skull bomb (still thrown), and his bomb belt round the hips. Lower and smaller since 2026-11-18 (Rickard:
+            // "bältet för högt upp och för stort för blast"): 1.95 times the hip joints wide instead of 2.3, its bottom 0.03 of his
+            // height below the hip joints instead of 0.03 above, so the band sits where his own belt is and the bombs hang at the hips
             GearDef bl = g[(int)HeroId.Blast];
             bl.Weapons[0].Model = "v2_blast_bomb";
-            bl.Worn = new[] { new WornDef { Model = "v2_blast_belt", Bone = Hips, From = LLeg, To = RLeg, Wide = 2.3f, At = new Vector3(0f, 0.03f, 0f) } };
+            bl.Worn = new[] { new WornDef { Model = "v2_blast_belt", Bone = Hips, From = LLeg, To = RLeg, Wide = BlastBeltWide, At = BlastBeltAt } };
 
             // Bonk: the new club on his shoulder as before; the wolf pelt over his shoulders (its top at the shoulder line, wolf head on
             // his left, a little stiff swing) and the fang necklace on his chest; both came at Tripo's raw size and are scaled here
