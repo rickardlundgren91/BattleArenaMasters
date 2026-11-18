@@ -429,8 +429,12 @@ namespace BAM.Art
         // holds he picked carry over; the worn parts are first guesses from the bones, to be tuned with BAM > Art > Weapon Tuner
         // ("<Hero> V2"). Rickard 2026-11-13: "jag måste ju kunna spela dom så lägg in dom". No numbers of the match change.
         /// <summary>Bonk's V2 wolf pelt over his shoulders (shared with his skins' mantles, SkinGear).</summary>
-        internal const float BonkPeltWide = 1.35f;
-        internal static Vector3 BonkPeltAt => new Vector3(0f, 0.11f, -0.02f); // a property: byHeroV2 above is made before any field below it
+        // Rickard 2026-11-18 "bonks päls ligger fortf fel" ("den med vargen"): on his clothed Tripo-rigged bodies (thick vest and fur
+        // collar, arm joints a little higher) the old 1.35 / (0, 0.11, -0.02) hid the wolf head inside his shoulder and left only a
+        // narrow strip on his back; measured on the new bind pose (bam-work/skin-cover/bonk/pelt-fix) the head lies on his left
+        // shoulder again and the pelt covers his back
+        internal const float BonkPeltWide = 1.7f;
+        internal static Vector3 BonkPeltAt => new Vector3(0f, 0.165f, -0.005f); // a property: byHeroV2 above is made before any field below it
         /// <summary>Blast's V2 bomb belt (and every skin's belt, SkinGear): its width in hip joints and where its bottom sits from them,
         /// in shares of his height (Rickard 2026-11-18: lower and smaller).</summary>
         internal const float BlastBeltWide = 1.95f;
@@ -533,7 +537,7 @@ namespace BAM.Art
             bo.Worn = new[]
             {
                 new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = BonkPeltWide, At = BonkPeltAt, Flat = 0.8f, Sway = 8f },
-                new WornDef { Model = "v2_bonk_necklace", Bone = Chest, From = LArm, To = RArm, Wide = 1.0f, At = new Vector3(0f, 0f, 0.04f), Turn = new Vector3(25f, 0f, 0f) },
+                new WornDef { Model = "v2_bonk_necklace", Bone = Chest, From = LArm, To = RArm, Wide = 1.0f, At = new Vector3(0f, 0.01f, 0.11f), Turn = new Vector3(25f, 0f, 0f) }, // out over the vest (18 Nov)
                 // a sabre-tooth skull on the pelt between his shoulder blades, staring back, so he is known from behind and from the
                 // match camera (Rickard's card 2026-11-16, "C: Ny Tripo-skalle på ryggen", after Ravna's mask seen from behind); made
                 // facing +z, so turned round; rigid, like the necklace. His skins have their own looks and go without it (SkinGear)

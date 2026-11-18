@@ -133,8 +133,9 @@ namespace BAM.Art
                 case "helmet": // on the head, like Nässla's cap
                     // Bonk Mammoth's sabre-tooth skull: at the cap's size it sat inside his big hair (not seen in the menu, 2026-11-16);
                     // as a hood over the head, the fangs framing his face
+                    // (18 Nov: his clothed Tripo-rigged body has its Head joint mid-head, not at the neck, so 0.085 floated it above him)
                     if (hero == HeroId.Bonk)
-                        return new WornDef { Bone = Head, From = Head, Height = 0.25f, At = new Vector3(0f, 0.085f, 0f) };
+                        return new WornDef { Bone = Head, From = Head, Height = 0.25f, At = new Vector3(0f, -0.05f, 0f) };
                     return new WornDef { Bone = Head, From = Head, Height = 0.16f, At = new Vector3(0f, 0.06f, 0f) };
                 case "halo": // a ring behind the head
                     return new WornDef { Bone = Head, From = Head, Height = 0.22f, At = new Vector3(0f, 0.0f, -0.08f) };
