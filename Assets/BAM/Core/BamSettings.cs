@@ -192,6 +192,7 @@ namespace BAM.Core
         /// opens after NormalWinsForHard wins against Normal, Ultra after UltraWins against Hard). Returns true when the pick moved
         /// (the result card says so).
         /// </summary>
+        public const int BeginnerDownLosses = 3, BeginnerUpWins = 2;
         public static bool AfterBotMatch(BAM.Sim.Difficulty played, bool won)
         {
             Load();
@@ -201,6 +202,9 @@ namespace BAM.Core
             int to = lastDifficulty;
             if (run <= -2 && lastDifficulty == (int)BAM.Sim.Difficulty.Normal) { to = (int)BAM.Sim.Difficulty.Easy; PlayerPrefs.SetInt(Key + "diffneed", Mathf.Min(7, need + 2)); }
             else if (run >= need && lastDifficulty == (int)BAM.Sim.Difficulty.Easy) to = (int)BAM.Sim.Difficulty.Normal;
+            // Beginner (2026-11-18): 3 losses in a row on Easy move the pick down to Beginner, 2 wins in a row there back up to Easy
+            else if (run <= -BeginnerDownLosses && lastDifficulty == (int)BAM.Sim.Difficulty.Easy) to = (int)BAM.Sim.Difficulty.Beginner;
+            else if (run >= BeginnerUpWins && lastDifficulty == (int)BAM.Sim.Difficulty.Beginner) to = (int)BAM.Sim.Difficulty.Easy;
             if (to != lastDifficulty) { LastDifficulty = (BAM.Sim.Difficulty)to; return true; }
             PlayerPrefs.SetInt(Key + "diffrun", run); Commit();
             return false;
@@ -223,12 +227,12 @@ namespace BAM.Core
             tutorialCard = tutCard == 1 || tutCard == 2;
             tutorialSkipped = tutCard == 2;
             lastHero = (int)BAM.Sim.HeroCatalog.CleanMenu(PlayerPrefs.GetInt(Key + "hero", (int)BAM.Sim.HeroId.Tyra)); // keeps an editor preview hero (Ragn, Nässla)
-            lastDifficulty = Mathf.Clamp(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal), 0, (int)BAM.Sim.Difficulty.Ultra);
+            lastDifficulty = (int)BAM.Sim.DifficultyOrder.Clean(PlayerPrefs.GetInt(Key + "diff", (int)BAM.Sim.Difficulty.Normal));
             // Hard's lock came 2026-11-04: a phone that already had Hard or Ultra picked, or a win against Hard, keeps Hard open.
             // Decided once, on the first start with the lock, and saved, so it never changes after that (a new phone: locked).
             if (!PlayerPrefs.HasKey(Key + "hardopen"))
             {
-                bool had = lastDifficulty >= (int)BAM.Sim.Difficulty.Hard || PlayerPrefs.GetInt(Key + "hardwins", 0) > 0;
+                bool had = lastDifficulty == (int)BAM.Sim.Difficulty.Hard || lastDifficulty == (int)BAM.Sim.Difficulty.Ultra || PlayerPrefs.GetInt(Key + "hardwins", 0) > 0;
                 PlayerPrefs.SetInt(Key + "hardopen", had ? 1 : 0);
                 PlayerPrefs.Save();
             }

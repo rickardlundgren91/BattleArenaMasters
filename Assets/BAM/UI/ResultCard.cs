@@ -340,9 +340,9 @@ namespace BAM.UI
             int seconds = Mathf.Max(0, Mathf.FloorToInt(r.Seconds));
             string length = (seconds / 60) + ":" + (seconds % 60).ToString("00");
             // online the enemy may be people, and the bots' level is the room's (full review 2026-11-09 nr 61)
-            string bots = DifficultyNames[Mathf.Clamp((int)r.Difficulty, 0, DifficultyNames.Length - 1)] + " bots";
+            string bots = DifficultyOrder.Name(r.Difficulty) + " bots";
             resSub.text = (r.Tutorial ? "Tutorial" : r.Online ? "Online · " + (r.Versus ? "vs players" : bots) : bots) + " · " + length
-                + (r.BotsMoved ? " · next: " + DifficultyNames[Mathf.Clamp((int)BamSettings.LastDifficulty, 0, DifficultyNames.Length - 1)] + " bots" : "");
+                + (r.BotsMoved ? " · next: " + DifficultyOrder.Name(BamSettings.LastDifficulty) + " bots" : "");
 
             resTable.gameObject.SetActive(resTableMode);
             resSmall.gameObject.SetActive(!resTableMode);

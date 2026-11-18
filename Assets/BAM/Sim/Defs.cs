@@ -189,7 +189,12 @@ namespace BAM.Sim
 
         // Normal is Silver since 2026-10-31: with Gold, Easy -> Normal cost a mid player 25 points and Normal -> Hard only 5
         // (real matches 30-31 Oct: 82 % wins on Easy, 27 % on Normal, 57 % on Hard); Silver splits the gap (58/42/28 %).
-        public static BotTier Tier(Difficulty d) => d == Difficulty.Easy ? Bronze : d == Difficulty.Normal ? Silver : d == Difficulty.Ultra ? Ultra : Platinum;
+        // Beginner, below Easy (Rickard 2026-11-18, his card: "Ny nivå Beginner, Easy behåller det"): Easy's beginner play (BotBeginner.cs,
+        // it reads Bronze's rows in BotTables) with slower thinking still (1.6/2.3/3.2 s), leaving a fight later (20 %) and hitting heroes
+        // 45 % softer. Every bot in the match, both teams. Bot lab, 1600 matches, a stand-in for a person: wins 86 % against Beginner,
+        // 73 % against Easy (reactions 2.0/2.8/3.8 with 30 % softer hits: 79 %; both: 88 %).
+        public static readonly BotTier Beginner = WithHeroDmg(T("Beginner", 0.2f, 0.3f, 0.4f, 0.7f, 0, 3, 3, false, new[] { 1.6f, 2.3f, 3.2f }, 1, 1, 0, 1.2f), 0.55f);
+        public static BotTier Tier(Difficulty d) => d == Difficulty.Beginner ? Beginner : d == Difficulty.Easy ? Bronze : d == Difficulty.Normal ? Silver : d == Difficulty.Ultra ? Ultra : Platinum;
     }
 
     /// <summary>The match rules' fixed numbers (the old game's shipped values).</summary>

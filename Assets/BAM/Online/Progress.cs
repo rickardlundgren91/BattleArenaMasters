@@ -169,7 +169,7 @@ namespace BAM.Online
                 towerDeaths = r.TowerDeaths,
                 readyDeaths = r.ReadyDeaths,
                 hero = r.Hero.ToString(),
-                difficulty = r.Difficulty.ToString(),
+                difficulty = (r.Difficulty == Difficulty.Beginner ? Difficulty.Easy : r.Difficulty).ToString(), // Beginner counts as Easy for Rating (the server knows Easy..Ultra)
                 vs = vs ?? "",
                 team = team,
                 quit = quitVs,

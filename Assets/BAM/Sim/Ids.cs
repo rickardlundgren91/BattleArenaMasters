@@ -100,7 +100,21 @@ namespace BAM.Sim
     /// (2026-11-04, Rickard: own design in the spirit of the old game's walled garden map; PRACTICE only until tested).</summary>
     public enum MapId : byte { Runes = 0, Grove = 1 }
 
-    public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2, Ultra = 3 } // Ultra: above Hard (Rickard 2026-10-31)
+    // Ultra: above Hard (Rickard 2026-10-31). Beginner: below Easy (Rickard 2026-11-18 "det kanske är bättre med en egen beginner nivå");
+    // it got the next free number so saved picks, traces and the online wire keep their meaning: walk the levels with DifficultyOrder.
+    public enum Difficulty : byte { Easy = 0, Normal = 1, Hard = 2, Ultra = 3, Beginner = 4 }
+
+    /// <summary>The bot levels from the easiest up, as the menus show them (Beginner is numbered after Ultra in the enum).</summary>
+    public static class DifficultyOrder
+    {
+        public static readonly Difficulty[] Levels = { Difficulty.Beginner, Difficulty.Easy, Difficulty.Normal, Difficulty.Hard, Difficulty.Ultra };
+        public static readonly string[] Names = { "Beginner", "Easy", "Normal", "Hard", "Ultra" };
+        /// <summary>The level's place in Levels (0 = Beginner); an unknown number counts as Normal.</summary>
+        public static int Pos(Difficulty d) { int i = System.Array.IndexOf(Levels, d); return i < 0 ? 2 : i; }
+        public static string Name(Difficulty d) => Names[Pos(d)];
+        /// <summary>A level number from a save or the wire: a known level, else Normal.</summary>
+        public static Difficulty Clean(int v) => v >= 0 && v <= (int)Difficulty.Beginner ? (Difficulty)v : Difficulty.Normal;
+    }
 
     /// <summary>The battle spell a hero takes into the match (old SimSpells.cs): one extra button beside the SPECIAL.</summary>
     public enum SpellId : byte { None = 0, Blink = 1, Recall = 2, Shield = 3, Haste = 4, Sprint = 5 }

@@ -667,7 +667,7 @@ namespace BAM.Online.Mp
                     Members.Clear();
                     for (int i = 0; i < n; i++)
                         Members.Add(new Member { Id = r.U8(), Name = r.Str(), Hero = HeroCatalog.Clean(r.U8()), Spell = (SpellId)r.U8(), InMatch = r.U8() == 1, Ping = r.U16(), Side = r.U8() });
-                    bool q = r.U8() == 1; int ps = r.U8(); Diff = (Difficulty)Math.Min(r.U8(), (int)Difficulty.Ultra);
+                    bool q = r.U8() == 1; int ps = r.U8(); Diff = DifficultyOrder.Clean(r.U8());
                     Size = r.U8() == 2 ? 2 : 3; Map = r.U8() == (int)MapId.Grove ? MapId.Grove : MapId.Runes;
                     foreach (var mm in Members) mm.Skin = r.U8(); // last: every member's look, in the same order
                     if (q && !Quick) SearchSince = Time.realtimeSinceStartup; // our group's host started looking
@@ -677,7 +677,7 @@ namespace BAM.Online.Mp
                 }
                 case MpMsg.Start:
                 {
-                    int seed = r.I32(); var diff = (Difficulty)r.U8(); Mode = Math.Min(r.U8(), Versus); int n = r.U8();
+                    int seed = r.I32(); var diff = DifficultyOrder.Clean(r.U8()); Mode = Math.Min(r.U8(), Versus); int n = r.U8();
                     if (n > MpRelay.MaxPlayers) return;
                     var seats = new SeatConfig[n];
                     for (int s = 0; s < n; s++) { seats[s] = new SeatConfig { Hero = HeroCatalog.Clean(r.U8()), Team = Math.Min(r.U8(), 1), Spell = (SpellId)r.U8() }; seats[s].Name = r.Str(); }

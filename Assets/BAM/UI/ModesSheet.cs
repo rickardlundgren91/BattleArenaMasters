@@ -73,7 +73,7 @@ namespace BAM.UI
         static float ExpNow => ExpH + PartyRowH + (Party() != null ? PartyRowH : 0); // MAP, and PARTY under it in a party
 
         static string PlaySubFor(Mode m, bool withDifficulty) =>
-            m == Mode.Classic ? SizeNow + "V" + SizeNow + " · VS BOTS" + (BamSettings.LastMap == MapId.Grove ? " · GROVE" : "") + (withDifficulty ? " · " + DifficultyNames[(int)BamSettings.LastDifficulty].ToUpperInvariant() : "") : ModeTitle(m);
+            m == Mode.Classic ? SizeNow + "V" + SizeNow + " · VS BOTS" + (BamSettings.LastMap == MapId.Grove ? " · GROVE" : "") + (withDifficulty ? " · " + DifficultyOrder.Name(BamSettings.LastDifficulty).ToUpperInvariant() : "") : ModeTitle(m);
 
         static void BuildModes()
         {
@@ -137,27 +137,28 @@ namespace BAM.UI
             Stretched(diffLabel.rectTransform, 0, Cw + 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
             var segs = UiKit.NewRect("Difficulty", modeExpand);
             Stretched(segs, 0, Cw + 4.5f * Cw, 0, 12 * Cw);
-            modeDifficulty = new HubChoice(segs, DifficultyNames, i =>
+            modeDifficulty = new HubChoice(segs, DifficultyNames, seg =>
             {
-                if (i == (int)Difficulty.Hard && !BamSettings.HardOpen) // locked like Ultra: Hard opens after 3 wins against Normal (Rickard 2026-11-04)
+                var d = DifficultyOrder.Levels[seg]; // the segments run Beginner .. Ultra
+                if (d == Difficulty.Hard && !BamSettings.HardOpen) // locked like Ultra: Hard opens after 3 wins against Normal (Rickard 2026-11-04)
                 {
                     ShowMenuHint("Hard opens after " + BamSettings.NormalWinsForHard + " wins against Normal (" + Mathf.Min(BamSettings.NormalWins, BamSettings.NormalWinsForHard) + "/" + BamSettings.NormalWinsForHard + ")");
                     RefreshModes(); return;
                 }
-                if (i == (int)Difficulty.Ultra && !BamSettings.UltraOpen) // locked: a padlock and "12/30" under it; the tap tells the rest (nr 130)
+                if (d == Difficulty.Ultra && !BamSettings.UltraOpen) // locked: a padlock and "12/30" under it; the tap tells the rest (nr 130)
                 {
                     ShowMenuHint("Ultra opens after " + BamSettings.UltraWins + " wins against Hard (" + Mathf.Min(BamSettings.HardWins, BamSettings.UltraWins) + "/" + BamSettings.UltraWins + ")");
                     RefreshModes(); return;
                 }
                 // in a party the leader picks the bots for everyone (MpRoom.SetDiff); the others are told and the choice goes back
-                if (TestParty != null) TestParty.Bots = (Difficulty)i;
-                else if (Party() != null) OnlineHooks.PartyBots?.Invoke((Difficulty)i);
-                else BamSettings.LastDifficulty = (Difficulty)i;
+                if (TestParty != null) TestParty.Bots = d;
+                else if (Party() != null) OnlineHooks.PartyBots?.Invoke(d);
+                else BamSettings.LastDifficulty = d;
                 RefreshHome();
                 RefreshModes();
             }, true);
-            hardLock = SegLock(modeDifficulty, (int)Difficulty.Hard, out hardLockText);
-            ultraLock = SegLock(modeDifficulty, (int)Difficulty.Ultra, out ultraLockText);
+            hardLock = SegLock(modeDifficulty, DifficultyOrder.Pos(Difficulty.Hard), out hardLockText);
+            ultraLock = SegLock(modeDifficulty, DifficultyOrder.Pos(Difficulty.Ultra), out ultraLockText);
 
             // in a party, under it: TOGETHER (the party against bots) or AGAINST EACH OTHER, the leader's pick as the bots
             modePartyRow = UiKit.NewRect("Party", modeExpand);
@@ -365,11 +366,11 @@ namespace BAM.UI
             if (modeSheet == null) return;
             var party = Party();
             bool ultraOpen = BamSettings.UltraOpen;
-            modeDifficulty.Dim((int)Difficulty.Hard, !BamSettings.HardOpen); // Hard opens after 3 wins against Normal (Rickard 2026-11-04)
-            modeDifficulty.Dim((int)Difficulty.Ultra, !ultraOpen);
-            ShowSegLock(modeDifficulty, (int)Difficulty.Hard, hardLock, hardLockText, !BamSettings.HardOpen, BamSettings.NormalWins, BamSettings.NormalWinsForHard);
-            ShowSegLock(modeDifficulty, (int)Difficulty.Ultra, ultraLock, ultraLockText, !ultraOpen, BamSettings.HardWins, BamSettings.UltraWins);
-            modeDifficulty.Set((int)(party != null ? party.Bots : BamSettings.LastDifficulty));
+            modeDifficulty.Dim(DifficultyOrder.Pos(Difficulty.Hard), !BamSettings.HardOpen); // Hard opens after 3 wins against Normal (Rickard 2026-11-04)
+            modeDifficulty.Dim(DifficultyOrder.Pos(Difficulty.Ultra), !ultraOpen);
+            ShowSegLock(modeDifficulty, DifficultyOrder.Pos(Difficulty.Hard), hardLock, hardLockText, !BamSettings.HardOpen, BamSettings.NormalWins, BamSettings.NormalWinsForHard);
+            ShowSegLock(modeDifficulty, DifficultyOrder.Pos(Difficulty.Ultra), ultraLock, ultraLockText, !ultraOpen, BamSettings.HardWins, BamSettings.UltraWins);
+            modeDifficulty.Set(DifficultyOrder.Pos(party != null ? party.Bots : BamSettings.LastDifficulty));
             // Ultra opens after 30 wins against Hard bots (Rickard 2026-10-31)
             diffLabel.text = "BOT DIFFICULTY"; // a locked level is dimmed with its padlock and progress; tapping it tells how to open it (ShowHint)
             modeSize.Set(SizeNow == 2 ? 1 : 0);

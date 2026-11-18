@@ -16,7 +16,7 @@ namespace BAM.UI
     {
         static GameObject mainMenu, heroSelect, modes;
 
-        static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard", "Ultra" };
+        static string[] DifficultyNames => DifficultyOrder.Names; // in menu order, Beginner first: index with DifficultyOrder.Pos
 
         static void SetBadge(RectTransform badge, HeroId id)
         {
