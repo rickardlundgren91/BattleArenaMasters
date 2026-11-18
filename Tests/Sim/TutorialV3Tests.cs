@@ -286,7 +286,7 @@ namespace BAM.Sim
             // close to him her arrows find him by themselves, but stop at half his health; a tap still fires nothing
             p.X = p.PX = f.X + 1.5f; p.Y = p.PY = f.Y + 2.5f;
             t0 = m.Time; cast = false; float low = f.Hp;
-            while (m.Time - t0 < 6f)
+            while (m.Time - t0 < 9f) // 6 s until 2026-11-18: Tyra's level-1 arrow 15.5 -> 10 (ABC2 hero numbers)
             {
                 var i = PlayerInput.None;
                 if ((int)Math.Round(m.Time * 60) % 45 == 0) i.Special = true;

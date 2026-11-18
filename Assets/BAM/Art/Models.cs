@@ -110,6 +110,8 @@ namespace BAM.Art
             var gearOf = hero;
             if (d.Art == null && StandIn(hero, out HeroId si)) { d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + si); gearOf = si; } // Øli's four: a stand-in body and its weapon until Rickard's own models
             if (skin > 0 && d.Art != null && gearOf == hero) d.Art = HeroSkins.Apply(d.Art, skin);
+            float size = SizeK(hero);
+            if (d.Art != null && size != 1f) { d.Art = Object.Instantiate(d.Art); d.Art.Height *= size; } // a copy: the asset itself stays as built
             if (d.Art == null && hero >= HeroId.Bonk) Debug.LogError("[BAM.Art] " + hero + " has no HeroArt (run BAM > Art > Build Hero Art): showing a stand-in figure");
             if (d.Art != null)
             {
@@ -121,6 +123,17 @@ namespace BAM.Art
             cache[k] = d;
             return d;
         }
+
+        /// <summary>How much taller a hero is drawn than its HeroArt Height (Rickard 2026-11-18, after the ABC2 comparison: "gör de heroes
+        /// som är för små större och för stora mindre"). ABC2's web game drew its figures 1.8 tiles x their size: Thief 1.80, Banshee
+        /// 2.02, Marksman 2.02, Paladin 2.05, Archer 2.25, Witch 2.52 tiles. Fenn 2.19 -> 1.95, Bram 1.59 -> 1.85, Tyra 1.78 -> 1.98,
+        /// Moa 1.73 -> 1.90, Nässla 1.62 -> 1.90, Ravna 1.80 -> 1.90; the others as built. Only the picture: radius, reach and
+        /// hits read the rules, never this. 1 for every hero = the sizes before.</summary>
+        public static float SizeK(HeroId hero) => hero switch
+        {
+            HeroId.Fenn => 0.89f, HeroId.Bram => 1.16f, HeroId.Tyra => 1.11f, HeroId.Moa => 1.10f, HeroId.Nassla => 1.17f, HeroId.Ravna => 1.055f,
+            _ => 1f,
+        };
 
         public static RigDef Minion(MinionKind kind, int team)
         {

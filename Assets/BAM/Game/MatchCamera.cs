@@ -7,10 +7,10 @@ namespace BAM.Game
 {
     /// <summary>
     /// The old game's camera (AbcGame.cs Layout and updateCamera): orthographic, tilted down 55 degrees (elevation asin 0.82),
-    /// 11 tiles across the camera frame (UiKit.CameraFrame) with the focus 52% down it (Rickard 2026-10-25: "rätt zoom
+    /// 10.75 tiles across the camera frame (UiKit.CameraFrame) with the focus 52% down it (Rickard 2026-10-25: "rätt zoom
     /// på kamera" at 11.5; 2026-11-02 after a tester's wish, "zooma liiite mer in ... man ser nästan hela banan nu": 10.5;
     /// 2026-11-07 after tester Ski's "It's quite cramped": 11, halfway back, so a 9:20 phone sees about 30 of the arena's
-    /// 35 rows, 28.5 at 10.5 and 31 at 11.5). On a phone the frame is the whole safe area and the picture runs on under the status and navigation bars;
+    /// 35 rows, 28.5 at 10.5 and 31 at 11.5; 2026-11-18 Rickard "zooma in kameran lite": 10.75, between the two). On a phone the frame is the whole safe area and the picture runs on under the status and navigation bars;
     /// a standing screen wider than 9:16 (UiKit.WideScreen: a foldable, a tablet held upright) keeps a usual phone's tile size
     /// and lane length and simply shows more to the sides (the arena's edge and the water round it) instead of the old game's
     /// black edges (a Z Fold tester, 2026-10-31). A landscape window (the editor's landscape Game view) keeps the old game's
@@ -22,7 +22,7 @@ namespace BAM.Game
     {
         // Back: orthographic framing ignores distance, but the High shadow distance (30 m, BamQuality) is measured from the camera,
         // so the camera stays close: the ground then lies about 9-28 m away on a long phone (the island's cloud sea at about 38)
-        const float TilesAcross = 11f, Back = 18f, FocusDown = 0.52f;
+        const float TilesAcross = 10.75f, Back = 18f, FocusDown = 0.52f;
         static readonly float Pitch = Mathf.Asin(0.82f) * Mathf.Rad2Deg;
         const float Lead = 1.2f;        // the focus sits this far ahead of the hero, so more of the way forward is seen
         const float Over = 3f;          // the focus may pass the map edge by this much (the hero is not stuck under the buttons)

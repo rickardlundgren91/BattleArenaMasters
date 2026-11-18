@@ -12,6 +12,9 @@ namespace BAM.Sim
             while (m.State == MatchState.Countdown) m.Step(in none);
             return m;
         }
+        // every hero kept at full health while the offers are checked: a bot that dies before its pick would wait for its respawn (with the
+        // ABC2 hero numbers of 2026-11-18 seed 21 lost one at level 10)
+        static void Full(Match m) { for (int i = 0; i < m.Heroes.Count; i++) if (m.Heroes[i].Alive) m.Heroes[i].Hp = m.Heroes[i].MaxHp; }
         static void Give(Unit h, ItemId id) => h.Items[h.ItemCount++] = new ItemSlot { Id = id, ReadyAt = -99 };
         Unit HeroOf(int team, Unit not = null) { for (int i = 0; i < Heroes.Count; i++) if (Heroes[i].Team == team && Heroes[i] != not) return Heroes[i]; return null; }
 
@@ -19,7 +22,7 @@ namespace BAM.Sim
         {
             // ---------- the offers and the picks ----------
             var m = ItemMatch(21); var none = PlayerInput.None; var p = m.Player;
-            while (m.Level < 6) { p.Hp = p.MaxHp; m.Step(in none); }
+            while (m.Level < 6) { Full(m); m.Step(in none); }
             bool all3 = true, distinct = true;
             for (int i = 0; i < m.Heroes.Count; i++)
             {
@@ -27,7 +30,7 @@ namespace BAM.Sim
                 if (h.Offer[0] == h.Offer[1] || h.Offer[0] == h.Offer[2] || h.Offer[1] == h.Offer[2]) distinct = false;
             }
             Check(all3 && distinct, "level 6: every hero is offered three different items");
-            for (int k = 0; k < 60 * 5; k++) { p.Hp = p.MaxHp; m.Step(in none); }
+            for (int k = 0; k < 60 * 5; k++) { Full(m); m.Step(in none); }
             int botsWith = 0; for (int i = 0; i < m.Heroes.Count; i++) if (m.Heroes[i] != p && m.Heroes[i].ItemCount == 1 && m.Heroes[i].OfferCount == 0) botsWith++;
             Check(botsWith == 5, $"every bot took one item within 4 s ({botsWith}/5)");
             Check(p.ItemCount == 0 && p.OfferCount == 3, "the player's offer waits for the player");
@@ -42,7 +45,7 @@ namespace BAM.Sim
             Check(p.OfferCount == 0 && m.Level == ItemS.OfferLevels[1] - 1, $"no offer before the second offer level (level {m.Level}, offers {p.OfferCount})");
             m.Time = Rules.SecondsPerLevel * (ItemS.OfferLevels[1] - 1); m.Step(in none); // straight to the second offer level
             Check(m.Level == ItemS.OfferLevels[1] && p.OfferCount == 3 && !p.HasItem(p.Offer[0]) && !p.HasItem(p.Offer[1]) && !p.HasItem(p.Offer[2]), $"level {ItemS.OfferLevels[1]}: a new offer without the item already held");
-            for (int k = 0; k < 60 * 5; k++) { p.Hp = p.MaxHp; m.Step(in none); }
+            for (int k = 0; k < 60 * 5; k++) { Full(m); m.Step(in none); }
             botsWith = 0; for (int i = 0; i < m.Heroes.Count; i++) if (m.Heroes[i] != p && m.Heroes[i].ItemCount == 2 && m.Heroes[i].Items[0].Id != m.Heroes[i].Items[1].Id) botsWith++;
             Check(botsWith == 5, $"every bot holds two different items after the second offer ({botsWith}/5)");
             // Hard and Ultra bots take the card worth most to bots (ItemS.BotWorth, 2026-11-16); Easy and Normal pick at random
