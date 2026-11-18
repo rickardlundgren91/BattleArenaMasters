@@ -212,7 +212,7 @@ namespace BAM.Art
                 visR.sharedMaterial.SetTexture(ArtMaterials.BaseMap, kt);
                 visR.sharedMaterial.mainTexture = kt;
                 Color kc = Fx.HeroMain(HeroId.Kugg); kc.a = 1f;
-                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, kc); // the white picture in his turquoise
+                visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, kc); // the white picture in his turquoise (his look's glow: SetSkin)
                 visR.sharedMaterial.renderQueue = 3020;
             }
             else if (boulder)
@@ -401,6 +401,17 @@ namespace BAM.Art
         public override void MarkSpent() => spent = true;
         public override void SetProgress(float k) => prog = Mathf.Clamp01(k);
         public override void SetLob(float height) => lob = Mathf.Max(0f, height);
+
+        // Kugg's balls and sparks in his look's glow (BodyForm.KuggGlow; Rickard 2026-11-18 "kugg fixa"). Called on every launch, so a
+        // pooled shot never keeps another Kugg's colour.
+        int shotSkin; // the shooter's look, for the splash (Fx.Impact)
+        public override void SetSkin(int skin)
+        {
+            shotSkin = skin;
+            if (!kuggPic || visR == null || visR.sharedMaterial == null) return;
+            Color kc = BodyView.KuggGlow(skin); kc.a = 1f;
+            visR.sharedMaterial.SetColor(ArtMaterials.BaseColor, kc);
+        }
 
         public override void LaunchFrom(Vector3 muzzle)
         {
@@ -606,7 +617,7 @@ namespace BAM.Art
             // the shot came and went inside one hitch frame and was never drawn, so every attack still shows its hit
             if (launched && !melee && kind != ProjKind.BlastBomb && kind != ProjKind.HildeKeg && kind != ProjKind.HildeBurst && kind != ProjKind.KnutAnchor)
             {
-                if (hit) Fx.Impact(kind, vis.position, team);
+                if (hit) Fx.Impact(kind, vis.position, team, shotSkin);
                 else if (!spent) Fx.Fizzle(kind, vis.position, team);
                 // Tyra's bolt (Rickard 2026-10-28, tester Benny: "pilen borde ha mer ljus och effekter"): his spikes fly on the way
                 // it went, and a short light pillar stands where it struck

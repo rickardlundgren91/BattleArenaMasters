@@ -164,7 +164,7 @@ namespace BAM.Art
                 case HeroId.Kugg:
                     if (gear != null && gear.WornPoint(gear.FindWorn("gear"), Vector3.zero, out p))
                     {
-                        Color32 c = KuggSmokeColor[Mathf.Clamp(Skin, 0, KuggSmokeColor.Length - 1)];
+                        Color32 c = KuggGlow(Skin); // the look's glow (BodyForm.KuggGlow, by the look's name)
                         Fx.Glow(p, 1, Fade(new Color32(c.r, c.g, c.b, 150), w), 0.42f, 0.03f, 0.3f, 0f, 0.04f);
                     }
                     break;

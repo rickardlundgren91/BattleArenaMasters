@@ -300,6 +300,10 @@ namespace BAM.Game
         static readonly string[] heroVoice = System.Enum.GetNames(typeof(HeroId));
         static string HeroVoice(HeroId h) => (int)h < heroVoice.Length ? heroVoice[(int)h] : null;
 
+        /// <summary>The look of the hero who fired a shot (0 when the shooter is no hero or gone).</summary>
+        int ShotSkin(int srcSerial) =>
+            unitBySerial.TryGetValue(srcSerial, out UnitRec r) && r.U != null && r.U.Kind == UnitKind.Hero ? SkinOf(r.U) : 0;
+
         int SkinOf(Unit u)
         {
             var who = u.IsClone ? u.Owner : u;
@@ -500,6 +504,7 @@ namespace BAM.Game
         {
             var v = ArtKit.CreateProjectile(s.Kind, Side(p.Team)); // s.Kind: the volley's arrows wear their own look
             s.V = v;
+            v.SetSkin(ShotSkin(s.SrcSerial)); // Kugg's shots in his skin's glow
             Vector3 from = Coords.World(p.PX, p.PY), to;
             float flight;
             if (p.Mode == ProjMode.Auto && p.Tgt != null)
@@ -531,6 +536,7 @@ namespace BAM.Game
             if (s.V == null)
             {
                 s.V = ArtKit.CreateProjectile(s.Kind, Side(s.Team));
+                s.V.SetSkin(ShotSkin(s.SrcSerial));
                 s.V.transform.SetPositionAndRotation(from, Quaternion.LookRotation(Flat(to - from)));
                 s.V.Launch(from, to, Mathf.Max(flight, 0.05f));
                 if (!s.Melee && MuzzleOf(s.SrcSerial, out Vector3 mz)) s.V.LaunchFrom(mz);

@@ -138,6 +138,8 @@ namespace BAM.Art
         public virtual void LaunchFrom(Vector3 muzzle) { }
         /// <summary>A ghost thrown high (Bram's Anvil Drop hammer): the arc's top in tiles over the flight, whatever its kind.</summary>
         public virtual void SetLob(float height) { }
+        /// <summary>The shooter's look (HeroSkins; 0 = plain): a shot in a skin's colour (Kugg's cannon balls and sparks).</summary>
+        public virtual void SetSkin(int skin) { }
     }
 
     public abstract class ZoneView : MonoBehaviour

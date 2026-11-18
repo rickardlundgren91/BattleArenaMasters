@@ -1390,7 +1390,7 @@ namespace BAM.Art
         }
 
         /// <summary>Where a projectile ends: each hero's own splash (honey, poison, fire, sparks), so you see whose shot landed.</summary>
-        public static void Impact(ProjKind k, Vector3 p, int team)
+        public static void Impact(ProjKind k, Vector3 p, int team, int skin = 0)
         {
             Color32 teamL = C(Pal.TeamLight(team));
             switch (k)
@@ -1492,18 +1492,20 @@ namespace BAM.Art
                 case ProjKind.KuggShot:
                 case ProjKind.KuggShell:
                 {
-                    // Kugg's rune cannon ball: a turquoise pop, brass sparks and stone chips (bigger when anchored)
-                    Color32 m = heroMain[(int)HeroId.Kugg], a = heroAccent[(int)HeroId.Kugg];
+                    // Kugg's rune cannon ball: a pop in his look's glow (turquoise, Molten orange, Jade green; BodyView.KuggGlow), brass
+                    // sparks and stone chips (bigger when anchored)
+                    Color32 m = BodyView.KuggGlow(skin), a = heroAccent[(int)HeroId.Kugg];
                     float s = k == ProjKind.KuggShell ? 1.25f : 0.9f;
-                    Flash(p + Vector3.up * 0.3f, 0.1f, 0.45f * s, new Color(0.7f, 1f, 0.95f, 0.9f), 0.08f);
+                    Color fl = Color.Lerp(m, Color.white, 0.6f); fl.a = 0.9f;
+                    Flash(p + Vector3.up * 0.3f, 0.1f, 0.45f * s, fl, 0.08f);
                     Pow(p, 1, m, 0.8f * s, 0.16f);
                     Sparks(p + Vector3.up * 0.3f, 5, a, 0.1f, 3.5f, 0.25f, 1.2f);
                     Chunks(p, 2, C(Pal.Rock), 0.1f, 2.5f, 0.5f, 2f);
                     break;
                 }
                 case ProjKind.KuggSpark:
-                    Pow(p, 1, heroMain[(int)HeroId.Kugg], 0.5f, 0.12f);
-                    Sparks(p + Vector3.up * 0.3f, 4, heroMain[(int)HeroId.Kugg], 0.08f, 3f, 0.2f, 1f);
+                    Pow(p, 1, BodyView.KuggGlow(skin), 0.5f, 0.12f);
+                    Sparks(p + Vector3.up * 0.3f, 4, BodyView.KuggGlow(skin), 0.08f, 3f, 0.2f, 1f);
                     break;
                 case ProjKind.SiegeShell:
                     Pow(p, 1, C(Pal.FireCore), 0.8f, 0.15f);

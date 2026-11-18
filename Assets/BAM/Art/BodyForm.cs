@@ -39,7 +39,11 @@ namespace BAM.Art
             formT.SetParent(transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = FormModels.Mat("kugg_turret");
+            // the turret wears the look's colours (Rickard 2026-11-18 "kugg fixa": a Molten or Jade Kugg turned into the plain
+            // slate-and-turquoise turret): kugg_turret_molten / _jade, recoloured from the plain picture; a look without its own
+            // picture keeps the plain one
+            int look = KuggLook(Skin);
+            r.sharedMaterial = FormModels.Mat(look == 1 ? "kugg_turret_molten" : look == 2 ? "kugg_turret_jade" : "kugg_turret", "kugg_turret");
             r.shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
             float s = transform.lossyScale.y;
             formSize = def.Height * FormHeight / Mathf.Max(0.01f, mesh.bounds.size.y * (s > 0f ? s : 1f));
@@ -89,7 +93,7 @@ namespace BAM.Art
                         float ls = transform.lossyScale.y > 0f ? transform.lossyScale.y : 1f;
                         sealT.localScale = Vector3.one * (SealSize * (0.6f + 0.4f * formK) / ls);
                         sealT.localRotation = Quaternion.Euler(0f, idleT * 12f, 0f); // turns slowly so it reads as alive
-                        Color c = Fx.HeroMain(HeroId.Kugg); c.a = 0.85f * formK;
+                        Color c = KuggGlow(Skin); c.a = 0.85f * formK; // in the look's glow, as his smoke and shots
                         sealMat.SetColor(ArtMaterials.BaseColor, c);
                     }
                 }
@@ -98,6 +102,26 @@ namespace BAM.Art
             if (hide) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = false; bodyOff = true; }
             else if (bodyOff) { for (int i = 0; i < rends.Length; i++) rends[i].enabled = renderersOn; bodyOff = false; }
         }
+
+        /// <summary>Kugg's look by its folder name (HeroSkins), not its number: the skins are numbered in folder-name order, so Jade
+        /// is 1 and Molten 2. 0 = plain (turquoise runes), 1 = Molten (lava orange), 2 = Jade (green).</summary>
+        internal static int KuggLook(int skin)
+        {
+            if (skin <= 0 || skin >= kuggLooks.Length) return 0;
+            int l = kuggLooks[skin];
+            if (l < 0) // read once per look: the smoke, the ready glow and every shot ask
+            {
+                string n = HeroSkins.Name(HeroId.Kugg, skin);
+                l = kuggLooks[skin] = string.Equals(n, "Molten", StringComparison.OrdinalIgnoreCase) ? 1 : string.Equals(n, "Jade", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+            }
+            return l;
+        }
+        static readonly int[] kuggLooks = { 0, -1, -1, -1, -1, -1, -1, -1 };
+
+        static readonly Color32[] kuggGlow = { new Color32(60, 230, 210, 255), new Color32(255, 140, 40, 255), new Color32(70, 220, 130, 255) };
+
+        /// <summary>The glow of Kugg's runes in this look: his turret seal, chimney smoke and cannon shots.</summary>
+        internal static Color32 KuggGlow(int skin) => kuggGlow[KuggLook(skin)];
 
         // a little overshoot as it pops up, like a spring
         static float BackOut(float k) { k -= 1f; return 1f + k * k * (2.7f * k + 1.7f); }
@@ -139,6 +163,13 @@ namespace BAM.Art
                 catch (Exception e) { Debug.LogWarning("BAM: could not read the form " + name + " (" + e.Message + ")"); }
             }
             return meshes[name] = mesh;
+        }
+
+        /// <summary>The form's material from name's picture, or from fallback's when name has no picture.</summary>
+        public static Material Mat(string name, string fallback)
+        {
+            if (name == fallback || Resources.Load<Texture2D>("BAMArt/Forms/" + name + "_tex") != null) return Mat(name);
+            return Mat(fallback);
         }
 
         public static Material Mat(string name)

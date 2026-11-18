@@ -1721,10 +1721,10 @@ namespace BAM.Art
 
         // Rune smoke from Kugg's chimney (Rickard 2026-11-16 picked "Båda": the smoke and the back cog, Weapons.MakeV2): a ring
         // rises from the chimney top now and then, faster while he shoots, on the menu stage and in a match, in the look's colour
-        // (plain turquoise, Molten lava orange, Jade green). The chimney top is measured on the round V3 body from his upper chest,
+        // (plain turquoise, Molten lava orange, Jade green; BodyForm.KuggGlow by the look's name: by its number Jade, skin 1, smoked
+        // orange and Molten green until 2026-11-18). The chimney top is measured on the round V3 body from his upper chest,
         // in shares of his height: x to his right, y up, z forward.
         static readonly Vector3 KuggChimney = new Vector3(-0.169f, 0.327f, -0.199f);
-        static readonly Color32[] KuggSmokeColor = { new Color32(60, 230, 210, 170), new Color32(255, 140, 40, 170), new Color32(70, 220, 130, 170) };
         float kuggSmokeT;
         void KuggSmoke(float dt)
         {
@@ -1735,7 +1735,7 @@ namespace BAM.Art
             if (chest == null) chest = anim.GetBoneTransform(HumanBodyBones.Chest);
             if (chest == null) return;
             Vector3 p = chest.position + anim.transform.rotation * KuggChimney * ShownHeight;
-            Color32 c = KuggSmokeColor[Mathf.Clamp(Skin, 0, KuggSmokeColor.Length - 1)];
+            Color32 c = KuggGlow(Skin); c.a = 170;
             Fx.Bubbles(p, 1, c, 0.22f, 0.25f, 1.2f, 0.8f, 0.03f);
         }
 
