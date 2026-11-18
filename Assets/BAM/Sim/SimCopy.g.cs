@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "bc121c9290e282f7";
+            Generated = true; GeneratedHash = "6714826bcde60f71";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -242,6 +242,8 @@ namespace BAM.Sim
             spHoldT = __s.spHoldT;
             spT = __s.spT;
             spWantT = __s.spWantT;
+            spam = __s.spam;
+            spamRolled = __s.spamRolled;
             strafe = __s.strafe;
             strafeMag = __s.strafeMag;
             strafeT = __s.strafeT;
@@ -259,6 +261,10 @@ namespace BAM.Sim
             SimMirror.Arr(tk, __s.tk);
             ttk = __s.ttk;
             urgent = __s.urgent;
+            wanderNext = __s.wanderNext;
+            wanderUntil = __s.wanderUntil;
+            wanderX = __s.wanderX;
+            wanderY = __s.wanderY;
         }
     }
     partial class KegCrash

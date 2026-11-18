@@ -317,6 +317,7 @@ namespace BAM.Sim
             if (v3 && target == null && !finish && (Mode == BotMode.Lane || Mode == BotMode.Group || Mode == BotMode.Support)) V3Goal(hpR, myTower, fwd);
             if (target == null && !finish && !retreat && (Mode == BotMode.Lane || Mode == BotMode.Group)) TeamFollow(hpR, myTower, fwd);
             else following = false;
+            if (target == null && !finish && !retreat) BeginnerWander(hpR); // a beginner loses focus at the wave now and then (BotBeginner.cs)
             TeamLeash(finish, fwd); // stay within range of the human (BotTeam.cs)
             if (!finish) SignalGoal(target, myTower, fwd); // a teammate's ATTACK or DEFEND (BotSignal.cs)
             if (hasGoal && hasBlocked && now < blockedT && Hyp(gX - blockedX, gY - blockedY) < 1.5f) hasGoal = false;
@@ -325,7 +326,7 @@ namespace BAM.Sim
             GoalOutOfTowers(); // never a spot inside a tower body (BotSense.cs)
             if (HmKeepGoal(oHas, oX, oY, oStop, oFollow)) { gX = oX; gY = oY; } // barely moved: keep the old goal and path
             else if (!hasGoal || !M.Map.FindPath(h.X, h.Y, gX, gY, now, path)) path.Clear();
-            if (!h.SpecialReady) spWantT = 0;
+            if (!h.SpecialReady) { spWantT = 0; BeginnerSpecialSpent(); }
             if (h.SpecialReady)
             {
                 bool dz = danger || retreat && ttk < 3;
@@ -365,10 +366,10 @@ namespace BAM.Sim
             var fightAt = Nearest(MatesWithin(h, float.MaxValue, bufMates), h);
             float clear = Math.Max(h.Range, 3.5f) + 1;
             float bx = 0, by = 0;
-            bool bush = fightAt != null && Dist(fightAt, h) < 9 && BushSpot(fightAt.X, fightAt.Y, 6, enemyTower, clear, out bx, out by);
-            if (!bush) bush = BushSpot(h.X, h.Y, 7, enemyTower, clear, out bx, out by);
+            bool bush = !Beginner && fightAt != null && Dist(fightAt, h) < 9 && BushSpot(fightAt.X, fightAt.Y, 6, enemyTower, clear, out bx, out by);
+            if (!bush && !Beginner) bush = BushSpot(h.X, h.Y, 7, enemyTower, clear, out bx, out by); // a beginner never hides in the grass (BotBeginner.cs)
             if (bush && Now - h.LastCombat > 0.8f && (M.Map.InGrass(h.X, h.Y) && Hyp(h.X - bx, h.Y - by) < 1.2f || !threat || Hyp(h.X - bx, h.Y - by) < 3)) SetGoal(bx, by, 0.3f);
-            else if (threat || Now - h.LastCombat < 0.5f)
+            else if (threat || Now - h.LastCombat < 0.5f || Beginner) // a beginner runs straight home
             {
                 float d = Dist(h, myTower); if (d == 0) d = 1;
                 float backX = myTower.X, backY = myTower.Y - fwd * (Rules.TowerBody + h.R + 0.6f);
@@ -395,8 +396,8 @@ namespace BAM.Sim
             SetGoal(target.X + (h.X - target.X) / d * keep, target.Y + (h.Y - target.Y) / d * keep, keep + 0.1f, target);
             if (v3 && TK3(30) > 0 && V3CleanSpot(target, keep, out float cx, out float cy)) SetGoal(cx, cy);
             if (d < h.Range + target.R + 3 && !M.Map.LosClear(h, target)) SetGoal(target.X, target.Y, 0.3f, target); // a wall in the way: walk round it
-            if (safety && (BotTables.Ranged(h.Hero) && target.Range < 2.6f || Outranges(h, target)) && d < target.Range + target.R + h.R + 0.4f) kite = target;
-            else if (safety && d > h.Range + 1.5f && d < 9 && !M.Map.InGrass(h.X, h.Y) && gStop != 0.3f)
+            if (safety && !Beginner && (BotTables.Ranged(h.Hero) && target.Range < 2.6f || Outranges(h, target)) && d < target.Range + target.R + h.R + 0.4f) kite = target; // a beginner stands and shoots
+            else if (safety && !Beginner && d > h.Range + 1.5f && d < 9 && !M.Map.InGrass(h.X, h.Y) && gStop != 0.3f)
             {
                 if (BushSpot(target.X, target.Y, h.Range + 1, enemyTower, 0, out float bx, out float by) && Hyp(bx - target.X, by - target.Y) < d - 1 && Hyp(h.X - bx, h.Y - by) < d) SetGoal(bx, by, 0.3f);
             }
@@ -430,7 +431,7 @@ namespace BAM.Sim
                 var mate = Nearest(mates, h);
                 if (mate != null && foesAhead >= 2 && Dist(mate, h) > 6) { Mode = BotMode.Group; SetGoal(mate.X, mate.Y - fwd * 1.5f); }
             }
-            if (!shouldTower && hasGoal && safety && Mode == BotMode.Lane && BushSpot(gX, gY, Math.Max(1.5f, h.Range - 0.5f), enemyTower, 0, out float ax, out float ay)) SetGoal(ax, ay, 0.3f);
+            if (!shouldTower && hasGoal && safety && !Beginner && Mode == BotMode.Lane && BushSpot(gX, gY, Math.Max(1.5f, h.Range - 0.5f), enemyTower, 0, out float ax, out float ay)) SetGoal(ax, ay, 0.3f);
             // people don't stand perfectly still while they wait at the wave: shuffle a little around the spot
             // (a new spot every 1.5-3 s, not every decision: BotMove.cs)
             FlankGrass(enemyTower, HpR(h)); // one bot per team waits in the side grass (BotSquad.cs)

@@ -66,6 +66,7 @@ namespace BAM.Sim
                 // the bots only tapped, so on Hard a hero stood in the long reach and out of the ring 3.6-4.9 s a minute with it ready)
                 if (DragTier && M.DragAimOn && !retreat && DragHero(out bool far) != null && far) return true;
                 if (!M.TapHasTarget(h)) return false;
+                if (BeginnerSpam()) return true; // Easy: fired at the first thing in reach, minions too (BotBeginner.cs)
                 // Kugg's Anchor roots him for up to 10 s (Hero7.cs): ROI17's old AI (SimAI AI_Joker) deployed above 60 % health with an
                 // enemy hero within 7 tiles or 4 enemies in reach, never to escape. The bot waits for KuggAnchorStocks (he may anchor from
                 // 2, but two shots never pay for ~3.4 s rooted: 16 anchors a match, 85 % with 2 stocks, win 15 %) and never anchors while
