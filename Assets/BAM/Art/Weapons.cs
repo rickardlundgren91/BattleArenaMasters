@@ -600,7 +600,10 @@ namespace BAM.Art
                 // her mushroom cap as big as on her own picture (portrait_nassla), down over her hair to the brow: at 0.14 high and
                 // 0.11 over the head joint it sat small and high on top of her hair like a party hat (same pictures; Blender check
                 // of 0.21 / 0.085 on her V2 body, bam-work/nassla-detail/cap_fore_efter.png). Her skins' caps go on the same spot
-                new WornDef { Model = "v2_nassla_cap", Bone = Head, From = Head, Height = 0.21f, At = new Vector3(0f, 0.085f, 0f) },
+                // At.y 0.085 -> 0.045 (Rickard 2026-11-18 "svampen sitter för högt, den ska se naturlig ut på huvudet"): at 0.085 the
+                // brim floated over her hair with the cap's underside showing; now it rests on her hair at the brow, the ears and hair
+                // coming out under it (Blender check on her V2 body, bam-work/nassla-detail/hatt_fore_efter_2.png)
+                new WornDef { Model = "v2_nassla_cap", Bone = Head, From = Head, Height = 0.21f, At = new Vector3(0f, 0.045f, 0f) },
                 new WornDef { Model = "v2_nassla_basket", Bone = Chest, From = LArm, To = RArm, Height = 0.22f, At = new Vector3(0f, -0.16f, -0.09f) },
             };
 
