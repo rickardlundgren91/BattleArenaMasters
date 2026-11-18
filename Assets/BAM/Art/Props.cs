@@ -87,19 +87,24 @@ namespace BAM.Art
         /// below the crossguard pushed together to share k of their length and thin times as thick about the handle's middle; the
         /// guard and blade as they were. The guard is found on the mesh (the widest slice in its lower half, down to where it is half
         /// as wide), so the skins' swords get the same. guard: where the guard began on src, as a share of src's height. null (and
-        /// nothing changed) when no guard stands out, or the mesh can't be read.</summary>
-        public static Mesh ShortHandle(string name, Mesh src, float k, float thin, out float guard)
+        /// nothing changed) when no guard stands out, or the mesh can't be read. Then (Rickard 2026-11-18, Fenn on the phone: "Eggen
+        /// på svärdet är alldeles för tjock och likaså hela klingan. Den ska vara tunnare", "Nu blir det sån bred kant"): above the
+        /// guard the blade deep times as thick, and its bevels (from the fuller's width out to the edge) edge times as wide, so the
+        /// blade is slimmer and the broad grey band along each edge narrow; 1 = as made.</summary>
+        public static Mesh ShortHandle(string name, Mesh src, float k, float thin, out float guard) => ShortHandle(name, src, k, thin, 1f, 1f, out guard);
+
+        public static Mesh ShortHandle(string name, Mesh src, float k, float thin, float deep, float edge, out float guard)
         {
-            string key = name + "|" + k + "|" + thin;
+            string key = name + "|" + k + "|" + thin + "|" + deep + "|" + edge;
             guard = 0f;
             if (shortHandles.TryGetValue(key, out Mesh done)) { if (done != null) guard = shortGuards[key]; return done; }
-            Mesh m = src != null && src.isReadable ? MakeShortHandle(src, k, thin, out guard) : null;
+            Mesh m = src != null && src.isReadable ? MakeShortHandle(src, k, thin, deep, edge, out guard) : null;
             shortHandles[key] = m;
             shortGuards[key] = guard;
             return m;
         }
 
-        static Mesh MakeShortHandle(Mesh src, float k, float thin, out float guard)
+        static Mesh MakeShortHandle(Mesh src, float k, float thin, float deep, float edge, out float guard)
         {
             guard = 0f;
             Vector3[] v = src.vertices;
@@ -125,6 +130,9 @@ namespace BAM.Art
             int g = top;
             while (g > 0 && (!any[g - 1] || w[g - 1] > 0.5f * w[top])) g--;
             float gy = y0 + g * 0.5f * H / Bins; // the guard's underside
+            int gt = top;
+            while (gt < Bins - 1 && any[gt + 1] && w[gt + 1] > 0.5f * w[top]) gt++;
+            float bladeY = y0 + (gt + 1) * 0.5f * H / Bins; // the guard's top: the blade above it
             // the handle's own middle (its axis), from the part between pommel and guard
             Vector2 cLo = new Vector2(float.MaxValue, float.MaxValue), cHi = new Vector2(float.MinValue, float.MinValue);
             for (int i = 0; i < v.Length; i++)
@@ -138,11 +146,26 @@ namespace BAM.Art
             float shift = (gy - y0) * (1f - k), fade = 0.04f * H;
             Vector3[] n = src.normals;
             bool hasN = n != null && n.Length == v.Length;
+            bool blade = deep < 1f || edge < 1f;
+            float bx = 0f, bz = 0f, rf = 0f;
+            if (blade) blade = BladeMiddle(v, bladeY, y0 + H, out bx, out bz, out rf);
+            float bfade = 0.04f * H;
             var nv = new Vector3[v.Length];
             for (int i = 0; i < v.Length; i++)
             {
                 Vector3 p = v[i];
-                if (p.y >= gy) { nv[i] = new Vector3(p.x, p.y - shift, p.z); continue; }
+                if (p.y >= gy)
+                {
+                    if (blade && p.y > bladeY)
+                    {   // slimmer: the fuller's width kept, the bevel outside it narrowed, the whole blade thinner; eased in over the guard
+                        float e = Mathf.Clamp01((p.y - bladeY) / bfade); e = e * e * (3f - 2f * e);
+                        float r = Mathf.Abs(p.x - bx), r2 = r <= rf ? r : rf + (r - rf) * edge;
+                        float x2 = bx + Mathf.Sign(p.x - bx) * r2, z2 = bz + (p.z - bz) * deep;
+                        p.x += (x2 - p.x) * e; p.z += (z2 - p.z) * e;
+                    }
+                    nv[i] = new Vector3(p.x, p.y - shift, p.z);
+                    continue;
+                }
                 float u = Mathf.Clamp01((gy - p.y) / fade); u = u * u * (3f - 2f * u); // thin below the guard, eased in
                 float s = Mathf.Lerp(1f, thin, u);
                 nv[i] = new Vector3(c.x + (p.x - c.x) * s, y0 + (p.y - y0) * k, c.y + (p.z - c.y) * s);
@@ -154,10 +177,46 @@ namespace BAM.Art
             m.uv = src.uv;
             m.subMeshCount = src.subMeshCount;
             for (int s = 0; s < src.subMeshCount; s++) m.SetTriangles(src.GetTriangles(s), s);
-            if (!hasN) m.RecalculateNormals();
+            if (!hasN || blade) m.RecalculateNormals(); // the blade's bevels turned: its faces lit as they now lie
             m.RecalculateBounds();
             guard = (gy - y0) / H;
             return m;
+        }
+
+        // the blade's middle line across (x) and through (z), and the fuller's half width: per slice above the guard, how far out the
+        // blade still has its full thickness (its flat middle), the median over the slices so the edges stay straight lines
+        static bool BladeMiddle(Vector3[] v, float from, float to, out float bx, out float bz, out float rf)
+        {
+            bx = bz = rf = 0f;
+            const int Bins = 40;
+            float span = to - from;
+            if (!(span > 1e-5f)) return false;
+            var lists = new List<int>[Bins];
+            for (int i = 0; i < v.Length; i++)
+            {
+                if (v[i].y <= from) continue;
+                int b = Mathf.Min(Bins - 1, Mathf.FloorToInt((v[i].y - from) / span * Bins));
+                (lists[b] ??= new List<int>()).Add(i);
+            }
+            var cx = new List<float>(); var cz = new List<float>(); var rs = new List<float>();
+            for (int b = 0; b < Bins; b++)
+            {
+                List<int> I = lists[b];
+                if (I == null || I.Count < 6) continue;
+                float xl = float.MaxValue, xh = float.MinValue, zl = float.MaxValue, zh = float.MinValue;
+                foreach (int i in I) { xl = Mathf.Min(xl, v[i].x); xh = Mathf.Max(xh, v[i].x); zl = Mathf.Min(zl, v[i].z); zh = Mathf.Max(zh, v[i].z); }
+                float mx = (xl + xh) * 0.5f, mz = (zl + zh) * 0.5f, zm = (zh - zl) * 0.5f, r = -1f;
+                if (zm < 1e-6f) continue;
+                foreach (int i in I) if (Mathf.Abs(v[i].z - mz) > 0.8f * zm) r = Mathf.Max(r, Mathf.Abs(v[i].x - mx));
+                cx.Add(mx); cz.Add(mz);
+                if (r >= 0f && r < 0.9f * (xh - xl) * 0.5f) rs.Add(r);
+            }
+            if (cx.Count < 4) return false;
+            cx.Sort(); cz.Sort();
+            bx = cx[cx.Count / 2]; bz = cz[cz.Count / 2];
+            if (rs.Count >= cx.Count / 3) { rs.Sort(); rf = rs[rs.Count / 2]; }
+            else rf = float.MaxValue; // no flat middle to keep (a diamond blade): only thinner
+            return true;
         }
 
         static Mesh Decode(string name, byte[] d)

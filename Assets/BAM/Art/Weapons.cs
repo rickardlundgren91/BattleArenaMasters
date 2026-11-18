@@ -75,6 +75,10 @@ namespace BAM.Art
         public float HandleK;
         /// <summary>Code only, with <see cref="HandleK"/>: the handle's thickness as a share of the made one's.</summary>
         public float HandleThin = 1f;
+        /// <summary>Code only, with <see cref="HandleK"/>: the blade above the guard this share as thick, and its bevels (the band from
+        /// the fuller out to the edge) BladeEdge as wide (Props.ShortHandle). Fenn's 0.45 and 0.4 (Rickard 2026-11-18: "Eggen på
+        /// svärdet är alldeles för tjock och likaså hela klingan. Den ska vara tunnare", "Nu blir det sån bred kant").</summary>
+        public float BladeDeep = 1f, BladeEdge = 1f;
         /// <summary>Which way the flat side of the run hold goes: 0 = as the idle votes (BAM's own pick), 1 or -1 fixed (Weapon Tuner
         /// "Walk: flip", Rickard 2026-10-30: "tyra i game norr och vänster gå blir pilbågen bakofram vänd").</summary>
         public int RunSign;
@@ -495,6 +499,10 @@ namespace BAM.Art
             // as it was. The fist at 0.17 of the sword as made instead of 0.12, which on the shorter handle is the middle of the
             // grip between pommel and guard (0.12 sat on the pommel's top, with a long bare handle above the fist)
             f.Weapons[0].HandleK = 0.6f; f.Weapons[0].HandleThin = 0.75f; f.Weapons[0].Grip = 0.17f;
+            // Rickard 2026-11-18 on the phone: "Eggen på svärdet är alldeles för tjock och likaså hela klingan. Den ska vara tunnare",
+            // "Nu blir det sån bred kant": the blade under half as thick (it was 0.68 of its width through) and the grey bevel along
+            // each edge 0.4 as wide, the cyan fuller as it was, so the blade is about a third narrower (the skins' too)
+            f.Weapons[0].BladeDeep = 0.45f; f.Weapons[0].BladeEdge = 0.4f;
             f.Shield.Dia = 0.4f;
             // the cape bigger and alive (Rickard 2026-11-18: "större cloak båda längre och bredare", "animera cloaken"): 0.48 of his
             // height across its shoulders' scale instead of 0.42 (about 14 % wider) and a quarter longer on top (Long), so the hem
@@ -1268,7 +1276,7 @@ namespace BAM.Art
             hLen[i] = 1f; hGuard[i] = 0f; hK[i] = 1f;
             if (mesh != null && W.HandleK > 0f && W.HandleK < 1f)
             {   // a smaller handle (Fenn): the made mesh's numbers kept, so Len and Grip mean what they did
-                Mesh sh = Props.ShortHandle(W.Model, mesh, W.HandleK, W.HandleThin, out float guard);
+                Mesh sh = Props.ShortHandle(W.Model, mesh, W.HandleK, W.HandleThin, W.BladeDeep, W.BladeEdge, out float guard);
                 if (sh != null) { hLen[i] = sh.bounds.size.y / Mathf.Max(1e-4f, mesh.bounds.size.y); hGuard[i] = guard; hK[i] = W.HandleK; mesh = sh; }
             }
             Transform hd = an.GetBoneTransform(W.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
