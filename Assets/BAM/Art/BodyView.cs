@@ -1693,27 +1693,43 @@ namespace BAM.Art
         // out and forward of the shoulder (KuggFist, in arm lengths: out, down, forward), the elbow out and back. Not on the move
         // (his walk and run swing as made) and not while he swings or casts.
         static readonly Vector3 KuggFist = new Vector3(0.55f, 0.6f, 0.3f); // 0.3 out still went into his body (Rickard 2026-11-11: "armen går in i hans kropp")
+        static readonly Vector3 KuggFistElbow = new Vector3(0.9f, 0.2f, -0.2f);
+        // and his right forearm IS the cannon (the 2026-11-16 cannon-arm bodies): the idle raised it in front of him with the barrel
+        // pointing at the viewer, so on Home it read as a raised fist (Rickard 2026-11-18, his picture: "kugg blev väl sådär"). At rest
+        // the upper arm hangs down and a little out and the forearm is held out to his side and forward, a little down, so the whole
+        // barrel and its glowing mouth are seen side on, on the menu stage and standing in a match. In arm lengths: out, down, forward
+        // for the wrist; the elbow hint down and back.
+        static readonly Vector3 KuggCannonRest = new Vector3(0.58f, 0.6f, 0.2f);
+        static readonly Vector3 KuggCannonElbow = new Vector3(0.2f, 0.8f, -0.4f);
         void KuggGuard()
         {
             float w = (1f - Mathf.Clamp01(gearAct)) * (1f - Mathf.Clamp01(moveW));
             if (w <= 0.01f || anim == null || !anim.isHuman) return;
-            Transform up = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), lo = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm),
-                hand = anim.GetBoneTransform(HumanBodyBones.LeftHand);
+            KuggArm(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand, KuggFist, KuggFistElbow, w);
+            KuggArm(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, KuggCannonRest, KuggCannonElbow, w);
+        }
+
+        // A two-bone IK for one of Kugg's arms: the wrist to goal and the elbow toward hint, both in arm lengths from the shoulder
+        // (x out from his body, y down, z forward), blended in by w
+        void KuggArm(HumanBodyBones upB, HumanBodyBones loB, HumanBodyBones handB, Vector3 goalK, Vector3 hintK, float w)
+        {
+            Transform up = anim.GetBoneTransform(upB), lo = anim.GetBoneTransform(loB), hand = anim.GetBoneTransform(handB);
             if (up == null || lo == null || hand == null) return;
             // "out" is measured on the body itself: from his chest out through this shoulder, level (Rickard 2026-11-11, "handen i
             // magen": the fist went in front of his belly, so the side taken from the transform's axes was the wrong one here)
             Transform body = anim.transform, chest = anim.GetBoneTransform(HumanBodyBones.Chest);
             if (chest == null) chest = anim.GetBoneTransform(HumanBodyBones.Spine);
+            if (chest == null) return;
             Vector3 fwd = body.forward, upW = body.up;
-            Vector3 outW = chest != null ? Vector3.ProjectOnPlane(up.position - chest.position, upW) : -body.right;
+            Vector3 outW = Vector3.ProjectOnPlane(up.position - chest.position, upW);
             if (outW.sqrMagnitude < 1e-8f) return;
             outW.Normalize();
             fwd = Vector3.ProjectOnPlane(fwd, outW).normalized;
             Vector3 a = up.position, b = lo.position, c = hand.position;
             float la = (b - a).magnitude, lb = (c - b).magnitude, arm = la + lb;
             if (la < 1e-5f || lb < 1e-5f) return;
-            Vector3 goal = a + (outW * KuggFist.x - upW * KuggFist.y + fwd * KuggFist.z) * arm;
-            Vector3 hint = a + (outW * 0.9f - upW * 0.2f - fwd * 0.2f) * arm;
+            Vector3 goal = a + (outW * goalK.x - upW * goalK.y + fwd * goalK.z) * arm;
+            Vector3 hint = a + (outW * hintK.x - upW * hintK.y + fwd * hintK.z) * arm;
             goal = Vector3.Lerp(c, goal, w);
             Vector3 at = goal - a;
             float d = Mathf.Clamp(at.magnitude, Mathf.Abs(la - lb) + 1e-4f, arm - 1e-4f);

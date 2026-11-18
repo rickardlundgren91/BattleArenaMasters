@@ -287,12 +287,15 @@ namespace BAM.UI
             if (!Picture.enabled) Picture.enabled = true;
         }
 
-        // the skinned body's reach from the stage's middle across the ground (so turning him never changes it), measured once on
-        // the posed mesh in its idle (a skinned renderer's bounds are the import's, T-pose arms and all); held weapons left out, as
-        // the height above leaves them to FitGear
+        // how far the skinned body reaches to either side of the stage's middle in the picture, over his resting turn (the start yaw
+        // and the sway either way), measured once on the posed mesh in its idle (a skinned renderer's bounds are the import's, T-pose
+        // arms and all); held weapons left out, as the height above leaves them to FitGear. It was his reach all round the middle,
+        // so the arm he held toward the viewer counted as width and Kugg came out about half the others' size on Home (Rickard
+        // 2026-11-18, his picture: "kanske bara är för att han är så liten"); a drag that turns him side on may take an arm past the edge
         float BodyHalfWidth()
         {
             float r = 0f;
+            Quaternion toLocal = Quaternion.Inverse(view.transform.rotation);
             var baked = new Mesh();
             var verts = new List<Vector3>();
             foreach (var sk in view.GetComponentsInChildren<SkinnedMeshRenderer>())
@@ -303,12 +306,16 @@ namespace BAM.UI
                 Transform t = sk.transform;
                 for (int k = 0; k < verts.Count; k++)
                 {
-                    Vector3 w = t.position + t.rotation * verts[k] - Spot;
-                    r = Mathf.Max(r, w.x * w.x + w.z * w.z);
+                    Vector3 l = toLocal * (t.position + t.rotation * verts[k] - Spot);
+                    for (int s = -1; s <= 1; s++)
+                    {
+                        float f = (yaw + s * Sway) * Mathf.Deg2Rad;
+                        r = Mathf.Max(r, Mathf.Abs(l.x * Mathf.Cos(f) + l.z * Mathf.Sin(f)));
+                    }
                 }
             }
             Destroy(baked);
-            return Mathf.Sqrt(r);
+            return r;
         }
 
         // the dragged yaw plus a slow sway, so the hero never stands frozen (old Speltest View3DTeam: sin(t * 0.6))
