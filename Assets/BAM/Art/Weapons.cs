@@ -651,11 +651,12 @@ namespace BAM.Art
             // shoulder and mantle (0.14 -> 0.18), and the back rack sits further back on the mantle (At.z -0.08 -> -0.13). Measured on
             // the model, not yet seen in Unity: tune with Weapon Tuner "Bram V2"
             br.CarryOut = 0.18f;
-            br.Worn = new[]
+            br.Worn = new WornDef[]
             {
                 // Bram 2.0 (Tripo 2026-11-18, Rickard's concept C): the fur pauldron and the apron are part of the new body, so the old
                 // separate v2_bram_pauldron and v2_bram_apronflap are no longer worn (they lay double on him)
-                new WornDef { Model = "v2_bram_backrack", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.2f, -0.13f), Yaw = 180f },
+                // Rickard 2026-11-19 ("ryggstället kan vi inte ha nu också med manteln", "skit i extra hammare nu"): no back rack of spare
+                // hammers on the base body any more, his fur collar covers the back (the skins keep their own racks)
             };
 
             // Kugg: since the cannon-arm bodies (2026-11-16, Rickard's pick "Ny kanonarm i Tripo") his right forearm and hand ARE the
