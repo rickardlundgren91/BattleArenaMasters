@@ -176,6 +176,7 @@ namespace BAM.Sim
             tgt.Hp -= amount;
             if (taken > 0 && tgt.Kind == UnitKind.Hero && tgt.Hero == HeroId.Oaken) tgt.OakenLastLoss = Time;
             Emit(EventType.Damage, att, tgt, taken, 0, false, 0, 0, kind);
+            if (Events.Count > 0 && Events[Events.Count - 1].Type == EventType.Damage && Events[Events.Count - 1].BSerial == tgt.Serial) { var de = Events[Events.Count - 1]; de.Full = amount; Events[Events.Count - 1] = de; } // the shown number keeps the overkill (SimEvent.Full)
             ItemLifesteal(att, tgt, taken); // Parascythe (Items.cs)
             if (src != null && src.Kind == UnitKind.Hero && !src.IsClone && src.Hero == HeroId.Blast && !burning && (flags & DmgFlags.NoIgnite) == 0) Ignite(src, tgt, amount);
             if (tgt.Hp <= 0) Kill(tgt, src);

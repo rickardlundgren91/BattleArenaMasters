@@ -66,5 +66,9 @@ namespace BAM.Sim
         /// <summary>The flying shot (Proj.Serial, IsShot) whose update sent this event, 0 for none: the view marks exactly the shot that
         /// hit (two shots of one kind from one shooter can end in the same tick, Tyra's volley). Metadata only: no rule reads it.</summary>
         public int Shot;
+        /// <summary>Damage only: the whole hit after armour and shields, overkill included (V is the health it took, never more than
+        /// the target had). The damage numbers show this on a killing blow (Rickard 2026-11-19 "overkill ska synas också"). Metadata
+        /// only: no rule reads it.</summary>
+        public float Full;
     }
 }

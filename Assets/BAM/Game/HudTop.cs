@@ -150,7 +150,8 @@ namespace BAM.Game
         void OnTick(SimEvent e)
         {
             var b = e.B;
-            if (b == null || e.V <= 0f) return;
+            float v = Shown(e);
+            if (b == null || v <= 0f) return;
             bool toPlayer = b == m.Player, byPlayer = e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
             bool creep = byPlayer && b.IsMinionLike && b.Team != m.Player.Team;
             if (!b.IsRealHero && !creep) return;
@@ -160,11 +161,11 @@ namespace BAM.Game
             for (int i = 0; i < tickSums.Length; i++)
             {
                 var t = tickSums[i] ?? (tickSums[i] = new TickSum());
-                if (t.Unit == b && !t.Heal && t.ToPlayer == toPlayer) { t.Sum += e.V; t.Last = now; return; }
+                if (t.Unit == b && !t.Heal && t.ToPlayer == toPlayer) { t.Sum += v; t.Last = now; return; }
                 if (t.Unit == null && free == null) free = t;
             }
             if (free == null) return; // a dozen burning heroes at once: the rest stay quiet
-            free.Unit = b; free.ToPlayer = toPlayer; free.Creep = creep; free.Heal = false; free.Sum = e.V; free.Since = now; free.Last = now;
+            free.Unit = b; free.ToPlayer = toPlayer; free.Creep = creep; free.Heal = false; free.Sum = v; free.Since = now; free.Last = now;
             free.Poison = b.Has(St.Poison) && !b.Has(St.Burn);
         }
 
@@ -197,10 +198,12 @@ namespace BAM.Game
             {
                 var t = tickSums[i];
                 if (t == null || t.Unit == null) continue;
-                bool due = now - t.Since >= TickShowEvery || now - t.Last > (t.Heal ? 1.1f : 0.6f);
-                if (!due) continue;
                 var u = t.Unit;
-                if (t.Sum >= (t.Heal ? 1f : 0.5f) && u.Alive && (t.ToPlayer || m.IsVisibleTo(u, m.Player.Team)))
+                // a target that died shows what its burn or poison did at once: the sum used to be dropped with it, so the last
+                // second of ticks vanished at a kill (Rickard 2026-11-19 "när man dödar target ... syns bara den sista dmg")
+                bool due = now - t.Since >= TickShowEvery || now - t.Last > (t.Heal ? 1.1f : 0.6f) || !u.Alive;
+                if (!due) continue;
+                if (t.Sum >= (t.Heal ? 1f : 0.5f) && (u.Alive || !t.Heal) && (t.ToPlayer || !u.Alive || m.IsVisibleTo(u, m.Player.Team)))
                 {
                     var f = floats[nextFloat];
                     nextFloat = (nextFloat + 1) % floats.Length;
@@ -222,7 +225,8 @@ namespace BAM.Game
         void OnDamage(SimEvent e)
         {
             var b = e.B;
-            if (b == null || e.V < 0.5f) return;
+            float v = Shown(e);
+            if (b == null || v < 0.5f) return;
             bool toPlayer = b == m.Player, byPlayer = e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
             // the player's own hits on minions get small, dim numbers (the old game, all modes since 2026-10-25)
             bool creep = byPlayer && b.IsMinionLike && b.Team != m.Player.Team;
@@ -239,22 +243,27 @@ namespace BAM.Game
                 var f = floats[i];
                 if (f.Unit == b && !f.Word && f.ToPlayer == toPlayer && now - f.Born < FloatMerge)
                 {
-                    f.Value += e.V;
+                    f.Value += v;
+                    if (!creep && !f.Big && f.Value >= 0.15f * b.MaxHp) { f.Big = true; f.Label.color = toPlayer ? DmgToPlayer : BigHit; f.Label.fontSize = 66; }
                     f.Label.text = Int(Mathf.RoundToInt(f.Value));
                     return;
                 }
             }
             var t = floats[nextFloat];
             nextFloat = (nextFloat + 1) % floats.Length;
-            t.Unit = b; t.Born = now; t.Value = e.V; t.ToPlayer = toPlayer; t.Word = false;
-            t.Big = !creep && e.V >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
+            t.Unit = b; t.Born = now; t.Value = v; t.ToPlayer = toPlayer; t.Word = false;
+            t.Big = !creep && v >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
             PlaceFloat(t, b);
-            t.Label.text = Int(Mathf.RoundToInt(e.V));
+            t.Label.text = Int(Mathf.RoundToInt(v));
             t.Label.color = toPlayer ? DmgToPlayer : creep ? CreepHit : t.Big ? BigHit : Color.white;
             t.Label.fontSize = creep ? 34 : t.Big ? 66 : 50;
             t.BaseA = creep ? 0.7f : 1f;
             t.Label.gameObject.SetActive(true);
         }
+
+        // The number a hit shows: the whole hit, overkill included (Rickard 2026-11-19 "overkill ska synas också"). V is only the
+        // health it took, so a 180 arrow on a hero with 12 left showed "12"; SimEvent.Full holds the hit before that cut
+        static float Shown(in SimEvent e) => e.Full > e.V ? e.Full : e.V;
 
         // Where a number starts: over a hero's name (and the eye or poison bubbles over it) so it never sits on the name or the bar
         // (Rickard 2026-11-03, a green poison "3" on Bram's name: "lite mycket överlapp"). It used to start 1.6 up from the feet,
@@ -266,11 +275,30 @@ namespace BAM.Game
                 f.At = bar;
                 f.Lift = OverheadClear(u, OverheadTile()) + f.Label.fontSize * 0.45f;
             }
+            else if (!u.Alive && SpotOfOther(f, u, out Vector3 at, out float lift))
+            {
+                // the killing blow: the bar is gone with the target, so the number starts where its earlier numbers did instead of
+                // dropping down to the body (2026-11-19)
+                f.At = at; f.Lift = lift;
+            }
             else
             {
                 f.At = views.DrawnAt(u) + Vector3.up * 1.6f;
                 f.Lift = 30f;
             }
+        }
+
+        bool SpotOfOther(FloatText f, Unit u, out Vector3 at, out float lift)
+        {
+            at = Vector3.zero; lift = 0f;
+            float best = -99f;
+            for (int i = 0; i < floats.Length; i++)
+            {
+                var o = floats[i];
+                if (o == f || o.Unit != u || !o.Label.gameObject.activeSelf || o.Born <= best) continue;
+                best = o.Born; at = o.At; lift = o.Lift;
+            }
+            return best > -99f;
         }
 
         /// <summary>A word rising over a unit in the damage numbers' style (the old floatText): "Recall", "Cancelled"...</summary>
