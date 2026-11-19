@@ -380,6 +380,7 @@ namespace BAM.Art
             }
             if (HeroIndex == (int)HeroId.Kugg && art.V2 && anim.isHuman) ShortLegs(KuggLegK); else legDrop = 0f;
             if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureHeadHold(); else headHold = false;
+            if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureArmRoll(); else armRoll = false;
             anim.runtimeAnimatorController = null;
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -1103,6 +1104,10 @@ namespace BAM.Art
             // huvud är vikt bakåt", still after a fixed 25-degree nod); the head is held on the chest as it sits in the bind pose,
             // mostly, after the Animator, in the menu and in a match
             if (imported && headHold) HoldHead(BlastV2HeadHold);
+            // and his right upper arm may not roll outward: the throw rolls it about 130 degrees, from 59 inward on the wind-up to 69
+            // outward after the release, so the bent forearm swung from down to straight out to the side (Rickard 2026-11-19:
+            // "vrider armen onaturligt ut. 90 grader upp till 90 grader ner")
+            if (imported && armRoll && !dead) LimitArmRoll();
             if (!Preview && imported && IsHero && !dead && HeroIndex == (int)HeroId.Kugg) KuggAim();
             // dead, that lift settles away over the fall (AnimateDeath sinks the body below it) instead of dropping it at the blow
             if (!Preview && imported && IsHero && dead) GroundFeet(dt, 0f);
@@ -2010,6 +2015,48 @@ namespace BAM.Art
             if (holdHead == null || holdChest == null) return;
             if (holdNeck != null) holdNeck.rotation = Quaternion.Slerp(holdNeck.rotation, holdChest.rotation * holdNeckRel, w);
             holdHead.rotation = Quaternion.Slerp(holdHead.rotation, holdChest.rotation * holdRel, w);
+        }
+
+        /// <summary>How far Blast's V2 right upper arm may roll about its own length, from the bind pose, in degrees: inward
+        /// (Min, negative) and outward (Max). His idle holds it 29 inward; the throw went from 59 inward to 69 outward.</summary>
+        const float BlastV2ArmRollMin = -45f, BlastV2ArmRollMax = -5f;
+        bool armRoll;
+        Transform rollArm;
+        Quaternion rollBind = Quaternion.identity;
+        Vector3 rollAxis = Vector3.up;
+        float rollOut = 1f;
+
+        /// <summary>Notes the right upper arm's bind turn on its parent, its length axis, and which way about that axis rolls it
+        /// outward (a bent forearm going up), for <see cref="LimitArmRoll"/>. A fresh instance stands in the bind pose.</summary>
+        void MeasureArmRoll()
+        {
+            armRoll = false;
+            if (anim == null || !anim.isHuman) return;
+            rollArm = anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            Transform elbow = anim.GetBoneTransform(HumanBodyBones.RightLowerArm);
+            if (rollArm == null || elbow == null || elbow.localPosition.sqrMagnitude < 1e-8f) return;
+            rollBind = rollArm.localRotation;
+            rollAxis = elbow.localPosition.normalized;
+            // the sign is taken from the body rather than assumed, as the FBX import mirrors handedness: a positive turn about the
+            // arm (pointing out to his right) carries his forward toward up when it rolls the arm outward
+            Vector3 along = rollArm.TransformDirection(rollAxis);
+            rollOut = Vector3.Dot(Vector3.Cross(along, anim.transform.forward), anim.transform.up) >= 0f ? 1f : -1f;
+            armRoll = true;
+        }
+
+        void LimitArmRoll()
+        {
+            if (rollArm == null) return;
+            Quaternion d = Quaternion.Inverse(rollBind) * rollArm.localRotation; // the clip's turn on the bind pose, in the bone's frame
+            float along = d.x * rollAxis.x + d.y * rollAxis.y + d.z * rollAxis.z;
+            float roll = 2f * Mathf.Atan2(along, d.w) * Mathf.Rad2Deg;
+            roll = Mathf.DeltaAngle(0f, roll);
+            float outward = roll * rollOut;
+            float kept = Mathf.Clamp(outward, BlastV2ArmRollMin, BlastV2ArmRollMax);
+            if (Mathf.Approximately(kept, outward)) return;
+            Quaternion twist = Quaternion.AngleAxis(roll, rollAxis);
+            Quaternion swing = d * Quaternion.Inverse(twist);
+            rollArm.localRotation = rollBind * swing * Quaternion.AngleAxis(kept * rollOut, rollAxis);
         }
 
         static float BindBottom(Renderer[] rs, float fallback) => BindY(rs, fallback, false);
