@@ -95,6 +95,9 @@ namespace BAM.Art
                 if (used.Contains(m) || !Has(m)) continue;
                 // Kugg's round V3 bodies hide a pack or a cape wholly inside the ball (as the plain one's, Weapons.MakeV2)
                 if (hero == HeroId.Kugg && (slot == "pack" || slot == "cape")) continue;
+                // Moa's wings are see-through bee wings made in code, not the skin's solid Tripo wings (Rickard 2026-11-19: "lätt
+                // transparenta precis som bivingar", Weapons.MoaBeeWing)
+                if (hero == HeroId.Moa && slot == "wings") { worn.Add(Weapons.MoaBeeWing(true)); worn.Add(Weapons.MoaBeeWing(false)); continue; }
                 WornDef w = Extra(hero, skin, slot);
                 if (w == null) { Debug.LogWarning("[BAM.Art] " + hero + " skin " + skin + ": no place for its " + slot + " yet"); continue; }
                 w.Model = m;

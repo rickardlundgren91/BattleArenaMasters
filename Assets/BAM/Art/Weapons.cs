@@ -223,6 +223,9 @@ namespace BAM.Art
         public Vector3 Turn;
         /// <summary>Drawn unlit and a little see-through, so it glows against the body (Tikta's insect wings, Rickard 2026-11-16).</summary>
         public bool Glow;
+        /// <summary>Drawn lit and see-through by its picture's own alpha, so only the drawn parts show (Moa's bee wings, Rickard
+        /// 2026-11-19: "lätt transparenta precis som bivingar": a clear membrane with dark veins).</summary>
+        public bool Clear;
         /// <summary>Degrees a wing beats up and down about the hero's forward axis at its root (0 = none): slow and small at rest,
         /// wider and faster on the move. Negative for a left wing, so both beat up together.</summary>
         public float Flap;
@@ -470,6 +473,18 @@ namespace BAM.Art
             Model = right ? "v2_tikta_glowwingr" : "v2_tikta_glowwingl", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm,
             To = HumanBodyBones.RightUpperArm, Height = 0.27f,
             At = new Vector3(right ? 0.015f : -0.015f, -0.02f, -0.1f), Glow = true, Flap = right ? 12f : -12f,
+        };
+
+        /// <summary>Moa's bee wings on her Queen skin (Rickard 2026-11-19: "Fixa moas vingar så de ser ut som riktiga. Dom ska vara lätt
+        /// transparenta precis som bivingar"): in place of the skin's solid gold Tripo wings, a fore and a smaller hind wing a side,
+        /// a clear, faintly gold membrane with a soft rainbow sheen and dark brown veins in the inner two thirds, as a honeybee's.
+        /// Made in code (bam-work/hero-details/moa-beewings/tools/make_beewings.py; the .png's alpha is the wing), rooted on her
+        /// upper back and beating softly (SkinGear).</summary>
+        internal static WornDef MoaBeeWing(bool right) => new WornDef
+        {
+            Model = right ? "v2_moa_beewingr" : "v2_moa_beewingl", Bone = HumanBodyBones.UpperChest, From = HumanBodyBones.LeftUpperArm,
+            To = HumanBodyBones.RightUpperArm, Height = 0.3f,
+            At = new Vector3(right ? 0.03f : -0.03f, -0.01f, -0.11f), Clear = true, Flap = right ? 10f : -10f,
         };
 
         static GearDef[] MakeV2()
@@ -980,7 +995,7 @@ namespace BAM.Art
             return h;
         }
 
-        static Renderer MakeRenderer(GameObject go, Mesh mesh, string model, List<Renderer> rends, List<Material> op, List<Material> fd, bool glow = false)
+        static Renderer MakeRenderer(GameObject go, Mesh mesh, string model, List<Renderer> rends, List<Material> op, List<Material> fd, bool glow = false, bool clear = false)
         {
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
@@ -988,7 +1003,7 @@ namespace BAM.Art
             r.receiveShadows = true;
             Texture tex = Props.Texture(model);
             if (tex == null) tex = Texture2D.whiteTexture;
-            Material o = ArtMaterials.Instance(glow ? ArtMaterials.UnlitFade : ArtMaterials.Lit), f = ArtMaterials.Instance(glow ? ArtMaterials.UnlitFade : ArtMaterials.LitFade);
+            Material o = ArtMaterials.Instance(glow ? ArtMaterials.UnlitFade : clear ? ArtMaterials.LitFade : ArtMaterials.Lit), f = ArtMaterials.Instance(glow ? ArtMaterials.UnlitFade : ArtMaterials.LitFade);
             o.SetTexture(ArtMaterials.BaseMap, tex); o.mainTexture = tex;
             f.SetTexture(ArtMaterials.BaseMap, tex); f.mainTexture = tex;
             if (glow) o.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, GlowAlpha)); // its own light, a little see-through
@@ -1017,8 +1032,9 @@ namespace BAM.Art
                 if (bone == null) bone = an.GetBoneTransform(HumanBodyBones.Hips);
                 if (mesh == null || bone == null) continue;
                 var go = new GameObject("Worn " + w.Model);
-                Renderer wr = MakeRenderer(go, mesh, w.Model, rends, op, fd, w.Glow);
+                Renderer wr = MakeRenderer(go, mesh, w.Model, rends, op, fd, w.Glow, w.Clear);
                 if (w.Glow) { wr.receiveShadows = false; wornGlow.Add(wr.sharedMaterial); }
+                if (w.Clear) wr.receiveShadows = false;
                 Transform t = go.transform;
                 t.SetParent(bone, false);
                 Transform fa = w.From != HumanBodyBones.LastBone ? an.GetBoneTransform(w.From) : null;
