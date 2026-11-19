@@ -127,6 +127,9 @@ namespace BAM.Art
         /// has no perspective, a body that comes up towards it must grow to look higher and not just further up the map.
         /// (0, 1) = on the ground again.</summary>
         public virtual void SetAir(float height, float size) { }
+        /// <summary>The end of a match: 1 = this hero's team won (it dances), 2 = it lost (it shakes its head), 0 = back to the idle.
+        /// Played in place of the idle, so a swing or a flinch still shows over it.</summary>
+        public virtual void SetEndPose(int pose) { }
     }
 
     public abstract class ProjectileView : MonoBehaviour

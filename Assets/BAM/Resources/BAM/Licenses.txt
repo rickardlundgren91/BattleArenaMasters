@@ -9,6 +9,8 @@ Minion character, character rigging and animations: Mixamo (Adobe).
 Arena and training island textures: Rickard Lundgren.
 Some sound effects (Ragn and Nässla) are mixed from CC0 (public domain) packs by
 artisticdude, rubberduck, qubodup, CaveboyTup, Kenney and IgnasD. Thank you!
+Victory dance and defeat head shake: Quaternius, Universal Animation Library
+(CC0, quaternius.com). Thank you!
 
 Made with Unity.
 

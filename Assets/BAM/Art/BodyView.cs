@@ -595,6 +595,7 @@ namespace BAM.Art
             SetAir(0f, 1f); // a body that went back to the pool in mid-air (the guided match's island ends at the top of the pad's throw)
             Probe.Reset();
             FormReset();
+            EndPoseReset();
             atkCut = castCut = -1f;
             model.localPosition = Vector3.zero;
             model.localRotation = Quaternion.identity;

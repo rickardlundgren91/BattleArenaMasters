@@ -62,6 +62,7 @@ namespace BAM.Game
             public float FixX, FixY;       // online guest: a correction of the guess, drawn away over ~0.1 s instead of a jump
             public float JoltX, JoltY, JoltT, JoltLen; // the player's own hit shoves the target a little away (OwnHit), map tiles; JoltT left of JoltLen s
             public bool Squared;           // the view was told it faces a target or an aim, not its path (AnimFix.LegsFollow)
+            public bool EndPosed;          // the view was told how the match ended (UnitView.SetEndPose)
             public float Air;              // how high the view was told it is in the air (UnitView.SetAir), 0 = on the ground
             public MeshRenderer Bar;       // the art's health bar (its child named "Bar"), for the HUD's marks over it
         }
@@ -332,7 +333,7 @@ namespace BAM.Game
             var r = unitRecPool.Count > 0 ? unitRecPool.Pop() : new UnitRec();
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
             r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.MaxHp = -1f; r.Energy = -2f; r.Ready = false; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff; r.Form = -1;
-            r.JoltT = 0f; r.Air = 0f;
+            r.JoltT = 0f; r.Air = 0f; r.EndPosed = false;
             r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
             r.Bar = null;
             foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
@@ -1340,7 +1341,12 @@ namespace BAM.Game
             if (u.Alive == r.Dead) { r.Dead = !u.Alive; v.SetDead(r.Dead); if (!r.Dead) { r.Hp01 = -1f; r.Vis = -1f; } }
             if (r.Dead) { HeroMarksOff(r); return; }
 
-            bool moving = m.Time - u.MovedAt < 0.1f;
+            // the match is over (the tower fell): the rules stop, so a hero that was running would run on the spot; every hero still
+            // standing stops instead, and the winners dance while the losers shake their heads until the result card comes up
+            // (Quaternius' Universal Animation Library, CC0; Rickard 2026-11-19 "ta det du tror kommer göra stor skillnad")
+            bool ended = hero && m.State == MatchState.Over && m.Tut == null && !m.HeroTest && m.Winner >= 0;
+            if (ended && !r.EndPosed) { r.EndPosed = true; v.SetEndPose(u.Team == m.Winner ? 1 : 2); }
+            bool moving = !ended && m.Time - u.MovedAt < 0.1f;
             float speed01 = 0f;
             if (moving && u.BaseSpeed > 0f) speed01 = Mathf.Sqrt((u.X - u.PX) * (u.X - u.PX) + (u.Y - u.PY) * (u.Y - u.PY)) / Rules.Tick / u.BaseSpeed;
             v.SetMoving(moving, moving ? Mathf.Max(0.5f, speed01) : 0f);

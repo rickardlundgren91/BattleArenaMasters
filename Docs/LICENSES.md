@@ -37,6 +37,7 @@ own arena/tutorial textures; each such file gets a row under "Imported from the 
 | RavnaFlock | Audio/Resources/BAM/Sfx/RavnaFlock.mp3 | Mix av oss av: Hope-Sounds "Birds taking off fly" (freesound 499679), spring-spring "Various Sound Effects" (snd_batwings), qubodup "3 dark magic spells" (fout-02), zeroisnotnull "Crow caw" | CC0 1.0 | None |
 | RavnaCaw | Audio/Resources/BAM/Sfx/RavnaCaw.mp3 | Mix av oss av: zeroisnotnull "Crow caw", spring-spring "Various Sound Effects" (snd_batwings) | CC0 1.0 | None |
 | HeroDeath_Ravna | Audio/Resources/BAM/Sfx/HeroDeath_Ravna.mp3 | Mix av oss av: cicifyre "Female RPG Voice Starter Pack" (Type 2/damaged1), Hope-Sounds "Birds taking off fly" (freesound 499679) | CC0 1.0 | None |
+| End-of-match clips Victory, Defeat | Art/Resources/BAMArt/Poses/Victory.fbx, Defeat.fbx | Quaternius: "Universal Animation Library" Standard (Dance_Loop) and "Universal Animation Library 2" Standard (Idle_No_Loop), quaternius.itch.io, downloaded free 2026-11-19; each cut by us to one clip (armature only) in Blender 5.3 | CC0 1.0 (License.txt in both zips) | None (credited in Licenses.txt anyway) |
 
 ## Imported from the old game
 
