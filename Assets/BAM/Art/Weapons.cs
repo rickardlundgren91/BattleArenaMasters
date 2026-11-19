@@ -546,8 +546,10 @@ namespace BAM.Art
             // faster as he runs. The skins' capes take the same numbers (SkinGear clones this). Then (Rickard 2026-11-18, Home: "fenns
             // kappa är dubbel, gör den rörlig som annan textur"): the Tripo cape is a thick shell whose inner layer hung on its own
             // below the outer one, so it is pressed into one sheet (Sheet), and it bends like cloth instead of swinging stiffly: the
-            // hem trails the way he runs and turns, down from a still top edge (TickCape)
-            f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.48f, Long = 1.25f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f, Wave = 0.06f, Sheet = 0.1f } };
+            // hem trails the way he runs and turns, down from a still top edge (TickCape). Sheet 0.2 instead of 0.1 (Rickard 2026-11-19,
+            // Home: "fenns mantel lite för tunn"): the two layers a fifth of their gap apart (about 5 % of the cape's length), twice as
+            // thick as the paper-thin 0.1, still one cloak
+            f.Worn = new[] { new WornDef { Model = "v2_fenn_cape", Bone = Chest, From = LArm, To = RArm, Height = 0.48f, Long = 1.25f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f, Wave = 0.06f, Sheet = 0.2f } };
 
             // Tyra: her new longbow in the left fist (turned a quarter in the conversion so its belly faces as the old bow's did), the
             // quiver on her back, slanting over her right shoulder. Her V2 rig has all its finger bones, so her fingers play the clips
