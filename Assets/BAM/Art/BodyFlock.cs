@@ -19,6 +19,16 @@ namespace BAM.Art
         const float FlockGrow = 0.14f, FlockShrink = 0.18f;
         const float CrowSize = 0.22f;  // a crow's longest side over her height (0.3 with 8 crows, 0.27 with 22; smaller in the tight swarm)
         const float CrowPitch = -45f;  // the perched model stands about 55 degrees up from tail to head: this lays it nearly flat, beak first and a touch down
+        // Rickard 2026-11-19 (ok to a Tripo flying raven): Props v2_ravna_crowfly is a raven with its wings spread (span along x, beak
+        // +z, back +y). When it is there the flock flies those, with a real wing beat: FlapFrames copies of the mesh with the wings
+        // bent from up to down at the shoulders, played in a loop. Without it the perched crow and its squeeze beat are used as before.
+        const float CrowSizeFly = 0.36f; // the flying raven's wingspan over her height
+        const int FlapFrames = 6;
+        const float FlapUp = 42f, FlapDown = -32f, WingRoot = 0.13f; // wing angles (degrees) and the body's half width (share of the span)
+        Mesh[] flapMesh;               // null: the perched crow
+        static Mesh[] flapShared;
+        static bool flapTried;
+        MeshFilter[] crowF;
 
         Transform[] crowT, crowM;      // each crow's place (turns with the flight) and its mesh under it (the wing beat)
         Material crowOpaque, crowFade;
@@ -45,8 +55,11 @@ namespace BAM.Art
 
         void BuildFlock()
         {
-            string model = "v2_ravna_crow";
+            string model = "v2_ravna_crowfly";
             Mesh mesh = Props.Mesh(model);
+            if (!flapTried) { flapTried = true; flapShared = mesh != null ? MakeFlap(mesh) : null; } // made once, shared by every Ravna
+            flapMesh = mesh != null ? flapShared : null;
+            if (flapMesh == null) { model = "v2_ravna_crow"; mesh = Props.Mesh(model); }
             if (mesh == null) { model = "ravna_crow"; mesh = Props.Mesh(model); }
             if (mesh == null || def == null) return;
             Texture tex = Props.Texture(model);
@@ -57,12 +70,12 @@ namespace BAM.Art
             crowFade.SetTexture(ArtMaterials.BaseMap, tex); crowFade.mainTexture = tex;
 
             Vector3 sz = mesh.bounds.size;
-            crowScale = CrowSize * def.Height / Mathf.Max(0.01f, Mathf.Max(sz.x, Mathf.Max(sz.y, sz.z)));
+            crowScale = (flapMesh != null ? CrowSizeFly : CrowSize) * def.Height / Mathf.Max(0.01f, Mathf.Max(sz.x, Mathf.Max(sz.y, sz.z)));
             crowCentre = mesh.bounds.center;
-            Quaternion lay = Quaternion.Euler(CrowPitch, 180f, 0f);
+            Quaternion lay = flapMesh != null ? Quaternion.identity : Quaternion.Euler(CrowPitch, 180f, 0f);
 
             crowN = ArtKit.High ? FlockMax : FlockLow;
-            crowT = new Transform[crowN]; crowM = new Transform[crowN]; crowR = new MeshRenderer[crowN];
+            crowT = new Transform[crowN]; crowM = new Transform[crowN]; crowR = new MeshRenderer[crowN]; crowF = new MeshFilter[crowN];
             crowA = new float[crowN]; crowRad = new float[crowN]; crowH = new float[crowN]; crowSpin = new float[crowN]; crowPh = new float[crowN];
             crowBeat = new float[crowN];
             crowStrays = ArtKit.High ? StraysHigh : StraysLow;
@@ -76,7 +89,8 @@ namespace BAM.Art
                 crowM[i].SetParent(crowT[i], false);
                 crowM[i].localRotation = lay;
                 crowM[i].localPosition = -(lay * crowCentre) * crowScale; // turns about its own middle, not its feet
-                mg.AddComponent<MeshFilter>().sharedMesh = mesh;
+                crowF[i] = mg.AddComponent<MeshFilter>();
+                crowF[i].sharedMesh = flapMesh != null ? flapMesh[i % FlapFrames] : mesh;
                 var r = mg.AddComponent<MeshRenderer>();
                 r.sharedMaterial = crowOpaque;
                 r.shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
@@ -92,7 +106,8 @@ namespace BAM.Art
                                  : def.Height * (0.6f + 0.5f * (((i * 0.618f) % 1f) - 0.5f)); // 0.35-0.85 of her height
                 crowSpin[i] = (i % 2 == 0 ? 1f : -1f) * (stray ? 1.7f + 0.5f * Random.value : 0.6f + 0.6f * Random.value);
                 crowPh[i] = Random.value * 10f;
-                crowBeat[i] = 18f + 6f * Random.value; // not all in step
+                crowBeat[i] = flapMesh != null ? (stray ? 7f : 11f) + 3f * Random.value  // real wings beat slower than the squeeze did
+                                               : 18f + 6f * Random.value; // not all in step
                 go.SetActive(false);
             }
         }
@@ -143,8 +158,16 @@ namespace BAM.Art
                 // beak along the flight, leaning into its circle, nose bobbing with the beat
                 float beat = Mathf.Sin(t * crowBeat[i] + ph);
                 crowT[i].localRotation = Quaternion.Euler(6f * beat, 14f * Mathf.Sin(t * 3f + ph), -24f * Mathf.Sign(crowSpin[i]) * Mathf.Cos(a));
+                if (flapMesh != null)
+                {
+                    // the wing beat: up and down through the bent copies; strays glide now and then with their wings held out
+                    float k = beat * 0.5f + 0.5f;
+                    if (stray && Mathf.Sin(t * 0.9f + ph) > 0.3f) k = 0.55f;
+                    crowF[i].sharedMesh = flapMesh[Mathf.Clamp(Mathf.RoundToInt(k * (FlapFrames - 1)), 0, FlapFrames - 1)];
+                    crowM[i].localScale = Vector3.one * crowScale;
+                }
                 // the wing beat: the folded wings squeeze and widen across the body (mesh x)
-                crowM[i].localScale = new Vector3(crowScale * (1f + 0.3f * beat), crowScale * (1f - 0.08f * beat), crowScale);
+                else crowM[i].localScale = new Vector3(crowScale * (1f + 0.3f * beat), crowScale * (1f - 0.08f * beat), crowScale);
             }
 
             // the magic round the flock (Rickard 2026-11-16: "mer effekter, rök eller dimma ... dimmigt, mystiskt, fåglar, magiskt"): a
@@ -197,6 +220,44 @@ namespace BAM.Art
             Fx.Smoke(mid, ArtKit.High ? 8 : 4, MistDark, height * 0.6f, 0.7f, 0.8f, 0.1f, height * 0.2f);
             Fx.Wisps(mid, ArtKit.High ? 6 : 3, WispViolet, height * 0.3f, 0.5f, 0.7f, 0.7f, 0.12f);
             Fx.Swirl(feet, height * 0.6f, new Color(0.45f, 0.3f, 0.75f, 0.6f), 0.6f);
+        }
+
+        // the flying raven's wing beat as FlapFrames meshes, frame 0 wings down (FlapDown) to the last wings up (FlapUp): every vertex
+        // further out than the body (|x| > WingRoot of the span) turns about the shoulder line, the tip a little more than the root,
+        // so the wing curves like a real one. null when the mesh can't be read.
+        static Mesh[] MakeFlap(Mesh src)
+        {
+            if (src == null || !src.isReadable) return null;
+            Vector3[] v = src.vertices, n = src.normals;
+            if (v.Length == 0) return null;
+            bool hasN = n != null && n.Length == v.Length;
+            Bounds b = src.bounds;
+            float half = Mathf.Max(0.001f, Mathf.Max(-b.min.x, b.max.x)), root = WingRoot * 2f * half, reach = Mathf.Max(0.001f, half - root);
+            float yc = b.center.y, xc = 0f; // crowfly2bytes.py puts the body line at x = 0
+            var frames = new Mesh[FlapFrames];
+            var fv = new Vector3[v.Length];
+            var fn = hasN ? new Vector3[v.Length] : null;
+            for (int f = 0; f < FlapFrames; f++)
+            {
+                float a = Mathf.Lerp(FlapDown, FlapUp, f / (float)(FlapFrames - 1)) * Mathf.Deg2Rad;
+                for (int i = 0; i < v.Length; i++)
+                {
+                    Vector3 p = v[i];
+                    float x = p.x - xc, side = Mathf.Sign(x), d = Mathf.Abs(x) - root;
+                    if (d <= 0f) { fv[i] = p; if (hasN) fn[i] = n[i]; continue; }
+                    float th = a * (0.7f + 0.3f * d / reach), c = Mathf.Cos(th), s = Mathf.Sin(th);
+                    float dy = p.y - yc; // turn (d, dy) about the shoulder (root, yc)
+                    fv[i] = new Vector3(xc + side * (root + d * c - dy * s), yc + d * s + dy * c, p.z);
+                    if (hasN) { Vector3 q = n[i]; float qx = q.x * side; fn[i] = new Vector3(side * (qx * c - q.y * s), qx * s + q.y * c, q.z); }
+                }
+                var m = Object.Instantiate(src);
+                m.name = src.name + " flap " + f;
+                m.vertices = fv;
+                if (hasN) m.normals = fn;
+                m.RecalculateBounds();
+                frames[f] = m;
+            }
+            return frames;
         }
 
         void FlockReset()
