@@ -1185,6 +1185,7 @@ namespace BAM.Art
             if (AnimFix.BlowTiming) InPlace();
             else model.localPosition = Vector3.zero; // switched off live (Animation Check): nothing left held over
             if (AnimFix.UpperSwing) UpperTurn();
+            TwistHold();
             bool life = AnimFix.Life;
             float wAtk = 0f, wCast = 0f, wHit = 0f, wDeath = 0f;
             if (dead)
@@ -1401,13 +1402,46 @@ namespace BAM.Art
             return clip != null && clipInfo.TryGetValue(clip, out ClipInfo ci) && ci.Yaw != null ? YawAt(ci, (float)p.GetTime()) * w : 0f;
         }
 
-        static float YawAt(ClipInfo ci, float t)
+        static float YawAt(ClipInfo ci, float t) => AngleAt(ci.Yaw, ci.Step, t);
+
+        static float AngleAt(float[] a, float step, float t)
         {
-            int n = ci.Yaw.Length;
-            if (n < 2 || ci.Step <= 0f) return n > 0 ? ci.Yaw[0] : 0f;
-            float f = Mathf.Clamp(t / ci.Step, 0f, n - 1);
+            int n = a.Length;
+            if (n < 2 || step <= 0f) return n > 0 ? a[0] : 0f;
+            float f = Mathf.Clamp(t / step, 0f, n - 1);
             int i = Mathf.Min((int)f, n - 2);
-            return Mathf.LerpAngle(ci.Yaw[i], ci.Yaw[i + 1], f - i);
+            return Mathf.LerpAngle(a[i], a[i + 1], f - i);
+        }
+
+        // Rickard 2026-11-19 ("bonk snurrar fortfarande vid autoattack", "bonk ska slå stora rätt långsamma slag över huvudet med
+        // bägge händer"): Bonk's auto attack is the two-armed overhead smash (Oaken's cast clip: both fists over his head, then on
+        // the ground), whose windup turns the hips 100 degrees away from the blow's facing (the chest 140). The share of that turn
+        // named here is taken back off the hips (the thighs turned back, so the feet stay put, as UpperTurn does) and off the spine
+        // and chest, measured from the blow's own frame: the blow lands as before, straight ahead, and the club goes up and comes
+        // down over his head instead of round him. Same frame and weight the pose was evaluated with.
+        static float TwistHoldOf(int hero) => hero == (int)HeroId.Bonk ? 0.85f : 0f;
+
+        void TwistHold()
+        {
+            float k = TwistHoldOf(HeroIndex), w = (drAtk + drUpA) * k;
+            if (w < 1e-3f || hipsT == null || spineT == null) return; // the menu stages too (IsHero is off there), where Rickard saw it
+            AnimationClip clip = clips[CAttack].GetAnimationClip();
+            if (clip == null || !clipInfo.TryGetValue(clip, out ClipInfo ci) || ci.Yaw == null || ci.Chest == null || ci.Blow < 0f) return;
+            float t = (float)clips[CAttack].GetTime();
+            float dHips = Mathf.DeltaAngle(YawAt(ci, ci.Blow), YawAt(ci, t));
+            float dChest = Mathf.DeltaAngle(AngleAt(ci.Chest, ci.Step, ci.Blow), AngleAt(ci.Chest, ci.Step, t)) - dHips;
+            Vector3 up = transform.up;
+            Quaternion hips = Quaternion.AngleAxis(-dHips * w, up), back = Quaternion.Inverse(hips);
+            hipsT.rotation = hips * hipsT.rotation;
+            if (thighL != null) thighL.rotation = back * thighL.rotation;
+            if (thighR != null) thighR.rotation = back * thighR.rotation;
+            float rest = -dChest * w;
+            if (chestT != null)
+            {
+                spineT.rotation = Quaternion.AngleAxis(rest * 0.6f, up) * spineT.rotation;
+                chestT.rotation = Quaternion.AngleAxis(rest * 0.4f, up) * chestT.rotation;
+            }
+            else spineT.rotation = Quaternion.AngleAxis(rest, up) * spineT.rotation;
         }
 
         static Vector2 HipsAt(ClipInfo ci, float t)
@@ -1427,7 +1461,7 @@ namespace BAM.Art
         // slam 1.9 s, Knut's 2.1, Tikta's 1.5; -1 if never, Tyra's shot ends drawn), and for a bow the full draw (Draw: the bow hand
         // at its highest from 10 % on) with which way the arrow points there (AimL: degrees from straight ahead, left negative), and
         // which hand is the fast one at the blow (Right; the hand a shot leaves from, Muzzle)
-        sealed class ClipInfo { public float Blow = -1f, Contact = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public bool Right = true; public Vector2[] Hips; public float[] Yaw; }
+        sealed class ClipInfo { public float Blow = -1f, Contact = -1f, Settle = -1f, Draw = -1f, AimL, Step = 1f / 30f; public bool Right = true; public Vector2[] Hips; public float[] Yaw, Chest; }
         static readonly Dictionary<AnimationClip, ClipInfo> clipInfo = new Dictionary<AnimationClip, ClipInfo>();
         static readonly List<AnimationClip> measureList = new List<AnimationClip>();
 
@@ -1473,6 +1507,7 @@ namespace BAM.Art
             Transform head = an.GetBoneTransform(HumanBodyBones.Head);
             Transform lf = an.GetBoneTransform(HumanBodyBones.LeftFoot), rf = an.GetBoneTransform(HumanBodyBones.RightFoot);
             Transform lul = an.GetBoneTransform(HumanBodyBones.LeftUpperLeg), rul = an.GetBoneTransform(HumanBodyBones.RightUpperLeg);
+            Transform lua = an.GetBoneTransform(HumanBodyBones.LeftUpperArm), rua = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
             float hs = hipsH > 1e-4f ? hipsH : 1f;
             Transform[] bones = SaveBones(root, out Vector3[] lp, out Quaternion[] lr);
             PlayableGraph g = PlayableGraph.Create("BAM clip info");
@@ -1495,6 +1530,7 @@ namespace BAM.Art
                     var R = new Vector3[n];
                     var pose = new float[n * 16];
                     var yaw = lul != null && rul != null ? new float[n] : null;
+                    var chest = lua != null && rua != null ? new float[n] : null;
                     for (int i = 0; i < n; i++)
                     {
                         cp.SetTime(step * i); g.Evaluate(0f);
@@ -1513,10 +1549,17 @@ namespace BAM.Art
                             a.y = 0f;
                             yaw[i] = a.sqrMagnitude > 1e-8f ? Vector3.SignedAngle(Vector3.right, a, Vector3.up) : 0f;
                         }
+                        if (chest != null)
+                        {
+                            Vector3 a = root.InverseTransformPoint(rua.position) - root.InverseTransformPoint(lua.position);
+                            a.y = 0f;
+                            chest[i] = a.sqrMagnitude > 1e-8f ? Vector3.SignedAngle(Vector3.right, a, Vector3.up) : 0f;
+                        }
                     }
                     ci.Step = step;
                     ci.Hips = track;
                     ci.Yaw = yaw;
+                    ci.Chest = chest;
                     float best = 0f;
                     for (int i = 1; i < n - 1; i++)
                     {
