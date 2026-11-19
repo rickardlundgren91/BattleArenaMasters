@@ -39,6 +39,11 @@ namespace BAM.Sim
         /// without it at 3.2; with it 70.1 % at 3.2, 61.1 % at 2.4, 58.3 % at 2.0, 55.1 % at 1.7 (without the bots' threat change);
         /// as built (bots weigh it as two hits) 53.9 % at 1.8, 55.6 % at 1.9 (Normal 1200: 67.1 %, was 66.1 %), 57.4 % at 2.0.</summary>
         public const bool Return = true;
+        /// <summary>The hammer flies back to Bram himself, wherever he is now, and he catches it (Rickard 2026-11-19: "Brams hammare borde gå
+        /// tillbaka till honom så han kan fånga den, inte dit därifrån den kastades"). Same speed, damage and hits as Return; only the way
+        /// back follows him. CatchRadius: how close to his body it is caught; HomeMax: the most tiles it flies back before it falls (a Recall).</summary>
+        public const bool Home = true;
+        public const float CatchRadius = 0.25f, HomeMax = 16;
         /// <summary>Focus in Silver's steps (hero review 2026-11-13, Rickard "bram 80%"): +10 % a step up to 8 (+80 %); it was 8 % up to 5
         /// (+40 %), Silver's Sharpshooter 10 % up to 10. Hard bots hardly notice (2400 matches: about a third of a step on average, 53 %
         /// either way, never past 7 steps); it pays the player who keeps one target in his ring, a lone hero chased or a good spot.</summary>
@@ -360,7 +365,7 @@ namespace BAM.Sim
             var p = NewProj(ProjMode.HammerLine, h, h.X, h.Y);
             p.Kind = ProjKind.BramBolt; p.T = -BramS.BeamCharge; p.Ang = aa; p.Speed = BramS.LineSpeed; p.Travel = len; p.Radius = BramS.LineWidth; p.Dmg = dmg * BramS.LineCoeff; p.Big = true;
             // the charge: he stands with the red line out as long as the beam can still hit (a stun cuts it, InterruptSpecial)
-            WarnOf(WarnLine(h, aa, len, BramS.LineWidth, BramS.BeamCharge + (BramS.Return ? 2 : 1) * len / BramS.LineSpeed), p); // out and back
+            WarnOf(WarnLine(h, aa, len, BramS.LineWidth, BramS.BeamCharge + (BramS.Return && !BramS.Home ? 2 : 1) * len / BramS.LineSpeed), p); // out and back; with Home only out (its way back follows him, not the line)
             AddStatus(h, St.Casting, BramS.BeamCharge); AddStatus(h, St.Disarm, BramS.BeamCharge); Channel(h, BramS.BeamCharge);
             castX = h.X + SimMath.Cos(aa) * len; castY = h.Y + SimMath.Sin(aa) * len;
             return true;
@@ -396,6 +401,7 @@ namespace BAM.Sim
         /// <summary>A flying hammer hitting every enemy it passes once (the 11 Nov afternoon Hammer Line, again since 2026-11-12).</summary>
         void HammerFlyUpdate(Proj p, float dt)
         {
+            if (p.Mode == ProjMode.HammerLine && p.Out && BramS.Home && p.Src != null && p.Src.Alive) { HammerHomeUpdate(p, dt); return; }
             float step = Math.Max(0, Math.Min(p.Speed * dt, p.Travel - p.D));
             float ox = p.X, oy = p.Y, ex = ox + SimMath.Cos(p.Ang) * step, ey = oy + SimMath.Sin(p.Ang) * step;
             for (int i = 0; i < Units.Count; i++)
@@ -409,12 +415,37 @@ namespace BAM.Sim
             p.X = ex; p.Y = ey; p.D += step;
             if (p.D < p.Travel - 1e-4f) return;
             if (p.Mode == ProjMode.HammerLine && BramS.Return && !p.Out)
-            {   // the turn: back the same way to where he threw it, and everyone it passes can be hit again
+            {   // the turn: back to him (BramS.Home; the same way to where he threw it if he is dead), and everyone it passes can be hit again
                 p.Out = true; p.Ang += (float)Math.PI; p.D = 0;
                 for (int i = 0; i < p.HitCount; i++) p.Hit[i] = null;
                 p.HitCount = 0;
             }
             else p.Done = true;
+        }
+
+        /// <summary>The hammer's way back (BramS.Home, Rickard 2026-11-19): it turns towards where Bram is NOW every tick, at LineSpeed,
+        /// hits every enemy it passes once more (not through a wall), and is gone as it reaches him: he catches it (the view puts it back
+        /// in his fist then, MatchViews). Should he die on the way it flies on straight as before; a Recall that takes him far away
+        /// (more than HomeMax tiles of flight back) lets it fall.</summary>
+        void HammerHomeUpdate(Proj p, float dt)
+        {
+            var b = p.Src;
+            float dx = b.X - p.X, dy = b.Y - p.Y, dist = SimMath.Hypot(dx, dy);
+            if (dist <= b.R + BramS.CatchRadius || p.D >= BramS.HomeMax) { p.Done = true; return; }
+            p.Ang = SimMath.Atan2(dy, dx);
+            float step = Math.Min(p.Speed * dt, dist);
+            float ox = p.X, oy = p.Y, ex = ox + SimMath.Cos(p.Ang) * step, ey = oy + SimMath.Sin(p.Ang) * step;
+            for (int i = 0; i < Units.Count; i++)
+            {
+                var u = Units[i];
+                if (!Hurtable(b, u) || u.Team == p.Team || p.HasHit(u)) continue;
+                if (SimMath.PtSeg(u.X, u.Y, ox, oy, ex, ey) > p.Radius + u.R) continue;
+                if (!Map.LosClear(ox, oy, u.X, u.Y)) continue; // he walked behind a wall: it flies over to him but hits no one through it
+                p.AddHit(u);
+                SpecialHit(b, u, p.Dmg, p.Kind, true);
+            }
+            p.X = ex; p.Y = ey; p.D += step;
+            if (dist - step <= b.R + BramS.CatchRadius) p.Done = true; // caught
         }
 
         /// <summary>Focus: the share more this auto attack of Bram's on tgt deals (0 when it is a new target); counts the step. The old game's

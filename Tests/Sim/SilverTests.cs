@@ -25,6 +25,7 @@ namespace BAM.Sim
             {
                 bool charging = p.T < -Rules.Tick * 0.5f;
                 Hold(a, x + 2, y); Hold(c, x + 4.5f, y + 0.2f); // they stand still (their bots would walk out of the line)
+                if (p.T >= 0) Hold(b, x, y); // he too: the hammer flies back to where he is (BramS.Home)
                 m.Events.Clear(); m.Step(PlayerInput.None);
                 foreach (var e in m.Events) if (e.Type == EventType.Hit && e.A == b && (e.B == a || e.B == c)) hits++;
                 if (charging && hits == 0) chargeTicks++;
@@ -33,6 +34,29 @@ namespace BAM.Sim
             int want = BramS.Return ? 4 : 2; // out and back (BramS.Return, 2026-11-18)
             Check(a.Hp < ha && c.Hp < hc && hits == want, $"SILVER: the thrown hammer hits both enemies in the line, each once on the way out and once on the way back ({hits} of {want})");
             Check(p.Done && p.D <= BramS.LineReach + 0.01f, "SILVER: the bolt reaches at most LineReach");
+
+            // the hammer flies back to Bram where he is now and he catches it (BramS.Home, Rickard 2026-11-19), hitting on that way back
+            if (BramS.Home)
+            {
+                var m3 = Make(HeroId.Bram, new[] { HeroId.Tyra, HeroId.Moa }, new[] { HeroId.Knut, HeroId.Fenn, HeroId.Tikta });
+                var b3 = m3.Player; var a3 = m3.Foe(HeroId.Knut);
+                foreach (var u in m3.Heroes) if (u != b3) Place(u, u.Team == b3.Team ? 2 : 13, u.Team == b3.Team ? 30 : 4);
+                Place(b3, x, y); b3.Charge = b3.HDef.MaxCharge;
+                Check(m3.TryCastSpecial(b3, 0, 1), "SILVER HOME: the hammer is thrown");
+                var p3 = m3.Projs.Find(q => q.Mode == ProjMode.HammerLine && !q.Done);
+                float bx = x, by = y + 3; // he steps 3 tiles aside while it flies; a foe stands on the way from the line's end to him
+                float ex = x + p3.Travel, fx = (ex + bx) / 2, fy = (y + by) / 2;
+                float ha3 = a3.Hp; int k3 = 0;
+                for (; k3 < 200 && !p3.Done; k3++)
+                {
+                    if (p3.T >= 0) Hold(b3, bx, by);
+                    Hold(a3, fx, fy);
+                    m3.Step(PlayerInput.None);
+                }
+                Check(p3.Done && SimMath.Hypot(p3.X - bx, p3.Y - by) <= b3.R + BramS.CatchRadius + 0.3f, $"SILVER HOME: it ends in his hands where he stands now ({SimMath.Hypot(p3.X - bx, p3.Y - by):0.00} tiles from him)");
+                Check(a3.Hp < ha3, "SILVER HOME: a foe on its way back to him is hit");
+                Check(SimMath.Hypot(p3.X - x, p3.Y - y) > 2, "SILVER HOME: it does not stop where he threw it");
+            }
 
             // a stun during the charge cuts the bolt
             var m2 = Make(HeroId.Bram, new[] { HeroId.Tyra, HeroId.Moa }, new[] { HeroId.Knut, HeroId.Fenn, HeroId.Tikta });

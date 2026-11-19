@@ -390,6 +390,8 @@ namespace BAM.Game
                 shotBySerial.Remove(s.Serial);
                 droppedNow.Add(s.Serial);
                 HookLanded(s.P);
+                // Bram's hammer flew back to him and he caught it (BramS.Home): it is in his fist again now
+                if (s.Kind == ProjKind.BramBolt && BramS.Home && unitBySerial.TryGetValue(s.SrcSerial, out UnitRec catcher) && catcher.V != null) catcher.V.CatchThrown();
                 s.Hit = shotHitAt.TryGetValue(s.Serial, out Vector3 hitAt);
                 // where the rules ended it: on what it hit, at the wall, else its own last spot (its Proj is pooled, not yet reused)
                 Vector3 end = s.Hit ? hitAt : shotStopAt.TryGetValue(s.Serial, out Vector3 stop) ? stop

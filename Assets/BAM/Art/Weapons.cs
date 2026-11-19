@@ -1687,6 +1687,14 @@ namespace BAM.Art
             }
         }
 
+        /// <summary>The thrown weapon is caught (Bram's hammer reached him, BramS.Home): it pops back into the fist now instead of when
+        /// its away time ends; one cut while still in the hand (a stun in the charge) never leaves it.</summary>
+        public void Catch()
+        {
+            hideIn = -1f;
+            if (backIn > PopIn) backIn = PopIn;
+        }
+
         public void Throw(float delay, float away = AwayFor, bool held = false, int side = 0)
         {
             hideIn = Mathf.Max(0f, delay);

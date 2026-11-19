@@ -119,6 +119,8 @@ namespace BAM.Art
         public virtual bool Muzzle(out Vector3 at) { at = Vector3.zero; return false; }
         /// <summary>The model name (Props) of the weapon in the hero's hand, the skin's own when he wears one; null without one.</summary>
         public virtual string HeldModel => null;
+        /// <summary>A thrown weapon that came back is caught: it is in the hand again now (Bram's hammer, BramS.Home).</summary>
+        public virtual void CatchThrown() { }
         /// <summary>A whole-body form: 0 = its own body, 1 = Kugg's turret while the rules keep him rooted in his Anchor (BodyForm.cs), 2 = Ravna as a flock of crows in her Night Flight (BodyFlock.cs).</summary>
         public virtual void SetForm(int form) { }
         /// <summary>The unit is in the air (the guided match's boost pad): the game layer has lifted transform.position

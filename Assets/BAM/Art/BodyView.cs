@@ -488,6 +488,7 @@ namespace BAM.Art
         /// the needle in the throwing fist), else that fist. False for minions, towers, the wolf and code figures.</summary>
         public override bool Muzzle(out Vector3 at) => MuzzleAt(true, out at);
         public override string HeldModel => gear != null ? gear.HeldModel : null;
+        public override void CatchThrown() { if (gear != null) gear.Catch(); }
 
         /// <summary>The same point as <see cref="Muzzle"/> without counting a release (the weapon debug view asks every frame).</summary>
         internal bool MuzzlePoint(out Vector3 at) => MuzzleAt(false, out at);
@@ -742,7 +743,7 @@ namespace BAM.Art
         void ThrowOnCast(float at)
         {
             if (HeroIndex == (int)HeroId.Knut) { if (castDrag) gear.Throw(at, KnutS.CastTime, true); }
-            else if (HeroIndex == (int)HeroId.Bram && BramS.Silver) gear.Throw(BramS.BeamCharge, (BramS.Return ? 2f : 1f) * BramS.LineReach / BramS.LineSpeed, true); // out and back (BramS.Return)
+            else if (HeroIndex == (int)HeroId.Bram && BramS.Silver) gear.Throw(BramS.BeamCharge, BramS.Home ? BramS.HomeMax / BramS.LineSpeed + BramS.LineReach / BramS.LineSpeed : (BramS.Return ? 2f : 1f) * BramS.LineReach / BramS.LineSpeed, true); // out and back (BramS.Return); with Home it is back in his fist as he catches it (CatchThrown), this is only the longest it can be away
             else gear.Throw(at);
         }
 
