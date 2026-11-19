@@ -2251,11 +2251,20 @@ namespace BAM.Art
             if (up == null || lo == null) return;
             up.rotation = Quaternion.AngleAxis(-a.y, root.right) * Quaternion.AngleAxis(a.x * side, root.forward) * up.rotation;
             if (a.z == 0f || hd == null) return;
+            Vector3 u = lo.position - up.position, l = hd.position - lo.position;
+            // a straighter elbow (negative z) stops just short of straight: past it the arm bent backwards, and as the clip's
+            // bend plane collapses near straight it flipped from frame to frame (Rickard 2026-11-19, Bram V2's left arm with
+            // z -49 on the walk: "när man går så böjer sig armen ibland bakom honom")
+            if (a.z < 0f)
+            {
+                float room = Mathf.Max(0f, Vector3.Angle(u, l) - 3f);
+                if (-a.z > room) a.z = -room;
+                if (a.z == 0f) return;
+            }
             Vector3 axis;
             if (hinge != Vector3.zero) axis = up.rotation * hinge; // GearDef.SteadyElbow
             else
             {
-                Vector3 u = lo.position - up.position, l = hd.position - lo.position;
                 axis = Vector3.Cross(u, l);
                 if (axis.sqrMagnitude < 1e-10f) axis = side * root.right; // a straight arm bends forward
             }
