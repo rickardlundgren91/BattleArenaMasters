@@ -242,6 +242,8 @@ namespace BAM.Game
             if (!cfg.Tutorial && !cfg.HeroTest && MatchTraces.Share && HeroCatalog.InGame((int)cfg.PlayerHero)) // never a preview hero (editor only)
                 trace = MatchTrace.Begin(cfg, net != null && cfg.Seats != null ? cfg.Seats.Length : 1, MatchTraces.Protocol, Application.version,
                     System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(), net != null, Application.isEditor);
+            if (trace != null && MatchTraces.Describe != null)
+                try { MatchTraces.Describe(trace); } catch (System.Exception e) { Debug.LogWarning("[BAM.Game] match trace bands: " + e.Message); } // never breaks a match
             if (net != null && net.Predicts)
             {
                 confirmed = Match.Create(cfg);

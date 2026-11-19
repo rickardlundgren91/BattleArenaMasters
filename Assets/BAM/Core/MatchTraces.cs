@@ -19,6 +19,10 @@ namespace BAM.Core
         /// <summary>Send traces at all. On while testing; Rickard decides the privacy text and any switch in Settings.</summary>
         public static bool Share = true;
 
+        /// <summary>Fills a new trace's player bands (MatchTrace.Rank, Played, HeroPlayed) from the player's totals. Set by
+        /// BAM.Online at boot; null = left unknown. Called once as the match begins, before its result is counted.</summary>
+        public static Action<BAM.Sim.MatchTrace> Describe;
+
         public const int MaxKept = 10;
         /// <summary>A trace bigger than this is dropped, not sent (a normal match is 5-25 kB).</summary>
         public const int MaxBytes = 96 * 1024;

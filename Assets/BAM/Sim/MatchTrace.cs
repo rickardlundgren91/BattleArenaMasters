@@ -18,7 +18,7 @@ namespace BAM.Sim
     /// </summary>
     public sealed class MatchTrace
     {
-        public const int Format = 1;
+        public const int Format = 2; // 2 (2026-11-19): + Rank, Played, HeroPlayed; format 1 is still read (with them unknown)
         const uint Magic = 0x31544D42; // "BMT1"
 
         // ---------- header ----------
@@ -29,6 +29,21 @@ namespace BAM.Sim
         public bool Online, Editor;
         public MatchConfig Config;
         public int Seats;
+
+        // ---------- who recorded it (format 2) ----------
+        // How good and how experienced the phone's player is, so the bots can learn from good players rather than from everyone
+        // (Rickard 2026-11-19 "Lägg till rating först"). Only coarse bands, never the Rating or match count itself: those are
+        // public on the Top 100, and an exact number would tie a trace to a player (privacy text: "cannot be tied to you").
+        // Unknown = -1 (format 1, or the game could not tell). Filled by BAM.Online through Core.MatchTraces.Describe.
+        /// <summary>The player's rank by Rating: 0 Ember, 1 Rift, 2 Vanguard, 3 Eclipse, 4 Sovereign, 5 Ascendant.</summary>
+        public int Rank = -1;
+        /// <summary>Matches played before this one, as a band (<see cref="PlayedBand"/>): 0 under 20, 1 under 100, 2 under 500, 3 more.</summary>
+        public int Played = -1;
+        /// <summary>Matches with this match's hero before this one, as a band (<see cref="HeroBand"/>): 0 under 5, 1 under 20, 2 under 100, 3 more.</summary>
+        public int HeroPlayed = -1;
+
+        public static int PlayedBand(int matches) => matches < 0 ? -1 : matches < 20 ? 0 : matches < 100 ? 1 : matches < 500 ? 2 : 3;
+        public static int HeroBand(int matches) => matches < 0 ? -1 : matches < 5 ? 0 : matches < 20 ? 1 : matches < 100 ? 2 : 3;
 
         // ---------- the end ----------
         public int Steps, Winner = -1;
@@ -107,6 +122,7 @@ namespace BAM.Sim
             w.Write((byte)((Online ? 1 : 0) | (Editor ? 2 : 0) | (Ended ? 4 : 0)));
             WriteConfig(w, Config ?? new MatchConfig());
             w.Write((byte)Seats);
+            w.Write(Band(Rank, 5)); w.Write(Band(Played, 3)); w.Write(Band(HeroPlayed, 3));
             w.Write(Steps); w.Write((sbyte)Winner); w.Write(Ticks); w.Write(Time); w.Write(EndChecksum);
             w.Write((int)body.Length); w.Write(body.GetBuffer(), 0, (int)body.Length);
             w.Flush();
@@ -122,15 +138,19 @@ namespace BAM.Sim
             raw.Position = 0;
             var r = new BinaryReader(raw);
             if (r.ReadUInt32() != Magic) throw new InvalidDataException("not a BAM match trace");
-            int fmt = r.ReadByte(); if (fmt != Format) throw new InvalidDataException("trace format " + fmt);
+            int fmt = r.ReadByte(); if (fmt < 1 || fmt > Format) throw new InvalidDataException("trace format " + fmt);
             var t = new MatchTrace { Protocol = r.ReadInt32(), App = r.ReadString(), At = r.ReadInt64() };
             int f = r.ReadByte(); t.Online = (f & 1) != 0; t.Editor = (f & 2) != 0; t.Ended = (f & 4) != 0;
             t.Config = ReadConfig(r);
             t.Seats = r.ReadByte();
+            if (fmt >= 2) { t.Rank = Unband(r.ReadByte()); t.Played = Unband(r.ReadByte()); t.HeroPlayed = Unband(r.ReadByte()); }
             t.Steps = r.ReadInt32(); t.Winner = r.ReadSByte(); t.Ticks = r.ReadInt64(); t.Time = r.ReadSingle(); t.EndChecksum = r.ReadUInt64();
             int n = r.ReadInt32(); var b = r.ReadBytes(n); t.body.Write(b, 0, b.Length);
             return t;
         }
+
+        static byte Band(int v, int max) => v < 0 || v > max ? (byte)255 : (byte)v;
+        static int Unband(byte b) => b == 255 ? -1 : b;
 
         static void WriteConfig(BinaryWriter w, MatchConfig c)
         {

@@ -20,6 +20,7 @@ namespace BAM.Online.UI
             Flow.MatchEnded = r => Safe("match end", () => BAM.Online.Online.MatchEnded(r));
             Flow.Resumed = () => Safe("resume", BAM.Online.Online.Resumed);
             MatchTraces.Protocol = BAM.Online.Mp.MpSocial.Protocol; // a match trace replays only with the rules of its protocol
+            MatchTraces.Describe = DescribeTrace;
             Social.Protocol = BAM.Online.Mp.MpSocial.Protocol; // friends see "0.2.0 (10)": the app version alone is the same in every build
             OnlineHooks.Back = OnlineUi.Back;
             OnlineHooks.HomeChip = OnlineUi.HomeChip;
@@ -60,6 +61,21 @@ namespace BAM.Online.UI
             OnlineHooks.PartySize = OnlineMenu.PartySize;
             OnlineHooks.PartyMap = OnlineMenu.PartyMap;
             OnlineHooks.Paint = OnlineUi.Paint;
+        }
+
+        /// <summary>The player's bands for a new match trace (Sim/MatchTrace.cs): rank by Rating, matches played and matches with
+        /// the trace's hero, all from the totals before this match. Coarse on purpose, see MatchTrace.Rank.</summary>
+        static void DescribeTrace(BAM.Sim.MatchTrace t)
+        {
+            var tot = Progress.Shown;
+            if (tot == null) return;
+            t.Rank = RankInfo.RankOf(tot.rating);
+            t.Played = BAM.Sim.MatchTrace.PlayedBand(tot.matches);
+            var c = t.Config;
+            if (c == null) return;
+            var hero = c.Seats != null && c.LocalSeat >= 0 && c.LocalSeat < c.Seats.Length ? c.Seats[c.LocalSeat].Hero : c.PlayerHero; // online: this phone's seat
+            var h = tot.heroes.Find(x => x.id == hero.ToString());
+            t.HeroPlayed = BAM.Sim.MatchTrace.HeroBand(h != null ? h.m : 0);
         }
 
         static void Safe(string what, System.Action a)

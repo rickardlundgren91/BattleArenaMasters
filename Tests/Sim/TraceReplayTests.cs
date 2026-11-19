@@ -57,8 +57,13 @@ namespace BAM.Sim
             trace.End(m);
             if (toTheEnd) Check(m.State == MatchState.Over && m.Winner >= 0, $"TRACE {what}: the recorded match ends ({m.Time:0} s, winner {m.Winner})");
 
+            Check(trace.Rank == -1 && trace.Played == -1 && trace.HeroPlayed == -1, $"TRACE {what}: the player's bands start unknown");
+            bool bands = !cfg.PlayerIsBot; // the bot match leaves them unknown, the others fill them
+            if (bands) { trace.Rank = 4; trace.Played = MatchTrace.PlayedBand(150); trace.HeroPlayed = MatchTrace.HeroBand(3); }
             byte[] bytes = trace.ToBytes();
             var back = MatchTrace.FromBytes(bytes);
+            Check(bands ? back.Rank == 4 && back.Played == 2 && back.HeroPlayed == 0 : back.Rank == -1 && back.Played == -1 && back.HeroPlayed == -1,
+                $"TRACE {what}: the player's bands read back ({back.Rank}/{back.Played}/{back.HeroPlayed})");
             Check(back.Protocol == 60 && back.App == "test" && back.At == 1763000000L && back.Online == (cfg.Seats != null) && !back.Editor && back.Ended,
                 $"TRACE {what}: the header reads back ({bytes.Length} bytes for {trace.Steps} steps)");
             Check(back.Seats == seats && back.Steps == trace.Steps && back.Winner == trace.Winner && back.Ticks == trace.Ticks && back.EndChecksum == trace.EndChecksum,
