@@ -95,10 +95,22 @@ namespace BAM.Art.Editor
             {
                 string animDir = Path.GetDirectoryName(assetPath).Replace('\\', '/');
                 string heroDir = Path.GetDirectoryName(animDir).Replace('\\', '/');
-                Avatar body = AssetDatabase.LoadAssetAtPath<Avatar>(animDir + "/Run.fbx");
-                if (body == null || !body.isValid || !body.isHuman) body = AssetDatabase.LoadAssetAtPath<Avatar>(heroDir + "/" + Path.GetFileName(heroDir) + ".fbx");
-                if (body != null) { mi.avatarSetup = ModelImporterAvatarSetup.CopyFromOther; mi.sourceAvatar = body; }
-                else Debug.LogWarning("[BAM.Art] " + assetPath + ": no avatar in " + heroDir + " to borrow, its own is used");
+                // 2026-11-19: borrowing Run.fbx's avatar (CopyFromOther) still gave no clip on Rickard's PC ("no clip in
+                // Ragn/Anim/RunFour.fbx" at every reload). RunFour's rest skeleton is the same as Run.fbx's (checked bone by bone),
+                // so build RunFour's OWN avatar from Run.fbx's human description: its skeleton is the standing rest pose, so the
+                // crawl's first frame no longer matters, and the clip is no longer tied to another file's avatar
+                var run = AssetImporter.GetAtPath(animDir + "/Run.fbx") as ModelImporter;
+                if (run != null && run.humanDescription.human != null && run.humanDescription.human.Length > 0)
+                {
+                    mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+                    mi.humanDescription = run.humanDescription;
+                }
+                else
+                {
+                    Avatar body = AssetDatabase.LoadAssetAtPath<Avatar>(heroDir + "/" + Path.GetFileName(heroDir) + ".fbx");
+                    if (body != null) { mi.avatarSetup = ModelImporterAvatarSetup.CopyFromOther; mi.sourceAvatar = body; }
+                    else Debug.LogWarning("[BAM.Art] " + assetPath + ": no avatar in " + heroDir + " to borrow, its own is used");
+                }
             }
             mi.importCameras = false;
             mi.importLights = false;
@@ -527,7 +539,7 @@ namespace BAM.Art.Editor
                 art.Idle = Clip(s.Idle, 0); art.Run = Clip(s.Run, 1); art.Attack = Clip(s.Attack, 2);
                 art.Cast = Clip(s.Cast, 3); art.Hit = Clip(s.Hit, 4); art.Death = Clip(s.Death, 5); art.Walk = Clip(s.Walk, 6);
                 art.RunFour = s.RunFour != null ? Load(s.RunFour) : null;
-                if (s.RunFour != null && art.RunFour == null) Debug.LogWarning("[BAM.Art] " + s.Hero + ": no clip in " + s.RunFour + ".fbx");
+                if (s.RunFour != null && art.RunFour == null) Debug.LogWarning("[BAM.Art] " + s.Hero + ": no clip in " + s.RunFour + ".fbx" + WhatIsIn(s.RunFour));
                 art.Height = s.Height;
                 art.AttackRelease = s.Release;
                 art.AttackStart = s.Start;
@@ -556,6 +568,22 @@ namespace BAM.Art.Editor
             if (c == null) c = Load(pool[slot]);
             if (c == null) Debug.LogWarning("[BAM.Art] Clip missing: " + (p ?? pool[slot]) + ".fbx");
             return c;
+        }
+
+        // what an FBX that gave no clip holds after import, so the console shows why (Ragn's RunFour, 2026-11-19)
+        static string WhatIsIn(string p)
+        {
+            string path = ModelsDir + p + ".fbx";
+            var sb = new System.Text.StringBuilder(" (holds:");
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                sb.Append(' ').Append(o.GetType().Name).Append(" '").Append(o.name).Append('\'');
+                if (o is Avatar a) sb.Append(a.isValid ? " valid" : " INVALID").Append(a.isHuman ? " human" : " not human");
+            }
+            if (AssetImporter.GetAtPath(path) is ModelImporter mi)
+                sb.Append("; importer: ").Append(mi.animationType).Append(", avatar ").Append(mi.avatarSetup)
+                  .Append(", importAnimation ").Append(mi.importAnimation).Append(", takes ").Append(mi.importedTakeInfos.Length);
+            return sb.Append(')').ToString();
         }
 
         static AnimationClip Load(string p)
