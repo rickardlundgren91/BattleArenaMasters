@@ -249,8 +249,9 @@ namespace BAM.Art.Editor
             // Hilde's spec is out while she waits in HeroCatalog.Coming (full review 2026-11-09 nr 85): everything under Resources ships,
             // and her HeroArt pulled her body, clips and picture (3 MB) into every build. Put the line back when she returns:
             // new Spec { Hero = "Hilde", Model = "Hilde/Hilde", Idle = "Hilde/Anim/Idle", Run = "Hilde/Anim/Run", Attack = "Hilde/Anim/Attack1", Cast = "Hilde/Anim/Cast", Hit = "Hilde/Anim/Hit", Death = "Hilde/Anim/Dying", Walk = "Hilde/Anim/Walk", Height = 1.64f, Release = 0.3f },
-            // Oaken stays: Kugg borrows his Hit, Dying and Walk clips below.
-            new Spec { Hero = "Oaken", Model = "Oaken/Oaken", Idle = "Oaken/Anim/Idle", Run = "Oaken/Anim/Run", Attack = "Oaken/Anim/Attack1", Cast = "Oaken/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.49f },
+            // Oaken's spec is out too (Rickard 2026-11-19, prune C): his HeroArt pulled his body, picture and own clips (~3.6 MB) into
+            // every build. Kugg and Bonk still borrow his clips by path below, so those ship with them. Put the line back when he returns:
+            // new Spec { Hero = "Oaken", Model = "Oaken/Oaken", Idle = "Oaken/Anim/Idle", Run = "Oaken/Anim/Run", Attack = "Oaken/Anim/Attack1", Cast = "Oaken/Anim/Cast", Hit = "Oaken/Anim/Hit", Death = "Oaken/Anim/Dying", Walk = "Oaken/Anim/Walk", Height = 1.78f, Release = 0.49f },
             // Kugg (hero 10, 2026-11-09): Rickard's Tripo rune golem rigged in Mixamo (the cannon is his right arm), his own clips:
             // Male Weighted Run, Firing A Gun (the kick at 0.30-0.33 s of 1.17, so the shot leaves at 27 %) and Standing To Kneeling
             // Down as he anchors (the turret takes over 0.3 s later, BodyForm.cs). Idle, hit, death and walk are

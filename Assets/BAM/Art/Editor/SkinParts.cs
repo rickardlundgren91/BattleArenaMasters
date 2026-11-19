@@ -21,6 +21,12 @@ namespace BAM.Art.Editor
         // beak to the front): x' = -z, z' = -x instead of the plain mirror
         static bool Turned(string hero, string slot) => (hero == "Tyra" && slot == "bow") || (hero == "Ravna" && slot == "mask");
 
+        // skin parts the game never shows (SkinGear): everything under Resources ships, so these are not converted (Rickard 2026-11-19,
+        // prune A+B+C). Ragn fights with his fists; Kugg's cannon-arm bodies have no worn cannon and his round V3 hides the pack;
+        // Moa's wings are the see-through bee wings made in code; Blast's skins wear no bomb belt.
+        static bool Unused(string hero, string slot) => (hero == "Ragn" && slot == "hammer") || (hero == "Kugg" && (slot == "cannon" || slot == "pack" || slot == "cape"))
+            || (hero == "Moa" && slot == "wings") || (hero == "Blast" && slot == "belt");
+
         /// <summary>True when a part of the skin is not converted yet, or changed since (HeroArtImport.EnsureBuilt).</summary>
         public static bool Pending(string hero, string skinDir) => Convert(hero, skinDir, true) > 0;
 
@@ -37,6 +43,7 @@ namespace BAM.Art.Editor
                 int us = baseName.LastIndexOf('_');
                 if (us < 0) continue;
                 string slot = baseName.Substring(us + 1).ToLowerInvariant();
+                if (Unused(hero, slot)) continue;
                 string name = ("v2s_" + hero + "_" + skin + "_" + slot).ToLowerInvariant();
                 string bytes = PropsDir + name + ".bytes", jpg = PropsDir + name + ".jpg";
                 string tex = Path.GetDirectoryName(obj).Replace('\\', '/') + "/" + baseName + "_Tex.jpg";
