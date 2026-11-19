@@ -13,15 +13,18 @@ namespace BAM.Art
     // her as her body returns (the puff and caw are MatchViews' FlockEnd). Nothing changes in the rules: this is only the look.
     sealed partial class BodyView
     {
-        const int FlockMax = 22, FlockLow = 14; // Rickard 2026-11-17 "tätare och större flock" (was 8 / 6)
+        // Rickard 2026-11-19 "sätta ravens tätare mer som en svärm" (was 22 / 14 in a wide ring-like cloud): a tight swarm round her
+        // middle where each crow wanders on its own, plus a few strays that circle wider and higher outside it
+        const int FlockMax = 30, FlockLow = 18, StraysHigh = 3, StraysLow = 2;
         const float FlockGrow = 0.14f, FlockShrink = 0.18f;
-        const float CrowSize = 0.27f;  // a crow's longest side over her height (0.3 with 8 crows; a little smaller now there are many)
+        const float CrowSize = 0.22f;  // a crow's longest side over her height (0.3 with 8 crows, 0.27 with 22; smaller in the tight swarm)
         const float CrowPitch = -45f;  // the perched model stands about 55 degrees up from tail to head: this lays it nearly flat, beak first and a touch down
 
         Transform[] crowT, crowM;      // each crow's place (turns with the flight) and its mesh under it (the wing beat)
         Material crowOpaque, crowFade;
         MeshRenderer[] crowR;
-        float[] crowA, crowRad, crowH, crowSpin, crowPh;
+        float[] crowA, crowRad, crowH, crowSpin, crowPh, crowBeat;
+        int crowStrays;
         int crowN;
         bool flockOn, flockShown, flockFading;
         float flockK, flockT, featherT, mistT, wispT2, crowScale;
@@ -61,6 +64,8 @@ namespace BAM.Art
             crowN = ArtKit.High ? FlockMax : FlockLow;
             crowT = new Transform[crowN]; crowM = new Transform[crowN]; crowR = new MeshRenderer[crowN];
             crowA = new float[crowN]; crowRad = new float[crowN]; crowH = new float[crowN]; crowSpin = new float[crowN]; crowPh = new float[crowN];
+            crowBeat = new float[crowN];
+            crowStrays = ArtKit.High ? StraysHigh : StraysLow;
             for (int i = 0; i < crowN; i++)
             {
                 var go = new GameObject("Ravna crow " + i);
@@ -77,12 +82,17 @@ namespace BAM.Art
                 r.shadowCastingMode = ArtKit.Shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
                 r.receiveShadows = true;
                 crowR[i] = r;
-                // a loose cloud: evenly round her, each at its own distance, height, speed and wing beat
-                crowA[i] = i * Mathf.PI * 2f / crowN + Random.value * 0.5f;
-                crowRad[i] = def.Height * (0.12f + 0.6f * Mathf.Sqrt(Random.value)); // a filled cloud up to 0.72 of her height out, not a ring
-                crowH[i] = def.Height * (0.15f + 0.95f * ((i * 0.618f) % 1f));
-                crowSpin[i] = (i % 2 == 0 ? 1f : -1f) * (1.6f + 0.9f * Random.value);
+                // the swarm: a dense ball round her middle, each crow at its own distance, height, slow drift and wing beat; the last
+                // few are strays that circle wider, higher and faster outside it
+                bool stray = i >= crowN - crowStrays;
+                crowA[i] = i * Mathf.PI * 2f / crowN * 2.618f + Random.value * 0.5f;
+                crowRad[i] = stray ? def.Height * (0.75f + 0.25f * Random.value)
+                                   : def.Height * (0.04f + 0.34f * Mathf.Sqrt(Random.value)); // filled ball up to 0.38 of her height out
+                crowH[i] = stray ? def.Height * (0.95f + 0.35f * Random.value)
+                                 : def.Height * (0.6f + 0.5f * (((i * 0.618f) % 1f) - 0.5f)); // 0.35-0.85 of her height
+                crowSpin[i] = (i % 2 == 0 ? 1f : -1f) * (stray ? 1.7f + 0.5f * Random.value : 0.6f + 0.6f * Random.value);
                 crowPh[i] = Random.value * 10f;
+                crowBeat[i] = 18f + 6f * Random.value; // not all in step
                 go.SetActive(false);
             }
         }
@@ -115,16 +125,23 @@ namespace BAM.Art
             if (fade) crowFade.SetColor(ArtMaterials.BaseColor, new Color(1f, 1f, 1f, vis));
 
             float spread = BackOut(flockK); // a little overshoot as they burst out, then they settle
+            float wander = def.Height * 0.11f;
             for (int i = 0; i < crowN; i++)
             {
                 float t = flockT, ph = crowPh[i];
+                bool stray = i >= crowN - crowStrays;
                 float a = crowA[i] + t * crowSpin[i];
-                float rad = crowRad[i] * (1f + 0.25f * Mathf.Sin(t * 2.3f + ph)) * spread;
+                float rad = crowRad[i] * (1f + (stray ? 0.15f : 0.35f) * Mathf.Sin(t * 2.3f + ph)) * spread;
                 float y = Mathf.Lerp(def.Height * 0.5f, crowH[i] + def.Height * 0.07f * Mathf.Sin(t * 6f + ph), flockK);
-                // stretched along the flight (z), so it reads as a stream of birds and not a ring
-                crowT[i].localPosition = new Vector3(Mathf.Cos(a) * rad, y, Mathf.Sin(a) * rad * 1.5f);
+                // each swarm crow also wanders on its own (two sines per axis), so the ball churns instead of spinning like a wheel
+                Vector3 w = stray ? Vector3.zero : new Vector3(
+                    Mathf.Sin(t * 1.7f + ph) + 0.5f * Mathf.Sin(t * 3.1f + ph * 2f),
+                    0.6f * Mathf.Sin(t * 2.2f + ph * 1.3f),
+                    Mathf.Sin(t * 1.3f + ph * 0.7f) + 0.5f * Mathf.Sin(t * 2.9f + ph * 1.7f)) * (wander * flockK);
+                // a little stretched along the flight (z), so it reads as a swarm on the move
+                crowT[i].localPosition = new Vector3(Mathf.Cos(a) * rad, y, Mathf.Sin(a) * rad * 1.3f) + w;
                 // beak along the flight, leaning into its circle, nose bobbing with the beat
-                float beat = Mathf.Sin(t * 20f + ph);
+                float beat = Mathf.Sin(t * crowBeat[i] + ph);
                 crowT[i].localRotation = Quaternion.Euler(6f * beat, 14f * Mathf.Sin(t * 3f + ph), -24f * Mathf.Sign(crowSpin[i]) * Mathf.Cos(a));
                 // the wing beat: the folded wings squeeze and widen across the body (mesh x)
                 crowM[i].localScale = new Vector3(crowScale * (1f + 0.3f * beat), crowScale * (1f - 0.08f * beat), crowScale);
@@ -135,13 +152,13 @@ namespace BAM.Art
             // in it, and dark feathers fall behind (none of it while see-through: only her own team sees her then)
             if (!fade && flockOn)
             {
-                Vector3 mid = transform.position + new Vector3(0f, ShownHeight * 0.45f, 0f);
+                Vector3 mid = transform.position + new Vector3(0f, ShownHeight * 0.55f, 0f);
                 Vector3 back = -transform.forward;
                 if ((mistT -= dt) <= 0f)
                 {
                     mistT = ArtKit.High ? 0.035f : 0.07f;
                     // the mist: big soft puffs round the flock and a little behind it, so it leaves a trail along the path
-                    Vector3 at = mid + back * (ShownHeight * 0.25f) + new Vector3((Random.value - 0.5f) * ShownHeight * 1.1f, (Random.value - 0.5f) * ShownHeight * 0.6f, (Random.value - 0.5f) * ShownHeight * 1.3f);
+                    Vector3 at = mid + back * (ShownHeight * 0.25f) + new Vector3((Random.value - 0.5f) * ShownHeight * 0.75f, (Random.value - 0.5f) * ShownHeight * 0.45f, (Random.value - 0.5f) * ShownHeight * 0.9f);
                     Fx.Smoke(at, 1, MistDark, ShownHeight * (0.7f + 0.45f * Random.value), 0.15f, 0.9f, 0.08f, 0.1f);
                     if (Random.value < 0.5f) Fx.Smoke(mid + back * (ShownHeight * 0.1f), 1, MistViolet, ShownHeight * 0.45f, 0.25f, 0.6f, 0.05f, ShownHeight * 0.2f);
                 }
