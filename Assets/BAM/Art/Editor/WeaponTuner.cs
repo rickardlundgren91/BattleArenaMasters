@@ -124,7 +124,8 @@ namespace BAM.Art.Editor
                     if (d.Wide > 0f) d.Wide = EditorGUILayout.Slider(new GUIContent("Size", "Size as a share of the distance between its two bones (the shoulders, the hips; along the forearm for a sleeve)"), d.Wide, 0.1f, 4f);
                     else d.Height = EditorGUILayout.Slider(new GUIContent("Size", "Height as a share of the hero's height"), d.Height, 0.02f, 1.2f);
                     d.Yaw = EditorGUILayout.Slider(new GUIContent("Turn round", "Degrees about the hero's up axis (180 = the other way round)"), d.Yaw, -180f, 180f);
-                    if (d.Sway > 0f || d.Model.Contains("cape") || d.Model.Contains("mantle") || d.Model.Contains("pelt") || d.Model.Contains("scarf") || d.Model.Contains("apron"))
+                    if (d.Skin) EditorGUILayout.LabelField("  Follows the body (skinned): moves live, no swing of its own", EditorStyles.miniLabel);
+                    else if (d.Sway > 0f || d.Model.Contains("cape") || d.Model.Contains("mantle") || d.Model.Contains("pelt") || d.Model.Contains("scarf") || d.Model.Contains("apron"))
                         d.Sway = EditorGUILayout.Slider(new GUIContent("Swing", "Degrees it swings back at full run (0 = stiff)"), d.Sway, 0f, 45f);
                     EditorGUILayout.LabelField("Extra turn (degrees about the hero's right, up, forward)");
                     d.Turn = new Vector3(

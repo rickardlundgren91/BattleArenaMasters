@@ -1099,7 +1099,11 @@ namespace BAM.Art
                 };
                 wornT[i] = t;
                 PlaceWorn(i);
-                if (w.Skin && SkinWorn(go, mesh, an, rends)) wornT[i] = null; // follows the body now: no sway of its own
+                if (w.Skin)
+                {
+                    SkinPart sp = SkinWorn(go, mesh, an, rends, bone.localToWorldMatrix);
+                    if (sp != null) { wornT[i] = null; (wornS ??= new SkinPart[n])[i] = sp; } // follows the body now: no sway of its own
+                }
                 else if (w.Wave > 0f) MakeWave(i, go, w.Sheet > 0f ? Props.Sheet(w.Model, mesh, w.Sheet) ?? mesh : mesh);
             }
         }
@@ -1107,7 +1111,13 @@ namespace BAM.Art
         // puts worn part i on its bone from its WornDef (bind pose frame kept in WornBase), and notes the numbers it used
         void PlaceWorn(int i)
         {
-            WornDef w = worn[i]; Transform t = wornT[i];
+            if (wornT[i] == null && wornS != null && wornS[i] != null) { Reskin(i); return; }
+            PlaceWornOn(i, wornT[i]);
+        }
+
+        void PlaceWornOn(int i, Transform t)
+        {
+            WornDef w = worn[i];
             ref WornBase b = ref wornB[i];
             b.At = w.At; b.Turn = w.Turn; b.Yaw = w.Yaw; b.Height = w.Height; b.Wide = w.Wide;
             Vector3 at = w.At * b.H / b.Ps;
@@ -1117,6 +1127,7 @@ namespace BAM.Art
             // Wide: a share of the distance between its two bones, across (a cloak to the shoulders) or, Along, lengthwise (a sleeve)
             float k = w.Wide > 0f && b.Span > 0f ? w.Wide * b.Span / (w.Along ? b.MeshY : b.MeshX) : w.Height * b.H / b.MeshY;
             t.localScale = new Vector3(k, k * (w.Long > 0f ? w.Long : 1f), k * w.Flat) / b.Ps;
+            if (t == wornPlacer) return; // a skinned part placed again (Reskin): only its bone-space frame was wanted
             wornRest[i] = t.localRotation;
             // a swing goes back about the hero's right (forward for a Front flap), whatever the part's own Yaw
             swayAx[i] = (Quaternion.Inverse(t.localRotation) * (b.RootL * Vector3.right)) * (w.Front ? -1f : 1f);
@@ -1130,11 +1141,20 @@ namespace BAM.Art
             HumanBodyBones.LeftUpperArm, HumanBodyBones.RightUpperArm, HumanBodyBones.LeftLowerLeg, HumanBodyBones.RightLowerLeg };
         const float ThighShare = 1f;
 
+        // a skinned worn part: its bones and their segments as they were in the bind pose, so the Weapon Tuner can place it again later
+        sealed class SkinPart
+        {
+            public Mesh Mesh; public Transform[] Bones; public Vector3[] SegA, SegB; public bool[] Thigh; public Matrix4x4[] W2L;
+            public Matrix4x4 BoneBind; // the bone it was placed on, local to world, in the bind pose
+        }
+        SkinPart[] wornS;
+        Transform wornPlacer; // a hidden scratch transform PlaceWornOn writes a skinned part's bone-space frame into
+
         // turns a worn part, already placed in the bind pose, into a skinned mesh on the body's own bones: every vertex is weighted to
         // its two nearest bone segments (inverse square of the distance), so the part bends with the body as the clips play
-        static bool SkinWorn(GameObject go, Mesh mesh, Animator an, List<Renderer> rends)
+        static SkinPart SkinWorn(GameObject go, Mesh mesh, Animator an, List<Renderer> rends, Matrix4x4 boneBind)
         {
-            if (!mesh.isReadable) return false;
+            if (!mesh.isReadable) return null;
             var bones = new List<Transform>(); var segA = new List<Vector3>(); var segB = new List<Vector3>(); var thigh = new List<bool>();
             for (int b = 0; b < SkinFrom.Length; b++)
             {
@@ -1145,28 +1165,52 @@ namespace BAM.Art
                 bones.Add(a); segA.Add(a.position); segB.Add(e != null ? e.position : a.position);
                 thigh.Add(SkinFrom[b] == HumanBodyBones.LeftUpperLeg || SkinFrom[b] == HumanBodyBones.RightUpperLeg);
             }
-            if (bones.Count == 0) return false;
-            int hips = 0; // Hips is first when the model has it (every humanoid does)
+            if (bones.Count == 0) return null;
+            var sp = new SkinPart { Bones = bones.ToArray(), SegA = segA.ToArray(), SegB = segB.ToArray(), Thigh = thigh.ToArray(), W2L = new Matrix4x4[bones.Count], BoneBind = boneBind };
+            for (int b = 0; b < bones.Count; b++) sp.W2L[b] = bones[b].worldToLocalMatrix;
             Transform t = go.transform;
             Matrix4x4 l2w = t.localToWorldMatrix;
-            Vector3[] v = mesh.vertices;
+            var sm = Object.Instantiate(mesh);
+            sm.name = mesh.name + " skinned";
+            sp.Mesh = sm;
+            Weigh(sp, l2w);
+            t.SetParent(an.transform, true);
+            var mr = go.GetComponent<MeshRenderer>(); var mf = go.GetComponent<MeshFilter>();
+            Material[] mats = mr.sharedMaterials;
+            int ri = rends.IndexOf(mr);
+            Object.DestroyImmediate(mr); Object.DestroyImmediate(mf);
+            var r = go.AddComponent<SkinnedMeshRenderer>();
+            r.sharedMesh = sm; r.bones = sp.Bones; r.rootBone = sp.Bones[0];
+            r.sharedMaterials = mats;
+            r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = true;
+            r.updateWhenOffscreen = true; // a long cloak reaches past the body's own bounds
+            if (ri >= 0) rends[ri] = r; // the fades and the menu see the skinned renderer
+            return sp;
+        }
+
+        // the weights and bind poses of a skinned part placed at l2w (world, in the bind pose)
+        static void Weigh(SkinPart sp, Matrix4x4 l2w)
+        {
+            const int hips = 0; // Hips is first when the model has it (every humanoid does)
+            Vector3[] v = sp.Mesh.vertices;
             var bw = new BoneWeight[v.Length];
+            int nb = sp.Bones.Length;
             for (int i = 0; i < v.Length; i++)
             {
                 Vector3 p = l2w.MultiplyPoint3x4(v[i]);
                 int b0 = -1, b1 = -1; float d0 = float.MaxValue, d1 = float.MaxValue;
-                for (int b = 0; b < bones.Count; b++)
+                for (int b = 0; b < nb; b++)
                 {
-                    Vector3 ab = segB[b] - segA[b];
-                    float u = ab.sqrMagnitude > 1e-8f ? Mathf.Clamp01(Vector3.Dot(p - segA[b], ab) / ab.sqrMagnitude) : 0f;
-                    float d = (p - (segA[b] + ab * u)).sqrMagnitude;
+                    Vector3 ab = sp.SegB[b] - sp.SegA[b];
+                    float u = ab.sqrMagnitude > 1e-8f ? Mathf.Clamp01(Vector3.Dot(p - sp.SegA[b], ab) / ab.sqrMagnitude) : 0f;
+                    float d = (p - (sp.SegA[b] + ab * u)).sqrMagnitude;
                     if (d < d0) { d1 = d0; b1 = b0; d0 = d; b0 = b; } else if (d < d1) { d1 = d; b1 = b; }
                 }
                 float w0 = 1f / (d0 + 1e-4f), w1 = b1 >= 0 ? 1f / (d1 + 1e-4f) : 0f, sum = w0 + w1;
                 w0 /= sum; w1 /= sum;
                 float wh = 0f; // what a thigh gives up goes to the hips, so the hem swings with the legs but does not tear
-                if (thigh[b0]) { wh += w0 * (1f - ThighShare); w0 *= ThighShare; }
-                if (b1 >= 0 && thigh[b1]) { wh += w1 * (1f - ThighShare); w1 *= ThighShare; }
+                if (sp.Thigh[b0]) { wh += w0 * (1f - ThighShare); w0 *= ThighShare; }
+                if (b1 >= 0 && sp.Thigh[b1]) { wh += w1 * (1f - ThighShare); w1 *= ThighShare; }
                 var x = new BoneWeight { boneIndex0 = b0, weight0 = w0 };
                 if (b1 >= 0) { x.boneIndex1 = b1; x.weight1 = w1; }
                 if (wh > 0f)
@@ -1175,26 +1219,25 @@ namespace BAM.Art
                 }
                 bw[i] = x;
             }
-            var sm = Object.Instantiate(mesh);
-            sm.name = mesh.name + " skinned";
-            sm.boneWeights = bw;
-            var bp = new Matrix4x4[bones.Count];
-            Transform body = an.transform;
-            t.SetParent(body, true);
-            l2w = t.localToWorldMatrix;
-            for (int b = 0; b < bones.Count; b++) bp[b] = bones[b].worldToLocalMatrix * l2w;
-            sm.bindposes = bp;
-            var mr = go.GetComponent<MeshRenderer>(); var mf = go.GetComponent<MeshFilter>();
-            Material[] mats = mr.sharedMaterials;
-            int ri = rends.IndexOf(mr);
-            Object.DestroyImmediate(mr); Object.DestroyImmediate(mf);
-            var r = go.AddComponent<SkinnedMeshRenderer>();
-            r.sharedMesh = sm; r.bones = bones.ToArray(); r.rootBone = bones[hips];
-            r.sharedMaterials = mats;
-            r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = true;
-            r.updateWhenOffscreen = true; // a long cloak reaches past the body's own bounds
-            if (ri >= 0) rends[ri] = r; // the fades and the menu see the skinned renderer
-            return true;
+            sp.Mesh.boneWeights = bw;
+            var bp = new Matrix4x4[nb];
+            for (int b = 0; b < nb; b++) bp[b] = sp.W2L[b] * l2w;
+            sp.Mesh.bindposes = bp;
+        }
+
+        // the Weapon Tuner moved a skinned part: its new frame on its bone in the bind pose, and the skin weighed again from there
+        void Reskin(int i)
+        {
+            if (wornPlacer == null)
+            {
+                var g = new GameObject("Worn placer") { hideFlags = HideFlags.HideAndDontSave };
+                wornPlacer = g.transform;
+            }
+            wornPlacer.SetParent(null, false);
+            wornPlacer.localPosition = Vector3.zero; wornPlacer.localRotation = Quaternion.identity; wornPlacer.localScale = Vector3.one;
+            PlaceWornOn(i, wornPlacer); // writes wornB[i] and the placer's local frame (in its bone's space)
+            SkinPart sp = wornS[i];
+            Weigh(sp, sp.BoneBind * Matrix4x4.TRS(wornPlacer.localPosition, wornPlacer.localRotation, wornPlacer.localScale));
         }
 
         // WornDef.Wave: the cloak's own copy of its mesh, bent every frame (TickWave); its vertices as made and how far down each is
@@ -1305,8 +1348,12 @@ namespace BAM.Art
             for (int i = 0; i < wornT.Length; i++)
             {
                 Transform t = wornT[i];
-                if (t == null) continue;
                 WornDef w = worn[i];
+                if (t == null)
+                {   // a skinned part (WornDef.Skin): the Weapon Tuner moves it by placing it again and skinning it anew
+                    if (wornS != null && wornS[i] != null && (w.At != wornB[i].At || w.Turn != wornB[i].Turn || w.Yaw != wornB[i].Yaw || w.Height != wornB[i].Height || w.Wide != wornB[i].Wide)) Reskin(i);
+                    continue;
+                }
                 if (w.At != wornB[i].At || w.Turn != wornB[i].Turn || w.Yaw != wornB[i].Yaw || w.Height != wornB[i].Height || w.Wide != wornB[i].Wide) PlaceWorn(i); // the Weapon Tuner moved it
                 if (waveM != null && waveM[i] != null) { TickCape(i, t, dt, moveW, atkW, dead); continue; }
                 if (w.Flap != 0f)
