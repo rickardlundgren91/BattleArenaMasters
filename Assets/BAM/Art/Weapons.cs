@@ -668,6 +668,11 @@ namespace BAM.Art
             // the match holds it by the fist's own grip (GripLockFull) as before. Tune with BAM > Art > Weapon Tuner ("Nassla V2").
             n.Weapons[0].Turn = Vector3.zero;
             n.Weapons[0].Menu = new Hold { Up = 84f, Out = 60f };
+            // nor the old body's Offset (0.07 of her height down) and right arm 22.7 degrees out: on the V2 body the staff stood off her
+            // open right hand, beside it, and the arm stood out from her (Rickard 2026-11-18/19: "nässlas händer är inte i rätt
+            // position", "nässla håller inte i vapen och armarna är konstig position"); the grip sits in her palm (LockGrip)
+            n.Weapons[0].Offset = Vector3.zero;
+            n.RightArm = Vector3.zero;
             n.Worn = new[]
             {
                 // her mushroom cap as big as on her own picture (portrait_nassla), down over her hair to the brow: at 0.14 high and

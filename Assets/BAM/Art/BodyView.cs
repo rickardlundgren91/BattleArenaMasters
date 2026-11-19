@@ -1718,8 +1718,13 @@ namespace BAM.Art
         // in her throw or cast is left alone), on the menu stage too
         const float NasslaArmOut = 14f;
         // and her palms face forward in Moa's Idle (Rickard 2026-11-10, his picture: "hennes händer är vända med handflaterna framåt"):
-        // each hanging arm also turns about its own length, so the palms face her sides (checked on Unity's own pose of her idle)
-        const float NasslaPalmIn = 60f;
+        // each hanging arm also turns about its own length, so the palms face her sides (checked on Unity's own pose of her idle).
+        // That was a fixed 60 degrees, measured on her old body; on her V2 body (2026-11-18) it turned the hands past her sides until
+        // the backs of the hands faced forward and the staff stood off her open right hand (Rickard 2026-11-18, his Home picture:
+        // "nässlas händer är inte i rätt position", "man står inte med handryggen mot sitt mål sådär"). Now the turn is measured each
+        // frame from the hand's own fingers: the arm turns about the line from shoulder to wrist (so the hand stays where it hangs)
+        // until the palm faces her thigh, at most NasslaPalmMax degrees; a body without finger bones keeps the old fixed turn
+        const float NasslaPalmIn = 60f, NasslaPalmMax = 120f;
         void ArmsOut(float deg)
         {
             if (anim == null || !anim.isHuman) return;
@@ -1733,10 +1738,40 @@ namespace BAM.Art
                 Vector3 d = lo.position - up.position;
                 float m = d.magnitude, hang = m < 1e-6f ? 1f : Mathf.Clamp01(Vector3.Dot(d / m, down) / 0.7f);
                 up.rotation = Quaternion.AngleAxis(side * w * hang, fwd) * up.rotation;
-                if (m >= 1e-6f) up.rotation = Quaternion.AngleAxis(side * NasslaPalmIn * (w / deg) * hang, d / m) * up.rotation;
+                if (m < 1e-6f) return;
+                float k = (w / deg) * hang;
+                if (PalmTwist(up, side > 0f, out Vector3 axis, out float turn))
+                    up.rotation = Quaternion.AngleAxis(turn * k, axis) * up.rotation;
+                else up.rotation = Quaternion.AngleAxis(side * NasslaPalmIn * k, d / m) * up.rotation;
             }
             Out(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, 1f);
             Out(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, -1f);
+        }
+
+        // The turn about the shoulder-to-wrist line that makes the hanging hand's palm face the figure's side (her thigh). The palm's
+        // normal comes from the fingers: along the middle finger, across from the little (or ring) finger to the index. In Unity's
+        // left-handed axes a right hand's palm is Cross(along, littleToIndex), a left hand's the opposite (a right hand in the T-pose:
+        // fingers +x, index +z, so the palm is -y)
+        bool PalmTwist(Transform up, bool right, out Vector3 axis, out float turn)
+        {
+            axis = Vector3.zero; turn = 0f;
+            Transform hd = anim.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+            Transform mid = anim.GetBoneTransform(right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
+            Transform ix = anim.GetBoneTransform(right ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal);
+            Transform lt = anim.GetBoneTransform(right ? HumanBodyBones.RightLittleProximal : HumanBodyBones.LeftLittleProximal);
+            if (lt == null) lt = anim.GetBoneTransform(right ? HumanBodyBones.RightRingProximal : HumanBodyBones.LeftRingProximal);
+            if (hd == null || ix == null || lt == null) return false;
+            Vector3 along = (mid != null ? mid.position : (ix.position + lt.position) * 0.5f) - hd.position;
+            Vector3 across = ix.position - lt.position;
+            Vector3 palm = Vector3.Cross(along, across) * (right ? 1f : -1f);
+            Vector3 a = hd.position - up.position;
+            if (palm.sqrMagnitude < 1e-12f || a.sqrMagnitude < 1e-10f) return false;
+            axis = a.normalized;
+            Vector3 want = anim.transform.right * (right ? -1f : 1f); // towards her middle
+            Vector3 p = Vector3.ProjectOnPlane(palm, axis), q = Vector3.ProjectOnPlane(want, axis);
+            if (p.sqrMagnitude < 1e-12f || q.sqrMagnitude < 1e-12f) return false;
+            turn = Mathf.Clamp(Vector3.SignedAngle(p, q, axis), -NasslaPalmMax, NasslaPalmMax);
+            return true;
         }
 
         // Kugg's legs drawn shorter (Rickard 2026-11-18, his Home picture: "kugg för liten och för långa ben"): the round golem's
