@@ -379,7 +379,7 @@ namespace BAM.Art
                 if (!float.IsNaN(f)) footRef = f - transform.position.y; // the bind pose, its mesh's sole on the ground
             }
             if (HeroIndex == (int)HeroId.Kugg && art.V2 && anim.isHuman) ShortLegs(KuggLegK); else legDrop = 0f;
-            kuggBindOk = false; kuggBindWait = 3;
+            kuggBindOk = false; kuggRBindOk = false; kuggBindWait = 3;
             if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureHeadHold(); else headHold = false;
             if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureArmRoll(); else armRoll = false;
             anim.runtimeAnimatorController = null;
@@ -1815,7 +1815,9 @@ namespace BAM.Art
         // the upper arm hangs down and a little out and the forearm is held out to his side and forward, a little down, so the whole
         // barrel and its glowing mouth are seen side on, on the menu stage and standing in a match. In arm lengths: out, down, forward
         // for the wrist; the elbow hint down and back.
-        static readonly Vector3 KuggCannonRest = new Vector3(0.58f, 0.6f, 0.2f);
+        // (Rickard 2026-11-19, his Home picture: "hans vapenhand är lite tillplattad": 0.2 forward pointed the barrel at the menu camera,
+        // so it read short and squashed; now it hangs further down and out, about level with his hip, the barrel side on)
+        static readonly Vector3 KuggCannonRest = new Vector3(0.62f, 0.7f, 0.02f);
         static readonly Vector3 KuggCannonElbow = new Vector3(0.2f, 0.8f, -0.4f);
         // The left fist stays down through his shots too (Rickard 2026-11-19: "hans vänstra arm glitchar"): Attack1Mirror is Firing A Gun,
         // whose free hand comes up to steady a rifle in front of the chest; only the right (cannon) arm shoots (KuggAim), so with the
@@ -1830,6 +1832,7 @@ namespace BAM.Art
             if (!kuggBindOk && gearAct < 0.01f && moveW < 0.01f && --kuggBindWait <= 0) KuggFistBind(); // his idle as it stands, once
             if (wFist > 0.01f) KuggFistSteady(wFist);
             if (wFist > 0.01f) KuggArm(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand, KuggFist, KuggFistElbow, wFist);
+            if (w > 0.01f) KuggCannonSteady(w);
             if (w > 0.01f) KuggArm(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, KuggCannonRest, KuggCannonElbow, w);
         }
 
@@ -1849,6 +1852,23 @@ namespace BAM.Art
             kuggBindOk = up != null && lo != null && hand != null;
             if (!kuggBindOk) return;
             kuggUpBind = up.localRotation; kuggLoBind = lo.localRotation; kuggHandBind = hand.localRotation;
+            Transform ru = anim.GetBoneTransform(HumanBodyBones.RightUpperArm), rl = anim.GetBoneTransform(HumanBodyBones.RightLowerArm),
+                rh = anim.GetBoneTransform(HumanBodyBones.RightHand);
+            kuggRBindOk = ru != null && rl != null && rh != null;
+            if (kuggRBindOk) { kuggRUpBind = ru.localRotation; kuggRLoBind = rl.localRotation; kuggRHandBind = rh.localRotation; }
+        }
+        // the cannon arm the same way, so its twist (and the barrel's skin about the elbow) never follows the idle's moving arm
+        Quaternion kuggRUpBind, kuggRLoBind, kuggRHandBind;
+        bool kuggRBindOk;
+        void KuggCannonSteady(float w)
+        {
+            if (!kuggRBindOk) return;
+            Transform up = anim.GetBoneTransform(HumanBodyBones.RightUpperArm), lo = anim.GetBoneTransform(HumanBodyBones.RightLowerArm),
+                hand = anim.GetBoneTransform(HumanBodyBones.RightHand);
+            w = Mathf.Clamp01(w);
+            up.localRotation = Quaternion.Slerp(up.localRotation, kuggRUpBind, w);
+            lo.localRotation = Quaternion.Slerp(lo.localRotation, kuggRLoBind, w);
+            hand.localRotation = Quaternion.Slerp(hand.localRotation, kuggRHandBind, w);
         }
         void KuggFistSteady(float w)
         {
