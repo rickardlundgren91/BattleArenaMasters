@@ -50,6 +50,11 @@ namespace BAM.Art
         /// rigg-anim/sving); a fist-made slash (Fenn, Bram, Bonk) keeps the fist's grip.</summary>
         public bool SwingAim;
         public float SwingFollow = 0.5f;
+        /// <summary>AnimFix.FixedGrip, code only: how much, with the attack's weight, the weapon is turned about its grip to point
+        /// on along the forearm (elbow to fist), so a two-handed overhead blow carries it up over the head and down in front instead
+        /// of leaving it across the fists. Bonk 1 (Rickard 2026-11-19 on his Zombie Attack slam: "vapnet viks bara åt sidan när han
+        /// slår och han tar inte med sig vapnet över huvudet"): the clasped fists of that clip held the club out sideways.</summary>
+        public float SwingAlong;
         /// <summary>AnimFix.FixedGrip: degrees turned about the grip in the weapon's own x/y/z while an attack plays, with its weight
         /// (Tyra's bow stands up for the shot; in the fist's own grip it lay flat). Not in a cast: Tyra's cast is a held draw, made for
         /// a bow, upright in the fist's own grip.</summary>
@@ -443,7 +448,7 @@ namespace BAM.Art
             // förutom hur vapen ligger"): it now leans 35 degrees out from straight back and the fist sits 0.04 further out
             g[(int)HeroId.Bonk] = new GearDef
             {
-                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 145f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f }, NoThumb = true } },
+                Weapons = new[] { new WeaponDef { Model = "bonk_club", Len = 0.85f, Grip = 0.12f, HoldUp = 36f, HoldOut = 145f, Follow = 0.1f, Run = new Hold { Up = 75f, Out = 140f }, NoThumb = true, SwingAlong = 1f } },
                 Shoulder = true,
                 CarryOut = 0.14f,
             };
@@ -1823,6 +1828,7 @@ namespace BAM.Art
                 bool menuHold = OnMenu && W.Menu.On;
                 bool full = AnimFix.GripLockFull && hasAnat[i] && !gone && t.localScale.y > 1e-4f && !(menuHold && rest > 0.5f);
                 if (full) { t.rotation = menuHold ? Quaternion.Slerp(t.rotation, hand[i].rotation * anatR[i], Mathf.Clamp01(1f - 2f * rest)) : hand[i].rotation * anatR[i]; FistTwist[i] = 0f; } // nothing left for the wrist to take
+                if (AnimFix.FixedGrip && W.SwingAlong > 0f && !gone && sw > 0.001f) AlongForearm(i, W, W.SwingAlong * sw);
                 if (W.WristMax > 0f && !gone && !full) Wrist(i, W, liveW);
                 LockGrip(i, full);
                 // Rickard's Offset was tuned on the 0.6 palm; with the calibrated socket the grip is already in the fist (Tyra's -0.03
@@ -2182,6 +2188,20 @@ namespace BAM.Art
                 Quaternion q = Quaternion.FromToRotation(v, want);
                 t.SetPositionAndRotation(g + q * (t.position - g), q * t.rotation);
             }
+        }
+
+        // WeaponDef.SwingAlong: the shaft (the weapon's +y, handle to head) turned about the grip, the shortest way, by w towards
+        // the forearm's line from the elbow through the fist. Only an aim: LockGrip below still puts the grip in the palm, and
+        // AboveGround still lays a head that would go into the ground forward along it (the slam's club on the ground in front).
+        void AlongForearm(int i, WeaponDef W, float w)
+        {
+            Transform t = wT[i], hd = hand[i], lo = W.Left ? elbL : elbR;
+            if (t == null || hd == null || lo == null) return;
+            Vector3 arm = hd.position - lo.position;
+            if (arm.sqrMagnitude < 1e-10f) return;
+            Vector3 gg = t.TransformPoint(gripL[i]);
+            Quaternion q = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(t.up, arm.normalized), Mathf.Clamp01(w));
+            t.SetPositionAndRotation(gg + q * (t.position - gg), q * t.rotation);
         }
 
         // turned by a rotation in the weapon's own axes, about its grip
