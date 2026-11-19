@@ -126,7 +126,7 @@ namespace BAM.Art
                     if (hero == HeroId.Bonk && string.Equals(skin, "Lava", System.StringComparison.OrdinalIgnoreCase))
                         return new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = 1.6f, At = new Vector3(0f, 0.16f, -0.05f), Flat = 1f, Sway = 8f };
                     return hero == HeroId.Bonk
-                        ? new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = Weapons.BonkPeltWide, At = Weapons.BonkPeltAt, Flat = 0.8f, Sway = 8f }
+                        ? new WornDef { Bone = Chest, From = LArm, To = RArm, Wide = Weapons.BonkPeltWide, At = Weapons.BonkPeltAt, Flat = 0.8f, Skin = true } // skinned like his own pelt (Weapons)
                         : new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.42f, At = new Vector3(0f, 0.01f, -0.07f), Yaw = 180f, Flat = 0.8f, Sway = 22f };
                 case "wings": // Tikta's wing plate
                     return new WornDef { Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0f, -0.14f, -0.07f), Yaw = 180f };

@@ -572,7 +572,9 @@ namespace BAM.Art
             bo.Weapons[0].Len = 1.2f; // the Tripo club (16 Nov) with its head swelled fat in v2_bonk_club.bytes; Rickard: "längre klubba och tjockare där uppe, riktigt tjock"
             bo.Worn = new[]
             {
-                new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = BonkPeltWide, At = BonkPeltAt, Flat = 0.8f, Sway = 8f },
+                // skinned to the body (Rickard 2026-11-19: "hans päls ligger fortfarande inte rätt"): fixed to the chest it stood out from
+                // his back in the idle and run poses, where the arms and shoulders of the clothed body move under it
+                new WornDef { Model = "v2_bonk_pelt", Bone = Chest, From = LArm, To = RArm, Wide = BonkPeltWide, At = BonkPeltAt, Flat = 0.8f, Skin = true },
                 new WornDef { Model = "v2_bonk_necklace", Bone = Chest, From = LArm, To = RArm, Wide = 1.0f, At = new Vector3(0f, 0.01f, 0.11f), Turn = new Vector3(25f, 0f, 0f) }, // out over the vest (18 Nov)
                 // a sabre-tooth skull on the pelt between his shoulder blades, staring back, so he is known from behind and from the
                 // match camera (Rickard's card 2026-11-16, "C: Ny Tripo-skalle på ryggen", after Ravna's mask seen from behind); made
