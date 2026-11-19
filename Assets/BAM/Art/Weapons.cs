@@ -168,6 +168,12 @@ namespace BAM.Art
         /// turned at rest on top of the clip, in degrees: x = the upper arm out from the side, y = the upper arm forward, z = the
         /// elbow bent more (negative = straighter). Eased out while a swing or cast plays, so those play as made.</summary>
         public Vector3 RightArm, LeftArm;
+        /// <summary>The elbow bend of <see cref="RightArm"/>/<see cref="LeftArm"/> (z) goes about the elbow's own hinge, taken
+        /// from the bind pose and turning with the upper arm, instead of about the plane the clip's arm happens to make. An idle
+        /// with an almost straight arm (Blast V2's right, about 7 degrees) leaves that plane undefined, and the menu's breath tipped
+        /// it round, so the tuned 60-degree bend swung his forearm from up to down (Rickard 2026-11-19, the main menu: "vrider armen
+        /// onaturligt ut. 90 grader upp till 90 grader ner").</summary>
+        public bool SteadyElbow;
         /// <summary>Degrees added to <see cref="ArmSpread"/> in code only (the Weapon Tuner and WeaponTune.json leave it alone), so
         /// hands that hang close to the legs stay off the thighs as the idle sways (Tyra, ANIM-24).</summary>
         public float HandsOff;
@@ -600,6 +606,7 @@ namespace BAM.Art
             GearDef bl = g[(int)HeroId.Blast];
             bl.Weapons[0].Model = "v2_blast_bomb";
             bl.Worn = null;
+            bl.SteadyElbow = true; // the tuned right-arm bend (WeaponTune BlastV2, z -60) about his elbow's own hinge: his idle arm is almost straight
 
             // Bonk: the new club on his shoulder as before; the wolf pelt over his shoulders (its top at the shoulder line, wolf head on
             // his left, a little stiff swing) and the fang necklace on his chest; both came at Tripo's raw size and are scaled here
@@ -913,6 +920,7 @@ namespace BAM.Art
         GearDef gdef;
         Transform armR, armL, elbR, elbL, wriR, wriL;
         Transform thighR, thighL, kneeR, kneeL; // GearDef.HandGap
+        Vector3 hingeR, hingeL; // GearDef.SteadyElbow: each elbow's hinge in its upper arm's space (zero = the clip's bend plane)
         // the right arm bent to carry the weapon on the shoulder
         Transform carryUp, carryLo, carryHand;
         // the cannon on the chest, where it sits and which way it kicks (chest space), the right arm that holds it
@@ -1014,6 +1022,7 @@ namespace BAM.Art
                 h.thighR = an.GetBoneTransform(HumanBodyBones.RightUpperLeg); h.kneeR = an.GetBoneTransform(HumanBodyBones.RightLowerLeg);
                 h.thighL = an.GetBoneTransform(HumanBodyBones.LeftUpperLeg); h.kneeL = an.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
             }
+            if (g.SteadyElbow) { h.hingeR = h.Hinge(h.armR, h.elbR); h.hingeL = h.Hinge(h.armL, h.elbL); }
             if (g.Shoulder)
             {
                 h.carryUp = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -2183,19 +2192,34 @@ namespace BAM.Art
         void ArmTune(float w)
         {
             if (w <= 0.001f) return;
-            if (gdef.RightArm != Vector3.zero) ArmTune(armR, elbR, wriR, gdef.RightArm * w, 1f);
-            if (gdef.LeftArm != Vector3.zero) ArmTune(armL, elbL, wriL, gdef.LeftArm * w, -1f);
+            if (gdef.RightArm != Vector3.zero) ArmTune(armR, elbR, wriR, gdef.RightArm * w, 1f, hingeR);
+            if (gdef.LeftArm != Vector3.zero) ArmTune(armL, elbL, wriL, gdef.LeftArm * w, -1f, hingeL);
         }
 
-        void ArmTune(Transform up, Transform lo, Transform hd, Vector3 a, float side)
+        void ArmTune(Transform up, Transform lo, Transform hd, Vector3 a, float side, Vector3 hinge)
         {
             if (up == null || lo == null) return;
             up.rotation = Quaternion.AngleAxis(-a.y, root.right) * Quaternion.AngleAxis(a.x * side, root.forward) * up.rotation;
             if (a.z == 0f || hd == null) return;
-            Vector3 u = lo.position - up.position, l = hd.position - lo.position;
-            Vector3 axis = Vector3.Cross(u, l);
-            if (axis.sqrMagnitude < 1e-10f) axis = side * root.right; // a straight arm bends forward
+            Vector3 axis;
+            if (hinge != Vector3.zero) axis = up.rotation * hinge; // GearDef.SteadyElbow
+            else
+            {
+                Vector3 u = lo.position - up.position, l = hd.position - lo.position;
+                axis = Vector3.Cross(u, l);
+                if (axis.sqrMagnitude < 1e-10f) axis = side * root.right; // a straight arm bends forward
+            }
             lo.rotation = Quaternion.AngleAxis(-a.z, axis.normalized) * lo.rotation;
+        }
+
+        /// <summary>The elbow's hinge in the upper arm's space, from the bind pose (a fresh instance, as <see cref="Build"/> sees it):
+        /// square to the upper arm and to the body's front, turned the way <see cref="ArmTune"/>'s clip bend plane turns for a
+        /// forearm in front of the upper arm, so the same z bends the same way. Zero when it cannot be found.</summary>
+        Vector3 Hinge(Transform up, Transform lo)
+        {
+            if (up == null || lo == null) return Vector3.zero;
+            Vector3 n = Vector3.Cross(lo.position - up.position, root.forward);
+            return n.sqrMagnitude < 1e-10f ? Vector3.zero : Quaternion.Inverse(up.rotation) * n.normalized;
         }
 
         // AnimFix.ArmRoom: 1 for an upper arm hanging down (up to 45 degrees off, as in the run), less as it rises, 0 from level up
