@@ -264,6 +264,11 @@ namespace BAM.Sim
         public const float MinionVsTower = 1.5f;
         public const float TowerVsMinion = 0.8f;
         public const float BackdoorMult = 0.75f;
+        // CREEPS (Rickard 2026-11-19 "Creepsen gör man för lite dmg på"): heroes, their pets and clones hit minions x1.4. The minions
+        // got ABC2's health on 2026-11-18 (135/75/295 -> 190/130/550) while hero damage stayed ~9 % under ABC2's, so a wave took
+        // much longer to clear. x1.4 leaves 136/93/393 effective health; minions' health stays ABC2's. Not Fenn's wolf, not towers,
+        // not the tutorial (its lessons count hits)
+        public const float HeroVsMinion = 1.4f;
         // towers: shots in a row at one hero hit harder, and heroes take more from towers as the match goes on (LateStart..LateFull)
         public const float TowerAggroTime = 2, TowerRamp = 0.2f, TowerRampMax = 2, TowerRampReset = 2.5f;
         public const float TowerLateMax = 2;

@@ -228,7 +228,10 @@ namespace BAM.Game
             bool creep = byPlayer && b.IsMinionLike && b.Team != m.Player.Team;
             if (!b.IsRealHero && !creep) return;
             if (!toPlayer && !byPlayer) return;
-            if (!toPlayer && !m.IsVisibleTo(b, m.Player.Team)) return;
+            // the killing blow: the target is already dead when the HUD reads the hit, and a dead unit is never "visible", so the
+            // number of the hit that killed was dropped (Rickard 2026-11-19 "Damage syns inte när tyra dödar en spelare"). Only
+            // a living target is checked; a dead one here was killed by the player, who saw it fall
+            if (!toPlayer && b.Alive && !m.IsVisibleTo(b, m.Player.Team)) return;
             float now = Time.unscaledTime;
             // a burn or a quick volley on the same hero adds to the number that is already rising
             for (int i = 0; i < floats.Length; i++)

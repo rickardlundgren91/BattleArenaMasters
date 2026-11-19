@@ -134,6 +134,7 @@ namespace BAM.Sim
                 amount *= ItemDamageMult(att, tgt, kind, dot); // Quarry Mark, Minion Skewer, Crushing Spanner, Heroes Bane (Items.cs)
                 amount *= FuryMult(att, tgt); // the Fury battle spell: +20 % on enemy heroes (Spells.cs)
                 amount *= PlateMult(tgt); // the Iron Plate item (Items.cs)
+                if (tgt.Kind == UnitKind.Minion && att != null && att.Kind == UnitKind.Hero && Tut == null) amount *= Rules.HeroVsMinion; // creeps (Defs.cs)
                 if (tgt.Kind == UnitKind.Tower && Tut == null) amount *= TowerLateTaken() * TowerNeedsWave(att, tgt);
                 if (tgt.Kind == UnitKind.Tower && src != null && src.IsMinionLike) amount *= PacingMinionTowerMult() * (Tut == null ? Rules.MinionVsTower : 1); // the old wolf counted as a minion
                 if (Tut != null) TutSawHit(src, tgt, kind); // the guided match's special lessons (Tutorial.cs)
