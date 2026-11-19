@@ -50,10 +50,11 @@ namespace BAM.Art.Editor
                 ti.textureType = TextureImporterType.Default;
                 ti.sRGBTexture = true;
                 ti.mipmapEnabled = true;
-                // V2 Tyra carries her old body's head (Rickard 2026-11-19: "tyras ansikte var bättre i v1"): her picture is the V2
-                // body's picture (left half) beside the old body's (right half), 2048 x 1024, so each half keeps its full 1024
-                ti.maxTextureSize = assetPath == ModelsV2Dir + "Tyra/Tyra_Tex.jpg" ? 2048 : 1024;
-                ti.textureCompression = TextureImporterCompression.Compressed;
+                // V2 Tyra's face looked pixly (Rickard 2026-11-19): her picture is Tripo's full 2048 colour map (with the same
+                // colour fixes as before), kept at 2048 with high-quality compression; every other body stays at 1024
+                bool sharp = assetPath == ModelsV2Dir + "Tyra/Tyra_Tex.jpg";
+                ti.maxTextureSize = sharp ? 2048 : 1024;
+                ti.textureCompression = sharp ? TextureImporterCompression.CompressedHQ : TextureImporterCompression.Compressed;
                 return;
             }
             if (assetPath.StartsWith("Assets/BAM/Art/Resources/BAMArt/Fx/"))
