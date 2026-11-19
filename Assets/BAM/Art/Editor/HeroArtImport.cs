@@ -241,9 +241,11 @@ namespace BAM.Art.Editor
             // (Rickard 2026-10-26: "fötterna böjer sig"). Since 2026-10-30 his own again: Rickard's Orc Idle 1 (7.4 s, downloaded on
             // Bonk's rig), whose knees bend 13-22 degrees against the old Orc Idle's 23-34 (Rickard's pick: "bonk behöver ny idle")
             // Rickard 2026-11-19 ("bonk snurrar fortfarande vid autoattack", "stora rätt långsamma slag över huvudet med bägge händer"): his
-            // auto attack is Oaken's two-armed overhead smash (both fists over his head at 0.9-1.1 s, on the ground at 1.33 s of 3.0; blow 42 %),
-            // its windup's turn mostly held off (BodyView.TwistHold); his one-armed axe chop (Bonk/Anim/Attack1) swung round him
-            new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Bonk/Anim/IdleOrc1", Run = "Bonk/Anim/Run", Attack = "Oaken/Anim/Cast", Cast = "Bram/Anim/Attack2", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 2.0f, Release = 0.42f },
+            // auto attack was Oaken's two-armed overhead smash, then (Rickard 2026-11-19 "nya slaget blev inte bra ta ett annat"; that cast's
+            // chest swung 153 degrees in its played part) Mixamo's Zombie Attack (Bonk/Anim/Slam): hands clasped over his head at 1.0-1.3 s,
+            // brought straight down to the ground at 1.45-1.7 s of 4.6 (blow 31 %), the chest turning only 30 degrees and the hips 17 in its
+            // played part. What turn is left is held off by BodyView.TwistHold; his one-armed axe chop (Bonk/Anim/Attack1) swung round him
+            new Spec { Hero = "Bonk", Model = "Bonk/Bonk", Idle = "Bonk/Anim/IdleOrc1", Run = "Bonk/Anim/Run", Attack = "Bonk/Anim/Slam", Cast = "Bram/Anim/Attack2", Hit = "Bonk/Anim/Hit", Death = "Bonk/Anim/Dying", Walk = "Knut/Anim/Walk", Height = 2.0f, Release = 0.31f },
             // Hilde (hero 9) and Oaken (hero 10), 2026-10-28: Speltest's current bodies (Mixamo/Looks/Hilde with Hilde2.jpg, Looks/Oaken
             // with OaknN.jpg) and clips (Resources/Mixamo/Anim/Hilde|Oaken). Hilde's shot is a 0.27 s rifle clip for the shoulder cannon,
             // her cast the keg throw. Oaken walks and runs with the heavy Mutant clips; his attack is a hook punch (the fist is furthest

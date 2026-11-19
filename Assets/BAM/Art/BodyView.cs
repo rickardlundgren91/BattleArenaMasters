@@ -1421,8 +1421,9 @@ namespace BAM.Art
         }
 
         // Rickard 2026-11-19 ("bonk snurrar fortfarande vid autoattack", "bonk ska slå stora rätt långsamma slag över huvudet med
-        // bägge händer"): Bonk's auto attack is the two-armed overhead smash (Oaken's cast clip: both fists over his head, then on
-        // the ground), whose windup turns the hips 100 degrees away from the blow's facing (the chest 140). The share of that turn
+        // bägge händer"): Bonk's auto attack is a two-handed overhead smash. First Oaken's cast clip, whose windup turned the hips
+        // 100 degrees away from the blow's facing (the chest 140; Rickard: "blev inte bra"), since then Mixamo's Zombie Attack, hands
+        // clasped over his head, which turns only 17 (the chest 30). The share of that turn
         // named here is taken back off the hips (the thighs turned back, so the feet stay put, as UpperTurn does) and off the spine
         // and chest, measured from the blow's own frame: the blow lands as before, straight ahead, and the club goes up and comes
         // down over his head instead of round him. Same frame and weight the pose was evaluated with.
