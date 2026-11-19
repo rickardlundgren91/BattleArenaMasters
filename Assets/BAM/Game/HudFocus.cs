@@ -38,6 +38,10 @@ namespace BAM.Game
         Outline focusLabelEdge;
         int focusShown = -1;
         bool focusHintOn;
+        // Rickard 2026-11-19: "focus ligger inne hela tiden nu ha det bara i tutorial och beginner och easy". The chip and its
+        // line are a help for new players: the guided match and the Beginner and Easy bot levels only, never Normal and up and
+        // never online (an online match's Difficulty is only its fill bots' level). Set per match in BeginFocus.
+        bool focusOn;
         float focusHintAt;
         // the guided match: its lesson has named it; it was up last frame; it has been up in this half; the size it is drawn
         // at now and the size its pieces are laid out for; the last pop, and whether that was the chip coming up
@@ -108,7 +112,9 @@ namespace BAM.Game
             focusHint.gameObject.SetActive(false);
             // the line beside the chip: the first three real matches only (the old game's abc2-focushint)
             focusHintOn = false; focusHintAt = -1f;
-            if (!tutorial && !heroTest)
+            var cfg = m.Config;
+            focusOn = tutorial || cfg.Seats == null && (cfg.Difficulty == Difficulty.Beginner || cfg.Difficulty == Difficulty.Easy);
+            if (focusOn && !tutorial && !heroTest)
             {
                 int seen = PlayerPrefs.GetInt("bam-focushint", 0);
                 focusHintOn = seen < 3;
@@ -120,7 +126,7 @@ namespace BAM.Game
         {
             var p = m.Player;
             var tu = m.Tut;
-            int n = !hidden && !heroTest && m.State == MatchState.Play && p != null && p.Alive ? m.FocusTargets(p) : 0;
+            int n = focusOn && !hidden && !heroTest && m.State == MatchState.Play && p != null && p.Alive ? m.FocusTargets(p) : 0;
             // the island: not before its lesson has named it
             if (!focusKnown && (tu == null || !tu.Island || tu.FocusShown || tu.Step > Tutorial.IslandFocus)) focusKnown = true;
             bool show = n > 0 && focusKnown;
