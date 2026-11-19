@@ -64,9 +64,8 @@ namespace BAM.UI
             ClampHero(); // a hero that is locked for this account (HeroLocks.cs)
             var id = (HeroId)BamSettings.LastHero;
             var info = HeroCatalog.Get(id);
-            bool shown = homeStage.Show(id);
-            homeHero.gameObject.SetActive(!shown);
-            if (!shown) SetBadge(homeHero, id);
+            if (homeSkinListFor != (int)id || homeSkinList == null || !homeSkinList.gameObject.activeSelf) skinPreview = -1; // a preview lasts while its list is open
+            ShowHomeHero(id);
             homePortraitImg.texture = Portrait(id);
             homePortraitImg.enabled = homePortraitImg.texture != null;
             homeName.text = info.Name;
@@ -95,10 +94,38 @@ namespace BAM.UI
         static void RefreshSkinPick(HeroId id)
         {
             homeSkinPick.SetActive(true); // shown for every hero, also one with Classic only, so the choice is always found (Rickard 2026-11-14 "inget skin val" on Tyra)
-            int cur = HeroSkins.Chosen(id);
-            homeSkinText.text = "SKIN  <color=#" + ColorUtility.ToHtmlStringRGB(HeroSkins.Tint(id, cur)) + ">" + HeroSkins.Name(id, cur).ToUpperInvariant() + "</color>  \u25BE";
+            SkinPillText(id);
             if (homeSkinListFor != (int)id) SkinListOpen(false);
             RefreshGoldPill();
+        }
+
+        // ---- skin preview (Rickard 2026-11-19 "man måste kunna få se preview på skin"): a tap on a look the player cannot wear yet
+        // (gold skin not bought, premium out of the top 10) puts it on the hero on the platform without wearing it, and the pill says
+        // "PREVIEW <NAME>". The list stays open for the buy tap; closing the list, wearing a look or another hero takes it off. Only
+        // the menu stage shows it: matches and the room read HeroSkins.Chosen. ----
+
+        static int skinPreview = -1; // the look shown on Home's hero instead of the worn one, -1: none
+
+        /// <summary>The hero on Home's platform, in the previewed look while there is one, else the worn one.</summary>
+        static void ShowHomeHero(HeroId id)
+        {
+            bool shown = skinPreview >= 0 ? homeStage.Show(id, false, skinPreview) : homeStage.Show(id);
+            homeHero.gameObject.SetActive(!shown);
+            if (!shown) SetBadge(homeHero, id);
+        }
+
+        static void SkinPillText(HeroId id)
+        {
+            int cur = skinPreview >= 0 ? skinPreview : HeroSkins.Chosen(id);
+            homeSkinText.text = (skinPreview >= 0 ? "<color=#7fe3ff>PREVIEW</color>  " : "SKIN  ") + "<color=#" + ColorUtility.ToHtmlStringRGB(HeroSkins.Tint(id, cur)) + ">" + HeroSkins.Name(id, cur).ToUpperInvariant() + "</color>  \u25BE";
+        }
+
+        static void SkinPreview(HeroId id, int skin)
+        {
+            if (skinPreview == skin) return;
+            skinPreview = skin;
+            ShowHomeHero(id);
+            SkinPillText(id);
         }
 
         static void SkinListOpen(bool open)
@@ -108,7 +135,12 @@ namespace BAM.UI
             homeSkinList.gameObject.SetActive(open);
             homeSkinListFor = open ? BamSettings.LastHero : -1;
             skinBuyAsk = -1;
-            if (!open) return;
+            if (!open)
+            {
+                if (skinPreview >= 0 && homeStage != null) SkinPreview((HeroId)BamSettings.LastHero, -1); // back to the worn look
+                skinPreview = -1;
+                return;
+            }
             GoalListOpen(false);
             homeSkinList.SetAsLastSibling();
             var id = (HeroId)BamSettings.LastHero;
@@ -141,7 +173,7 @@ namespace BAM.UI
                 b.onClick.AddListener(() =>
                 {
                     BamAudio.Play(SfxId.UiTap);
-                    if (price != 0) { SkinBuyTap(id, skin, price, t); return; } // gold skin not bought yet, or premium out of the top 10 (HomeGold.cs)
+                    if (price != 0) { SkinPreview(id, skin); SkinBuyTap(id, skin, price, t); return; } // see it on the hero first, then the buy ask // gold skin not bought yet, or premium out of the top 10 (HomeGold.cs)
                     int keep = OnlineHooks.SkinKeep != null ? OnlineHooks.SkinKeep(id, skin) : 0;
                     if (keep > 0 && skin == HeroSkins.Chosen(id)) { SkinBuyTap(id, skin, keep, t); return; } // worn in the top 10: keep it for good
                     HeroSkins.Choose(id, skin);

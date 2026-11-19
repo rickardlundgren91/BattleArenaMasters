@@ -9,7 +9,7 @@ namespace BAM.UI
 {
     // Gold on Home (Rickard 2026-11-15 "Ja, bygg nu", numbers "okej"; BAM.Online Gold.cs counts it): a pill beside the skin
     // dropdown, "GOLD 1250 · DAILY 1/3 ▾", whose tap opens the day's first win and three goals with their progress and when new
-    // ones come. The skin list shows "1500 GOLD" on a gold skin not bought yet (two taps buy it) and "TOP 10 ONLY" on a premium
+    // ones come. The skin list shows "1500 GOLD" on a gold skin not bought yet (the first tap previews it on the hero and asks, the second buys; HomeScreen SkinPreview) and "TOP 10 ONLY" on a premium
     // skin (Rickard 2026-11-19: worn only while in the top 10, then on every hero; "TOP 10" on one worn that way). After a season
     // finished in the top 10 a premium skin shows "KEEP 3000 GOLD": two taps (on the worn one) keep it for good. Offline builds have no gold hooks: no pill, every skin open, as before.
     public static partial class Screens
