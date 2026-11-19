@@ -136,7 +136,7 @@ namespace BAM.Core
         public static BAM.Sim.SpellId Spell
         {
             get { Load(); return (BAM.Sim.SpellId)spell; }
-            set { Load(); int v = value == BAM.Sim.SpellId.None ? (int)BAM.Sim.SpellId.Blink : (int)value; if (spell == v) return; spell = v; PlayerPrefs.SetInt(Key + "spell", v); Commit(); }
+            set { Load(); int v = value == BAM.Sim.SpellId.None || value == BAM.Sim.SpellId.FirstAid ? (int)BAM.Sim.SpellId.Blink : (int)value; if (spell == v) return; spell = v; PlayerPrefs.SetInt(Key + "spell", v); Commit(); }
         }
 
         /// <summary>The map CLASSIC plays (MAP under BOT DIFFICULTY): Runes until the player picks Grove (Rickard 2026-11-13:
@@ -247,6 +247,7 @@ namespace BAM.Core
             teamSize = PlayerPrefs.GetInt(Key + "teamsize", 3) == 2 ? 2 : 3;
             lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Grove), (int)BAM.Sim.MapId.Runes, (int)MaxMap); // a saved Plateau plays Grove while Plateau is hidden
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Bladearmor);
+            if (spell == (int)BAM.Sim.SpellId.FirstAid) spell = (int)BAM.Sim.SpellId.Blink; // First Aid is out of the game (2026-11-19)
         }
 
         // First start: Low on weak phones (little memory or few cores), else High. The player can change it in Settings.

@@ -58,7 +58,7 @@ namespace BAM.Art
                     Fx.Stars(at + up, 4, c32, 0.3f, 1.2f, 0.45f, 0.8f, 0.3f);
                     break;
                 case SpellId.FirstAid:
-                    // the kit lands (its box is the zone's look, WorldViews) or is picked up: a soft red-white heal bloom
+                    // the caster starts healing (no kit on the ground since 2026-11-19): a soft red-white heal bloom
                     Fx.Ring(at, 0.2f, 0.9f, c, 0.35f);
                     Fx.Flash(at + up, 0.25f, 0.9f, new Color(1f, 1f, 1f, 0.8f), 0.1f);
                     Fx.Glow(at + Vector3.up * 0.2f, 8, c32, 0.18f, 0.9f, 0.5f, 1.4f, 0.3f);

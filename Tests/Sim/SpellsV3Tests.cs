@@ -25,37 +25,11 @@ namespace BAM.Sim
         {
             float x = 7.5f, y = 20;
 
-            // ---------- First Aid ----------
+            // ---------- First Aid: out of the game (Rickard 2026-11-19) ----------
             {
-                var m = MakeQuiet(HeroId.Tyra, new[] { HeroId.Bram }, new[] { HeroId.Knut, HeroId.Moa });
-                var p = m.Player; var al = m.Ally(HeroId.Bram); var fo = m.Foe(HeroId.Knut);
-                Place(m.Foe(HeroId.Moa), 1, 1); Place(al, x + 4, y); Place(fo, x, y); Place(p, x, y);
-                p.Spell = SpellId.FirstAid; p.Hp = p.MaxHp * 0.2f; fo.Hp = fo.MaxHp * 0.2f;
-                Check(m.CastSpell(p), "First Aid: cast");
-                Proj kit = null; foreach (var q in m.Projs) if (q.Mode == ProjMode.FirstAidKit) kit = q;
-                Check(kit != null && kit.IsZone && kit.Zone == ZoneKind.FirstAid, "First Aid: a kit lies on the ground");
-                for (int i = 0; i < (int)(0.5f / Rules.Tick); i++) m.Step(PlayerInput.None);
-                Check(!kit.Done, "First Aid: the dropper does not take it at once, and an enemy on it never does");
-                float foHp = fo.Hp; fo.X = fo.PX = x; fo.Y = fo.PY = y + 8; // away, so it does not fight
-                m.Events.Clear();
-                for (int i = 0; i < (int)(0.7f / Rules.Tick); i++) m.Step(PlayerInput.None);
-                Check(kit.Done && p.Has(St.HealOverTime), "First Aid: after a second the dropper standing on it picks it up");
-                float max0 = p.MaxHp; // the level can rise during the heal: it counts from the max at the pick-up
-                float got = 0;
-                for (int i = 0; i < (int)(7.5f / Rules.Tick); i++) { p.LastFight = fo.LastFight = m.Time; m.Step(PlayerInput.None); got += m.HealFrom(p, p); }
-                Check(Near(got, max0 * SpellDefs.FirstAidHeal, 0.5f) && !p.Has(St.HealOverTime), $"First Aid: 40 % of max HP over 7 s ({got / max0 * 100:0.0} %)");
-                Check(fo.Hp <= foHp + 0.01f, "First Aid: the enemy on it got nothing");
-
-                // an ally takes it; a hero at full health walks over it
-                p.SpellAt = 0; Place(p, x, y); Place(fo, x, y + 8); Place(al, x, y); al.Hp = al.MaxHp * 0.5f;
-                Check(m.CastSpell(p), "First Aid: cast again");
-                m.Step(PlayerInput.None);
-                Check(al.Has(St.HealOverTime) && !p.Has(St.HealOverTime), "First Aid: an ally on it takes it at once");
-                p.SpellAt = 0; Place(al, x + 4, y); Place(p, x, y);
-                m.CastSpell(p);
-                for (int i = 0; i < (int)(2f / Rules.Tick); i++) m.Step(PlayerInput.None);
-                bool lies = false; foreach (var q in m.Projs) if (q.Mode == ProjMode.FirstAidKit && !q.Done) lies = true;
-                Check(lies && !p.Has(St.HealOverTime), "First Aid: at full health the kit stays on the ground");
+                Check(Array.IndexOf(SpellDefs.All, SpellId.FirstAid) < 0, "First Aid: not in the picker");
+                var m = Create(new MatchConfig { PlayerHero = HeroId.Tyra, Allies = new[] { HeroId.Bram }, Enemies = new[] { HeroId.Knut, HeroId.Moa }, Seed = 3, PlayerSpell = SpellId.FirstAid });
+                Check(m.Player.Spell == SpellId.Blink, "First Aid: a pick saved from before plays Blink");
             }
 
             // ---------- Immune ----------
@@ -146,7 +120,7 @@ namespace BAM.Sim
                     foreach (var h in m.Heroes) { if (h == m.Player) continue; seen[(int)h.Spell] = true; recall |= h.Spell == SpellId.Recall; }
                 }
                 bool all = true; foreach (var sp in SpellDefs.All) if (sp != SpellId.Recall && !seen[(int)sp]) all = false;
-                Check(all && !recall, "bots draw every spell but Recall");
+                Check(all && !recall && !seen[(int)SpellId.FirstAid], "bots draw every spell but Recall (and never First Aid)");
             }
         }
     }

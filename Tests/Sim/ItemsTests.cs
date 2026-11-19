@@ -107,6 +107,7 @@ namespace BAM.Sim
             float hp0 = e.Hp; e.ClearStatusesExcept(St.QuarryMark);
             m.DealDamage(a, e, 10, DmgKind.Auto);
             Check(Math.Abs(hp0 - e.Hp - 10) < 1e-3f && e.Find(St.QuarryMark) >= 0, "the marker's own hit does not spend it");
+            ally.Spell = SpellId.None; // the bot's drawn spell could be Fury (+20 % on heroes), which is not what this checks
             hp0 = e.Hp; m.DealDamage(ally, e, 10, DmgKind.Special);
             Check(Math.Abs(hp0 - e.Hp - 12) < 1e-3f && e.Find(St.QuarryMark) < 0, $"another ally's hit does +20 % and spends the mark ({hp0 - e.Hp:0.0})");
             a.ItemCount = 0; e.Hp = e.MaxHp;

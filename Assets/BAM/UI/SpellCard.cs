@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace BAM.UI
 {
     // The BATTLE SPELL card on the hero page (old MenuSpell.cs SpellPicker): BATTLE SPELL in small dim letters, one chip per
-    // spell (ten since 2026-11-18, two rows of five: SpellDefs.All) with the spell's glyph in its colour and its name, the chosen one mint with a mint edge,
+    // spell (nine since 2026-11-19, rows of five: SpellDefs.All) with the spell's glyph in its colour and its name, the chosen one mint with a mint edge,
     // and the chosen spell's text under them. The pick counts for every hero (BamSettings.Spell).
     public static partial class Screens
     {

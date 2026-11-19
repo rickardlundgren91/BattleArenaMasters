@@ -10,7 +10,7 @@ namespace BAM.Sim
         {
             float x = 7.5f, y = 20;
             Check(ItemS.OfferLevels[0] == 5 && ItemS.OfferLevels[1] == 10, "items are offered at levels 5 and 10");
-            for (int k = 12; k <= 20; k++) Check(ItemCatalog.Get((ItemId)k) != null, $"item {(ItemId)k} is in the catalog");
+            for (int k = 12; k <= 20; k++) Check((ItemCatalog.Get((ItemId)k) != null) == ((ItemId)k != ItemId.Keen), $"item {(ItemId)k} is in the catalog (Keen Edge removed 2026-11-19)");
 
             Match M(out Unit p, out Unit fo)
             {
@@ -92,13 +92,11 @@ namespace BAM.Sim
                 Check(m.DealDamage(fo, p, 100, DmgKind.Special) == 0 && m.AddStatus(p, St.Stun, 1, 0, 0, fo) < 0, "Divine Protection: no damage, no stun");
                 Check(!m.UseItem(p, 0), "Divine Protection: not again on cooldown");
             }
-            // Keen Edge
+            // Keen Edge: removed 2026-11-19, never offered
             {
-                var m = M(out var p, out var fo);
-                Give(p, ItemId.Keen);
-                int crits = 0, n = 600;
-                for (int i = 0; i < n; i++) if (m.KeenMult(p, fo) > 1) crits++;
-                Check(Math.Abs(crits / (float)n - ItemS.KeenChance) < 0.06f, $"Keen Edge: about 35 % crits ({crits * 100f / n:0} %)");
+                var m = M(out var p, out var fo); bool seen = false;
+                for (int i = 0; i < 300; i++) { p.ItemCount = 0; p.OfferCount = 0; m.RollOffer(p); for (int j = 0; j < p.OfferCount; j++) seen |= p.Offer[j] == ItemId.Keen; }
+                Check(!seen, "Keen Edge: never offered");
             }
             // Quick Gloves
             {

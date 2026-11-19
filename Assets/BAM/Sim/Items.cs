@@ -4,7 +4,7 @@ namespace BAM.Sim
 {
     /// <summary>The match items (Rickard 2026-11-11, thread "Lägg in sex items i BAM"): Simon's Items V2 from the old game
     /// (Speltest SimItemsV2.cs, XYZ main cb45566), the six Rickard kept. Sole Target Sigil and Siege Banner are left out.</summary>
-    /// 1 was Resonance Core, removed from the game 2026-11-13 (Rickard: "inte rätt item för spelet. ta bort"); the number stays free
+    /// 1 was Resonance Core, removed from the game 2026-11-13 (Rickard: "inte rätt item för spelet. ta bort"); the number stays free; 19 Keen Edge likewise 2026-11-19 ("ta bort crit item också")
     /// so the other items keep their ids on the wire and in match traces.
     public enum ItemId : byte { None = 0, Mark = 2, Fang = 3, Thread = 4, Rally = 5, Charm = 6, Lifesteal = 7, MinionDmg = 8, TowerDmg = 9, HeroDmg = 10, Boots = 11,
         // the nine of 2026-11-18 (Rickard, his card: "Alla som items"; ItemS below)
@@ -145,8 +145,7 @@ namespace BAM.Sim
                 Text = $"You take {P(ItemS.PlateCut)} less damage from everything" },
             new Info { Id = ItemId.Divine, Short = $"TAP: invincible for {ItemS.DivineTime}s", Name = "Divine Protection", Rarity = 2, Icon = "item_divine",
                 Text = $"Tap its icon: no damage and no stuns for {ItemS.DivineTime}s, but you move {P(-ItemS.DivineSlow)} slower (cd {ItemS.DivineCd}s)" },
-            new Info { Id = ItemId.Keen, Short = $"{P(ItemS.KeenChance)} chance to crit", Name = "Keen Edge", Rarity = 1, Icon = "item_keen",
-                Text = $"Your attacks have a {P(ItemS.KeenChance)} chance to deal {ItemS.KeenMult}x damage" },
+            null, // 19: Keen Edge (crit), removed 2026-11-19 (Rickard: "ta bort crit item också")
             new Info { Id = ItemId.Gloves, Short = $"+{P(ItemS.GlovesHaste)} attack speed", Name = "Quick Gloves", Rarity = 1, Icon = "item_gloves",
                 Text = $"+{P(ItemS.GlovesHaste)} attack speed, all match long" },
         };

@@ -40,9 +40,10 @@ namespace BAM.Sim
         /// <summary>V of the Invulnerable status Immune gives (the respawn's has 0): it also makes the hero CC immune.</summary>
         public const float ImmuneTag = -8f;
 
-        /// <summary>Every spell in the picker's order.</summary>
+        /// <summary>Every spell in the picker's order. First Aid is out of the game (Rickard 2026-11-19: "ta bort first aid saken helt
+        /// den skillen ska inte va med"); SpellId.FirstAid stays as a number, and a seat or save that still holds it plays Blink.</summary>
         public static readonly SpellId[] All = { SpellId.Blink, SpellId.Recall, SpellId.Shield, SpellId.Haste, SpellId.Sprint,
-            SpellId.FirstAid, SpellId.Immune, SpellId.Revive, SpellId.Fury, SpellId.Bladearmor };
+            SpellId.Immune, SpellId.Revive, SpellId.Fury, SpellId.Bladearmor };
         /// <summary>A spell with no button press: Revive and Fury work by themselves (the HUD button only shows them).</summary>
         public static bool Passive(SpellId s) => s == SpellId.Revive || s == SpellId.Fury;
 
@@ -54,7 +55,7 @@ namespace BAM.Sim
             : s == SpellId.Shield ? "A shield of " + (int)(ShieldPct * 100) + "% max health for " + (int)ShieldDur + " s. Cooldown " + (int)ShieldCd + " s"
             : s == SpellId.Haste ? "+" + (int)(HastePct * 100) + "% attack speed for " + (int)HasteDur + " s. Cooldown " + (int)HasteCd + " s"
             : s == SpellId.Sprint ? "+" + (int)(SprintPct * 100) + "% movement speed for " + (int)SprintDur + " s. Cooldown " + (int)SprintCd + " s"
-            : s == SpellId.FirstAid ? "Drop a first aid kit. You or an ally who picks it up heals " + I(FirstAidHeal * 100) + "% max health over " + I(FirstAidTime) + " s. Cooldown " + I(FirstAidCd) + " s"
+            : s == SpellId.FirstAid ? "Heal " + I(FirstAidHeal * 100) + "% max health over " + I(FirstAidTime) + " s. Cooldown " + I(FirstAidCd) + " s"
             : s == SpellId.Immune ? "Take no damage and no stuns for " + I(ImmuneDur) + " s, but move " + I(-ImmuneSlow * 100) + "% slower. Cooldown " + I(ImmuneCd) + " s"
             : s == SpellId.Revive ? "When you die, stand up where you fell with " + I(RevivePct * 100) + "% health. Works by itself. Cooldown " + I(ReviveCd) + " s"
             : s == SpellId.Fury ? "+" + I(FuryPct * 100) + "% damage to heroes, all match long."
@@ -96,7 +97,7 @@ namespace BAM.Sim
         /// aldrig välja teleport som skill"). Bot analysis 2026-10-30: a bot with Recall has no way out of a lost fight and died about
         /// twice as often as one with Blink.</summary>
         static readonly SpellId[] BotSpells = { SpellId.Blink, SpellId.Shield, SpellId.Haste, SpellId.Sprint,
-            SpellId.FirstAid, SpellId.Immune, SpellId.Revive, SpellId.Fury, SpellId.Bladearmor };
+            SpellId.Immune, SpellId.Revive, SpellId.Fury, SpellId.Bladearmor };
 
         // who gets which spell at match start: the player's pick, a seeded draw for bots
         void AssignSpells()
@@ -106,7 +107,7 @@ namespace BAM.Sim
             {
                 var h = Heroes[i];
                 var pick = Config.Seats != null && h.Seat >= 0 ? Config.Seats[h.Seat].Spell : h == Player ? Config.PlayerSpell : SpellId.None;
-                h.Spell = h.Seat >= 0 || h == Player ? (pick != SpellId.None ? pick : SpellId.Blink) : BotSpells[Rng.Int(BotSpells.Length)];
+                h.Spell = h.Seat >= 0 || h == Player ? (pick != SpellId.None && pick != SpellId.FirstAid ? pick : SpellId.Blink) : BotSpells[Rng.Int(BotSpells.Length)];
                 h.SpellAt = 0; h.SpellChanEnd = -1;
             }
         }
@@ -150,9 +151,10 @@ namespace BAM.Sim
                     break;
                 case SpellId.FirstAid:
                 {
-                    for (int i = 0; i < Projs.Count; i++) if (Projs[i].Mode == ProjMode.FirstAidKit && Projs[i].Src == h) Projs[i].Done = true; // one kit each
-                    var kit = NewProj(ProjMode.FirstAidKit, h, h.X, h.Y);
-                    kit.Radius = SpellDefs.FirstAidR; kit.Dur = SpellDefs.FirstAidLife;
+                    // Rickard 2026-11-19: no kit on the ground any more ("plötsligt spawnar saker på marken ... så ska det inte va"):
+                    // the caster heals at once, 40 % over 7 s (FirstAidUpdate and ProjMode.FirstAidKit stay for old replays)
+                    h.RemoveAll(St.HealOverTime); // a second one starts over, it does not stack
+                    AddStatus(h, St.HealOverTime, SpellDefs.FirstAidTime + 0.05f, h.MaxHp * SpellDefs.FirstAidHeal / SpellDefs.FirstAidTime, 0, h);
                     break;
                 }
                 case SpellId.Immune:
@@ -226,7 +228,7 @@ namespace BAM.Sim
                 case SpellId.Recall: if (h.Hp < h.MaxHp * 0.25f && !HurtRecently(h) && SimMath.Dist(h, h.SpawnX, h.SpawnY) > 8f) CastSpell(h); break;
                 case SpellId.Blink: if (h.Hp < h.MaxHp * 0.35f && HurtRecently(h)) CastSpell(h, SimMath.Atan2(h.SpawnY - h.Y, h.SpawnX - h.X)); break; // flee towards the base
                 case SpellId.Sprint: if (h.Hp < h.MaxHp * 0.4f && HurtRecently(h)) CastSpell(h); break; // run away (the bot walks home when this low)
-                case SpellId.FirstAid: if (h.Hp < h.MaxHp * 0.55f) CastSpell(h); break; // drops it at its feet and takes it a second later
+                case SpellId.FirstAid: if (h.Hp < h.MaxHp * 0.55f) CastSpell(h); break; // heals itself
                 case SpellId.Immune: if (h.Hp < h.MaxHp * 0.3f && HurtRecently(h)) CastSpell(h); break;
                 case SpellId.Bladearmor: if (HurtRecently(h) && EnemyHeroNear(h, 3.5f)) CastSpell(h); break;
             }
