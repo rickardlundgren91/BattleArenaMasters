@@ -313,6 +313,11 @@ namespace BAM.Online
         public int gold, gm, gw, gk, gh, gDone, gLv; // gLv: the level today's goals started at (picks the hero goal's hero)
         public long gDay = -1;
         public List<string> skins = new List<string>();
+        // premium skins (Rickard 2026-11-19, Gold.cs): the heroes whose premium skin was kept for good, the keep-picks not used yet
+        // (one per season finished in the top 10), and the player's Top 100 place right now when it is 1-10 in this season (0 =
+        // not in the top 10; sent by the server with every answer, never saved there)
+        public List<string> prem = new List<string>();
+        public int picks, top;
 
         public HeroTotals Hero(string id)
         {
@@ -337,6 +342,7 @@ namespace BAM.Online
             c.heroes = new List<HeroTotals>(heroes.Count);
             for (int i = 0; i < heroes.Count; i++) c.heroes.Add(new HeroTotals { id = heroes[i].id, m = heroes[i].m, w = heroes[i].w });
             c.skins = skins != null ? new List<string>(skins) : new List<string>();
+            c.prem = prem != null ? new List<string>(prem) : new List<string>();
             return c;
         }
     }

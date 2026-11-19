@@ -9,8 +9,9 @@ namespace BAM.UI
 {
     // Gold on Home (Rickard 2026-11-15 "Ja, bygg nu", numbers "okej"; BAM.Online Gold.cs counts it): a pill beside the skin
     // dropdown, "GOLD 1250 · DAILY 1/3 ▾", whose tap opens the day's first win and three goals with their progress and when new
-    // ones come. The skin list shows "1500 GOLD" on a gold skin not bought yet (two taps buy it) and "COMING SOON" on a skin that
-    // will be sold for money. Offline builds have no gold hooks: no pill, every skin open, as before.
+    // ones come. The skin list shows "1500 GOLD" on a gold skin not bought yet (two taps buy it) and "TOP 10 ONLY" on a premium
+    // skin (Rickard 2026-11-19: worn only while in the top 10, then on every hero; "TOP 10" on one worn that way). After a season
+    // finished in the top 10 a premium skin shows "KEEP 3000 GOLD": two taps (on the worn one) keep it for good. Offline builds have no gold hooks: no pill, every skin open, as before.
     public static partial class Screens
     {
         static GameObject homeGoldPill;
@@ -27,8 +28,11 @@ namespace BAM.UI
         {
             string name = (skin == cur ? "✓  " : "    ") + HeroSkins.Name(id, skin).ToUpperInvariant();
             if (note != null) return name + "   <color=#" + GoldHex + ">" + note + "</color>";
-            if (price < 0) return name + "   <color=#8a90b8>COMING SOON</color>";
-            if (price > 0) return name + "   <color=#" + GoldHex + ">" + price + " GOLD</color>";
+            if (price < 0) return name + "   <color=#8a90b8>TOP 10 ONLY</color>";
+            if (price > 0) return name + "   <color=#" + GoldHex + ">" + (OnlineHooks.SkinKeep != null && OnlineHooks.SkinKeep(id, skin) > 0 ? "KEEP " : "") + price + " GOLD</color>";
+            int keep = OnlineHooks.SkinKeep != null ? OnlineHooks.SkinKeep(id, skin) : 0;
+            if (keep > 0) return name + "   <color=#" + GoldHex + ">KEEP " + keep + " GOLD</color>";
+            if (OnlineHooks.SkinTop10 != null && OnlineHooks.SkinTop10(id, skin)) return name + "   <color=#7fe3ff>TOP 10</color>";
             return name;
         }
 
@@ -41,11 +45,12 @@ namespace BAM.UI
             int have = OnlineHooks.Gold != null ? OnlineHooks.Gold() : 0;
             if (have < price) { row.text = SkinRowText(id, skin, cur, price, "NEED " + (price - have) + " MORE GOLD"); return; }
             int key = (int)id * 100 + skin;
-            if (skinBuyAsk != key) { skinBuyAsk = key; row.text = SkinRowText(id, skin, cur, price, "TAP AGAIN: BUY " + price + " GOLD"); return; }
+            bool keep = OnlineHooks.SkinKeep != null && OnlineHooks.SkinKeep(id, skin) > 0;
+            if (skinBuyAsk != key) { skinBuyAsk = key; row.text = SkinRowText(id, skin, cur, price, "TAP AGAIN: " + (keep ? "KEEP FOR " : "BUY ") + price + " GOLD"); return; }
             skinBuyAsk = -1;
             skinBuying = true;
             row.text = SkinRowText(id, skin, cur, price, "BUYING...");
-            OnlineHooks.BuySkin(id, why =>
+            OnlineHooks.BuySkin(id, skin, why =>
             {
                 skinBuying = false;
                 if (why == null)

@@ -53,7 +53,7 @@ namespace BAM.UI
         {
             var body = NewScreen("Home", false, out mainMenu);
             BuildHomeBackground(body);
-            // a gold skin not bought yet (or one coming soon) is never worn, also in a match (HomeGold.cs); offline every look
+            // a gold skin not bought yet (or a premium one out of the top 10) is never worn, also in a match (HomeGold.cs); offline every look
             HeroSkins.Wearable = (id, skin) => OnlineHooks.SkinPrice == null || OnlineHooks.SkinPrice(id, skin) == 0;
             homeFx = body.gameObject.AddComponent<HomeFx>();
             homeFx.Build(body);
@@ -141,7 +141,9 @@ namespace BAM.UI
                 b.onClick.AddListener(() =>
                 {
                     BamAudio.Play(SfxId.UiTap);
-                    if (price != 0) { SkinBuyTap(id, skin, price, t); return; } // gold skin not bought yet, or coming soon (HomeGold.cs)
+                    if (price != 0) { SkinBuyTap(id, skin, price, t); return; } // gold skin not bought yet, or premium out of the top 10 (HomeGold.cs)
+                    int keep = OnlineHooks.SkinKeep != null ? OnlineHooks.SkinKeep(id, skin) : 0;
+                    if (keep > 0 && skin == HeroSkins.Chosen(id)) { SkinBuyTap(id, skin, keep, t); return; } // worn in the top 10: keep it for good
                     HeroSkins.Choose(id, skin);
                     SkinListOpen(false);
                     RefreshHome(); // the hero on the platform changes into the look at once

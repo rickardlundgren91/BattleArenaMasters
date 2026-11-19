@@ -9,7 +9,7 @@ namespace BAM.Online
     /// <summary>
     /// Gold, the day's first win and the three daily goals (Rickard 2026-11-15 "Ja, bygg nu" on the launch plan, numbers "okej"):
     /// the first win of the day gives 100 gold, each of the day's three goals 50, each new account level 100. A normal match
-    /// gives none, so playing bots all day cannot farm it. Gold buys each hero's first skin (1500, about a week of daily play);
+    /// gives none, so playing bots all day cannot farm it. Gold buys each hero's first skin (1500, about a week of daily play) and keeps a premium skin after a season in the top 10 (3000);
     /// gold is never sold for money and heroes are never bought. The SERVER counts it (ReportMatch.js, the same formulas as
     /// <see cref="Apply"/>) and keeps the gold and the bought skins in the protected "bam-progress" item; BuySkin.js spends it.
     /// The day is the UTC day (01:00 Swedish winter time), as the first win's XP already counts it.
@@ -26,10 +26,14 @@ namespace BAM.Online
         public static int ForLevel(int level) => level <= 1 ? 0 : IsMilestone(level) ? MilestoneGold : LevelUp;
         /// <summary>The gold for every level from `from` (not counted) up to `to`.</summary>
         public static int ForLevels(int from, int to) { int g = 0; for (int l = from + 1; l <= to; l++) g += ForLevel(l); return g; }
-        /// <summary>The skin gold buys: the hero's first skin (HeroSkins 1). The others wait for real-money purchases.</summary>
+        /// <summary>The skin gold buys: the hero's first skin (HeroSkins 1).</summary>
         public const int GoldSkin = 1;
-        /// <summary>Skins after the gold one show "COMING SOON" and cannot be worn until purchases exist.</summary>
-        public static bool MoneySkinsLocked = true;
+        /// <summary>Premium skins (HeroSkins 2 and up; Rickard 2026-11-19): worn only while the player is in the Top 100's first TopN
+        /// places this season, and then on every hero; out of the top 10, they are gone. A season finished in the top 10 gives one
+        /// keep-pick: one premium skin of the player's choice kept for good, for KeepPrice gold (two gold skins: about two weeks of
+        /// daily play, which a top-10 player earns easily). The server decides the place and the picks (ReportMatch/GetMe/BuySkin.js,
+        /// EndSeason.js ends a season).</summary>
+        public const int PremiumSkin = 2, TopN = 10, KeepPrice = 3000;
 
         public enum GoalKind { Play = 0, Win = 1, Kills = 2, Hero = 3 }
         static readonly int[] Target = { 3, 2, 10, 1 };
@@ -131,29 +135,50 @@ namespace BAM.Online
             return s != null && s.Contains(hero);
         }
 
-        /// <summary>0 = the player may wear it; SkinPrice = buy it for gold first; -1 = coming soon (sold for money later).</summary>
+        /// <summary>The hero's premium skin is the player's for good (kept with a season's keep-pick).</summary>
+        public static bool KeepsPremium(string hero)
+        {
+            var p = Progress.Shown.prem;
+            return p != null && p.Contains(hero);
+        }
+
+        /// <summary>The player is in this season's top 10 now (as the server last said), so every premium skin may be worn.</summary>
+        public static bool InTop10 => Progress.Shown.top > 0 && Progress.Shown.top <= TopN;
+
+        /// <summary>0 = the player may wear it; &gt; 0 = buy it for that much gold first (a gold skin, or a premium skin out of the top
+        /// 10 with a keep-pick left); -1 = premium: top 10 only.</summary>
         public static int PriceOf(string hero, int skin)
         {
             if (skin <= 0) return 0;
-            if (skin == GoldSkin) return OwnsGoldSkin(hero) ? 0 : SkinPrice;
-            return MoneySkinsLocked ? -1 : 0;
+            if (skin < PremiumSkin) return OwnsGoldSkin(hero) ? 0 : SkinPrice;
+            if (KeepsPremium(hero) || InTop10) return 0;
+            return Progress.Shown.picks > 0 ? KeepPrice : -1;
         }
+
+        /// <summary>A premium skin the player may keep for good now (a keep-pick left, this hero's not kept yet): its price, else 0.</summary>
+        public static int KeepPriceOf(string hero, int skin) => skin >= PremiumSkin && Progress.Shown.picks > 0 && !KeepsPremium(hero) ? KeepPrice : 0;
+
+        /// <summary>A premium skin worn only thanks to the top 10 (gone when the player drops out).</summary>
+        public static bool OnlyTop10(string hero, int skin) => skin >= PremiumSkin && !KeepsPremium(hero) && InTop10;
 
         static bool buying;
 
-        /// <summary>Buys the hero's gold skin on the server. Answers null when bought, else why not (shown to the player).</summary>
-        public static async Task<string> BuySkin(string hero)
+        /// <summary>Buys the hero's gold skin, or keeps its premium skin for good, on the server. Answers null when done, else why not
+        /// (shown to the player).</summary>
+        public static async Task<string> BuySkin(string hero, int skin)
         {
             if (buying) return "Wait a moment";
-            if (OwnsGoldSkin(hero)) return null;
+            bool premium = skin >= PremiumSkin;
+            if (premium ? KeepsPremium(hero) : OwnsGoldSkin(hero)) return null;
+            if (premium && Progress.Shown.picks <= 0) return "Finish a season in the top 10";
             if (Account.State != Account.Status.Ready) return "Go online to buy";
             buying = true;
             try
             {
                 await Server.SendPending(); // the gold from matches not sent yet must reach the server first
                 if (Progress.PendingCount > 0) return "Could not reach the server, try again";
-                if (Progress.Shown.gold < SkinPrice) return "Not enough gold";
-                var a = await Server.BuySkin(hero);
+                if (Progress.Shown.gold < (premium ? KeepPrice : SkinPrice)) return "Not enough gold";
+                var a = await Server.BuySkin(hero, premium ? PremiumSkin : GoldSkin);
                 if (a.totals != null) Progress.ServerAnswered(a.totals, null);
                 return a.ok ? null : string.IsNullOrEmpty(a.reason) ? "Not bought" : a.reason;
             }

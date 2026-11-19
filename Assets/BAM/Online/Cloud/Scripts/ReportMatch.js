@@ -10,7 +10,7 @@
 // Easy and Normal never take Rating away, and stop giving any at 300 and 700 (Rift and Vanguard reached), so grinding easy bots
 // cannot reach the top. Hard stops giving Rating at 4500 too (Rickard 2026-11-17: "Efter 4,5k rating [gäller] bara ultras
 // bottar"): above it only Ultra bots and real players raise it; a loss against Hard still costs.
-// XP and level count every match as before. Rating never goes under 0. Season 2 started everyone's Rating again from 0.
+// XP and level count every match as before. Rating never goes under 0. Each season (EndSeason.js) starts everyone's Rating again from 0.
 // A match against real players ("vs", the online match's seed, and the player's team) gives the player Rating only once a
 // player of the OTHER team has reported the same match with the opposite result: each side writes what it reported in private
 // custom data "bam-pvp" (one key per match and team, so the two sides never overwrite each other), and reads the other side.
@@ -28,7 +28,6 @@ const { LeaderboardsApi } = require("@unity-services/leaderboards-1.1");
 // keep equal to Progress.cs
 const MAX_LEVEL = 30, XP_WIN = 100, XP_LOSS = 60, XP_KILL = 5, XP_FIGHT_MAX = 60, XP_FIRST_WIN = 50;
 const RATING = { Easy: { win: 15, loss: 0, cap: 300 }, Normal: { win: 35, loss: 0, cap: 700 }, Hard: { win: 75, loss: -25, cap: 4500 }, Ultra: { win: 100, loss: -30, cap: 0 }, Players: { win: 150, loss: -50, cap: 0 } };
-const SEASON = 2;
 // MAX_AGE 7 -> 30 days (bug review 2026-11-02 nr 15): the phone counts offline matches at once, and a player offline over a week
 // lost level at the first sync when the server refused the older ones
 const MIN_SECONDS = 45, MAX_SECONDS = 1800, MAX_PER_DAY = 60, MAX_AGE = 30 * 86400, MAX_BATCH = 20, KEEP_IDS = 300;
@@ -100,9 +99,31 @@ function applyGold(t, day, won, kills, hero, firstWin, levelBefore, levelAfter) 
   for (const g of d.goals) if (!(t.gDone & (1 << g)) && have[g] >= GOAL_TARGET[g]) { t.gDone |= 1 << g; t.gold += GOLD_GOAL; }
 }
 
+// Seasons (2026-11-19): the season number lives in the private custom item "bam-season" key "now" ({ s: 3 }), written by
+// EndSeason.js (2 until the first EndSeason); "top<season>" holds the IDs of the players who finished that season in the top 10.
+// A player's first call in a new season starts its Rating again from 0 and gives one keep-pick (Gold.KeepPrice gold buys one
+// premium skin for good, BuySkin.js) for every finished season it ended in the top 10. Keep equal in ReportMatch, GetMe, BuySkin.
+const SEASONS = "bam-season", FIRST_SEASON = 2, TOP_N = 10;
+async function seasonNow(data, projectId) {
+  try { const g = await data.getPrivateCustomItems(projectId, SEASONS, ["now"]); const v = g.data.results.length ? g.data.results[0].value : null; return v && Number.isInteger(v.s) ? v.s : FIRST_SEASON; }
+  catch (e) { return FIRST_SEASON; }
+}
+async function seasonPicks(data, projectId, playerId, from, to) {
+  if (!Number.isInteger(from) || from >= to) return 0;
+  const keys = []; for (let s = Math.max(from, to - 8); s < to; s++) keys.push("top" + s);
+  try { const g = await data.getPrivateCustomItems(projectId, SEASONS, keys); return g.data.results.filter(r => Array.isArray(r.value) && r.value.includes(playerId)).length; }
+  catch (e) { return 0; }
+}
+/// The player's place on the board when it is in the top 10 of this season with some Rating, else 0 (sent, never saved).
+async function topPlace(lb, projectId, playerId, t, season) {
+  if (t.rs !== season || !(t.rating > 0)) return 0;
+  try { const s = await lb.getLeaderboardPlayerScore(projectId, "rating", playerId); const r = s.data.rank + 1; return r <= TOP_N ? r : 0; }
+  catch (e) { return 0; }   // not on the board yet
+}
+
 const xpToNext = l => 100 + 50 * (l - 1);
 function levelOf(xp) { let l = 1; while (l < MAX_LEVEL && xp >= xpToNext(l)) { xp -= xpToNext(l); l++; } return l; }
-const fresh = () => ({ xp: 0, level: 1, rating: 0, rs: SEASON, pend: 0, matches: 0, wins: 0, losses: 0, kills: 0, deaths: 0, streak: 0, bestStreak: 0, seconds: 0, winDay: -1, heroes: [], mk: {}, gold: 0, gm: 0, gw: 0, gk: 0, gh: 0, gDone: 0, gDay: -1, gLv: 0, skins: [] });
+const fresh = season => ({ xp: 0, level: 1, rating: 0, rs: season, pend: 0, matches: 0, wins: 0, losses: 0, kills: 0, deaths: 0, streak: 0, bestStreak: 0, seconds: 0, winDay: -1, heroes: [], mk: {}, gold: 0, gm: 0, gw: 0, gk: 0, gh: 0, gDone: 0, gDay: -1, gLv: 0, skins: [], prem: [], picks: 0 });
 const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 
 /// The Rating one match changes: a win up to the cap of its kind (0 = none), a loss never under 0.
@@ -117,13 +138,15 @@ module.exports = async ({ params, context, logger }) => {
   const data = new DataApi(context), lb = new LeaderboardsApi(context);
   const got = await data.getProtectedItems(projectId, playerId, ["bam-progress", "bam-matches", "bam-name"]);
   const item = k => (got.data.results.find(r => r.key === k) || {}).value;
-  const old = item("bam-progress"), t = Object.assign(fresh(), old || {});
+  const season = await seasonNow(data, projectId);
+  const old = item("bam-progress"), t = Object.assign(fresh(season), old || {});
   const lock = (got.data.results.find(r => r.key === "bam-progress") || {}).writeLock;
   const seen = Object.assign({ ids: [], lastAt: 0, days: {}, wait: [] }, item("bam-matches") || {});
   const name = (item("bam-name") || {}).name || "";
   const now = Math.floor(Date.now() / 1000), today = Math.floor(now / 86400);
   let changed = false;
-  if (old && old.rs !== SEASON) { t.rating = 0; t.rs = SEASON; t.pend = 0; seen.wait = []; changed = true; }
+  if (old && old.rs !== season) { t.picks = (t.picks || 0) + await seasonPicks(data, projectId, playerId, old.rs, season); t.rating = 0; t.rs = season; t.pend = 0; seen.wait = []; changed = true; }
+  delete t.top;   // never saved: the place now is sent with the answer
   if (old && old.gold === undefined) { t.gold = goldForLevels(1, levelOf(t.xp)); changed = true; }   // levels from before gold
 
   // the other team's entry: its players may date the match a day either side of ours (midnight, clocks), so all three are read
@@ -249,6 +272,7 @@ module.exports = async ({ params, context, logger }) => {
     await data.setProtectedItemBatch(projectId, playerId, { data: [Object.assign({ key: "bam-progress", value: t }, lock ? { writeLock: lock } : {}), { key: "bam-matches", value: seen }] });
     await lb.addLeaderboardPlayerScore(projectId, "rating", playerId, { score: t.rating, metadata: { n: name, l: t.level } });
   }
+  t.top = await topPlace(lb, projectId, playerId, t, season);   // premium skins: worn only in the top 10 (Gold.cs)
   return { totals: t, done: done, waiting: seen.wait.length };
 };
 

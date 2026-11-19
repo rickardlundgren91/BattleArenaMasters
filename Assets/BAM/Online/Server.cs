@@ -162,10 +162,40 @@ namespace BAM.Online
 
         internal static Task DeleteMe() => Call<OkAnswer>("DeleteMe", null, "ok");
 
-        /// <summary>Buys the hero's gold skin (BuySkin.js): the server takes Gold.SkinPrice from the gold it keeps.</summary>
-        internal static Task<BuyAnswer> BuySkin(string hero) => Call<BuyAnswer>("BuySkin", new Dictionary<string, object> { { "hero", hero } }, "ok");
+        /// <summary>Buys the hero's gold skin (skin 1, Gold.SkinPrice) or keeps its premium skin for good (skin 2, Gold.KeepPrice, one
+        /// keep-pick from a season finished in the top 10) on the server (BuySkin.js), which takes the gold it keeps.</summary>
+        internal static Task<BuyAnswer> BuySkin(string hero, int skin) => Call<BuyAnswer>("BuySkin", new Dictionary<string, object> { { "hero", hero }, { "skin", skin } }, "ok");
 
 #if UNITY_EDITOR
+        // BAM > Online > End season: ends the Rating season (EndSeason.js, premium skins 2026-11-19). Needs Play mode (signed in) and
+        // this editor's player ID in "bam-admins" (as the traces). First it shows the season and its top 10 now; OK saves them (each
+        // gets a keep-pick) and starts the next season. Then reset the leaderboard "rating" on the Unity Dashboard.
+        [Serializable, Preserve] class SeasonRow { public string playerId, name; public int score; }
+        [Serializable, Preserve] class SeasonAnswer { public bool ok; public string you; public int season; public List<SeasonRow> top; }
+
+        [UnityEditor.MenuItem("BAM/Online/End season (in Play)")]
+        static async void EndSeason()
+        {
+            if (!Application.isPlaying || Account.State != Account.Status.Ready) { Debug.LogWarning("[BAM.Online] end season: enter Play and wait for the sign-in first"); return; }
+            try
+            {
+                var a = await Call<SeasonAnswer>("EndSeason", null, "season");
+                if (a.season == 0) { Debug.LogWarning("[BAM.Online] end season: this editor may not. Add \"" + a.you + "\" to Cloud Save > Custom data > bam-admins > ids on the Unity Dashboard"); return; }
+                var who = new System.Text.StringBuilder();
+                int n = 0;
+                foreach (var r in a.top ?? new List<SeasonRow>()) who.Append(++n).Append(". ").Append(r.name).Append("  ").Append(r.score).Append('\n');
+                if (n == 0) who.Append("(nobody has Rating yet)\n");
+                if (!UnityEditor.EditorUtility.DisplayDialog("End season " + a.season + "?",
+                    "Top 10 now (each gets one premium skin to keep for " + Gold.KeepPrice + " gold):\n\n" + who +
+                    "\nSeason " + (a.season + 1) + " starts: everyone's Rating goes back to 0 at their next match.\nAfterwards reset the leaderboard \"rating\" on the Unity Dashboard.",
+                    "End season " + a.season, "Cancel")) return;
+                var b = await Call<SeasonAnswer>("EndSeason", new Dictionary<string, object> { { "confirm", a.season } }, "season");
+                if (b.ok) Debug.Log("[BAM.Online] season " + b.season + " ended, " + n + " in its top 10. Season " + (b.season + 1) + " runs now: reset the leaderboard \"rating\" on the Unity Dashboard.");
+                else Debug.LogWarning("[BAM.Online] end season: not ended (season " + b.season + " runs; someone else ended it meanwhile?)");
+            }
+            catch (Exception e) { Debug.LogWarning("[BAM.Online] end season: " + e.Message); }
+        }
+
         // BAM > Bots > Download match traces: the bot lab's copy of every trace on the server (ExportTraces.js), as .bmt files in
         // Downloads/BAM-Traces (a file already there is skipped). Needs Play mode (signed in) and this editor's player ID in the
         // Dashboard's Cloud Save custom item "bam-admins" key "ids"; refused, the Console says which ID to add.

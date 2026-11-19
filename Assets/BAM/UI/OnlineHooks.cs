@@ -44,10 +44,14 @@ namespace BAM.UI
         public static Func<int> FirstWinGold;
         /// <summary>Today's three goals for Home's DAILY list.</summary>
         public static Func<List<DailyGoal>> DailyGoals;
-        /// <summary>What a skin costs to wear (HeroSkins number): 0 = owned, &gt; 0 = gold to buy it first, -1 = coming soon.</summary>
+        /// <summary>What a skin costs to wear (HeroSkins number): 0 = may be worn, &gt; 0 = gold to buy it first, -1 = premium, top 10 only.</summary>
         public static Func<BAM.Sim.HeroId, int, int> SkinPrice;
-        /// <summary>Buys the hero's gold skin; the callback gets null when bought, else why not.</summary>
-        public static Action<BAM.Sim.HeroId, Action<string>> BuySkin;
+        /// <summary>A premium skin the player may keep for good now (a season finished in the top 10): its gold price, else 0.</summary>
+        public static Func<BAM.Sim.HeroId, int, int> SkinKeep;
+        /// <summary>A premium skin worn only while the player is in the top 10.</summary>
+        public static Func<BAM.Sim.HeroId, int, bool> SkinTop10;
+        /// <summary>Buys the hero's gold skin or keeps its premium skin (HeroSkins number); the callback gets null when done, else why not.</summary>
+        public static Action<BAM.Sim.HeroId, int, Action<string>> BuySkin;
 
         /// <summary>The party on Home (Speltest MenuHome3.HubTeam3): null when this phone is not in a room with friends.</summary>
         public static Func<PartyView> Party;

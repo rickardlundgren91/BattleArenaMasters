@@ -49,7 +49,9 @@ namespace BAM.Online.UI
                 return list;
             };
             OnlineHooks.SkinPrice = (id, skin) => Gold.PriceOf(id.ToString(), skin);
-            OnlineHooks.BuySkin = async (id, done) => { string why = await Gold.BuySkin(id.ToString()); done?.Invoke(why); };
+            OnlineHooks.SkinKeep = (id, skin) => Gold.KeepPriceOf(id.ToString(), skin);
+            OnlineHooks.SkinTop10 = (id, skin) => Gold.OnlyTop10(id.ToString(), skin);
+            OnlineHooks.BuySkin = async (id, skin, done) => { string why = await Gold.BuySkin(id.ToString(), skin); done?.Invoke(why); };
             OnlineHooks.Party = OnlineMenu.Party;
             OnlineHooks.PartyPlay = OnlineMenu.PartyPlay;
             OnlineHooks.LeaveParty = OnlineMenu.LeaveParty;
