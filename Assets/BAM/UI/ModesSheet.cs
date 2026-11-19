@@ -178,7 +178,7 @@ namespace BAM.UI
             Stretched(mapLabel.rectTransform, 0, 1.8f * Cw - 2.5f * Cw, 0, 5 * Cw);
             var msegs = UiKit.NewRect("Pick", modeMapRow);
             Stretched(msegs, 0, 4.5f * Cw, 0, 12 * Cw);
-            modeMap = new HubChoice(msegs, new[] { "RUNES", "GROVE", "PLATEAU" }, i =>
+            modeMap = new HubChoice(msegs, BamSettings.PlateauOpen ? new[] { "RUNES", "GROVE", "PLATEAU" } : new[] { "RUNES", "GROVE" }, i => // PLATEAU hidden until finished (Rickard 2026-11-19)
             {
                 var map = i == 2 ? MapId.Plateau : i == 1 ? MapId.Grove : MapId.Runes; // PLATEAU: the third map (Rickard 2026-11-18)
                 if (TestParty != null) TestParty.Map = map;

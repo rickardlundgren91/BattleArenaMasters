@@ -141,9 +141,15 @@ namespace BAM.Core
 
         /// <summary>The map CLASSIC plays (MAP under BOT DIFFICULTY): Runes until the player picks Grove (Rickard 2026-11-13:
         /// "lägg in grove som en valbar match precis som den vanliga kartan").</summary>
+        /// <summary>Plateau (the third map) is not in the map pick: not finished (Rickard 2026-11-19: "ta bort 3e mapen nu innan vi gör
+        /// detta till en update för den e inte klar", "plateau"). Its files stay; true puts it back in MODES.</summary>
+        public const bool PlateauOpen = false;
+        /// <summary>The highest map the pick offers now.</summary>
+        public static BAM.Sim.MapId MaxMap => PlateauOpen ? BAM.Sim.MapId.Plateau : BAM.Sim.MapId.Grove;
+
         public static BAM.Sim.MapId LastMap
         {
-            get { Load(); return (BAM.Sim.MapId)lastMap; }
+            get { Load(); return (BAM.Sim.MapId)Mathf.Min(lastMap, (int)MaxMap); }
             set { Load(); if (lastMap == (int)value) return; lastMap = (int)value; PlayerPrefs.SetInt(Key + "map", lastMap); Commit(); }
         }
 
@@ -239,7 +245,7 @@ namespace BAM.Core
             hardOpen = PlayerPrefs.GetInt(Key + "hardopen", 0) == 1;
             // Grove is CLASSIC's map until a player picks RUNES, so every tester tries it (Rickard 2026-11-13: "gör grove till standard")
             teamSize = PlayerPrefs.GetInt(Key + "teamsize", 3) == 2 ? 2 : 3;
-            lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Grove), (int)BAM.Sim.MapId.Runes, (int)BAM.Sim.MapId.Plateau);
+            lastMap = Mathf.Clamp(PlayerPrefs.GetInt(Key + "map", (int)BAM.Sim.MapId.Grove), (int)BAM.Sim.MapId.Runes, (int)MaxMap); // a saved Plateau plays Grove while Plateau is hidden
             spell = Mathf.Clamp(PlayerPrefs.GetInt(Key + "spell", (int)BAM.Sim.SpellId.Blink), (int)BAM.Sim.SpellId.Blink, (int)BAM.Sim.SpellId.Bladearmor);
         }
 

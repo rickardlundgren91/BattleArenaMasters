@@ -372,7 +372,7 @@ namespace BAM.Online.Mp
 
         /// <summary>Host: the arena for the next match.</summary>
         /// <summary>A map id off the wire: Runes, Grove or Plateau; anything else plays Runes.</summary>
-        static MapId MapOf(int b) => b == (int)MapId.Grove ? MapId.Grove : b == (int)MapId.Plateau ? MapId.Plateau : MapId.Runes;
+        static MapId MapOf(int b) => b == (int)MapId.Grove ? MapId.Grove : b == (int)MapId.Plateau && BamSettings.PlateauOpen ? MapId.Plateau : MapId.Runes; // Plateau hidden: Runes (Rickard 2026-11-19)
 
         public static void SetMap(MapId map)
         {
