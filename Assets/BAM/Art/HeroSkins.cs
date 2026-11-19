@@ -26,7 +26,7 @@ namespace BAM.Art
         public static int Count(HeroId hero)
         {
             var a = Art(hero);
-            return a != null && a.V2 ? 1 + a.SkinCount : 1;
+            return a != null ? 1 + a.SkinCount : 1; // an old body keeps its remake's skins (Kugg, 2026-11-19)
         }
 
         public static string Name(HeroId hero, int skin)
@@ -77,6 +77,7 @@ namespace BAM.Art
             var a = Object.Instantiate(art);
             a.name = art.name + " skin " + skin;
             a.Model = art.SkinModels[skin - 1];
+            a.V2 = true; // every skin body is a V2 remake, also under an old plain body (Kugg 2026-11-19): V2 parts, legs, size
             // no picture of its own: whatever the skin's FBX material has, never the plain body's picture on the skin's UVs
             a.Texture = art.SkinTextures != null && skin - 1 < art.SkinTextures.Length ? art.SkinTextures[skin - 1] : null;
             return a;

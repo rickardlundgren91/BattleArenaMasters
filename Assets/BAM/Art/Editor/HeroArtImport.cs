@@ -302,6 +302,9 @@ namespace BAM.Art.Editor
         static bool UsesV2(Spec s) => s.Out == null && V2On(s.Hero) && File.Exists(V2Body(s));
         /// <summary>The body file the hero uses now: its V2 remake, or the old model.</summary>
         static string ModelPath(Spec s) => UsesV2(s) ? V2Body(s) : ModelsDir + ModelOf(s) + ".fbx";
+        // the V2 skins stay when the hero is switched to its old body (Rickard 2026-11-19 on Kugg: "bara skinsen så vi slipper göra
+        // om", "andra kugg är sämst": the old stone golem as Classic, the remake's Jade and Molten as its skins)
+        static bool KeepsSkins(Spec s) => s.Out == null && File.Exists(V2Body(s));
         static string TexPath(Spec s) => UsesV2(s) ? ModelsV2Dir + s.Hero + "/" + s.Hero + "_Tex.jpg" : ModelsDir + ModelOf(s) + "_Tex.jpg";
 
         // ---- the skins (ModelsV2/<Hero>/Skins/<Skin>/: a body FBX and its <Body>_Tex.jpg; Parts/ under it are not used yet) ----
@@ -364,7 +367,7 @@ namespace BAM.Art.Editor
 
         static void FillSkins(HeroArt art, Spec s)
         {
-            SkinFiles[] files = art.V2 ? SkinsOf(s) : new SkinFiles[0];
+            SkinFiles[] files = art.V2 || KeepsSkins(s) ? SkinsOf(s) : new SkinFiles[0];
             // the skins' weapons and worn parts into Props (SkinGear reads them)
             foreach (SkinFiles f in files) SkinParts.Convert(s.Hero, Path.GetDirectoryName(f.Body).Replace('\\', '/'));
             var names = new System.Collections.Generic.List<string>();
@@ -386,7 +389,7 @@ namespace BAM.Art.Editor
 
         static bool SkinsStale(HeroArt art, Spec s)
         {
-            if (!art.V2) return art.SkinCount != 0;
+            if (!art.V2 && !KeepsSkins(s)) return art.SkinCount != 0;
             SkinFiles[] files = SkinsOf(s);
             foreach (SkinFiles f in files) if (SkinParts.Pending(s.Hero, Path.GetDirectoryName(f.Body).Replace('\\', '/'))) return true; // a part to convert
             if (art.SkinModels == null || art.SkinNames == null || art.SkinModels.Length != files.Length) return true;
@@ -473,7 +476,7 @@ namespace BAM.Art.Editor
             foreach (Spec s in specs)
             {
                 paths.Add(ModelPath(s));
-                if (UsesV2(s)) foreach (SkinFiles f in SkinsOf(s)) paths.Add(f.Body);
+                if (UsesV2(s) || KeepsSkins(s)) foreach (SkinFiles f in SkinsOf(s)) paths.Add(f.Body);
                 foreach (string p in new[] { s.Idle, s.Run, s.Attack, s.Cast, s.Hit, s.Death, s.Walk, s.RunFour })
                     if (p != null) paths.Add(ModelsDir + p + ".fbx");
             }

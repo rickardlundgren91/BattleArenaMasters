@@ -157,7 +157,7 @@ namespace BAM.UI
             view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, Facing(), 0));
             view.SetMoving(false, 0);
             heroHeight = MeasureHeight(view, Spot.y);
-            if (id == HeroId.Kugg) { var ka = Resources.Load<HeroArt>("BAMArt/Heroes/Kugg"); kuggV2 = ka == null || ka.V2; }
+            if (id == HeroId.Kugg) { var ka = Resources.Load<HeroArt>("BAMArt/Heroes/Kugg"); kuggV2 = ka == null || ka.V2 || skin > 0; } // a skin is the V2 body
             gearTop = swingTill = bodyHalfW = 0;
             measureAt = Time.frameCount + 2; // the model plays its idle from the next frame, and the weapons follow in its LateUpdate
             shownId = id;
