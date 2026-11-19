@@ -379,6 +379,7 @@ namespace BAM.Art
                 if (!float.IsNaN(f)) footRef = f - transform.position.y; // the bind pose, its mesh's sole on the ground
             }
             if (HeroIndex == (int)HeroId.Kugg && art.V2 && anim.isHuman) ShortLegs(KuggLegK); else legDrop = 0f;
+            kuggBindOk = false; kuggBindWait = 3;
             if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureHeadHold(); else headHold = false;
             if (HeroIndex == (int)HeroId.Blast && art.V2) MeasureArmRoll(); else armRoll = false;
             anim.runtimeAnimatorController = null;
@@ -1795,7 +1796,7 @@ namespace BAM.Art
         // his broad stone body it went into his head. Standing, a two-bone IK lowers it instead: the fist hangs beside his hip, a little
         // out and forward of the shoulder (KuggFist, in arm lengths: out, down, forward), the elbow out and back. Not on the move
         // (his walk and run swing as made) and not while he swings or casts.
-        static readonly Vector3 KuggFist = new Vector3(0.55f, 0.6f, 0.3f); // 0.3 out still went into his body (Rickard 2026-11-11: "armen går in i hans kropp")
+        static readonly Vector3 KuggFist = new Vector3(0.65f, 0.6f, 0.3f); // 0.3 out still went into his body (Rickard 2026-11-11: "armen går in i hans kropp")
         static readonly Vector3 KuggFistElbow = new Vector3(0.9f, 0.2f, -0.2f);
         // and his right forearm IS the cannon (the 2026-11-16 cannon-arm bodies): the idle raised it in front of him with the barrel
         // pointing at the viewer, so on Home it read as a raised fist (Rickard 2026-11-18, his picture: "kugg blev väl sådär"). At rest
@@ -1814,8 +1815,38 @@ namespace BAM.Art
             float still = 1f - Mathf.Clamp01(moveW);
             float w = (1f - Mathf.Clamp01(gearAct)) * still;
             float wFist = Mathf.Max(still, Mathf.Clamp01(gearAtk)) * (1f - Mathf.Clamp01(gearAct - gearAtk));
+            if (!kuggBindOk && gearAct < 0.01f && moveW < 0.01f && --kuggBindWait <= 0) KuggFistBind(); // his idle as it stands, once
+            if (wFist > 0.01f) KuggFistSteady(wFist);
             if (wFist > 0.01f) KuggArm(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand, KuggFist, KuggFistElbow, wFist);
             if (w > 0.01f) KuggArm(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, KuggCannonRest, KuggCannonElbow, w);
+        }
+
+        // The left fist shook on Home (Rickard 2026-11-19, "hans vänstra arm glitchar", read in his Unity: the upper arm jumped up to
+        // 12 degrees and the forearm 11 between frames 0.1 s apart, the cannon arm at most 6 in a smooth curve, and the fist went in and
+        // out of his belly). The IK sets only where the arm points; its roll about its own length came from IdleMirror, whose free
+        // hand waves about in front of his face, so the elbow and fist turned with it. Before the IK the left arm is now put back in
+        // one still pose (arm, forearm, hand as his idle held them when he first stood), so the IK always starts from the same twist
+        // and the fist follows only his body. The fist also hangs a little further out from his round belly (0.55 -> 0.65 arm lengths).
+        Quaternion kuggUpBind, kuggLoBind, kuggHandBind;
+        bool kuggBindOk;
+        int kuggBindWait = 3;
+        void KuggFistBind()
+        {
+            Transform up = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), lo = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm),
+                hand = anim.GetBoneTransform(HumanBodyBones.LeftHand);
+            kuggBindOk = up != null && lo != null && hand != null;
+            if (!kuggBindOk) return;
+            kuggUpBind = up.localRotation; kuggLoBind = lo.localRotation; kuggHandBind = hand.localRotation;
+        }
+        void KuggFistSteady(float w)
+        {
+            if (!kuggBindOk) return;
+            Transform up = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), lo = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm),
+                hand = anim.GetBoneTransform(HumanBodyBones.LeftHand);
+            w = Mathf.Clamp01(w);
+            up.localRotation = Quaternion.Slerp(up.localRotation, kuggUpBind, w);
+            lo.localRotation = Quaternion.Slerp(lo.localRotation, kuggLoBind, w);
+            hand.localRotation = Quaternion.Slerp(hand.localRotation, kuggHandBind, w);
         }
 
         // A two-bone IK for one of Kugg's arms: the wrist to goal and the elbow toward hint, both in arm lengths from the shoulder
