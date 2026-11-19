@@ -673,7 +673,8 @@ namespace BAM.UI
             // the closed STATS row and the battle spell card count too, so everything fits on the screen (Rickard 2026-11-14)
             float below = heroNameSize.preferredHeight + StatsHeadH + heroAbilities[0].Size.preferredHeight
                           + heroAbilities[1].Size.preferredHeight + SpellCardH + 4 * 2.2f * Cw;
-            float stH = Mathf.Clamp(view - 19 * Cw - below - 2.2f * Cw, 40 * Cw, 66 * Cw);
+            // the stage may shrink to 30 Cw (was 40) so the two rows of spells fit on a 16:9 screen too (UI/UX review 2026-11-19 nr 11)
+            float stH = Mathf.Clamp(view - 19 * Cw - below - 2.2f * Cw, 30 * Cw, 66 * Cw);
             heroStageSize.preferredHeight = stH;
             LayoutRebuilder.ForceRebuildLayoutImmediate(heroContent);
 

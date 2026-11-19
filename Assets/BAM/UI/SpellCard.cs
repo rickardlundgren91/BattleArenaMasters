@@ -21,11 +21,14 @@ namespace BAM.UI
         // two rows of five chips since the five new spells of 2026-11-18 (one row of five before)
         const int ChipsPerRow = 5;
         const float ChipGap = 2 * Cw;
-        const float SpellCardH = 8 * Cw + 2 * 15 * Cw + ChipGap + 10 * Cw;
+        // chips 15 -> 12 Cw tall since the second row came (UI/UX review 2026-11-19 nr 11: on a 16:9 screen the second row and the
+        // spell's text fell under the tab bar, and the hero page is meant to fit without scrolling, Rickard 2026-11-14)
+        const float ChipH = 12 * Cw;
+        const float SpellCardH = 8 * Cw + 2 * ChipH + ChipGap + 10 * Cw;
 
         static void BuildSpellCard(RectTransform content)
         {
-            float chipH = 15 * Cw, h = SpellCardH;
+            float chipH = ChipH, h = SpellCardH;
             var card = UiKit.NewRect("BattleSpell", content);
             card.gameObject.AddComponent<LayoutElement>().preferredHeight = h;
             CardBack(card, 4 * Cw);
@@ -60,7 +63,7 @@ namespace BAM.UI
                 RingRadius(c.Edge, 3 * Cw);
                 // the glyph: k = cw(3.2) around 38 % of the chip's height; the sprite spans 2.4 k
                 var glyph = Pic(chip, "Glyph", SpellGlyph(id), SpellColor(id));
-                Mid(glyph.rectTransform, 0.5f, 1, 0, -chipH * 0.38f, 2.4f * 3.2f * Cw, 2.4f * 3.2f * Cw);
+                Mid(glyph.rectTransform, 0.5f, 1, 0, -chipH * 0.38f, 2.0f * 3.2f * Cw, 2.0f * 3.2f * Cw); // 2.4 k -> 2.0 k with the lower chip
                 c.Name = Treb(chip, SpellDefs.Name(id), 2.8f, UiKit.TextDim);
                 c.Name.alignment = TextAnchor.MiddleCenter;
                 Mid(c.Name.rectTransform, 0.5f, 1, 0, -chipH * 0.82f, 20 * Cw, 4 * Cw);

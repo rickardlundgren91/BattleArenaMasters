@@ -49,6 +49,7 @@ namespace BAM.UI
         static Text resXp, resLevel, resUnlock;
         // one tip after a defeat, from how the match went (full review 2026-11-13 nr 122), between the card and PLAY AGAIN
         static Text resTip;
+        static Image resTipPlate; // a dark plate under the tip: it sat bare on the scene behind (UI/UX review 2026-11-19 nr 9)
         static Image resXpBack, resXpFill;
         static float resXpPart;
         static bool resTableMode, resWon;
@@ -242,6 +243,7 @@ namespace BAM.UI
             resXpFill = Pic(resCard, "XpFill", UiKit.Rounded, ResXpFill);
             resLevel = ResText(resCard, false, ResSub, TextAnchor.MiddleCenter);
             resUnlock = ResText(resCard, false, ResLevelUp, TextAnchor.MiddleCenter);
+            resTipPlate = Pic(resBody, "TipPlate", UiKit.Rounded, new Color(7f / 255f, 11f / 255f, 26f / 255f, 0.82f));
             resTip = ResText(resBody, false, ResSilverText, TextAnchor.MiddleCenter);
             resTip.horizontalOverflow = HorizontalWrapMode.Wrap; // one line that shrinks to fit, as the XP line (LayoutResult)
             resTip.verticalOverflow = VerticalWrapMode.Truncate;
@@ -352,6 +354,7 @@ namespace BAM.UI
             FillXp();
             string tip = r.Won || r.Quit || r.Tutorial || !resTableMode ? null : LossTip(r);
             resTip.gameObject.SetActive(tip != null);
+            resTipPlate.gameObject.SetActive(tip != null);
             resTip.text = tip ?? "";
             if (resTableMode) FillScores(m);
             else
@@ -472,7 +475,9 @@ namespace BAM.UI
                 Size(resTip, W * 0.032f);
                 resTip.resizeTextMaxSize = resTip.fontSize;
                 resTip.resizeTextMinSize = Mathf.Max(1, Mathf.RoundToInt(resTip.fontSize * 0.6f));
-                Centre(resTip.rectTransform, W / 2, top + ch + H * 0.0175f, W * 0.86f, resTip.fontSize * 1.5f);
+                Centre(resTip.rectTransform, W / 2, top + ch + H * 0.0175f, W * 0.82f, resTip.fontSize * 1.5f);
+                Centre(resTipPlate.rectTransform, W / 2, top + ch + H * 0.0175f, W * 0.86f, resTip.fontSize * 2f);
+                Radius(resTipPlate, resTip.fontSize * 0.9f);
             }
 
             LayoutButton(resAgain, resAgainShadow, resAgainText, W * 0.1f, H * 0.74f, W * 0.8f, H * 0.065f);

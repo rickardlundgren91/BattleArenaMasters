@@ -17,6 +17,7 @@ namespace BAM.Game
         public MatchIntro Intro;
 
         static readonly Color PlateColor = new Color(7f / 255f, 11f / 255f, 22f / 255f, 0.9f), Mint = Hex(0x8dffd6), PillInk = Hex(0x0a0d18);
+        static readonly Color TeamAlly = Hex(0x3d9bff), TeamFoe = Hex(0xff4040), PillDark = new Color(20f / 255f, 28f / 255f, 52f / 255f, 1f);
         const float TagHeight = 2.15f; // world height of the tag's foot, just above the heads
 
         RectTransform introRoot, barTop, barBottom;
@@ -52,7 +53,12 @@ namespace BAM.Game
                 tag.Name.text = info.Name;
                 tag.Name.color = u == m.Player ? Mint : Color.white;
                 tag.Role.text = info.Role.ToUpperInvariant();
-                tag.Edge.color = rc; tag.Notch.color = rc; tag.Pill.color = rc;
+                // the card's edge in the TEAM's colour (blue ours, red theirs, as the health bars), the role only as the pill's word
+                // in its colour on the dark plate: an Assassin's pink edge made our own Tikta read as an enemy (UI/UX review
+                // 2026-11-19 nr 8)
+                Color tc = u.Team == m.Player.Team ? TeamAlly : TeamFoe;
+                tag.Edge.color = tc; tag.Notch.color = tc;
+                tag.Pill.color = PillDark; tag.Role.color = rc;
             }
             ShowIntro(on);
         }
