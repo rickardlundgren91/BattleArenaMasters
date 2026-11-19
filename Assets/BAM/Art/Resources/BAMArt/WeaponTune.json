@@ -1055,8 +1055,8 @@
                     },
                     "Fist": 0.6899999976158142,
                     "RunSign": 0,
-                    "MenuUp": -1.0,
-                    "MenuOut": 52.0
+                    "MenuUp": -48.0,
+                    "MenuOut": 15.0
                 }
             ],
             "ArmSpread": 0.0,

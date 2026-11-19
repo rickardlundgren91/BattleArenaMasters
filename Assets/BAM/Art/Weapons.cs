@@ -171,6 +171,12 @@ namespace BAM.Art
         /// <summary>Degrees added to <see cref="ArmSpread"/> in code only (the Weapon Tuner and WeaponTune.json leave it alone), so
         /// hands that hang close to the legs stay off the thighs as the idle sways (Tyra, ANIM-24).</summary>
         public float HandsOff;
+        /// <summary>Code only: the least room, as a share of the hero's height, between each hand (wrist to fingertips) and the axis of
+        /// its own thigh (hip to knee) across the ground; where a hand comes closer, its upper arm turns out about the hero's forward
+        /// axis until it has that room, after <see cref="HandsOff"/>; 0 = off. A fixed spread was measured on one body and one idle,
+        /// so a frame of the idle's sway could still bring the hand in (V2 Tyra on Home, Rickard 2026-11-19: "hennes högra arm går in
+        /// i benen ibland, klipper"); this follows the body and the clip as they are.</summary>
+        public float HandGap;
         /// <summary>Every finger of both hands is held in the model's own pose each frame, before the fist closes, so no clip moves
         /// them (Tyra: her Avatar maps only the index, so her idle and run moved that one finger alone while the rest stood still,
         /// Cajsa 2026-11-11: "Tyras fingrar är så klåfingriga"). Code only.</summary>
@@ -542,6 +548,14 @@ namespace BAM.Art
             ty.Weapons[0].Model = "v2_tyra_bow";
             ty.Weapons[0].MatchScale = 1.25f; // a quarter longer in a match, so the bow reads from the match camera (WeaponDef.MatchScale)
             ty.StillFingers = false;
+            // her hands kept a hand's breadth off her thighs (GearDef.HandGap; Rickard 2026-11-19 on Home: "hennes högra arm går in i
+            // benen ibland, klipper"): the old body's 12-degree HandsOff stays, and the gap turns an arm out further only in a frame
+            // where the V2 body's wider thighs would still meet the hand
+            ty.HandGap = 0.1f;
+            // On Home and the hero page her bow hangs from her fist, pointing down and a little out (WeaponTune "TyraV2" MenuUp -48,
+            // MenuOut 15, the old body's pick of 2026-10-29): at the old file's level hold (-1/52) the V2 bow lay across in front of her
+            // with its tip at the camera and the wrist could not turn the fist round it, so the fingers hung under the handle (Rickard
+            // 2026-11-19: "tyra grepp om bågen"); hanging down, his Turn -117 leaves the fist holding it as in her shot
             ty.Worn = new[] { new WornDef { Model = "v2_tyra_quiver", Bone = Chest, From = LArm, To = RArm, Height = 0.3f, At = new Vector3(0.03f, -0.2f, -0.08f), Turn = new Vector3(0f, 0f, -20f) } };
 
             // Moa: the honey dipper staff and the honeycomb shield where her old ones were (her body keeps its own pauldrons, so the
@@ -898,6 +912,7 @@ namespace BAM.Art
         // arms turned out after the clips
         GearDef gdef;
         Transform armR, armL, elbR, elbL, wriR, wriL;
+        Transform thighR, thighL, kneeR, kneeL; // GearDef.HandGap
         // the right arm bent to carry the weapon on the shoulder
         Transform carryUp, carryLo, carryHand;
         // the cannon on the chest, where it sits and which way it kicks (chest space), the right arm that holds it
@@ -994,6 +1009,11 @@ namespace BAM.Art
             h.elbL = an.GetBoneTransform(HumanBodyBones.LeftLowerArm);
             h.wriR = an.GetBoneTransform(HumanBodyBones.RightHand);
             h.wriL = an.GetBoneTransform(HumanBodyBones.LeftHand);
+            if (g.HandGap > 0f)
+            {
+                h.thighR = an.GetBoneTransform(HumanBodyBones.RightUpperLeg); h.kneeR = an.GetBoneTransform(HumanBodyBones.RightLowerLeg);
+                h.thighL = an.GetBoneTransform(HumanBodyBones.LeftUpperLeg); h.kneeL = an.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+            }
             if (g.Shoulder)
             {
                 h.carryUp = an.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -1678,6 +1698,7 @@ namespace BAM.Art
                     stillB[i].localRotation = stillM[i] && sw > 0.001f ? Quaternion.Slerp(stillR[i], stillB[i].localRotation, sw) : stillR[i];
             }
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
+            if (gdef.HandGap > 0f && !dead) HandsOffThighs(gdef.HandGap * figH);
             ArmTune(dead ? 0f : 1f - Mathf.Clamp01(actW));
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
             // a death lets go of the rest hold over a quarter of a second instead of in one frame: at the blow that killed him Bram's
@@ -2121,6 +2142,43 @@ namespace BAM.Art
             if (armL != null) armL.rotation = Quaternion.AngleAxis(-spread * Hang(armL, elbL), fwd) * armL.rotation;
         }
 
+        // GearDef.HandGap: each hand kept that far from its own thigh's axis across the ground (checked at the wrist, the middle of
+        // the hand and the fingertips), by turning its upper arm out about the hero's forward axis (as ArmSpread does), only as far
+        // as it is needed; checked on V2 Tyra's body in Blender with Moa's idle: from the hands in her thighs to a hand's breadth clear
+        void HandsOffThighs(float gap)
+        {
+            HandOffThigh(armR, elbR, wriR, thighR, kneeR, gap, 1f);
+            HandOffThigh(armL, elbL, wriL, thighL, kneeL, gap, -1f);
+        }
+
+        static readonly float[] HandReach = { 0f, 0.05f, 0.1f }; // wrist, mid hand, fingertips: shares of the hero's height past the wrist
+
+        void HandOffThigh(Transform up, Transform lo, Transform hd, Transform hip, Transform knee, float gap, float side)
+        {
+            if (up == null || lo == null || hd == null || hip == null || knee == null) return;
+            Vector3 upW = root.up, fwd = root.forward;
+            for (int it = 0; it < 3; it++)
+            {
+                Vector3 along = hd.position - lo.position;
+                if (along.sqrMagnitude < 1e-10f) return;
+                along.Normalize();
+                Vector3 a = hip.position, ab = knee.position - a;
+                float need = 0f;
+                Vector3 at = hd.position;
+                for (int k = 0; k < HandReach.Length; k++)
+                {
+                    Vector3 p = hd.position + along * (HandReach[k] * figH);
+                    Vector3 c = a + ab * Mathf.Clamp01(ab.sqrMagnitude > 1e-10f ? Vector3.Dot(p - a, ab) / ab.sqrMagnitude : 0f);
+                    float d = Vector3.ProjectOnPlane(p - c, upW).magnitude;
+                    if (gap - d > need) { need = gap - d; at = p; }
+                }
+                if (need <= 1e-4f * figH) return;
+                float r = Vector3.ProjectOnPlane(at - up.position, fwd).magnitude;
+                if (r < 1e-4f) return;
+                up.rotation = Quaternion.AngleAxis(side * Mathf.Min(need / r * Mathf.Rad2Deg, 30f), fwd) * up.rotation;
+            }
+        }
+
         // the tuner's RightArm/LeftArm at rest (w), in the hero's own axes: out from the side, forward, then the elbow's bend
         void ArmTune(float w)
         {
@@ -2207,6 +2265,7 @@ namespace BAM.Art
         public void SampleRest()
         {
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
+            if (gdef.HandGap > 0f) HandsOffThighs(gdef.HandGap * figH);
             ArmTune(1f);
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(1f);
             for (int i = 0; i < wT.Length; i++)
