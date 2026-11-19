@@ -334,7 +334,9 @@ namespace BAM.Game
             r.U = u; r.Serial = u.Serial; r.V = v; r.Dead = false; r.Linger = 0f;
             r.Hp01 = -1f; r.Shield01 = -1f; r.Vis = -1f; r.Level = 0; r.MaxHp = -1f; r.Energy = -2f; r.Ready = false; r.Flags = (StatusFlags)0xFFFF; r.Honey = HoneyOff; r.Form = -1;
             r.JoltT = 0f; r.Air = 0f; r.EndPosed = false;
-            r.Rot = Quaternion.LookRotation(Coords.Dir(u.Facing));
+            // a tower always stands the way it is built (Match.Spawn's facing per team), even when its view is made mid-match
+            float face0 = u.Kind == UnitKind.Tower ? (u.Team == Teams.Player ? -SimMath.PI / 2 : SimMath.PI / 2) : u.Facing;
+            r.Rot = Quaternion.LookRotation(Coords.Dir(face0));
             r.Bar = null;
             foreach (var mr in v.GetComponentsInChildren<MeshRenderer>(true)) if (mr.gameObject.name == "Bar") { r.Bar = mr; break; }
             var t = v.transform;
@@ -1333,7 +1335,11 @@ namespace BAM.Game
             float face = fight ? SimMath.Atan2(u.Target.Y - u.Y, u.Target.X - u.X) : u.Facing;
             if (aim && hero && u.Hero == HeroId.Bonk && ClubLanding(u, out float cx, out float cy)) face = SimMath.Atan2(cy - u.Y, cx - u.X);
             Quaternion want = Quaternion.LookRotation(Coords.Dir(face));
-            if (AnimFix.SquaredFacing && hero) r.Rot = Quaternion.RotateTowards(Quaternion.Slerp(r.Rot, want, 1f - Mathf.Exp(-14f * dt)), want, 60f * dt);
+            // a tower is a building: it keeps the way it was built facing and never turns to its target; its shot leaves from the
+            // crystal on top (Rickard 2026-11-19 "turnet snurrar runt när det skjuter olika targets eller targets som rör på sig":
+            // the rules turn its Facing to each shot's target, and the whole tower spun round at 900 degrees a second)
+            if (u.Kind == UnitKind.Tower) { }
+            else if (AnimFix.SquaredFacing && hero) r.Rot = Quaternion.RotateTowards(Quaternion.Slerp(r.Rot, want, 1f - Mathf.Exp(-14f * dt)), want, 60f * dt);
             else r.Rot = Quaternion.RotateTowards(r.Rot, want, 900f * dt);
             t.SetPositionAndRotation(pos, r.Rot);
             if (hero && (aim || fight) != r.Squared) { r.Squared = aim || fight; v.SetSquared(r.Squared); }
