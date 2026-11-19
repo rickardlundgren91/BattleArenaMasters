@@ -1079,8 +1079,13 @@ namespace BAM.Art
             if (imported) AnimateImported(dt);
             if (Preview && imported && clips != null && !dead)
             {
+                // Kugg stands still on the menu stage (Rickard 2026-11-19, his Home picture of the V2 body: "han står jättebuggat i
+                // menyn. få honom bara att stå idle rätt stilla"): IdleMirror is held on its first frame and the menu breathing is
+                // left out, so only the arm IK (KuggGuard) poses him and nothing sways the round body; a tapped shot still plays
+                bool kuggStill = HeroIndex == (int)HeroId.Kugg;
+                if (kuggStill && clips[CIdle].GetSpeed() != 0d) { clips[CIdle].SetTime(0d); clips[CIdle].SetSpeed(0d); }
                 if (!breathTried) { breathTried = true; breath = PreviewBreath.For(anim, HeroIndex); }
-                breath?.Apply(Time.unscaledTime, 1f - Mathf.Clamp01(gearAct));
+                if (!kuggStill) breath?.Apply(Time.unscaledTime, 1f - Mathf.Clamp01(gearAct));
                 GroundFeet(dt);
             }
             if (!Preview && imported && clips != null && !dead)
