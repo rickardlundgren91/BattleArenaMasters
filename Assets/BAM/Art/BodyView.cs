@@ -854,7 +854,7 @@ namespace BAM.Art
         // The bar: a minion's only once it has taken damage, as in Speltest (Hud.drawMinion: if (hurt) hpBar), so a full wave is not
         // a row of full bars (review 2026-11-13, nr 5: 40 % of the bars on screen were full-health minions); none at all while the
         // match intro flies in (ArtKit.BarsHidden; nr 11: the bars sat between the heroes' name plates)
-        bool BarOn => vis > 0.01f && !dead && !Preview && !ArtKit.BarsHidden && (!minion || (hp >= 0f && hp < 0.999f));
+        bool BarOn => vis > 0.01f && !dead && !Preview && !ArtKit.BarsHidden && (!minion || (hp >= 0f && hp < 0.999f)) && !(ArtKit.BarCover != null && ArtKit.BarCover(bar.T.position));
 
         // ABC2 View3DCreeps CREEP_TINT: the whole figure takes 40 % of its side's colour (ours blue, theirs red) "so lanes read at a
         // glance". The rebuild drew both sides' goblins alike, only the bar told them apart (review 2026-11-13, nr 4). The view's Team

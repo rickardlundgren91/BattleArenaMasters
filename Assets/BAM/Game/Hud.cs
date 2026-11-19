@@ -123,12 +123,14 @@ namespace BAM.Game
             ApplyLayout();
             BamSettings.Changed += ApplyLayout;
             CancelTouches();
+            CoverBegin(); // bars and names stay out from under the top strip and the item cards (HudCover.cs)
         }
 
         public void End()
         {
             BamSettings.Changed -= ApplyLayout;
             CancelTouches();
+            CoverEnd();
             aimLook?.Destroy();
             aimLook = null;
             if (aim != null) ArtKit.Release(aim);
@@ -296,6 +298,7 @@ namespace BAM.Game
             EmoteFrame(hidden);
             SpellFrame(hidden);
             ItemsFrame(hidden);
+            CoverFrame(hidden); // after the top strip and the item cards are placed (HudCover.cs)
             HoldFrame(hidden);
             HeroTestFrame(hidden);
             Special();

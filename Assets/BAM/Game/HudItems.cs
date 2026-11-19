@@ -10,7 +10,7 @@ namespace BAM.Game
 {
     /// <summary>
     /// The match items (Sim/Items.cs; Rickard 2026-11-11 "välja av tre items lvl 6 och lvl 12"). The choice: three item cards side
-    /// by side in the upper half of the field, under a "CHOOSE ITEM 1 OF 2" title (Rickard 2026-11-11 21:13 "FÖR dåligt med shoppen ...
+    /// by side in the upper half of the field, under a "CHOOSE AN ITEM · NEXT AT LV 10" title ("CHOOSE YOUR LAST ITEM" at the last; it was "CHOOSE ITEM 1 OF 2" until the UI/UX review 2026-11-19) (Rickard 2026-11-11 21:13 "FÖR dåligt med shoppen ...
     /// städa upp det ui": the first panel sat low over the joystick and the SPECIAL with tiny text). Each card has the item's own
     /// icon (drawn in code, ItemIconArt), its name, its rarity and one short line with its numbers in gold; a tap anywhere on a
     /// card takes it, no SELECT button. The match does not stop: the cards wait until the player picks (keys 1-3 in the editor),
@@ -464,7 +464,15 @@ namespace BAM.Game
                     if (!scoreOpen) offerRoot.SetAsLastSibling(); // never over an open score sheet (online the match goes on under it)
                     // which choice of the match this is (one per ItemS.OfferLevels): tells a new player that a second one comes
                     int nr = Mathf.Min(p.ItemCount + 1, ItemS.OfferLevels.Length);
-                    if (nr != offerTitleNr) { offerTitleNr = nr; offerTitle.text = "CHOOSE ITEM " + nr + " OF " + ItemS.OfferLevels.Length; }
+                    // "CHOOSE ITEM 1 OF 2" over three cards read as "pick 1 of these 2" (UI/UX review 2026-11-19 nr 2): the title
+                    // now says what to do and, apart, when the next choice comes; the last choice says it is the last
+                    if (nr != offerTitleNr)
+                    {
+                        offerTitleNr = nr;
+                        offerTitle.text = nr < ItemS.OfferLevels.Length ? "CHOOSE AN ITEM · NEXT AT LV " + ItemS.OfferLevels[nr]
+                            : ItemS.OfferLevels.Length > 1 ? "CHOOSE YOUR LAST ITEM" : "CHOOSE AN ITEM";
+                        offerLaidW = -1f; // the pill follows the text's width
+                    }
                     for (int i = 0; i < ItemS.Choices; i++)
                     {
                         bool on = i < n; offerCard[i].gameObject.SetActive(on); if (!on) continue;
@@ -482,8 +490,8 @@ namespace BAM.Game
             if (offerLaidW != W)
             {   // sizes follow the screen: laid out again only when it changes
                 offerLaidW = W;
-                offerTitleRt.sizeDelta = new Vector2(W * 0.44f, titleH);
                 offerTitle.fontSize = Mathf.RoundToInt(W * 0.037f);
+                offerTitleRt.sizeDelta = new Vector2(Mathf.Min(W * 0.94f, Mathf.Max(W * 0.44f, offerTitle.preferredWidth + W * 0.07f)), titleH);
                 int nameMax = Mathf.RoundToInt(W * 0.04f), textMax = Mathf.RoundToInt(W * 0.034f);
                 for (int i = 0; i < ItemS.Choices; i++)
                 {

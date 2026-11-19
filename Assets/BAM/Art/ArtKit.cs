@@ -212,6 +212,10 @@ namespace BAM.Art
     {
         /// <summary>No health bars on the bodies (the match intro, GameFlow; review 2026-11-13, nr 11).</summary>
         public static bool BarsHidden;
+        /// <summary>Set by the match HUD: true for a world point whose health bar (and so its name tag) lies under a solid part of
+        /// the HUD, the top strip or the item cards (UI/UX review 2026-11-19 nr 1 and 6: they showed through and ran into the
+        /// words). Null outside a match.</summary>
+        public static System.Func<Vector3, bool> BarCover;
 
         static bool ready;
         static Transform root;
