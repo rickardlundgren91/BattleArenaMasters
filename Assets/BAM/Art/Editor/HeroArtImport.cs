@@ -50,7 +50,9 @@ namespace BAM.Art.Editor
                 ti.textureType = TextureImporterType.Default;
                 ti.sRGBTexture = true;
                 ti.mipmapEnabled = true;
-                ti.maxTextureSize = 1024;
+                // V2 Tyra carries her old body's head (Rickard 2026-11-19: "tyras ansikte var bättre i v1"): her picture is the V2
+                // body's picture (left half) beside the old body's (right half), 2048 x 1024, so each half keeps its full 1024
+                ti.maxTextureSize = assetPath == ModelsV2Dir + "Tyra/Tyra_Tex.jpg" ? 2048 : 1024;
                 ti.textureCompression = TextureImporterCompression.Compressed;
                 return;
             }
