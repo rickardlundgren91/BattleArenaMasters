@@ -456,6 +456,11 @@ namespace BAM.Art
         internal const float BonkPeltWide = 1.7f;
         internal static Vector3 BonkPeltAt => new Vector3(0f, 0.165f, -0.005f); // a property: byHeroV2 above is made before any field below it
 
+        /// <summary>Test 2026-11-19 (Rickard: "kanske testa ta bort fjärilsvingarna på tikta och bara ha dom stora andra vingarna
+        /// kvar"): false leaves her glowing butterfly-like wings (<see cref="TiktaGlowWing"/>) off, so only her big chitin wings
+        /// (v2_tikta_wings) stay, on her skins too. Set back to true to bring them back; nothing else about her changed.</summary>
+        internal const bool TiktaGlowWings = false;
+
         /// <summary>Tikta's glowing insect wings (Rickard 2026-11-16: "Ravna va fräck att man såg en mask bakifrån", he picked
         /// glowing wings so she stands out from behind and from the match camera): a teal fore wing and a violet hind wing a side,
         /// made in code (bam-work/hero-details/tikta/tools/make_glowwings.py), rooted on her upper back and beating softly. Kept on
@@ -552,6 +557,7 @@ namespace BAM.Art
                 new WornDef { Model = "v2_tikta_holster", Bone = RLeg, From = RLeg, To = HumanBodyBones.RightLowerLeg, Height = 0.12f, At = new Vector3(0.045f, -0.02f, 0f) },
                 TiktaGlowWing(true), TiktaGlowWing(false),
             };
+            if (!TiktaGlowWings) System.Array.Resize(ref tk.Worn, 3); // the glowing wings are the last two; see TiktaGlowWings
 
             // Blast: the new skull bomb (still thrown). No bomb belt (Rickard 2026-11-19: "skippa bältet på nya blast"; it was lowered and
             // made smaller 2026-11-18 first), and his skins wear none either (SkinGear)
