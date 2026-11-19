@@ -677,6 +677,11 @@ namespace BAM.Art
             // at -z, so Yaw 0 keeps the beak to the back), the mantle from her shoulders and the crow on her left shoulder
             GearDef rv = g[(int)HeroId.Ravna];
             rv.Weapons[0].Model = "v2_ravna_dagger"; rv.Weapons[1].Model = "v2_ravna_dagger";
+            // held by the wrapped handle (Rickard 2026-11-19 "ravna håller inte i sina vapen", in the menu): the V2 dagger has a thin
+            // pommel spike at its foot (0 to 0.15 of its length), the wrapped handle 0.2 to 0.55 and the hooked blade above, so the old
+            // body's Grip 0.06 put her fists round the spike tip with the whole handle hanging below them; 0.38 = the handle's middle
+            // (Blender check in Moa's idle, bam-work/ravna-grepp/fore-efter.png)
+            rv.Weapons[0].Grip = 0.38f; rv.Weapons[1].Grip = 0.38f;
             rv.Worn = new[]
             {
                 new WornDef { Model = "v2_ravna_mantle", Bone = Chest, From = LArm, To = RArm, Height = 0.55f, At = new Vector3(0f, 0.03f, -0.05f), Flat = 0.8f, Sway = 20f },
