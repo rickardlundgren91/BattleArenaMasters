@@ -199,7 +199,10 @@ namespace BAM.UI
             // pick 2026-10-29; ANIM-23: Bram's hammer reaches 1.36 times his height, and since the heroes' true heights its top was cut)
             float aspect = size.x / size.y;
             float viewH = Mathf.Max(heroHeight / HeroFill, gearTop * 1.04f / Mathf.Max(0.05f, 1f - FeetAt));
-            viewH = Mathf.Max(viewH, 2f * bodyHalfW * 1.08f / aspect);
+            // the width may draw him at most a little smaller than the height does: fitted fully across, round Kugg with his cannon
+            // held out to the side stood clearly smaller than the others in the hero pick (Rickard 2026-11-19: "kugg för liten", "jag
+            // pratar om hur dom ser ut i menyn"); the barrel's mouth may touch the picture's edge in the narrowest pictures
+            viewH = Mathf.Max(viewH, Mathf.Min(2f * bodyHalfW * 1.08f / aspect, viewH * 1.05f));
             cam.orthographicSize = viewH / 2;
             cam.aspect = aspect;
             cam.transform.position = Spot + new Vector3(0, viewH / 2 - FeetAt * viewH, -6f);
@@ -283,7 +286,8 @@ namespace BAM.UI
                     // and his height is measured where the posed body really reaches, not taken from his Height: framed by that,
                     // Kugg stood about 0.6 of the others' height on Home (Rickard 2026-11-18, his picture: "kugg för liten")
                     float bodyTop = BodyTop();
-                    if (bodyTop > 0.3f * heroHeight && bodyTop < 1.5f * heroHeight) heroHeight = bodyTop;
+                    // (his chimney stands well over his head, so he is framed by 0.9 of that top, about where the others' crowns are)
+                    if (bodyTop > 0.3f * heroHeight && bodyTop < 1.5f * heroHeight) heroHeight = 0.9f * bodyTop;
                     bodyHalfW = Mathf.Max(0.001f, Mathf.Min(BodyHalfWidth(), 1.2f * heroHeight));
                     Frame();
                 }

@@ -1726,12 +1726,18 @@ namespace BAM.Art
         // for the wrist; the elbow hint down and back.
         static readonly Vector3 KuggCannonRest = new Vector3(0.58f, 0.6f, 0.2f);
         static readonly Vector3 KuggCannonElbow = new Vector3(0.2f, 0.8f, -0.4f);
+        // The left fist stays down through his shots too (Rickard 2026-11-19: "hans vänstra arm glitchar"): Attack1Mirror is Firing A Gun,
+        // whose free hand comes up to steady a rifle in front of the chest; only the right (cannon) arm shoots (KuggAim), so with the
+        // fist let go at every shot the left arm jumped up into his stone body and back down. Now it lets go only for his cast, and on
+        // the move it is held down while he shoots (the upper-body copy of the attack) and swings as made otherwise.
         void KuggGuard()
         {
-            float w = (1f - Mathf.Clamp01(gearAct)) * (1f - Mathf.Clamp01(moveW));
-            if (w <= 0.01f || anim == null || !anim.isHuman) return;
-            KuggArm(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand, KuggFist, KuggFistElbow, w);
-            KuggArm(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, KuggCannonRest, KuggCannonElbow, w);
+            if (anim == null || !anim.isHuman) return;
+            float still = 1f - Mathf.Clamp01(moveW);
+            float w = (1f - Mathf.Clamp01(gearAct)) * still;
+            float wFist = Mathf.Max(still, Mathf.Clamp01(gearAtk)) * (1f - Mathf.Clamp01(gearAct - gearAtk));
+            if (wFist > 0.01f) KuggArm(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand, KuggFist, KuggFistElbow, wFist);
+            if (w > 0.01f) KuggArm(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, KuggCannonRest, KuggCannonElbow, w);
         }
 
         // A two-bone IK for one of Kugg's arms: the wrist to goal and the elbow toward hint, both in arm lengths from the shoulder
