@@ -1796,7 +1796,7 @@ namespace BAM.Art
         // his broad stone body it went into his head. Standing, a two-bone IK lowers it instead: the fist hangs beside his hip, a little
         // out and forward of the shoulder (KuggFist, in arm lengths: out, down, forward), the elbow out and back. Not on the move
         // (his walk and run swing as made) and not while he swings or casts.
-        static readonly Vector3 KuggFist = new Vector3(0.65f, 0.6f, 0.3f); // 0.3 out still went into his body (Rickard 2026-11-11: "armen går in i hans kropp")
+        static readonly Vector3 KuggFist = new Vector3(0.75f, 0.55f, 0.2f); // (Rickard 2026-11-19 "kör på bara": 0.65 out still peeked in and out behind his belly on Home as he turned) 0.3 out still went into his body (Rickard 2026-11-11: "armen går in i hans kropp")
         static readonly Vector3 KuggFistElbow = new Vector3(0.9f, 0.2f, -0.2f);
         // and his right forearm IS the cannon (the 2026-11-16 cannon-arm bodies): the idle raised it in front of him with the barrel
         // pointing at the viewer, so on Home it read as a raised fist (Rickard 2026-11-18, his picture: "kugg blev väl sådär"). At rest
