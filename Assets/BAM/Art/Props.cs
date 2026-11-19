@@ -90,21 +90,24 @@ namespace BAM.Art
         /// nothing changed) when no guard stands out, or the mesh can't be read. Then (Rickard 2026-11-18, Fenn on the phone: "Eggen
         /// på svärdet är alldeles för tjock och likaså hela klingan. Den ska vara tunnare", "Nu blir det sån bred kant"): above the
         /// guard the blade deep times as thick, and its bevels (from the fuller's width out to the edge) edge times as wide, so the
-        /// blade is slimmer and the broad grey band along each edge narrow; 1 = as made.</summary>
-        public static Mesh ShortHandle(string name, Mesh src, float k, float thin, out float guard) => ShortHandle(name, src, k, thin, 1f, 1f, out guard);
+        /// blade is slimmer and the broad grey band along each edge narrow; 1 = as made. Then (Rickard 2026-11-19, Fenn: "lite för stor
+        /// guard ... för tjock menar jag, det är okej att den är så bred"): the crossguard's arms guardThin times as thick through and as
+        /// tall, and anything on its middle (the boss) that sticks out past the handle's own thickness squeezed the same, its width
+        /// (tip to tip) as it was.</summary>
+        public static Mesh ShortHandle(string name, Mesh src, float k, float thin, out float guard) => ShortHandle(name, src, k, thin, 1f, 1f, 1f, out guard);
 
-        public static Mesh ShortHandle(string name, Mesh src, float k, float thin, float deep, float edge, out float guard)
+        public static Mesh ShortHandle(string name, Mesh src, float k, float thin, float deep, float edge, float guardThin, out float guard)
         {
-            string key = name + "|" + k + "|" + thin + "|" + deep + "|" + edge;
+            string key = name + "|" + k + "|" + thin + "|" + deep + "|" + edge + "|" + guardThin;
             guard = 0f;
             if (shortHandles.TryGetValue(key, out Mesh done)) { if (done != null) guard = shortGuards[key]; return done; }
-            Mesh m = src != null && src.isReadable ? MakeShortHandle(src, k, thin, deep, edge, out guard) : null;
+            Mesh m = src != null && src.isReadable ? MakeShortHandle(src, k, thin, deep, edge, guardThin, out guard) : null;
             shortHandles[key] = m;
             shortGuards[key] = guard;
             return m;
         }
 
-        static Mesh MakeShortHandle(Mesh src, float k, float thin, float deep, float edge, out float guard)
+        static Mesh MakeShortHandle(Mesh src, float k, float thin, float deep, float edge, float guardThin, out float guard)
         {
             guard = 0f;
             Vector3[] v = src.vertices;
@@ -150,10 +153,12 @@ namespace BAM.Art
             float bx = 0f, bz = 0f, rf = 0f;
             if (blade) blade = BladeMiddle(v, bladeY, y0 + H, out bx, out bz, out rf);
             float bfade = 0.04f * H;
+            bool slimGuard = guardThin < 1f;
+            Vector3[] gv = slimGuard ? SlimGuard(v, y0, H, gy, bladeY, guardThin) : v;
             var nv = new Vector3[v.Length];
             for (int i = 0; i < v.Length; i++)
             {
-                Vector3 p = v[i];
+                Vector3 p = gv[i];
                 if (p.y >= gy)
                 {
                     if (blade && p.y > bladeY)
@@ -177,10 +182,50 @@ namespace BAM.Art
             m.uv = src.uv;
             m.subMeshCount = src.subMeshCount;
             for (int s = 0; s < src.subMeshCount; s++) m.SetTriangles(src.GetTriangles(s), s);
-            if (!hasN || blade) m.RecalculateNormals(); // the blade's bevels turned: its faces lit as they now lie
+            if (!hasN || blade || slimGuard) m.RecalculateNormals(); // the blade's bevels turned: its faces lit as they now lie
             m.RecalculateBounds();
             guard = (gy - y0) / H;
             return m;
+        }
+
+        // the crossguard (gy..top on src) thinner, its width kept: across the guard is the wider of x and z there, through the other.
+        // Its arms (out past a quarter of its half width, eased in) t times as thick through and as tall about the guard's middle
+        // height; on its middle, and a little above and below it, only what sticks out past the handle's own half thickness is
+        // squeezed (r -> rc + (r - rc) * t), so the handle and blade going through it stay whole
+        static Vector3[] SlimGuard(Vector3[] v, float y0, float H, float gy, float top, float t)
+        {
+            var o = (Vector3[])v.Clone();
+            float glx = float.MaxValue, ghx = float.MinValue, glz = float.MaxValue, ghz = float.MinValue;
+            float hlx = float.MaxValue, hhx = float.MinValue, hlz = float.MaxValue, hhz = float.MinValue;
+            for (int i = 0; i < v.Length; i++)
+            {
+                Vector3 p = v[i];
+                if (p.y >= gy && p.y <= top) { glx = Mathf.Min(glx, p.x); ghx = Mathf.Max(ghx, p.x); glz = Mathf.Min(glz, p.z); ghz = Mathf.Max(ghz, p.z); }
+                float u = (p.y - y0) / (gy - y0);
+                if (u >= 0.4f && u <= 0.9f) { hlx = Mathf.Min(hlx, p.x); hhx = Mathf.Max(hhx, p.x); hlz = Mathf.Min(hlz, p.z); hhz = Mathf.Max(hhz, p.z); }
+            }
+            if (glx > ghx || hlx > hhx) return o;
+            bool alongX = ghx - glx >= ghz - glz;
+            float ca = alongX ? (hlx + hhx) * 0.5f : (hlz + hhz) * 0.5f, cb = alongX ? (hlz + hhz) * 0.5f : (hlx + hhx) * 0.5f;
+            float rc = alongX ? (hhz - hlz) * 0.5f : (hhx - hlx) * 0.5f;
+            float core = 0.25f * 0.5f * (alongX ? ghx - glx : ghz - glz);
+            float mid = (gy + top) * 0.5f, ext = 0.02f * H;
+            if (!(core > 1e-6f)) return o;
+            for (int i = 0; i < v.Length; i++)
+            {
+                Vector3 p = v[i];
+                if (p.y < gy - ext || p.y > top + ext) continue;
+                float a = alongX ? p.x : p.z, b = alongX ? p.z : p.x;
+                float arm = 0f;
+                if (p.y >= gy && p.y <= top) { arm = Mathf.Clamp01((Mathf.Abs(a - ca) - core) / core); arm = arm * arm * (3f - 2f * arm); }
+                float r = Mathf.Abs(b - cb), rk = r <= rc ? r : rc + (r - rc) * t;
+                float r2 = rk + (r * t - rk) * arm;
+                b = cb + Mathf.Sign(b - cb) * r2;
+                if (alongX) p.z = b; else p.x = b;
+                p.y = mid + (p.y - mid) * (1f + (t - 1f) * arm);
+                o[i] = p;
+            }
+            return o;
         }
 
         // the blade's middle line across (x) and through (z), and the fuller's half width: per slice above the guard, how far out the

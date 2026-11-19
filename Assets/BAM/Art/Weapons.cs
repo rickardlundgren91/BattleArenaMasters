@@ -79,6 +79,10 @@ namespace BAM.Art
         /// the fuller out to the edge) BladeEdge as wide (Props.ShortHandle). Fenn's 0.45 and 0.4 (Rickard 2026-11-18: "Eggen på
         /// svärdet är alldeles för tjock och likaså hela klingan. Den ska vara tunnare", "Nu blir det sån bred kant").</summary>
         public float BladeDeep = 1f, BladeEdge = 1f;
+        /// <summary>Code only, with <see cref="HandleK"/>: the crossguard's arms this share as thick and as tall, its width kept
+        /// (Props.ShortHandle). Fenn's 0.6 (Rickard 2026-11-19: "lite för stor guard ... för tjock menar jag, det är okej att den är
+        /// så bred").</summary>
+        public float GuardThin = 1f;
         /// <summary>Which way the flat side of the run hold goes: 0 = as the idle votes (BAM's own pick), 1 or -1 fixed (Weapon Tuner
         /// "Walk: flip", Rickard 2026-10-30: "tyra i game norr och vänster gå blir pilbågen bakofram vänd").</summary>
         public int RunSign;
@@ -519,6 +523,9 @@ namespace BAM.Art
             // "Nu blir det sån bred kant": the blade under half as thick (it was 0.68 of its width through) and the grey bevel along
             // each edge 0.4 as wide, the cyan fuller as it was, so the blade is about a third narrower (the skins' too)
             f.Weapons[0].BladeDeep = 0.45f; f.Weapons[0].BladeEdge = 0.4f;
+            // Rickard 2026-11-19: "fenn lite för stor guard ... för tjock menar jag, det är okej att den är så bred": the crossguard's
+            // arms 0.6 as thick through and as tall, and its middle boss pressed in where it stood out past the handle; tip to tip as it was
+            f.Weapons[0].GuardThin = 0.6f;
             f.Shield.Dia = 0.4f;
             // the cape bigger and alive (Rickard 2026-11-18: "större cloak båda längre och bredare", "animera cloaken"): 0.48 of his
             // height across its shoulders' scale instead of 0.42 (about 14 % wider) and a quarter longer on top (Long), so the hem
@@ -1300,7 +1307,7 @@ namespace BAM.Art
             hLen[i] = 1f; hGuard[i] = 0f; hK[i] = 1f;
             if (mesh != null && W.HandleK > 0f && W.HandleK < 1f)
             {   // a smaller handle (Fenn): the made mesh's numbers kept, so Len and Grip mean what they did
-                Mesh sh = Props.ShortHandle(W.Model, mesh, W.HandleK, W.HandleThin, W.BladeDeep, W.BladeEdge, out float guard);
+                Mesh sh = Props.ShortHandle(W.Model, mesh, W.HandleK, W.HandleThin, W.BladeDeep, W.BladeEdge, W.GuardThin, out float guard);
                 if (sh != null) { hLen[i] = sh.bounds.size.y / Mathf.Max(1e-4f, mesh.bounds.size.y); hGuard[i] = guard; hK[i] = W.HandleK; mesh = sh; }
             }
             Transform hd = an.GetBoneTransform(W.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
