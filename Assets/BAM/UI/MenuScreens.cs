@@ -140,6 +140,7 @@ namespace BAM.UI
         // the body's half width about its middle (world units, 0 = none yet): a wide hero (round Kugg) is drawn smaller until he
         // fits across the picture too, not only from feet to crown
         float bodyHalfW;
+        bool kuggV2 = true; // which Kugg body is built (HeroArt.V2: the round cannon-arm remake, or the old stone golem)
         int measureAt;
 
         /// <summary>Shows the hero; false if the model could not be made (the caller shows a fallback). mine: in this player's own skin
@@ -156,6 +157,7 @@ namespace BAM.UI
             view.transform.SetPositionAndRotation(Spot, Quaternion.Euler(0, Facing(), 0));
             view.SetMoving(false, 0);
             heroHeight = MeasureHeight(view, Spot.y);
+            if (id == HeroId.Kugg) { var ka = Resources.Load<HeroArt>("BAMArt/Heroes/Kugg"); kuggV2 = ka == null || ka.V2; }
             gearTop = swingTill = bodyHalfW = 0;
             measureAt = Time.frameCount + 2; // the model plays its idle from the next frame, and the weapons follow in its LateUpdate
             shownId = id;
@@ -202,7 +204,9 @@ namespace BAM.UI
             // the width may draw him at most a little smaller than the height does: fitted fully across, round Kugg with his cannon
             // held out to the side stood clearly smaller than the others in the hero pick (Rickard 2026-11-19: "kugg för liten", "jag
             // pratar om hur dom ser ut i menyn"); the barrel's mouth may touch the picture's edge in the narrowest pictures
-            viewH = Mathf.Max(viewH, Mathf.Min(2f * bodyHalfW * 1.08f / aspect, viewH * 1.05f));
+            // The old stone body (Models/Kugg, Rickard 2026-11-19: "jag gillar gamla kuggmodellen mer") holds both big fists out wide
+            // and filled the whole picture with his arms past its edges, so he is fitted across in full
+            viewH = Mathf.Max(viewH, Mathf.Min(2f * bodyHalfW * 1.08f / aspect, viewH * (kuggV2 ? 1.05f : 10f)));
             cam.orthographicSize = viewH / 2;
             cam.aspect = aspect;
             cam.transform.position = Spot + new Vector3(0, viewH / 2 - FeetAt * viewH, -6f);
@@ -287,7 +291,8 @@ namespace BAM.UI
                     // Kugg stood about 0.6 of the others' height on Home (Rickard 2026-11-18, his picture: "kugg för liten")
                     float bodyTop = BodyTop();
                     // (his chimney stands well over his head, so he is framed by 0.9 of that top, about where the others' crowns are)
-                    if (bodyTop > 0.3f * heroHeight && bodyTop < 1.5f * heroHeight) heroHeight = 0.9f * bodyTop;
+                    // (the old body has no chimney: its dome is its crown)
+                    if (bodyTop > 0.3f * heroHeight && bodyTop < 1.5f * heroHeight) heroHeight = (kuggV2 ? 0.9f : 1f) * bodyTop;
                     bodyHalfW = Mathf.Max(0.001f, Mathf.Min(BodyHalfWidth(), 1.2f * heroHeight));
                     Frame();
                 }

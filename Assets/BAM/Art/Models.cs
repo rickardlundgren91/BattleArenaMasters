@@ -111,6 +111,9 @@ namespace BAM.Art
             if (d.Art == null && StandIn(hero, out HeroId si)) { d.Art = Resources.Load<HeroArt>("BAMArt/Heroes/" + si); gearOf = si; } // Øli's four: a stand-in body and its weapon until Rickard's own models
             if (skin > 0 && d.Art != null && gearOf == hero) d.Art = HeroSkins.Apply(d.Art, skin);
             float size = SizeK(hero);
+            // the old stone Kugg (Models/Kugg, Rickard 2026-11-19 "jag gillar gamla kuggmodellen mer") keeps his full legs (ShortLegs is
+            // V2 only), so 1.2 drew him at about 2.14 tiles; 1.1 = about 1.96, as tall as the others
+            if (hero == HeroId.Kugg && d.Art != null && !d.Art.V2) size = 1.1f;
             if (d.Art != null && size != 1f) { d.Art = Object.Instantiate(d.Art); d.Art.Height *= size; } // a copy: the asset itself stays as built
             if (d.Art == null && hero >= HeroId.Bonk) Debug.LogError("[BAM.Art] " + hero + " has no HeroArt (run BAM > Art > Build Hero Art): showing a stand-in figure");
             if (d.Art != null)
