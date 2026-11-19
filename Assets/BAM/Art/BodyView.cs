@@ -587,7 +587,7 @@ namespace BAM.Art
         /// <summary>Fresh state for a new life out of the pool.</summary>
         public void ResetState()
         {
-            moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; ownT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false; fourOn = false; fourW = 0f;
+            moving = false; speed01 = 0f; moveW = 0f; hasLast = false; gSpd = 0f; atkT = -1f; castT = -1f; hitT = -1f; ownT = -1f; hitA = -1f; recoil = 0f; propBack = -1f; hp = -1f; channel = -1f; sprint = false; fourOn = false; fourW = 0f; fourPh = 0f;
             atkCarry = castCarry = lastAtkW = lastCastW = 0f; drAtk = drCast = drHit = drUpA = drUpC = 0f;
             recRate = RecoverRate; atkGap = 1.4f; lastAtkAt = -10f; aimYaw = 0f; stanceW = 0f;
             squared = false; travelV = Vector3.zero; legW = legYaw = leanP = leanR = 0f; legDir = 1; lastSpd = 0f; lastYaw = transform.eulerAngles.y;
@@ -900,6 +900,11 @@ namespace BAM.Art
         int cFour = -1;
         bool fourOn;
         float fourW, fourLen;
+        // the crawl's own stride (Rickard 2026-11-19: "ragn när han springer snabbare ... rör sig i slowmotion"): played on the run's
+        // phase, one bound lasted a whole run cycle, but a bound covers only about 0.4 of the run cycle's ground (each limb plants once
+        // per bound, each foot once per run cycle; RunFour 0.67 s, Run 0.87 s, measured on the FBXs), so on all fours he pawed at
+        // ~0.4x his speed. Now the crawl has its own phase, at the rate that keeps its planted paws still, like the run
+        float fourPh, fourSpd = -1f;
         public override void SetSquared(bool on) => squared = on;
         public override void SetDeathmark(float left) { if (left >= 0f || marks != null) Marks().SetDeathmark(left); }
         public override void SetChainSpark(bool on) { if (on || marks != null) Marks().SetChainSpark(on); }
@@ -1294,7 +1299,7 @@ namespace BAM.Art
             mixer.SetInputWeight(CWalk, rest * moveW * (1f - runK) * (1f - fourW));
             mixer.SetInputWeight(CRun, rest * moveW * runK * (1f - fourW));
             // on all fours at any pace: the crawl takes the walk's share too (at a jog the walk carried most of the stride)
-            if (cFour >= 0) { four.SetTime(gaitPh * fourLen); mixer.SetInputWeight(cFour, rest * moveW * fourW); }
+            if (cFour >= 0) { four.SetTime(fourPh * fourLen); mixer.SetInputWeight(cFour, rest * moveW * fourW); }
             mixer.SetInputWeight(CAttack, wAtk);
             mixer.SetInputWeight(CCast, wCast);
             mixer.SetInputWeight(CHit, wHit);
@@ -1951,6 +1956,12 @@ namespace BAM.Art
             // backing off with its legs turned round (LegsFollow), the stride plays backwards
             float back = AnimFix.LegsFollow && legDir < 0 && legW > 0.5f ? -1f : 1f;
             if (moveW > 0.01f) gaitPh = Mathf.Repeat(gaitPh + dt * rate * back, 1f);
+            if (cFour >= 0 && moveW > 0.01f)
+            {
+                // a faster top than the run's: a bounding animal's cadence climbs with its speed instead of its stride
+                float rate4 = Mathf.Clamp(rel / Mathf.Max(0.05f, FourStrideSpeed() * fourLen), 0.5f / fourLen, 3f / fourLen);
+                fourPh = Mathf.Repeat(fourPh + dt * rate4 * back, 1f);
+            }
             clips[CWalk].SetTime(gaitPh * wLen);
             clips[CRun].SetTime(gaitPh * rLen);
             return runK;
@@ -1972,6 +1983,18 @@ namespace BAM.Art
             walkSpd = w > 0f ? w : 2.2f;
             runSpd = r > 0f ? r : 5f;
             if (runSpd < walkSpd + 0.5f) runSpd = walkSpd + 0.5f; // a hero whose walk is its run (no own walk)
+        }
+
+        // the crawl's ground per bound, against the run's per cycle: measured, unless the planted-foot measure misread the crawl (its
+        // hands carry it as much as its feet); then the 0.4 of the run's ground per cycle seen on Ragn's FBXs
+        float FourStrideSpeed()
+        {
+            if (fourSpd > 0f) return fourSpd;
+            float runStride = runSpd * clipLen[CRun], f4 = gaitMeasured ? GroundSpeed(anim, four.GetAnimationClip()) : -1f;
+            float k = f4 > 0f ? f4 * fourLen / Mathf.Max(0.05f, runStride) : -1f;
+            float spd = (k >= 0.2f && k <= 0.8f ? k : 0.4f) * runStride / fourLen;
+            if (gaitMeasured) fourSpd = spd; // measured once; before the run is measured, this frame's guess only
+            return spd;
         }
 
         // a clip's speed over the ground in hip heights a second, from how fast its planted foot passes back under the hips (Speltest's
