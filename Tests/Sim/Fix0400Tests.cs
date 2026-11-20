@@ -178,13 +178,13 @@ namespace BAM.Sim
             m.DealDamage(h, a, 100, DmgKind.Auto);
             Check(a.Has(St.Burn), "FIX 67: Blast's hit lights the burn");
             int ticks = 0; float sum = 0, lo = 99, hi = 0;
-            for (int i = 0; i < 150; i++)
+            for (int i = 0; i < 400; i++)
             {
                 m.Step(PlayerInput.None);
                 foreach (var e in m.Events) if (e.Type == EventType.Damage && e.B == a && e.Dmg == DmgKind.Passive) { ticks++; sum += e.V; lo = Math.Min(lo, e.V); hi = Math.Max(hi, e.V); }
             }
-            Check(ticks == 8 && Near(sum, 15, 0.001f) && Near(lo, 1.875f, 0.005f) && Near(hi, 1.875f, 0.005f) && !a.Has(St.Burn),
-                $"FIX 67: a 2 s burn of a 100 hit is exactly 8 ticks of 1.875 ({ticks} ticks, {sum:0.000} in all, {lo:0.000}-{hi:0.000}, burn left {a.Has(St.Burn)})");
+            Check(ticks == 12 && Near(sum, 33.75f, 0.005f) && Near(lo, 2.8125f, 0.005f) && Near(hi, 2.8125f, 0.005f) && !a.Has(St.Burn),
+                $"FIX 67: a 3 s burn of a 100 hit is exactly 12 ticks of 2.8125 ({ticks} ticks, {sum:0.000} in all, {lo:0.000}-{hi:0.000}, burn left {a.Has(St.Burn)})");
         }
 
         // 101 (HERO-A-3): Knut died mid-haul and the freed catch kept the stun sized for the whole pull

@@ -212,12 +212,14 @@ namespace BAM.Sim
     }
 
     /// <summary>Blast, Supernova. Tap: a strip of fire for 2 s at a random enemy in reach that hurts enemies in it every 0.5 s.
-    /// Drag: a bomb thrown (over walls) onto the aimed spot that explodes 0.3 s later (swapped by Rickard 2026-10-30). Passive: everything she hits burns for 15 % more over 2 s.</summary>
+    /// Drag: a bomb thrown (over walls) onto the aimed spot that explodes 0.3 s later (swapped by Rickard 2026-10-30). Passive: everything she hits burns for 33.75 % more over 3 s.</summary>
     public static class BlastS
     {
         public const float Reach = 4.5f, Delay = 0.3f, Radius = 1.5f, DamageCoeff = 1.2f; // 1.45 -> 1.2 when the bomb became the aimed drag (2026-10-30: Hard 58.6 -> 53.1 %); Delay 0.5 -> 0.3 (Rickard 2026-11-15: "ska träffa marken snabbare")
         public const float LaneLength = 4.5f, LaneHalfWidth = 0.45f, LaneDuration = 2, LaneTick = 0.5f, LaneCoeff = 0.35f;
-        public const float BurnPercent = 0.15f, BurnDuration = 2, BurnTick = 0.25f;
+        // Rickard 2026-11-20 "burn hålla 5 sek och 50% mer dmg per tick", then 3 s on the card (5 s: Blast 51.5 -> 72 % vs Hard;
+        // 3 s: 61 %): 2 s -> 3 s and 1.875 % -> 2.8125 % of the hit per 0.25 s tick, so 0.15 * 1.5 * 3 / 2 = 0.3375 in all (12 ticks)
+        public const float BurnPercent = 0.3375f, BurnDuration = 3, BurnTick = 0.25f;
     }
 
     public sealed partial class Match
@@ -1145,7 +1147,7 @@ namespace BAM.Sim
             if (p.T >= BlastS.LaneDuration - 1e-4f) p.Done = true;
         }
 
-        /// <summary>Everything Blast hits burns: 15 % of the hit more over 2 s. One burn per target; a new hit adds to it and
+        /// <summary>Everything Blast hits burns: 33.75 % of the hit more over 3 s. One burn per target; a new hit adds to it and
         /// restarts its time.</summary>
         void Ignite(Unit src, Unit tgt, float amount)
         {
@@ -1163,7 +1165,7 @@ namespace BAM.Sim
             if (i < 0 || u.Sts[i].Amount <= 0 || u.Sts[i].By == null) return;
             u.Sts[i].V += dt;
             float t = u.Sts[i].T, v = u.Sts[i].V;
-            // eps: the ticks' float sums made a ninth tick of nothing after the eighth; a 2 s burn is exactly its 8 ticks, the last
+            // eps: the ticks' float sums made a ninth tick of nothing after the eighth; a burn is exactly its BurnDuration / BurnTick ticks, the last
             // takes what is left (full review 2026-11-09 nr 67)
             const float eps = 1e-4f;
             if (v < BlastS.BurnTick - eps && t > dt + eps) return;
