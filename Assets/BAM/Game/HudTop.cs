@@ -422,6 +422,9 @@ namespace BAM.Game
             {
                 int s = Mathf.Clamp(Mathf.CeilToInt(u.RespawnT), 0, 99);
                 if (s != p.Shown) { p.Shown = s; p.Secs.text = Int(s); }
+                // Revive is standing this hero up where it fell: the seconds in its phoenix orange (HudRevive.cs, Rickard 2026-11-20)
+                Color sc = u.ReviveComing ? ReviveOrange : Color.white;
+                if (p.Secs.color != sc) p.Secs.color = sc;
             }
         }
 

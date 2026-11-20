@@ -729,6 +729,7 @@ namespace BAM.Game
                     if (b == null) break;
                     if (unitBySerial.TryGetValue(b.Serial, out UnitRec r) && !r.Dead) { r.Dead = true; r.V.SetDead(true); }
                     ArtKit.PlayFx(FxKind.Death, Coords.Of(b), b.Kind == UnitKind.Hero ? 1.2f : 0.8f, Side(b.Team));
+                    if (b.ReviveComing) ArtKit.PlayReviveWait(Coords.Of(b)); // Revive: it stands up here in a moment (Rickard 2026-11-20)
                     if (b.Kind == UnitKind.Hero)
                     {
                         bool myKill = b.Team != m.Player.Team && b.IsRealHero && e.A != null && (e.A == m.Player || e.A.Owner == m.Player);

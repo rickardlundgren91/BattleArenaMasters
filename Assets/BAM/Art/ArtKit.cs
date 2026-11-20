@@ -529,6 +529,13 @@ namespace BAM.Art
             SpellFx.Cast(spell, from, at);
         }
 
+        /// <summary>A hero with Revive fell (event Death while ReviveComing): a phoenix-orange ring and embers where it will stand up.</summary>
+        public static void PlayReviveWait(Vector3 at)
+        {
+            if (!ready) return;
+            SpellFx.ReviveWait(at);
+        }
+
         /// <summary>A recall channel was cut (event SpellCancel).</summary>
         public static void PlaySpellCancel(Vector3 at)
         {

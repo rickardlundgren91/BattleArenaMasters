@@ -80,6 +80,8 @@ namespace BAM.Sim
     {
         /// <summary>Revive: this dead hero comes back where it fell (Spells.cs ReviveOnDeath), not at its base.</summary>
         internal bool ReviveHere;
+        /// <summary>Dead and Revive will stand it up where it fell in a moment (the HUD shows this to everyone; display only).</summary>
+        public bool ReviveComing => ReviveHere && !Alive;
     }
 
     public sealed partial class Match
@@ -91,6 +93,9 @@ namespace BAM.Sim
         public bool SpellReady(Unit h) => h != null && h.Alive && h.Spell != SpellId.None && SpellsOn && Time >= h.SpellAt && h.SpellChanEnd < 0;
         /// <summary>Seconds until h's spell is ready again (0 when ready).</summary>
         public float SpellLeft(Unit h) => h == null ? 0 : Math.Max(0, h.SpellAt - Time);
+        /// <summary>Revive is ready on h: if h dies now it stands up where it fell. Everyone sees a mark by its bar, so the
+        /// comeback is never a surprise (Rickard 2026-11-20 "så att de andra spelarna vet"). Display only.</summary>
+        public bool ReviveArmed(Unit h) => h != null && h.Alive && !h.IsClone && h.Spell == SpellId.Revive && SpellsOn && Time >= h.SpellAt;
         public static bool SpellChanneling(Unit h) => h != null && h.SpellChanEnd >= 0;
 
         /// <summary>What every bot draws from (all difficulties, allies and enemies): never Recall (Rickard 2026-11-18: "bottar ska

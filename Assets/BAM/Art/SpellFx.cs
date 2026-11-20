@@ -17,6 +17,20 @@ namespace BAM.Art
 
         static Color32 C32(Color c, byte a = 255) => new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), a);
 
+        /// <summary>Revive is coming (the hero just fell with it ready): a slow ring on the ground and embers rising from the body
+        /// for the ReviveDelay wait, so everyone near sees it stand up again (Rickard 2026-11-20). Display only.</summary>
+        public static void ReviveWait(Vector3 at)
+        {
+            Color c = Of(SpellId.Revive);
+            Color32 c32 = C32(c);
+            float wait = SpellDefs.ReviveDelay;
+            Fx.Ring(at, 0.5f, 1.4f, c, wait, 1.2f);
+            Fx.Ring(at, 0.2f, 1.2f, new Color(c.r, c.g, c.b, 0.8f), 0.4f);
+            Fx.Pillar(at, 0.5f, 2.5f, new Color(c.r, c.g, c.b, 0.45f), wait);
+            Fx.Glow(at + Vector3.up * 0.2f, 10, c32, 0.2f, 0.6f, wait, 1.6f, 0.5f);
+            Fx.Sparks(at + Vector3.up * 0.3f, 8, c32, 0.08f, 2.5f, 0.6f, 0.8f, 0.4f);
+        }
+
         public static void Cast(SpellId s, Vector3 from, Vector3 at)
         {
             Color c = Of(s);
