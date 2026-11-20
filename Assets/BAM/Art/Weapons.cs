@@ -179,6 +179,12 @@ namespace BAM.Art
         /// it round, so the tuned 60-degree bend swung his forearm from up to down (Rickard 2026-11-19, the main menu: "vrider armen
         /// onaturligt ut. 90 grader upp till 90 grader ner").</summary>
         public bool SteadyElbow;
+        /// <summary>Code only: the tuned <see cref="LeftArm"/> eases out as the hero moves, so the walk's and run's own arm swing plays
+        /// as made and the tune holds only standing (Home, the hero page, standing in a match). Bram V2's left arm is tuned on his
+        /// standing idle (WeaponTune BramV2 LeftArm z -49, nearly straight); laid over the run's pumping arm it straightened an elbow the
+        /// clip bends 40-90 degrees each stride and the stop short of straight caught it every step (Rickard 2026-11-20: "Bram buggar
+        /// när han springer med sin vänstra arm framförallt", after the 2026-11-19 walk fix 76714ae).</summary>
+        public bool LeftArmStill;
         /// <summary>Degrees added to <see cref="ArmSpread"/> in code only (the Weapon Tuner and WeaponTune.json leave it alone), so
         /// hands that hang close to the legs stay off the thighs as the idle sways (Tyra, ANIM-24).</summary>
         public float HandsOff;
@@ -658,6 +664,7 @@ namespace BAM.Art
             // shoulder and mantle (0.14 -> 0.18), and the back rack sits further back on the mantle (At.z -0.08 -> -0.13). Measured on
             // the model, not yet seen in Unity: tune with Weapon Tuner "Bram V2"
             br.CarryOut = 0.18f;
+            br.LeftArmStill = true; // his tuned left arm (BramV2 LeftArm) only standing: the walk and run swing it as the clips do
             br.Worn = new WornDef[]
             {
                 // Bram 2.0 (Tripo 2026-11-18, Rickard's concept C): the fur pauldron and the apron are part of the new body, so the old
@@ -1771,7 +1778,7 @@ namespace BAM.Art
             }
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
             if (gdef.HandGap > 0f && !dead) HandsOffThighs(gdef.HandGap * figH);
-            ArmTune(dead ? 0f : 1f - Mathf.Clamp01(actW));
+            ArmTune(dead ? 0f : 1f - Mathf.Clamp01(actW), moveW);
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(dead ? 0f : 1f - Mathf.Clamp01(actW));
             // a death lets go of the rest hold over a quarter of a second instead of in one frame: at the blow that killed him Bram's
             // hammer jumped about 155 degrees into the fist's own grip in one frame (WeaponDebug, Rickard's Unity 2026-10-30); a
@@ -2267,11 +2274,12 @@ namespace BAM.Art
         }
 
         // the tuner's RightArm/LeftArm at rest (w), in the hero's own axes: out from the side, forward, then the elbow's bend
-        void ArmTune(float w)
+        void ArmTune(float w, float moveW)
         {
             if (w <= 0.001f) return;
             if (gdef.RightArm != Vector3.zero) ArmTune(armR, elbR, wriR, gdef.RightArm * w, 1f, hingeR);
-            if (gdef.LeftArm != Vector3.zero) ArmTune(armL, elbL, wriL, gdef.LeftArm * w, -1f, hingeL);
+            float wl = gdef.LeftArmStill ? w * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(moveW))) : w; // GearDef.LeftArmStill
+            if (gdef.LeftArm != Vector3.zero && wl > 0.001f) ArmTune(armL, elbL, wriL, gdef.LeftArm * wl, -1f, hingeL);
         }
 
         void ArmTune(Transform up, Transform lo, Transform hd, Vector3 a, float side, Vector3 hinge)
@@ -2377,7 +2385,7 @@ namespace BAM.Art
         {
             if (gdef.ArmSpread + gdef.HandsOff > 0f) ArmSpread(gdef.ArmSpread + gdef.HandsOff);
             if (gdef.HandGap > 0f) HandsOffThighs(gdef.HandGap * figH);
-            ArmTune(1f);
+            ArmTune(1f, 0f);
             if (carryHand != null && carryLo != null && carryUp != null) CarryOnShoulder(1f);
             for (int i = 0; i < wT.Length; i++)
             {
