@@ -61,6 +61,12 @@ namespace BAM.Game
         readonly System.Collections.Generic.List<Unit> aimHits = new System.Collections.Generic.List<Unit>(8);
         // Moa: the ally her tap would shield now (MOA-02); Bonk: his club's ground circle while it winds up (BONK-07)
         readonly Ring[] moaPick = new Ring[1], smash = new Ring[4];
+        // Kugg's Anchor (Hero7.cs, Rickard 2026-11-20 "Man måste kunna se kuggs range när han ultar"): every anchored Kugg the
+        // player can see gets his 8-tile reach on the ground, a faint fill and a clear edge: the enemy's red (where his shells
+        // reach, like a tower's), an ally's blue, the player's own Kugg in the cannon's orange. The fill shows the reach also
+        // where its edge runs off the sides of a standing phone (8 tiles each way is wider than the 10.75 seen).
+        readonly Ring[] kuggFill = new Ring[3], kuggEdge = new Ring[6];
+        static readonly Color AnchorOrange = new Color(1f, 0.55f, 0.15f), AnchorAlly = new Color(0.35f, 0.65f, 1f);
         static readonly Color Honey = new Color(1f, 0.8f, 0.25f);
         Match m;
         MatchViews views;
@@ -71,14 +77,14 @@ namespace BAM.Game
         {
             m = match; views = matchViews;
             autoTarget = null; autoAt = swingAt = -99f; blowAt = -99f;
-            Make(range, true); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash);
+            Make(range, true); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash); Make(kuggFill); Make(kuggEdge, true);
             blinkOn = false;
             aimOn = false;
         }
 
         public void End()
         {
-            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink); Free(goal); Free(moaPick); Free(smash);
+            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink); Free(goal); Free(moaPick); Free(smash); Free(kuggFill); Free(kuggEdge);
             m = null; views = null; autoTarget = null;
         }
 
@@ -228,7 +234,10 @@ namespace BAM.Game
             bool power = p.NextHitSpecial;
             float pb = power ? 0.5f + 0.5f * Mathf.Sin(Time.time * 6f) : 0f;
             float ew = (2f + 1.5f * hit + (power ? 1.5f + pb : 0f)) * px, dw = 1f * px;
-            Color rc = power ? new Color(Gold.r, Gold.g, Gold.b, 0.75f + 0.25f * Mathf.Max(hit, pb)) : new Color(1f, 1f, 1f, 0.55f + 0.4f * hit);
+            // an anchored Kugg's range ring is his Anchor's 8-tile reach (Unit.Range): the cannon's orange, thicker (KuggReach below adds the fill)
+            bool anchored = p.Hero == HeroId.Kugg && p.KuggAnchored;
+            if (anchored) ew += 1.5f * px;
+            Color rc = anchored ? new Color(AnchorOrange.r, AnchorOrange.g, AnchorOrange.b, 0.8f + 0.2f * hit) : power ? new Color(Gold.r, Gold.g, Gold.b, 0.75f + 0.25f * Mathf.Max(hit, pb)) : new Color(1f, 1f, 1f, 0.55f + 0.4f * hit);
             Show(range[0], at, r + ew / 2f, rc, ew);
             Show(range[1], at, r + ew / 2f + dw, RingEdge, dw);
             Show(range[2], at, r - ew / 2f, RingEdge, dw);
@@ -314,6 +323,8 @@ namespace BAM.Game
                 Show(blink[1], bp, 0.45f * (0.55f + 0.1f * Mathf.Sin(Time.time * 10f)), new Color(blinkColor.r, blinkColor.g, blinkColor.b, 0.5f), 2f * px);
             }
 
+            KuggReach(p, px);
+
             // an enemy tower near the player: its reach, red while it shoots at the player
             var tw = m.Towers[Teams.Other(p.Team)];
             if (tw != null && tw.Alive)
@@ -345,9 +356,35 @@ namespace BAM.Game
             }
         }
 
+        /// <summary>Every anchored Kugg the player sees: his reach as a faint fill and an edge (the player's own edge is the range ring).</summary>
+        void KuggReach(Unit p, float px)
+        {
+            int n = 0;
+            var hs = m.Heroes;
+            for (int i = 0; i < hs.Count && n < kuggFill.Length; i++)
+            {
+                var u = hs[i];
+                if (u == null || !u.Alive || u.Hero != HeroId.Kugg || !u.KuggAnchored) continue;
+                bool me = u == p, foe = u.Team != p.Team;
+                if (!me && !m.IsVisibleTo(u, p.Team)) continue;
+                Vector3 c = views.DrawnAt(u); c.y = 0f;
+                float r = u.Range;
+                Color col = me ? AnchorOrange : foe ? HitRed : AnchorAlly;
+                Show(kuggFill[n], c, r, new Color(col.r, col.g, col.b, me ? 0.05f : foe ? 0.09f : 0.05f), r);
+                if (!me)
+                {
+                    // a breathing edge between two dark lines, as the range ring, so it reads on stone and grass
+                    float b = 0.5f + 0.5f * Mathf.Sin(Time.time * 4f), w = (foe ? 3f : 2f) * px, dw = 1f * px;
+                    Show(kuggEdge[2 * n], c, r + w / 2f, new Color(col.r, col.g, col.b, (foe ? 0.7f : 0.5f) + 0.2f * b), w);
+                    Show(kuggEdge[2 * n + 1], c, r + w / 2f + dw, RingEdge, dw);
+                }
+                n++;
+            }
+        }
+
         void HideAll()
         {
-            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink); Hide(goal); Hide(moaPick); Hide(smash);
+            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink); Hide(goal); Hide(moaPick); Hide(smash); Hide(kuggFill); Hide(kuggEdge);
         }
 
         static void Hide(Ring[] rings)
