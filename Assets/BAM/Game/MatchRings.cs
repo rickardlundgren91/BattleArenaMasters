@@ -65,7 +65,11 @@ namespace BAM.Game
         // player can see gets his 8-tile reach on the ground, a faint fill and a clear edge: the enemy's red (where his shells
         // reach, like a tower's), an ally's blue, the player's own Kugg in the cannon's orange. The fill shows the reach also
         // where its edge runs off the sides of a standing phone (8 tiles each way is wider than the 10.75 seen).
-        readonly Ring[] kuggFill = new Ring[3], kuggEdge = new Ring[6];
+        readonly Ring[] kuggFill = new Ring[3], kuggEdge = new Ring[6], kuggWave = new Ring[6];
+        // Rickard 2026-11-20 "ge hela kuggs range på marken någon effekt när han gör sin special så att de som är i zonen märker
+        // det": as the spikes go in a bright wave runs out over the whole reach and the area flashes; while anchored a rune pulse
+        // keeps leaving him for the edge and the area thumps on each shell; standing inside an enemy Kugg's reach it glows stronger.
+        readonly System.Collections.Generic.Dictionary<Unit, float> kuggSince = new System.Collections.Generic.Dictionary<Unit, float>(4), kuggShot = new System.Collections.Generic.Dictionary<Unit, float>(4);
         static readonly Color AnchorOrange = new Color(1f, 0.55f, 0.15f), AnchorAlly = new Color(0.35f, 0.65f, 1f);
         static readonly Color Honey = new Color(1f, 0.8f, 0.25f);
         Match m;
@@ -77,14 +81,14 @@ namespace BAM.Game
         {
             m = match; views = matchViews;
             autoTarget = null; autoAt = swingAt = -99f; blowAt = -99f;
-            Make(range, true); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash); Make(kuggFill); Make(kuggEdge, true);
+            Make(range, true); Make(charge); Make(reach); Make(target); Make(tower); Make(hits); Make(ready); Make(blink); Make(goal); Make(moaPick); Make(smash); Make(kuggFill); Make(kuggEdge, true); Make(kuggWave, true); kuggSince.Clear(); kuggShot.Clear();
             blinkOn = false;
             aimOn = false;
         }
 
         public void End()
         {
-            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink); Free(goal); Free(moaPick); Free(smash); Free(kuggFill); Free(kuggEdge);
+            Free(range); Free(charge); Free(reach); Free(target); Free(tower); Free(hits); Free(ready); Free(blink); Free(goal); Free(moaPick); Free(smash); Free(kuggFill); Free(kuggEdge); Free(kuggWave); kuggSince.Clear(); kuggShot.Clear();
             m = null; views = null; autoTarget = null;
         }
 
@@ -149,6 +153,7 @@ namespace BAM.Game
             {
                 var e = ev[i];
                 if (e.Type == EventType.AttackStart && e.A == m.Player && e.B != null) { autoTarget = e.B; autoAt = Time.time; }
+                if (e.Type == EventType.AttackStart && e.A != null && e.A.Hero == HeroId.Kugg && e.A.KuggAnchored && e.Kind == (byte)ProjKind.KuggShell) kuggShot[e.A] = Time.time;
             }
             // the range ring flashes on the blow itself, when the charge ring is full (below), not at the start of the wind-up
             bool winding = Winding(m.Player, out _);
@@ -356,35 +361,57 @@ namespace BAM.Game
             }
         }
 
-        /// <summary>Every anchored Kugg the player sees: his reach as a faint fill and an edge (the player's own edge is the range ring).</summary>
+        /// <summary>Every anchored Kugg the player sees: his reach as a fill and an edge (the player's own edge is the range ring), the
+        /// deploy wave over the whole reach, the rune pulse and the thump on each shell.</summary>
         void KuggReach(Unit p, float px)
         {
             int n = 0;
+            float now = Time.time;
             var hs = m.Heroes;
-            for (int i = 0; i < hs.Count && n < kuggFill.Length; i++)
+            for (int i = 0; i < hs.Count; i++)
             {
                 var u = hs[i];
-                if (u == null || !u.Alive || u.Hero != HeroId.Kugg || !u.KuggAnchored) continue;
+                if (u == null || u.Hero != HeroId.Kugg) continue;
+                if (!u.Alive || !u.KuggAnchored) { kuggSince.Remove(u); kuggShot.Remove(u); continue; }
+                if (!kuggSince.TryGetValue(u, out float since)) { since = now; kuggSince[u] = now; }
+                if (n >= kuggFill.Length) continue;
                 bool me = u == p, foe = u.Team != p.Team;
                 if (!me && !m.IsVisibleTo(u, p.Team)) continue;
                 Vector3 c = views.DrawnAt(u); c.y = 0f;
-                float r = u.Range;
+                float r = u.Range, dx = p.X - u.X, dy = p.Y - u.Y;
+                bool inside = foe && dx * dx + dy * dy <= r * r; // the player stands where his shells reach
                 Color col = me ? AnchorOrange : foe ? HitRed : AnchorAlly;
-                Show(kuggFill[n], c, r, new Color(col.r, col.g, col.b, me ? 0.05f : foe ? 0.09f : 0.05f), r);
+                float age = now - since;
+                // the deploy: a wave runs out to the edge in 0.45 s and the whole area flashes, fading over 0.8 s
+                float flash = Mathf.Clamp01(1f - age / 0.8f);
+                // each shell: a short thump of the area
+                float shot = kuggShot.TryGetValue(u, out float sa) ? Mathf.Clamp01(1f - (now - sa) / 0.3f) : 0f;
+                float b = 0.5f + 0.5f * Mathf.Sin(now * 4f);
+                float fa = (me ? 0.05f : foe ? (inside ? 0.13f + 0.05f * b : 0.09f) : 0.05f) + 0.22f * flash + 0.07f * shot;
+                Show(kuggFill[n], c, r, new Color(col.r, col.g, col.b, fa), r);
                 if (!me)
                 {
-                    // a breathing edge between two dark lines, as the range ring, so it reads on stone and grass
-                    float b = 0.5f + 0.5f * Mathf.Sin(Time.time * 4f), w = (foe ? 3f : 2f) * px, dw = 1f * px;
-                    Show(kuggEdge[2 * n], c, r + w / 2f, new Color(col.r, col.g, col.b, (foe ? 0.7f : 0.5f) + 0.2f * b), w);
+                    // a breathing edge between two dark lines, as the range ring, so it reads on stone and grass; thicker for whoever is inside
+                    float w = (foe ? (inside ? 4.5f : 3f) : 2f) * px, dw = 1f * px;
+                    Show(kuggEdge[2 * n], c, r + w / 2f, new Color(col.r, col.g, col.b, Mathf.Min(1f, (foe ? 0.7f : 0.5f) + 0.2f * b + 0.3f * flash)), w);
                     Show(kuggEdge[2 * n + 1], c, r + w / 2f + dw, RingEdge, dw);
                 }
+                if (age < 0.6f)
+                {
+                    float k = Mathf.Clamp01(age / 0.45f), ease = 1f - (1f - k) * (1f - k);
+                    float ww = (10f - 5f * k) * px;
+                    Show(kuggWave[2 * n], c, Mathf.Max(ww, r * ease), new Color(Mathf.Lerp(1f, col.r, 0.4f), Mathf.Lerp(1f, col.g, 0.4f), Mathf.Lerp(1f, col.b, 0.4f), 0.9f * (1f - Mathf.Clamp01((age - 0.35f) / 0.25f))), ww);
+                }
+                // the rune pulse: a thin ring leaving him for the edge every 1.6 s, fading as it goes
+                float pk = (age / 1.6f) % 1f;
+                if (age > 0.45f) Show(kuggWave[2 * n + 1], c, Mathf.Max(0.3f, r * pk), new Color(col.r, col.g, col.b, (me ? 0.35f : 0.5f) * (1f - pk)), (3f - 1.5f * pk) * px);
                 n++;
             }
         }
 
         void HideAll()
         {
-            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink); Hide(goal); Hide(moaPick); Hide(smash); Hide(kuggFill); Hide(kuggEdge);
+            Hide(range); Hide(charge); Hide(reach); Hide(target); Hide(tower); Hide(hits); Hide(ready); Hide(blink); Hide(goal); Hide(moaPick); Hide(smash); Hide(kuggFill); Hide(kuggEdge); Hide(kuggWave);
         }
 
         static void Hide(Ring[] rings)
