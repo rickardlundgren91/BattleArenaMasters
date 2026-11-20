@@ -25,6 +25,9 @@ namespace BAM.Game
         static readonly Color PortraitBack = Hex(0x2b3a6a), PlayerEdge = Hex(0xffd75a), MateEdge = Hex(0xc9953e), DeadEdge = new Color(0.59f, 0.63f, 0.75f, 0.6f);
         static readonly Color OwnTrail = Hex(0xb8fff6), FoeTrail = Hex(0xffe0a8), DmgToPlayer = Hex(0xff6b6b);
         static readonly Color BigHit = Hex(0xffc857), CreepHit = new Color(1f, 1f, 1f, 0.7f);
+        // the player's hits on the enemy tower: lilac, a colour no other number uses, so a tower hit reads as one at a glance
+        // (Rickard 2026-11-20 "Dmg siffror när man attackerar tornet i lämplig färg för att indikera tornträff")
+        static readonly Color TowerNum = Hex(0xc9a2ff);
         static readonly Color TowerHitGlow = new Color(1f, 0.16f, 0.12f, 0.9f), TowerHitEdge = new Color(1f, 0.3f, 0.24f, 1f), TowerHitBack = new Color(0.55f, 0.02f, 0.02f, 0.78f);
         static readonly Color BarBack = new Color(0f, 0f, 0f, 0.58f);
         const float TowerFlashTime = 0.5f, TowerFlashGap = 1f; // the flash fades in 0.5 s and starts again at most once a second
@@ -154,7 +157,8 @@ namespace BAM.Game
             if (b == null || v <= 0f) return;
             bool toPlayer = b == m.Player, byPlayer = e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
             bool creep = byPlayer && b.IsMinionLike && b.Team != m.Player.Team;
-            if (!b.IsRealHero && !creep) return;
+            bool tower = byPlayer && b.Kind == UnitKind.Tower && b.Team != m.Player.Team;
+            if (!b.IsRealHero && !creep && !tower) return;
             if (!toPlayer && !byPlayer) return;
             float now = Time.unscaledTime;
             TickSum free = null;
@@ -230,7 +234,10 @@ namespace BAM.Game
             bool toPlayer = b == m.Player, byPlayer = e.A != null && (e.A == m.Player || e.A.Owner == m.Player);
             // the player's own hits on minions get small, dim numbers (the old game, all modes since 2026-10-25)
             bool creep = byPlayer && b.IsMinionLike && b.Team != m.Player.Team;
-            if (!b.IsRealHero && !creep) return;
+            // the player's own hits on the enemy tower show too, in the tower colour (2026-11-20); never "big", a tower has so
+            // much health that 15 % of it is never one hit
+            bool tower = byPlayer && b.Kind == UnitKind.Tower && b.Team != m.Player.Team;
+            if (!b.IsRealHero && !creep && !tower) return;
             if (!toPlayer && !byPlayer) return;
             // the killing blow: the target is already dead when the HUD reads the hit, and a dead unit is never "visible", so the
             // number of the hit that killed was dropped (Rickard 2026-11-19 "Damage syns inte när tyra dödar en spelare"). Only
@@ -244,7 +251,7 @@ namespace BAM.Game
                 if (f.Unit == b && !f.Word && f.ToPlayer == toPlayer && now - f.Born < FloatMerge)
                 {
                     f.Value += v;
-                    if (!creep && !f.Big && f.Value >= 0.15f * b.MaxHp) { f.Big = true; f.Label.color = toPlayer ? DmgToPlayer : BigHit; f.Label.fontSize = 66; }
+                    if (!creep && !tower && !f.Big && f.Value >= 0.15f * b.MaxHp) { f.Big = true; f.Label.color = toPlayer ? DmgToPlayer : BigHit; f.Label.fontSize = 66; }
                     f.Label.text = Int(Mathf.RoundToInt(f.Value));
                     return;
                 }
@@ -252,11 +259,11 @@ namespace BAM.Game
             var t = floats[nextFloat];
             nextFloat = (nextFloat + 1) % floats.Length;
             t.Unit = b; t.Born = now; t.Value = v; t.ToPlayer = toPlayer; t.Word = false;
-            t.Big = !creep && v >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
+            t.Big = !creep && !tower && v >= 0.15f * b.MaxHp; // HeroJuice: 15 % of its health or more
             PlaceFloat(t, b);
             t.Label.text = Int(Mathf.RoundToInt(v));
-            t.Label.color = toPlayer ? DmgToPlayer : creep ? CreepHit : t.Big ? BigHit : Color.white;
-            t.Label.fontSize = creep ? 34 : t.Big ? 66 : 50;
+            t.Label.color = toPlayer ? DmgToPlayer : tower ? TowerNum : creep ? CreepHit : t.Big ? BigHit : Color.white;
+            t.Label.fontSize = creep ? 34 : tower ? 46 : t.Big ? 66 : 50;
             t.BaseA = creep ? 0.7f : 1f;
             t.Label.gameObject.SetActive(true);
         }
