@@ -80,11 +80,11 @@ namespace BAM.Sim
         public void Reset(bool died)
         {
             path.Clear(); hasGoal = false; gFollow = null; gHasF = false; kite = null;
-            hasStuck = false; hasBlocked = false; t = 0;
+            hasStuck = false; hasBlocked = false; t = 0; chaseWalk = false;
             if (died) { retreat = false; danger = false; focus = null; backWithLeader = false; HumanOnDeath(); }
         }
 
-        void SetGoal(float x, float y, float stop = 0, Unit follow = null) { hasGoal = true; gX = x; gY = y; gStop = stop; gFollow = follow; gHasF = false; }
+        void SetGoal(float x, float y, float stop = 0, Unit follow = null) { if (follow != gFollow) chaseWalk = false; hasGoal = true; gX = x; gY = y; gStop = stop; gFollow = follow; gHasF = false; }
 
         // ---------- the think tick (old aiHero) ----------
         public void Think(float dt)
@@ -118,8 +118,12 @@ namespace BAM.Sim
             if (hasGoal && gStop > 0)
             {
                 var f = gFollow != null && gFollow.Alive ? gFollow : null;
-                if (f != null && Dist(h, f) <= gStop)
+                // walking after a hero: keep going until a little inside reach, so a hero that walks away is followed in one smooth
+                // walk, not a tiny step each time it gets out of reach (Rickard 2026-11-20, BotMove.cs)
+                float hold = f != null && f.Kind == UnitKind.Hero ? HmHold() : 0;
+                if (f != null && Dist(h, f) <= gStop - (chaseWalk ? hold : 0))
                 {
+                    chaseWalk = false;
                     if (f.Kind == UnitKind.Hero && safety) // (Tyra stood still for Steady Hand until 2026-10-28; Featherstep has no such need)
                     {
                         float sm = HmStrafe(); // uneven steps and short pauses (BotMove.cs)
@@ -133,9 +137,10 @@ namespace BAM.Sim
                     }
                     return;
                 }
+                chaseWalk = hold > 0;
                 if (f != null && f.Kind == UnitKind.Hero && (!path.Has || !gHasF || Hyp(gFx - f.X, gFy - f.Y) > 1.0f))
                 {
-                    float d = Dist(h, f); if (d == 0) d = 1; float keep = gStop - 0.1f;
+                    float d = Dist(h, f); if (d == 0) d = 1; float keep = Math.Max(0.2f, gStop - 0.1f - hold);
                     gX = f.X + (h.X - f.X) / d * keep; gY = f.Y + (h.Y - f.Y) / d * keep; gFx = f.X; gFy = f.Y; gHasF = true;
                     SpreadGoal(); // not on top of a teammate (BotSquad.cs)
                     GoalOutOfTowers(true); // the keep-distance spot never inside a tower body
@@ -152,13 +157,15 @@ namespace BAM.Sim
                 if (hasGoal) { blockedX = gX; blockedY = gY; } else { blockedX = path.X[path.Count - 1]; blockedY = path.Y[path.Count - 1]; }
                 path.Clear(); hasGoal = false; t = Math.Min(t, 0.2f); stuckT = Now; return;
             }
-            if (path.Has)
+            LaneGlide(dt); // walk along with a moving wave instead of stop and go (BotMove.cs)
+            for (int n = 0; n < 3 && path.Has; n++) // a reached corner walks on to the next one in the same tick (no one-tick stop)
             {
                 for (int k = 0; k < 4 && path.Count - path.Index > 1 && ClearWalk(h, path.X[path.Index + 1], path.Y[path.Index + 1]); k++) path.Index++;
                 float nx = path.X[path.Index], ny = path.Y[path.Index], dx = nx - h.X, dy = ny - h.Y, d = Hyp(dx, dy);
                 bool last = path.Count - path.Index == 1;
-                if (d < (last ? 0.05f : 0.25f)) path.Index++;
-                else { float step = SpeedOf(h) * dt, k = last && d < step ? d / step : 1; k = Math.Min(k, HmPace(last, d, hasGoal && gFollow != null && gFollow.Kind == UnitKind.Hero)); BotMove(dx / d * k, dy / d * k, dt, last && d < 0.4f ? 0 : 18); }
+                if (d < (last ? 0.05f : 0.25f)) { path.Index++; continue; }
+                float step = SpeedOf(h) * dt, sk = last && d < step ? d / step : 1; sk = Math.Min(sk, HmPace(last, d, hasGoal && gFollow != null && gFollow.Kind == UnitKind.Hero)); if (last) sk = Math.Min(sk, GlidePace(d)); BotMove(dx / d * sk, dy / d * sk, dt, last && d < 0.4f ? 0 : 18);
+                break;
             }
         }
 
@@ -284,7 +291,7 @@ namespace BAM.Sim
             if (target != null && shouldTower && !urgent && Dist(h, enemyTower) < Dist(h, target) + 4) target = null;
 
             bool oHas = hasGoal; float oX = gX, oY = gY, oStop = gStop; Unit oFollow = gFollow; // the last goal (HmKeepGoal)
-            hasGoal = false; kite = null;
+            hasGoal = false; kite = null; laneU = null;
             if (retreat) GoalRetreat(myTower, enemyTower, fwd);
             else if (danger)
             {
@@ -326,6 +333,8 @@ namespace BAM.Sim
             GoalOutOfTowers(); // never a spot inside a tower body (BotSense.cs)
             if (HmKeepGoal(oHas, oX, oY, oStop, oFollow)) { gX = oX; gY = oY; } // barely moved: keep the old goal and path
             else if (!hasGoal || !M.Map.FindPath(h.X, h.Y, gX, gY, now, path)) path.Clear();
+            LaneGlideSet();
+            HmNoLittleStep(); // a standing bot doesn't take one little step to a calm spot just next to it (BotMove.cs)
             if (!h.SpecialReady) { spWantT = 0; BeginnerSpecialSpent(); }
             if (h.SpecialReady)
             {
@@ -418,6 +427,7 @@ namespace BAM.Sim
                 float y = fl.Y - fwd * (BotTables.Ranged(h.Hero) ? 1.6f : 0.8f);
                 if (towerUp && Math.Abs(y - enemyTower.Y) < tr + 0.6f && tank < 25) y = enemyTower.Y - fwd * (tr + 0.8f);
                 SetGoal(fl.X + slot, y);
+                if (fl.IsMinionLike) { laneU = fl; laneGx = gX; laneGy = gY; }
             }
             else if (towerUp) SetGoal(enemyTower.X + slot, enemyTower.Y - fwd * (tr + 1.2f));
             if (shouldTower && v3 && TK3(43) > 0.5f && V3CleanSpot(enemyTower, h.Range * 0.85f + enemyTower.R, out float cx, out float cy)) SetGoal(cx, cy); // hit the tower, not the minions around it

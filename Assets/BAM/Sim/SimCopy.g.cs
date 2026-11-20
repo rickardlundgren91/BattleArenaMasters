@@ -8,7 +8,7 @@ namespace BAM.Sim
     {
         static partial void Init()
         {
-            Generated = true; GeneratedHash = "4d3e1ae12aaadf3b";
+            Generated = true; GeneratedHash = "9fe5eb26704b6da7";
             TwinOf = Match.__TwinAny; CopyInto = Match.__CopyAny;
         }
     }
@@ -177,6 +177,7 @@ namespace BAM.Sim
             chaseLastT = __s.chaseLastT;
             chaseT = __s.chaseT;
             chaseU = __m.Map(__s.chaseU);
+            chaseWalk = __s.chaseWalk;
             chaseX = __s.chaseX;
             chaseY = __s.chaseY;
             chip = __s.chip;
@@ -207,6 +208,15 @@ namespace BAM.Sim
             hmPace = __s.hmPace;
             hmSide = __s.hmSide;
             kite = __m.Map(__s.kite);
+            laneGx = __s.laneGx;
+            laneGy = __s.laneGy;
+            laneLx = __s.laneLx;
+            laneLy = __s.laneLy;
+            laneOn = __s.laneOn;
+            laneOx = __s.laneOx;
+            laneOy = __s.laneOy;
+            laneU = __m.Map(__s.laneU);
+            laneV = __s.laneV;
             lastThinkT = __s.lastThinkT;
             lateRetreat = __s.lateRetreat;
             leadAt = __s.leadAt;

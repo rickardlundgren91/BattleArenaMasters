@@ -77,6 +77,9 @@ namespace BAM.Sim
         internal const float NoticeGrace = 0.5f, LeadSeenT = 0.3f;
         // human-like movement (old SimHumanMove.cs): walking turns at half rate, dodges turn at 16 rad/s, brake over the last 0.35 tiles
         internal const float HmTurn = 0.5f, HmDodgeTurn = 16, HmBrake = 0.35f;
+        // smooth walking (Rickard 2026-11-20): walking after a hero goes on this far inside reach (a share of the stop distance, capped),
+        // and a standing bot skips a calm spot closer than HmMinStep instead of taking one little step there
+        internal const float HmHold = 0.6f, HmHoldHarass = 0.3f, HmHoldShare = 0.2f, HmMinStep = 1.2f, GlideNear = 0.5f;
 
         // human mistakes and bot smarts by level (BotHuman.cs, Rickard 2026-10-31); same for every bot of a tier on both teams
         internal static readonly float[] TiltChance = { 0.7f, 0.5f, 0.3f, 0.1f, 0 }; // A: angry after a death
